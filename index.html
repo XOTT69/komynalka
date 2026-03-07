@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Мої Комунальні</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="apple-touch-icon" href="icon.png">
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans p-4">
+
+    <div class="max-w-md mx-auto">
+        <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">💧 Комуналка ⚡️</h1>
+
+        <!-- Форма додавання -->
+        <div class="bg-white p-4 rounded-xl shadow-md mb-6">
+            <h2 class="text-lg font-semibold mb-3">Нові показники</h2>
+            <form id="utilityForm" class="space-y-3">
+                <div>
+                    <label class="block text-sm text-gray-600">Місяць та рік</label>
+                    <input type="month" id="monthInput" class="w-full border rounded-lg p-2 mt-1" required>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm text-gray-600">Світло (кВт)</label>
+                        <input type="number" id="electroInput" class="w-full border rounded-lg p-2 mt-1" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600">Вода (куби)</label>
+                        <input type="number" id="waterInput" class="w-full border rounded-lg p-2 mt-1" required>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg mt-2 active:bg-blue-700">
+                    Зберегти
+                </button>
+            </form>
+        </div>
+
+        <!-- Список збережених місяців -->
+        <div>
+            <h2 class="text-lg font-semibold mb-3">Історія</h2>
+            <div id="recordsList" class="space-y-3">
+                <!-- Записи будуть додаватись сюди через JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('utilityForm');
+        const recordsList = document.getElementById('recordsList');
+        
+        // Завантаження даних з LocalStorage
+        let records = JSON.parse(localStorage.getItem('utilityRecords')) || [];
+
+        // Встановлення поточного місяця за замовчуванням
+        const today = new Date();
+        document.getElementById('monthInput').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+        function renderRecords() {
+            recordsList.innerHTML = '';
+            
+            // Сортування від найновішого до найстарішого
+            records.sort((a, b) => new Date(b.month) - new Date(a.month));
+
+            records.forEach((record, index) => {
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl shadow-sm border-l-4 ${record.paid ? 'bg-green-50 border-green-500' : 'bg-white border-red-500'}`;
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-bold text-lg">${formatMonth(record.month)}</span>
+                        <button onclick="togglePaid(${index})" class="text-sm px-3 py-1 rounded-full ${record.paid ? 'bg-green-200 text-green-800' : 'bg-red-100 text-red-600'} font-medium">
+                            ${record.paid ? '✓ Оплачено' : '⏳ Не оплачено'}
+                        </button>
+                    </div>
+                    <div class="flex justify-between text-gray-600 text-sm">
+                        <span>⚡️ Світло: <b>${record.electro}</b></span>
+                        <span>💧 Вода: <b>${record.water}</b></span>
+                        <button onclick="deleteRecord(${index})" class="text-red-400 hover:text-red-600">🗑</button>
+                    </div>
+                `;
+                recordsList.appendChild(card);
+            });
+        }
+
+        function formatMonth(monthString) {
+            const [year, month] = monthString.split('-');
+            const date = new Date(year, month - 1);
+            return date.toLocaleString('uk-UA', { month: 'long', year: 'numeric' }).replace(' р.', '');
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newRecord = {
+                month: document.getElementById('monthInput').value,
+                electro: document.getElementById('electroInput').value,
+                water: document.getElementById('waterInput').value,
+                paid: false
+            };
+
+            // Перевірка чи цей місяць вже є
+            const existingIndex = records.findIndex(r => r.month === newRecord.month);
+            if(existingIndex >= 0) {
+                if(confirm('Запис за цей місяць вже існує. Оновити його?')) {
+                    records[existingIndex] = newRecord;
+                } else return;
+            } else {
+                records.push(newRecord);
+            }
+
+            saveData();
+            form.reset();
+            // Повертаємо поточний місяць у форму
+            document.getElementById('monthInput').value = newRecord.month; 
+        });
+
+        window.togglePaid = function(index) {
+            records[index].paid = !records[index].paid;
+            saveData();
+        };
+
+        window.deleteRecord = function(index) {
+            if(confirm('Видалити цей запис?')) {
+                records.splice(index, 1);
+                saveData();
+            }
+        };
+
+        function saveData() {
+            localStorage.setItem('utilityRecords', JSON.stringify(records));
+            renderRecords();
+        }
+
+        // Ініціалізація Service Worker для роботи PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed', err));
+        }
+
+        renderRecords();
+    </script>
+</body>
+</html>
