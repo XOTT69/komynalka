@@ -7,77 +7,78 @@
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="theme-color" content="#3b82f6">
-    <link rel="apple-touch-icon" href="icon.png">
+    <!-- ?v=3 для оновлення кешу іконки -->
+    <link rel="apple-touch-icon" href="icon.png?v=3">
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans p-4 pb-10">
 
     <div class="max-w-md mx-auto">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-blue-600">💧 Комуналка ⚡️</h1>
-            <button onclick="toggleSettings()" class="text-gray-500 hover:text-gray-800">⚙️ Тарифи</button>
+            <button onclick="toggleSettings()" class="text-gray-500 hover:text-gray-800 bg-white px-3 py-1 rounded-full shadow-sm text-sm font-medium">⚙️ Тарифи</button>
         </div>
 
         <!-- Налаштування тарифів -->
         <div id="settingsPanel" class="hidden bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 text-sm">
-            <h2 class="font-semibold mb-3 text-gray-700">Налаштування цін (грн)</h2>
+            <h2 class="font-semibold mb-3 text-gray-700">Налаштування цін (₴)</h2>
             <div class="grid grid-cols-2 gap-3 mb-3">
                 <div><label class="block text-gray-500">Вода (за 1 м³)</label><input type="number" id="tWater" step="0.01" class="w-full border rounded p-1"></div>
                 <div><label class="block text-gray-500">Світло (база)</label><input type="number" id="tElectroBase" step="0.01" class="w-full border rounded p-1"></div>
                 <div><label class="block text-gray-500">Світло (зима до 2000)</label><input type="number" id="tElectroWinter" step="0.01" class="w-full border rounded p-1"></div>
                 <div><label class="block text-gray-500">Нічний коефіцієнт</label><input type="number" id="tNightCoef" step="0.1" class="w-full border rounded p-1"></div>
             </div>
-            <button onclick="saveTariffs()" class="w-full bg-gray-800 text-white rounded py-1">Зберегти тарифи</button>
+            <button onclick="saveTariffs()" class="w-full bg-gray-800 text-white rounded py-2 font-medium">Зберегти тарифи</button>
         </div>
 
         <!-- Форма додавання -->
-        <div class="bg-white p-4 rounded-xl shadow-md mb-6">
+        <div class="bg-white p-4 rounded-xl shadow-md mb-6 border border-gray-100">
             <div class="flex justify-between items-center mb-4">
-                <input type="month" id="monthInput" class="border-b-2 border-blue-500 font-bold text-lg outline-none pb-1" required>
-                <label class="flex items-center space-x-2 text-sm text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded">
-                    <input type="checkbox" id="isWinterInput" class="rounded">
+                <input type="month" id="monthInput" class="border-b-2 border-blue-500 font-bold text-lg outline-none pb-1 bg-transparent" required>
+                <label class="flex items-center space-x-2 text-sm text-blue-600 font-medium bg-blue-50 px-2 py-1.5 rounded-lg">
+                    <input type="checkbox" id="isWinterInput" class="rounded accent-blue-600 w-4 h-4">
                     <span>❄️ Зимовий тариф</span>
                 </label>
             </div>
 
             <form id="utilityForm" class="space-y-4">
                 <!-- Вода -->
-                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <h3 class="font-semibold text-blue-800 mb-2 flex justify-between">💧 Вода <span id="waterCostDisplay">0.00 грн</span></h3>
+                <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                    <h3 class="font-semibold text-blue-800 mb-2 flex justify-between">💧 Вода <span id="waterCostDisplay" class="text-blue-900">0.00 ₴</span></h3>
                     <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs text-gray-500">Минулі</label><input type="number" id="wPrev" class="w-full border rounded p-2" required></div>
-                        <div><label class="block text-xs text-gray-500">Поточні</label><input type="number" id="wCur" class="w-full border rounded p-2" required></div>
+                        <div><label class="block text-[11px] uppercase tracking-wider text-gray-500 font-medium mb-1">Минулі</label><input type="number" id="wPrev" class="w-full border-gray-200 rounded-lg p-2 bg-white" required></div>
+                        <div><label class="block text-[11px] uppercase tracking-wider text-blue-600 font-bold mb-1">Поточні</label><input type="number" id="wCur" class="w-full border-blue-300 rounded-lg p-2 bg-white ring-1 ring-transparent focus:ring-blue-400" required></div>
                     </div>
                 </div>
 
                 <!-- Світло -->
-                <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100">
-                    <h3 class="font-semibold text-yellow-800 mb-2 flex justify-between">⚡️ Світло <span id="electroCostDisplay">0.00 грн</span></h3>
-                    <div class="grid grid-cols-2 gap-3 mb-2">
-                        <div><label class="block text-xs text-yellow-600 font-medium">☀️ День (минулі)</label><input type="number" id="dPrev" class="w-full border rounded p-2" required></div>
-                        <div><label class="block text-xs text-yellow-600 font-medium">☀️ День (поточні)</label><input type="number" id="dCur" class="w-full border rounded p-2" required></div>
+                <div class="bg-yellow-50/50 p-3 rounded-xl border border-yellow-100">
+                    <h3 class="font-semibold text-yellow-800 mb-2 flex justify-between">⚡️ Світло <span id="electroCostDisplay" class="text-yellow-900">0.00 ₴</span></h3>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div><label class="block text-[11px] uppercase tracking-wider text-gray-500 font-medium mb-1">☀️ День (минулі)</label><input type="number" id="dPrev" class="w-full border-gray-200 rounded-lg p-2 bg-white" required></div>
+                        <div><label class="block text-[11px] uppercase tracking-wider text-yellow-600 font-bold mb-1">☀️ День (поточні)</label><input type="number" id="dCur" class="w-full border-yellow-300 rounded-lg p-2 bg-white" required></div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs text-indigo-500 font-medium">🌙 Ніч (минулі)</label><input type="number" id="nPrev" class="w-full border rounded p-2" required></div>
-                        <div><label class="block text-xs text-indigo-500 font-medium">🌙 Ніч (поточні)</label><input type="number" id="nCur" class="w-full border rounded p-2" required></div>
+                        <div><label class="block text-[11px] uppercase tracking-wider text-gray-500 font-medium mb-1">🌙 Ніч (минулі)</label><input type="number" id="nPrev" class="w-full border-gray-200 rounded-lg p-2 bg-white" required></div>
+                        <div><label class="block text-[11px] uppercase tracking-wider text-indigo-500 font-bold mb-1">🌙 Ніч (поточні)</label><input type="number" id="nCur" class="w-full border-indigo-200 rounded-lg p-2 bg-white" required></div>
                     </div>
                 </div>
 
                 <!-- Фіксовані платежі -->
-                <div class="bg-purple-50 p-3 rounded-lg border border-purple-100">
-                    <h3 class="font-semibold text-purple-800 mb-2 flex justify-between">🏢 Інші платежі <span id="otherCostDisplay">0.00 грн</span></h3>
+                <div class="bg-purple-50/50 p-3 rounded-xl border border-purple-100">
+                    <h3 class="font-semibold text-purple-800 mb-2 flex justify-between">🏢 Інші платежі <span id="otherCostDisplay" class="text-purple-900">0.00 ₴</span></h3>
                     <div class="grid grid-cols-3 gap-2">
-                        <div><label class="block text-xs text-purple-600 font-medium">Квартплата</label><input type="number" step="0.01" id="pRent" class="w-full border rounded p-2 text-sm"></div>
-                        <div><label class="block text-xs text-purple-600 font-medium">Сміття</label><input type="number" step="0.01" id="pGarbage" class="w-full border rounded p-2 text-sm"></div>
-                        <div><label class="block text-xs text-purple-600 font-medium">Абон. вода</label><input type="number" step="0.01" id="pWaterSub" class="w-full border rounded p-2 text-sm"></div>
+                        <div><label class="block text-[10px] uppercase text-purple-600 font-medium mb-1">Квартплата</label><input type="number" step="0.01" id="pRent" class="w-full border rounded p-1.5 text-sm bg-white"></div>
+                        <div><label class="block text-[10px] uppercase text-purple-600 font-medium mb-1">Сміття</label><input type="number" step="0.01" id="pGarbage" class="w-full border rounded p-1.5 text-sm bg-white"></div>
+                        <div><label class="block text-[10px] uppercase text-purple-600 font-medium mb-1">Абон. вода</label><input type="number" step="0.01" id="pWaterSub" class="w-full border rounded p-1.5 text-sm bg-white"></div>
                     </div>
                 </div>
 
-                <div class="flex justify-between items-center bg-gray-800 text-white p-3 rounded-lg mt-2">
-                    <span class="font-bold">Разом до сплати:</span>
-                    <span id="totalCostDisplay" class="font-bold text-xl">0.00 грн</span>
+                <div class="flex justify-between items-center bg-gray-900 text-white p-4 rounded-xl mt-4 shadow-sm">
+                    <span class="font-medium text-gray-300">Всього до сплати:</span>
+                    <span id="totalCostDisplay" class="font-bold text-2xl">0.00 ₴</span>
                 </div>
 
-                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg active:bg-blue-700 shadow-lg">
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl active:bg-blue-700 shadow-md transition-colors text-lg">
                     💾 Зберегти розрахунок
                 </button>
             </form>
@@ -85,7 +86,7 @@
 
         <!-- Історія -->
         <div>
-            <h2 class="text-lg font-semibold mb-3">Історія</h2>
+            <h2 class="text-xl font-bold mb-4 pl-1 text-gray-800">Історія платежів</h2>
             <div id="recordsList" class="space-y-4"></div>
         </div>
     </div>
@@ -96,7 +97,7 @@
         let tariffs = JSON.parse(localStorage.getItem('utilityTariffs')) || defaultTariffs;
         let records = JSON.parse(localStorage.getItem('utilityRecords')) || [];
 
-        // Ініціалізація налаштувань
+        // Ініціалізація
         document.getElementById('tWater').value = tariffs.water;
         document.getElementById('tElectroBase').value = tariffs.electroBase;
         document.getElementById('tElectroWinter').value = tariffs.electroWinter;
@@ -129,7 +130,6 @@
                 document.getElementById('dPrev').value = lastRecord.dCur || 0;
                 document.getElementById('nPrev').value = lastRecord.nCur || 0;
                 
-                // Автозаповнення фіксованих платежів
                 document.getElementById('pRent').value = lastRecord.rent || '';
                 document.getElementById('pGarbage').value = lastRecord.garbage || '';
                 document.getElementById('pWaterSub').value = lastRecord.waterSub || '';
@@ -140,7 +140,7 @@
         }
         fillPreviousReadings();
 
-        // Калькулятор
+        // Живий калькулятор
         const inputs = ['wPrev', 'wCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'isWinterInput', 'pRent', 'pGarbage', 'pWaterSub'];
         inputs.forEach(id => document.getElementById(id).addEventListener('input', calculatePreview));
 
@@ -149,11 +149,9 @@
         function calculatePreview() {
             let getVal = id => Math.max(0, parseFloat(document.getElementById(id).value) || 0);
             
-            // Вода
             let wVol = Math.max(0, getVal('wCur') - getVal('wPrev'));
             currentCalc.waterCost = wVol * tariffs.water;
 
-            // Світло
             let dVol = Math.max(0, getVal('dCur') - getVal('dPrev'));
             let nVol = Math.max(0, getVal('nCur') - getVal('nPrev'));
             let totalElectroVol = dVol + nVol;
@@ -176,16 +174,13 @@
                 currentCalc.electroCost = (dVol * tariffs.electroBase) + (nVol * tariffs.electroBase * tariffs.nightCoef);
             }
 
-            // Інші платежі
             currentCalc.otherCost = getVal('pRent') + getVal('pGarbage') + getVal('pWaterSub');
-
             currentCalc.total = currentCalc.waterCost + currentCalc.electroCost + currentCalc.otherCost;
 
-            // Оновлення UI
-            document.getElementById('waterCostDisplay').innerText = currentCalc.waterCost.toFixed(2) + ' грн';
-            document.getElementById('electroCostDisplay').innerText = currentCalc.electroCost.toFixed(2) + ' грн';
-            document.getElementById('otherCostDisplay').innerText = currentCalc.otherCost.toFixed(2) + ' грн';
-            document.getElementById('totalCostDisplay').innerText = currentCalc.total.toFixed(2) + ' грн';
+            document.getElementById('waterCostDisplay').innerText = currentCalc.waterCost.toFixed(2) + ' ₴';
+            document.getElementById('electroCostDisplay').innerText = currentCalc.electroCost.toFixed(2) + ' ₴';
+            document.getElementById('otherCostDisplay').innerText = currentCalc.otherCost.toFixed(2) + ' ₴';
+            document.getElementById('totalCostDisplay').innerText = currentCalc.total.toFixed(2) + ' ₴';
         }
 
         document.getElementById('utilityForm').addEventListener('submit', (e) => {
@@ -211,7 +206,7 @@
 
             const existingIndex = records.findIndex(r => r.month === newRecord.month);
             if(existingIndex >= 0) {
-                if(confirm('Запис за цей місяць вже існує. Оновити?')) records[existingIndex] = newRecord;
+                if(confirm('Запис за цей місяць вже існує. Оновити його новими даними?')) records[existingIndex] = newRecord;
                 else return;
             } else {
                 records.push(newRecord);
@@ -231,47 +226,112 @@
             list.innerHTML = '';
             records.sort((a, b) => new Date(b.month) - new Date(a.month)).forEach((rec, index) => {
                 const card = document.createElement('div');
-                card.className = `p-4 rounded-xl shadow-sm border-l-4 bg-white ${rec.paid ? 'border-green-500' : 'border-red-400'}`;
+                card.className = `p-4 rounded-xl shadow-sm border border-gray-100 bg-white relative transition-all ${rec.paid ? 'opacity-80 ring-2 ring-green-400' : 'border-l-4 border-l-red-500'}`;
                 
                 let wVol = rec.wCur - rec.wPrev;
                 let dVol = rec.dCur - rec.dPrev;
                 let nVol = rec.nCur - rec.nPrev;
+                let dateStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long', year:'numeric'}).replace(' р.','');
 
                 let otherHTML = '';
                 if(rec.otherCost > 0) {
-                    otherHTML = `<div class="mt-2 pt-2 border-t border-dashed text-purple-700 flex flex-wrap gap-x-3 gap-y-1">
-                        ${rec.rent ? `<span>🏢 Квартпл.: ${rec.rent} грн</span>` : ''}
-                        ${rec.garbage ? `<span>🗑 Сміття: ${rec.garbage} грн</span>` : ''}
-                        ${rec.waterSub ? `<span>🚰 Абон.вода: ${rec.waterSub} грн</span>` : ''}
+                    otherHTML = `
+                    <div class="mt-3 pt-2 border-t border-dashed text-sm flex flex-col gap-1">
+                        <div class="flex justify-between text-purple-800 font-medium">
+                            <span>🏢 Інші платежі</span>
+                            <span>${rec.otherCost.toFixed(2)} ₴</span>
+                        </div>
+                        <div class="text-xs text-gray-500 flex flex-wrap gap-x-3">
+                            ${rec.rent ? `<span>Квартпл: ${rec.rent}</span>` : ''}
+                            ${rec.garbage ? `<span>Сміття: ${rec.garbage}</span>` : ''}
+                            ${rec.waterSub ? `<span>Абон.вода: ${rec.waterSub}</span>` : ''}
+                        </div>
                     </div>`;
                 }
 
                 card.innerHTML = `
                     <div class="flex justify-between items-center mb-3 pb-2 border-b">
-                        <span class="font-bold text-lg capitalize">${new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long', year:'numeric'}).replace(' р.','')}</span>
-                        <div class="flex items-center space-x-2">
-                            <span class="font-bold text-gray-800">${rec.total.toFixed(2)} грн</span>
-                            <button onclick="togglePaid(${index})" class="text-sm px-2 py-1 rounded-md ${rec.paid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}">
-                                ${rec.paid ? 'Оплачено' : 'Сплатити'}
-                            </button>
+                        <span class="font-bold text-lg capitalize text-gray-800">${dateStr}</span>
+                        <span class="font-black text-xl text-gray-900">${rec.total.toFixed(2)} ₴</span>
+                    </div>
+
+                    <div class="space-y-3">
+                        <!-- Вода -->
+                        <div class="flex flex-col">
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium text-blue-700">💧 Вода</span>
+                                <span class="font-semibold text-gray-800">${rec.waterCost.toFixed(2)} ₴</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs text-gray-500 mt-1 bg-gray-50 p-1.5 rounded">
+                                <span>Мин: ${rec.wPrev}</span>
+                                <span class="text-blue-600 font-medium bg-blue-100 px-2 py-0.5 rounded">Пот: <b class="text-[13px] text-gray-900">${rec.wCur}</b></span>
+                                <span>${wVol} м³</span>
+                            </div>
+                        </div>
+
+                        <!-- Світло -->
+                        <div class="flex flex-col">
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium text-yellow-600">⚡️ Світло</span>
+                                <span class="font-semibold text-gray-800">${rec.electroCost.toFixed(2)} ₴</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-xs text-gray-500 mt-1 bg-gray-50 p-1.5 rounded">
+                                <div>
+                                    <span class="block text-[10px] uppercase text-yellow-600 font-medium mb-0.5">День (${dVol} кВт)</span>
+                                    ${rec.dPrev} &rarr; <b class="text-[13px] text-gray-900">${rec.dCur}</b>
+                                </div>
+                                <div>
+                                    <span class="block text-[10px] uppercase text-indigo-500 font-medium mb-0.5">Ніч (${nVol} кВт)</span>
+                                    ${rec.nPrev} &rarr; <b class="text-[13px] text-gray-900">${rec.nCur}</b>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="text-xs text-gray-600 space-y-1">
-                        <div class="flex justify-between"><span>💧 Вода: ${wVol} кубів</span> <span>${rec.waterCost.toFixed(2)} грн</span></div>
-                        <div class="flex justify-between"><span>⚡️ День: ${dVol} кВт</span> <span rowspan="2" class="text-right">${rec.electroCost.toFixed(2)} грн</span></div>
-                        <div class="flex justify-between"><span>🌙 Ніч: ${nVol} кВт</span></div>
-                    </div>
+
                     ${otherHTML}
-                    <div class="mt-3 text-right">
-                        <button onclick="deleteRecord(${index})" class="text-red-400 text-xs hover:text-red-600">Видалити запис</button>
+
+                    <!-- Кнопки дій -->
+                    <div class="mt-4 pt-3 border-t border-gray-100 flex gap-2 justify-between">
+                        <button onclick="togglePaid(${index})" class="flex-1 text-center py-2 rounded-lg font-bold text-sm transition-colors ${rec.paid ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600 border border-red-100'}">
+                            ${rec.paid ? '✅ ОПЛАЧЕНО' : '💳 СПЛАТИТИ'}
+                        </button>
+                        <button onclick="copyData(${index})" class="px-3 py-2 bg-gray-100 rounded-lg text-gray-600 hover:bg-gray-200 text-sm font-medium" title="Скопіювати для банку">📋 Копія</button>
+                        <button onclick="editRecord(${index})" class="px-3 py-2 bg-blue-50 rounded-lg text-blue-600 hover:bg-blue-100" title="Редагувати">✏️</button>
+                        <button onclick="deleteRecord(${index})" class="px-3 py-2 bg-red-50 rounded-lg text-red-500 hover:bg-red-100" title="Видалити">🗑</button>
                     </div>
                 `;
                 list.appendChild(card);
             });
         }
 
+        // Нові функції
+        window.copyData = function(index) {
+            let rec = records[index];
+            let text = `Показники за ${rec.month}:\n💧 Вода: ${rec.wCur}\n☀️ Світло (день): ${rec.dCur}\n🌙 Світло (ніч): ${rec.nCur}`;
+            navigator.clipboard.writeText(text).then(() => alert('📋 Показники скопійовано!\nТепер можна вставити їх у Приват24 або Monobank.'));
+        };
+
+        window.editRecord = function(index) {
+            let rec = records[index];
+            document.getElementById('monthInput').value = rec.month;
+            
+            document.getElementById('wPrev').value = rec.wPrev; document.getElementById('wCur').value = rec.wCur;
+            document.getElementById('dPrev').value = rec.dPrev; document.getElementById('dCur').value = rec.dCur;
+            document.getElementById('nPrev').value = rec.nPrev; document.getElementById('nCur').value = rec.nCur;
+            
+            document.getElementById('pRent').value = rec.rent || '';
+            document.getElementById('pGarbage').value = rec.garbage || '';
+            document.getElementById('pWaterSub').value = rec.waterSub || '';
+            
+            let m = new Date(rec.month).getMonth() + 1;
+            document.getElementById('isWinterInput').checked = (m >= 10 || m <= 4);
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            calculatePreview();
+        };
+
         window.togglePaid = function(index) { records[index].paid = !records[index].paid; saveData(); };
-        window.deleteRecord = function(index) { if(confirm('Видалити?')) { records.splice(index, 1); saveData(); } };
+        window.deleteRecord = function(index) { if(confirm('Точно видалити цей місяць?')) { records.splice(index, 1); saveData(); } };
         function saveData() { localStorage.setItem('utilityRecords', JSON.stringify(records)); renderRecords(); }
 
         renderRecords();
