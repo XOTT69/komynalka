@@ -118,7 +118,8 @@
     <!-- Модульний скрипт для роботи з Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // Змінено signInWithRedirect на signInWithPopup
+        import { getAuth, signInWithPopup, onAuthStateChanged, signOut, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -211,10 +212,17 @@
             }
         });
 
+        // НОВИЙ МЕТОД ВХОДУ (Popup)
         window.loginWithGoogle = () => {
             loadingScreen.classList.remove('hidden');
             loginScreen.classList.add('hidden');
-            signInWithRedirect(auth, provider);
+            
+            signInWithPopup(auth, provider).catch(error => {
+                console.error("Помилка входу:", error);
+                loadingScreen.classList.add('hidden');
+                loginScreen.classList.remove('hidden');
+                alert("Не вдалося увійти. Можливо, ви заблокували спливаюче вікно.");
+            });
         };
 
         window.logoutFromGoogle = () => {
