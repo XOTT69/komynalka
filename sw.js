@@ -1,4 +1,4 @@
-const CACHE_NAME = 'utility-cache-v2'; // Змінили версію
+const CACHE_NAME = 'utility-cache-v3'; // Версію змінено на v3
 const urlsToCache = [
   './',
   './index.html',
@@ -30,8 +30,7 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Стратегія "Network First, fallback to cache"
-  // Завжди тягне свіжу версію, якщо є інтернет
+  // Стратегія "Network First" - завжди тягне свіжу версію
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
   );
