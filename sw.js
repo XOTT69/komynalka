@@ -1,4 +1,6 @@
-const CACHE_NAME = 'utility-cache-v3'; // Версію змінено на v3
+// Назву кешу більше не треба міняти вручну!
+const CACHE_NAME = 'utility-dynamic-cache';
+
 const urlsToCache = [
   './',
   './index.html',
@@ -6,32 +8,51 @@ const urlsToCache = [
   './icon.png'
 ];
 
+// Встановлення
 self.addEventListener('install', event => {
-  self.skipWaiting(); // Змушує новий Service Worker активуватися одразу
+  self.skipWaiting(); // Одразу активуємо новий SW
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
 });
 
+// Активація (очищення старих версій кешу, якщо вони ще лишились)
 self.addEventListener('activate', event => {
-  // Видаляємо старий кеш при оновленні
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
+        cacheNames.map(cache => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => self.clients.claim()) // Перехоплюємо контроль над сторінкою
   );
 });
 
+// Стратегія: Завжди тягнемо з мережі. Якщо успішно - оновлюємо кеш. Якщо мережі нема - беремо з кешу.
 self.addEventListener('fetch', event => {
-  // Стратегія "Network First" - завжди тягне свіжу версію
+  // Ігноруємо запити до Firebase, бо вони мають свою логіку (onSnapshot)
+  if (event.request.url.includes('firestore.googleapis.com') || event.request.url.includes('identitytoolkit')) {
+    return;
+  }
+
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request)
+      .then(networkResponse => {
+        // Якщо завантажили успішно, кладемо копію в кеш
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // Якщо інтернету немає, шукаємо в кеші
+        return caches.match(event.request);
+      })
   );
 });
