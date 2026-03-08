@@ -76,7 +76,8 @@
             </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto no-scrollbar pb-[calc(100px+env(safe-area-inset-bottom))] px-4 relative">
+        <!-- Центральний контейнер з відступом під скрол (щоб нічого не ховалося під навігацію) -->
+        <div class="flex-1 overflow-y-auto no-scrollbar pb-[calc(110px+env(safe-area-inset-bottom))] px-4 relative">
             
             <!-- ВКЛАДКА 1: РОЗРАХУНОК -->
             <div id="tabCalc" class="tab-content block space-y-4">
@@ -187,7 +188,6 @@
                             </span>
                             <span id="customCostDisplay" class="font-black text-lg text-slate-800 dark:text-white">0.00 ₴</span>
                         </div>
-                        <!-- Сітка інших послуг -->
                         <div id="customServicesContainer" class="grid grid-cols-2 gap-2 empty:hidden"></div>
                         <p id="customEmptyMsg" class="text-[10px] text-center text-slate-400 hidden">Додайте послуги в налаштуваннях</p>
                     </div>
@@ -205,9 +205,9 @@
                 </form>
             </div>
 
-            <!-- ВКЛАДКА 2: ІСТОРІЯ -->
+            <!-- ВКЛАДКА 2: ІСТОРІЯ (З групуванням по роках) -->
             <div id="tabHistory" class="tab-content hidden space-y-4">
-                <div class="grid grid-cols-2 gap-3 mb-2">
+                <div class="grid grid-cols-2 gap-3 mb-4">
                     <div class="bg-blue-600 p-3 rounded-2xl text-white shadow-md">
                         <p class="text-blue-200 text-[9px] font-bold uppercase mb-0.5">Загалом</p>
                         <p id="statsTotal" class="font-black text-xl">0 ₴</p>
@@ -217,7 +217,8 @@
                         <p id="statsAvg" class="font-black text-xl text-slate-800 dark:text-white">0 ₴</p>
                     </div>
                 </div>
-                <div id="recordsList" class="space-y-3"></div>
+                <!-- Сюди рендеряться роки і записи -->
+                <div id="recordsList" class="space-y-5"></div>
             </div>
 
             <!-- ВКЛАДКА 3: НАЛАШТУВАННЯ -->
@@ -229,10 +230,10 @@
                         Тарифи (₴)
                     </h3>
                     <div class="grid grid-cols-2 gap-2 text-sm">
-                        <div><label class="block text-slate-400 text-[9px] uppercase font-bold mb-0.5 ml-1">Вода</label><input type="number" id="tWater" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg p-2 font-bold outline-none text-slate-800 dark:text-white"></div>
-                        <div><label class="block text-slate-400 text-[9px] uppercase font-bold mb-0.5 ml-1">Газ</label><input type="number" id="tGas" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg p-2 font-bold outline-none text-slate-800 dark:text-white"></div>
-                        <div><label class="block text-slate-400 text-[9px] uppercase font-bold mb-0.5 ml-1">Світло (база)</label><input type="number" id="tElectroBase" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg p-2 font-bold outline-none text-slate-800 dark:text-white"></div>
-                        <div><label class="block text-slate-400 text-[9px] uppercase font-bold mb-0.5 ml-1">Світло (зима)</label><input type="number" id="tElectroWinter" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg p-2 font-bold outline-none text-slate-800 dark:text-white"></div>
+                        <div class="relative"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Вода</span><input type="number" id="tWater" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
+                        <div class="relative"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Газ</span><input type="number" id="tGas" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
+                        <div class="relative"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Світло (база)</span><input type="number" id="tElectroBase" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
+                        <div class="relative"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Світло (зима)</span><input type="number" id="tElectroWinter" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
                     </div>
                 </div>
 
@@ -261,15 +262,16 @@
                     </h3>
                     <p class="text-[9px] text-slate-400 mb-3 leading-tight">Створіть свої поля. Суму можна залишити порожньою.</p>
                     <div id="customServicesSettingsList" class="space-y-2 mb-3"></div>
-                    <button onclick="addCustomServiceField()" class="w-full py-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-xs font-bold text-blue-600 dark:text-blue-400 border border-dashed border-slate-200 dark:border-slate-600">+ Додати нову послугу</button>
+                    <button onclick="addCustomServiceField()" class="w-full py-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-xs font-bold text-blue-600 dark:text-blue-400 border border-dashed border-slate-200 dark:border-slate-600 hover:bg-slate-100 transition-colors">+ Додати нову послугу</button>
                 </div>
                 
-                <button onclick="saveSettings()" class="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl py-3.5 font-bold shadow-lg mt-2 mb-4">
+                <button onclick="saveSettings()" class="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl py-3.5 font-bold shadow-lg transition-transform active:scale-[0.98]">
                     Зберегти налаштування
                 </button>
             </div>
         </div>
 
+        <!-- НИЖНЯ ПАНЕЛЬ НАВІГАЦІЇ -->
         <div class="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 pb-[max(env(safe-area-inset-bottom),16px)] z-[60]">
             <div class="flex justify-around items-center px-4 py-2 max-w-md mx-auto w-full">
                 <button onclick="switchTab('tabCalc')" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center p-2 text-blue-600 transition-colors">
@@ -303,6 +305,7 @@
             let btnId = tabId === 'tabCalc' ? 'btnTabCalc' : (tabId === 'tabHistory' ? 'btnTabHistory' : 'btnTabSettings');
             document.getElementById(btnId).classList.remove('text-slate-400'); document.getElementById(btnId).classList.add('text-blue-600');
             if(tabId === 'tabHistory') renderRecords(); if(tabId === 'tabSettings') renderSettingsCustomServices();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function toggleTheme() {
@@ -353,11 +356,11 @@
         function renderSettingsCustomServices() {
             const container = document.getElementById('customServicesSettingsList');
             container.innerHTML = customServices.map((srv, index) => `
-                <div class="flex gap-2 items-center bg-slate-100 dark:bg-slate-700/50 p-1.5 rounded-xl border border-slate-200 dark:border-slate-600">
-                    <input type="text" value="${srv.name}" onchange="customServices[${index}].name = this.value" placeholder="Назва" class="flex-1 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold outline-none px-2 py-1.5 text-slate-800 dark:text-white">
-                    <input type="number" step="0.01" value="${srv.defaultSum}" onchange="customServices[${index}].defaultSum = this.value" placeholder="Сума" class="w-16 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold outline-none px-1 py-1.5 text-center text-slate-800 dark:text-white">
+                <div class="flex gap-2 items-center bg-slate-100 dark:bg-slate-700/50 p-2 rounded-xl border border-slate-200 dark:border-slate-600">
+                    <input type="text" value="${srv.name}" onchange="customServices[${index}].name = this.value" placeholder="Назва" class="flex-1 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold outline-none px-2 py-2 text-slate-800 dark:text-white">
+                    <input type="number" step="0.01" value="${srv.defaultSum}" onchange="customServices[${index}].defaultSum = this.value" placeholder="Сума" class="w-16 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold outline-none px-1 py-2 text-center text-slate-800 dark:text-white">
                     <button onclick="removeCustomService(${index})" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 </div>
             `).join('');
@@ -461,13 +464,33 @@
         function renderRecords() {
             const list = document.getElementById('recordsList'); list.innerHTML = '';
             let totalSum = records.reduce((sum, r) => sum + r.total, 0); document.getElementById('statsTotal').innerText = totalSum.toFixed(0) + ' ₴'; document.getElementById('statsAvg').innerText = (records.length ? (totalSum / records.length) : 0).toFixed(0) + ' ₴';
+            
+            // Групування по роках
+            let groupedRecords = {};
             records.sort((a, b) => new Date(b.month) - new Date(a.month)).forEach((rec, index) => {
-                const card = document.createElement('div'); card.className = `rounded-2xl shadow-sm border bg-white dark:bg-slate-800 overflow-hidden ${rec.paid ? 'border-green-400 dark:border-green-500/50' : 'border-slate-100 dark:border-slate-700 border-l-[4px] border-l-red-500'}`;
-                let dateStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long', year:'numeric'}).replace(' р.','');
-                let customServicesHTML = ''; if (rec.customData && Object.keys(rec.customData).length > 0) { let itemsHTML = Object.values(rec.customData).map(item => `${item.name}: ${item.val} ₴`).join(' <span class="text-slate-300 mx-1">|</span> '); customServicesHTML = `<div class="flex justify-between pb-1"><div><span class="font-bold text-purple-500 text-[11px] uppercase">Інші</span><div class="text-[10px] text-slate-500 mt-0.5">${itemsHTML}</div></div><span class="font-bold text-xs">${rec.customCost.toFixed(2)} ₴</span></div>`; }
-                let headerHTML = `<div class="p-4 flex justify-between items-center cursor-pointer" onclick="toggleRecord(${index})"><div class="flex items-center gap-3"><div id="chev-${index}" class="chevron w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div><div><h4 class="font-bold capitalize text-slate-800 dark:text-white leading-none mb-1.5">${dateStr}</h4><span class="text-[9px] font-black uppercase px-2 py-0.5 rounded ${rec.paid ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600'}">${rec.paid ? 'Оплачено' : 'Борг'}</span></div></div><span class="font-black text-lg text-slate-900 dark:text-white">${rec.total.toFixed(2)} ₴</span></div>`;
-                let detailsHTML = `<div id="details-${index}" class="details-content bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 px-4"><div class="py-3 space-y-3 text-xs">${rec.waterCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-blue-500 text-[11px] uppercase">Вода</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.wPrev}</b> → Пот: <b>${rec.wCur}</b> (Витрата: ${rec.wCur - rec.wPrev} м³)</div></div><span class="font-bold">${rec.waterCost.toFixed(2)} ₴</span></div>` : ''}${rec.electroCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-yellow-500 text-[11px] uppercase">Світло</span><div class="text-[10px] text-slate-500 mt-0.5">День: <b>${rec.dPrev}</b> → <b>${rec.dCur}</b></div><div class="text-[10px] text-slate-500">Ніч: <b>${rec.nPrev}</b> → <b>${rec.nCur}</b></div></div><span class="font-bold">${rec.electroCost.toFixed(2)} ₴</span></div>` : ''}${rec.gasCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-orange-500 text-[11px] uppercase">Газ</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.gPrev||0}</b> → Пот: <b>${rec.gCur||0}</b></div></div><span class="font-bold">${rec.gasCost.toFixed(2)} ₴</span></div>` : ''}${customServicesHTML}</div><div class="pb-4 pt-1 flex gap-2"><button onclick="togglePaid(${index})" class="flex-1 py-2 rounded-lg font-bold text-xs ${rec.paid ? 'bg-slate-200 dark:bg-slate-700 text-slate-700' : 'bg-blue-600 text-white shadow-md'}">${rec.paid ? 'Скасувати' : '💳 Відмітити сплаченим'}</button><button onclick="editRecord(${index})" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-slate-700 dark:text-white" title="Редагувати"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button><button onclick="deleteRecord(${index})" class="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg" title="Видалити"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></div></div>`;
-                card.innerHTML = headerHTML + detailsHTML; list.appendChild(card);
+                let year = rec.month.split('-')[0];
+                if (!groupedRecords[year]) groupedRecords[year] = [];
+                groupedRecords[year].push({rec, index});
+            });
+
+            Object.keys(groupedRecords).sort((a, b) => b - a).forEach(year => {
+                // Заголовок року
+                let yearHeader = document.createElement('div');
+                yearHeader.className = "sticky top-0 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md py-2 z-10 -mx-4 px-4 flex items-center justify-between";
+                yearHeader.innerHTML = `<h2 class="text-xl font-black text-slate-800 dark:text-white">${year}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-700 ml-4"></div>`;
+                list.appendChild(yearHeader);
+
+                // Записи за цей рік
+                groupedRecords[year].forEach(item => {
+                    let {rec, index} = item;
+                    const card = document.createElement('div'); card.className = `rounded-2xl shadow-sm border bg-white dark:bg-slate-800 overflow-hidden mb-3 ${rec.paid ? 'border-green-400 dark:border-green-500/50' : 'border-slate-100 dark:border-slate-700 border-l-[4px] border-l-red-500'}`;
+                    let dateStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); // Прибрали рік, бо є заголовок
+                    
+                    let customServicesHTML = ''; if (rec.customData && Object.keys(rec.customData).length > 0) { let itemsHTML = Object.values(rec.customData).map(item => `${item.name}: ${item.val} ₴`).join(' <span class="text-slate-300 mx-1">|</span> '); customServicesHTML = `<div class="flex justify-between pb-1"><div><span class="font-bold text-purple-500 text-[11px] uppercase">Інші</span><div class="text-[10px] text-slate-500 mt-0.5">${itemsHTML}</div></div><span class="font-bold text-xs">${rec.customCost.toFixed(2)} ₴</span></div>`; }
+                    let headerHTML = `<div class="p-4 flex justify-between items-center cursor-pointer" onclick="toggleRecord(${index})"><div class="flex items-center gap-3"><div id="chev-${index}" class="chevron w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div><div><h4 class="font-bold capitalize text-slate-800 dark:text-white leading-none mb-1.5">${dateStr}</h4><span class="text-[9px] font-black uppercase px-2 py-0.5 rounded ${rec.paid ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600'}">${rec.paid ? 'Оплачено' : 'Борг'}</span></div></div><span class="font-black text-lg text-slate-900 dark:text-white">${rec.total.toFixed(2)} ₴</span></div>`;
+                    let detailsHTML = `<div id="details-${index}" class="details-content bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 px-4"><div class="py-3 space-y-3 text-xs">${rec.waterCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-blue-500 text-[11px] uppercase">Вода</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.wPrev}</b> → Пот: <b>${rec.wCur}</b> (Витрата: ${rec.wCur - rec.wPrev} м³)</div></div><span class="font-bold">${rec.waterCost.toFixed(2)} ₴</span></div>` : ''}${rec.electroCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-yellow-500 text-[11px] uppercase">Світло</span><div class="text-[10px] text-slate-500 mt-0.5">День: <b>${rec.dPrev}</b> → <b>${rec.dCur}</b></div><div class="text-[10px] text-slate-500">Ніч: <b>${rec.nPrev}</b> → <b>${rec.nCur}</b></div></div><span class="font-bold">${rec.electroCost.toFixed(2)} ₴</span></div>` : ''}${rec.gasCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-orange-500 text-[11px] uppercase">Газ</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.gPrev||0}</b> → Пот: <b>${rec.gCur||0}</b></div></div><span class="font-bold">${rec.gasCost.toFixed(2)} ₴</span></div>` : ''}${customServicesHTML}</div><div class="pb-4 pt-1 flex gap-2"><button onclick="togglePaid(${index})" class="flex-1 py-2 rounded-lg font-bold text-xs ${rec.paid ? 'bg-slate-200 dark:bg-slate-700 text-slate-700' : 'bg-blue-600 text-white shadow-md'}">${rec.paid ? 'Скасувати' : '💳 Відмітити сплаченим'}</button><button onclick="editRecord(${index})" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-slate-700 dark:text-white" title="Редагувати"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button><button onclick="deleteRecord(${index})" class="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg" title="Видалити"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></div></div>`;
+                    card.innerHTML = headerHTML + detailsHTML; list.appendChild(card);
+                });
             });
         }
 
