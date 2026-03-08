@@ -34,7 +34,8 @@
         }
     </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans h-screen flex flex-col transition-colors duration-300 overflow-hidden">
+<!-- Додано style="height: 100dvh" для вирішення проблеми з панеллю Safari -->
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans flex flex-col transition-colors duration-300 overflow-hidden" style="height: 100dvh;">
 
     <!-- Екран Логіну -->
     <div id="loginScreen" class="absolute inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-900">
@@ -76,8 +77,8 @@
             </div>
         </div>
 
-        <!-- Центральний контейнер з відступом під скрол (щоб нічого не ховалося під навігацію) -->
-        <div class="flex-1 overflow-y-auto no-scrollbar pb-[calc(110px+env(safe-area-inset-bottom))] px-4 relative">
+        <!-- Центральний контейнер (без pb-..., замість цього розпірка в кінці) -->
+        <div class="flex-1 overflow-y-auto no-scrollbar px-4 relative">
             
             <!-- ВКЛАДКА 1: РОЗРАХУНОК -->
             <div id="tabCalc" class="tab-content block space-y-4">
@@ -257,7 +258,7 @@
 
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
                     <h3 class="font-bold mb-1 text-sm text-slate-800 dark:text-white flex items-center gap-1.5">
-                        <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
                         Інші послуги
                     </h3>
                     <p class="text-[9px] text-slate-400 mb-3 leading-tight">Створіть свої поля. Суму можна залишити порожньою.</p>
@@ -269,6 +270,10 @@
                     Зберегти налаштування
                 </button>
             </div>
+
+            <!-- ФІЗИЧНА РОЗПІРКА ДЛЯ СКРОЛУ (Вирішує баг iOS Safari) -->
+            <div class="h-32 shrink-0 w-full"></div>
+            
         </div>
 
         <!-- НИЖНЯ ПАНЕЛЬ НАВІГАЦІЇ -->
@@ -465,7 +470,6 @@
             const list = document.getElementById('recordsList'); list.innerHTML = '';
             let totalSum = records.reduce((sum, r) => sum + r.total, 0); document.getElementById('statsTotal').innerText = totalSum.toFixed(0) + ' ₴'; document.getElementById('statsAvg').innerText = (records.length ? (totalSum / records.length) : 0).toFixed(0) + ' ₴';
             
-            // Групування по роках
             let groupedRecords = {};
             records.sort((a, b) => new Date(b.month) - new Date(a.month)).forEach((rec, index) => {
                 let year = rec.month.split('-')[0];
@@ -474,17 +478,15 @@
             });
 
             Object.keys(groupedRecords).sort((a, b) => b - a).forEach(year => {
-                // Заголовок року
                 let yearHeader = document.createElement('div');
                 yearHeader.className = "sticky top-0 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md py-2 z-10 -mx-4 px-4 flex items-center justify-between";
                 yearHeader.innerHTML = `<h2 class="text-xl font-black text-slate-800 dark:text-white">${year}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-700 ml-4"></div>`;
                 list.appendChild(yearHeader);
 
-                // Записи за цей рік
                 groupedRecords[year].forEach(item => {
                     let {rec, index} = item;
                     const card = document.createElement('div'); card.className = `rounded-2xl shadow-sm border bg-white dark:bg-slate-800 overflow-hidden mb-3 ${rec.paid ? 'border-green-400 dark:border-green-500/50' : 'border-slate-100 dark:border-slate-700 border-l-[4px] border-l-red-500'}`;
-                    let dateStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); // Прибрали рік, бо є заголовок
+                    let dateStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); 
                     
                     let customServicesHTML = ''; if (rec.customData && Object.keys(rec.customData).length > 0) { let itemsHTML = Object.values(rec.customData).map(item => `${item.name}: ${item.val} ₴`).join(' <span class="text-slate-300 mx-1">|</span> '); customServicesHTML = `<div class="flex justify-between pb-1"><div><span class="font-bold text-purple-500 text-[11px] uppercase">Інші</span><div class="text-[10px] text-slate-500 mt-0.5">${itemsHTML}</div></div><span class="font-bold text-xs">${rec.customCost.toFixed(2)} ₴</span></div>`; }
                     let headerHTML = `<div class="p-4 flex justify-between items-center cursor-pointer" onclick="toggleRecord(${index})"><div class="flex items-center gap-3"><div id="chev-${index}" class="chevron w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div><div><h4 class="font-bold capitalize text-slate-800 dark:text-white leading-none mb-1.5">${dateStr}</h4><span class="text-[9px] font-black uppercase px-2 py-0.5 rounded ${rec.paid ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600'}">${rec.paid ? 'Оплачено' : 'Борг'}</span></div></div><span class="font-black text-lg text-slate-900 dark:text-white">${rec.total.toFixed(2)} ₴</span></div>`;
