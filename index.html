@@ -34,7 +34,6 @@
         }
     </script>
 </head>
-<!-- Додано style="height: 100dvh" для вирішення проблеми з панеллю Safari -->
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans flex flex-col transition-colors duration-300 overflow-hidden" style="height: 100dvh;">
 
     <!-- Екран Логіну -->
@@ -77,7 +76,6 @@
             </div>
         </div>
 
-        <!-- Центральний контейнер (без pb-..., замість цього розпірка в кінці) -->
         <div class="flex-1 overflow-y-auto no-scrollbar px-4 relative">
             
             <!-- ВКЛАДКА 1: РОЗРАХУНОК -->
@@ -85,7 +83,7 @@
                 
                 <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
                     <input type="month" id="monthInput" class="font-bold text-lg outline-none bg-transparent" required>
-                    <label class="flex items-center space-x-1.5 text-sm font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1.5 rounded-xl cursor-pointer">
+                    <label id="winterCheckboxWrapper" class="flex items-center space-x-1.5 text-sm font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1.5 rounded-xl cursor-pointer">
                         <input type="checkbox" id="isWinterInput" class="rounded accent-blue-600 w-4 h-4"><span>❄️ Зима</span>
                     </label>
                 </div>
@@ -127,9 +125,9 @@
                         </div>
                         
                         <div class="space-y-2">
-                            <!-- День -->
-                            <div class="flex gap-2 items-center">
-                                <div class="w-8 text-[9px] font-bold text-yellow-500 uppercase text-right pr-1">День</div>
+                            <!-- День / База -->
+                            <div class="flex gap-2 items-center" id="electroDayRow">
+                                <div id="electroDayLabel" class="w-8 text-[9px] font-bold text-yellow-500 uppercase text-right pr-1">День</div>
                                 <div class="flex-1 relative">
                                     <span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase tracking-wide">Минулі</span>
                                     <input type="number" id="dPrev" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-center outline-none" required>
@@ -141,7 +139,7 @@
                                 </div>
                             </div>
                             <!-- Ніч -->
-                            <div class="flex gap-2 items-center">
+                            <div class="flex gap-2 items-center" id="electroNightRow">
                                 <div class="w-8 text-[9px] font-bold text-indigo-400 uppercase text-right pr-1">Ніч</div>
                                 <div class="flex-1 relative">
                                     <span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase tracking-wide">Минулі</span>
@@ -206,7 +204,7 @@
                 </form>
             </div>
 
-            <!-- ВКЛАДКА 2: ІСТОРІЯ (З групуванням по роках) -->
+            <!-- ВКЛАДКА 2: ІСТОРІЯ -->
             <div id="tabHistory" class="tab-content hidden space-y-4">
                 <div class="grid grid-cols-2 gap-3 mb-4">
                     <div class="bg-blue-600 p-3 rounded-2xl text-white shadow-md">
@@ -218,7 +216,6 @@
                         <p id="statsAvg" class="font-black text-xl text-slate-800 dark:text-white">0 ₴</p>
                     </div>
                 </div>
-                <!-- Сюди рендеряться роки і записи -->
                 <div id="recordsList" class="space-y-5"></div>
             </div>
 
@@ -234,7 +231,7 @@
                         <div class="relative"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Вода</span><input type="number" id="tWater" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
                         <div class="relative"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Газ</span><input type="number" id="tGas" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
                         <div class="relative"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Світло (база)</span><input type="number" id="tElectroBase" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
-                        <div class="relative"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Світло (зима)</span><input type="number" id="tElectroWinter" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
+                        <div class="relative" id="settingElectroWinterWrap"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Світло (зима)</span><input type="number" id="tElectroWinter" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
                     </div>
                 </div>
 
@@ -245,11 +242,23 @@
                             <span class="flex items-center gap-1.5"><span class="text-blue-500">💧</span> Вода</span>
                             <div class="relative inline-block w-10 mr-2 align-middle select-none"><input type="checkbox" id="prefWater" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"></div></div>
                         </label>
+                        
                         <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-300">
                             <span class="flex items-center gap-1.5"><span class="text-yellow-500">⚡️</span> Світло</span>
                             <div class="relative inline-block w-10 mr-2 align-middle select-none"><input type="checkbox" id="prefElectro" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"></div></div>
                         </label>
-                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-300">
+                        
+                        <!-- НОВІ ОПЦІЇ ДЛЯ СВІТЛА -->
+                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-300 pl-6 border-l-2 border-slate-100 dark:border-slate-700 ml-2">
+                            <span class="flex items-center gap-1.5 text-xs text-slate-500">Двозонний (День/Ніч)</span>
+                            <div class="relative inline-block w-10 mr-2 align-middle select-none"><input type="checkbox" id="prefElectroTwoZone" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"></div></div>
+                        </label>
+                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-300 pl-6 border-l-2 border-slate-100 dark:border-slate-700 ml-2">
+                            <span class="flex items-center gap-1.5 text-xs text-slate-500">Зимовий/Пільговий</span>
+                            <div class="relative inline-block w-10 mr-2 align-middle select-none"><input type="checkbox" id="prefElectroWinter" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"></div></div>
+                        </label>
+
+                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-300 mt-2">
                             <span class="flex items-center gap-1.5"><span class="text-orange-500">🔥</span> Газ</span>
                             <div class="relative inline-block w-10 mr-2 align-middle select-none"><input type="checkbox" id="prefGas" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"></div></div>
                         </label>
@@ -271,7 +280,7 @@
                 </button>
             </div>
 
-            <!-- ФІЗИЧНА РОЗПІРКА ДЛЯ СКРОЛУ (Вирішує баг iOS Safari) -->
+            <!-- ФІЗИЧНА РОЗПІРКА ДЛЯ СКРОЛУ -->
             <div class="h-32 shrink-0 w-full"></div>
             
         </div>
@@ -299,7 +308,8 @@
         const WORKER_URL = "https://komynalka.mikolenko-anton1.workers.dev";
         let sessionPhone = localStorage.getItem('k_phoneHash'); let sessionPass = localStorage.getItem('k_passHash');
         let defaultTariffs = { water: 30.38, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
-        let defaultPrefs = { showWater: true, showElectro: true, showGas: false };
+        // Нові дефолтні налаштування (день/ніч та зима включені за замовчуванням)
+        let defaultPrefs = { showWater: true, showElectro: true, showGas: false, electroTwoZone: true, electroWinter: true };
         let customServices = [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}, {id: "s3", name: "Абон. вода", defaultSum: ""}];
         let tariffs = { ...defaultTariffs }; let prefs = { ...defaultPrefs }; let records = [];
 
@@ -330,7 +340,13 @@
             const data = await res.json();
             if (res.status === 403) throw new Error("WRONG_PASSWORD");
             if (res.status === 404) return false; 
-            if (res.ok && data.success) { tariffs = data.data.tariffs || defaultTariffs; prefs = data.data.prefs || defaultPrefs; records = data.data.records || []; customServices = data.data.customServices || customServices; return true; }
+            if (res.ok && data.success) { 
+                tariffs = data.data.tariffs || defaultTariffs; 
+                prefs = { ...defaultPrefs, ...(data.data.prefs || {}) }; // Злиття старих збережень з новими ключами
+                records = data.data.records || []; 
+                customServices = data.data.customServices || customServices; 
+                return true; 
+            }
             throw new Error("SERVER_ERROR");
         }
 
@@ -390,9 +406,29 @@
         }
 
         function applyPreferences() {
-            document.getElementById('prefWater').checked = prefs.showWater; document.getElementById('prefElectro').checked = prefs.showElectro; document.getElementById('prefGas').checked = prefs.showGas;
-            document.getElementById('blockWater').style.display = prefs.showWater ? 'flex' : 'none'; document.getElementById('blockElectro').style.display = prefs.showElectro ? 'flex' : 'none'; document.getElementById('blockGas').style.display = prefs.showGas ? 'flex' : 'none';
+            document.getElementById('prefWater').checked = prefs.showWater;
+            document.getElementById('prefElectro').checked = prefs.showElectro;
+            document.getElementById('prefGas').checked = prefs.showGas;
+            document.getElementById('prefElectroTwoZone').checked = prefs.electroTwoZone;
+            document.getElementById('prefElectroWinter').checked = prefs.electroWinter;
+
+            document.getElementById('blockWater').style.display = prefs.showWater ? 'flex' : 'none';
+            document.getElementById('blockElectro').style.display = prefs.showElectro ? 'flex' : 'none';
+            document.getElementById('blockGas').style.display = prefs.showGas ? 'flex' : 'none';
             document.getElementById('blockCustomServices').style.display = customServices.length > 0 ? 'flex' : 'none';
+
+            // Відображення дня/ночі
+            if (prefs.electroTwoZone) {
+                document.getElementById('electroNightRow').style.display = 'flex';
+                document.getElementById('electroDayLabel').style.display = 'block';
+            } else {
+                document.getElementById('electroNightRow').style.display = 'none';
+                document.getElementById('electroDayLabel').style.display = 'none'; // Поля вводу розтягнуться на всю ширину як у Воді
+            }
+
+            // Відображення зимового тарифу
+            document.getElementById('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none';
+            document.getElementById('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'block' : 'none';
         }
 
         function initAppUI() {
@@ -405,7 +441,13 @@
 
         window.saveSettings = () => {
             tariffs = { water: parseFloat(document.getElementById('tWater').value)||defaultTariffs.water, electroBase: parseFloat(document.getElementById('tElectroBase').value)||defaultTariffs.electroBase, electroWinter: parseFloat(document.getElementById('tElectroWinter').value)||defaultTariffs.electroWinter, winterLimit: 2000, gas: parseFloat(document.getElementById('tGas').value)||defaultTariffs.gas, nightCoef: 0.5 };
-            prefs = { showWater: document.getElementById('prefWater').checked, showElectro: document.getElementById('prefElectro').checked, showGas: document.getElementById('prefGas').checked };
+            prefs = { 
+                showWater: document.getElementById('prefWater').checked, 
+                showElectro: document.getElementById('prefElectro').checked, 
+                showGas: document.getElementById('prefGas').checked,
+                electroTwoZone: document.getElementById('prefElectroTwoZone').checked,
+                electroWinter: document.getElementById('prefElectroWinter').checked
+            };
             customServices = customServices.filter(s => s.name.trim() !== "");
             syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); alert('✅ Налаштування збережено');
         };
@@ -429,15 +471,28 @@
 
         function calculatePreview() {
             let getVal = id => Math.max(0, parseFloat(document.getElementById(id)?.value) || 0);
+            
             if(prefs.showWater) currentCalc.waterCost = Math.max(0, getVal('wCur') - getVal('wPrev')) * tariffs.water; else currentCalc.waterCost = 0;
+            
             if(prefs.showElectro) {
-                let dVol = Math.max(0, getVal('dCur') - getVal('dPrev')), nVol = Math.max(0, getVal('nCur') - getVal('nPrev')), totalEl = dVol + nVol;
-                if (totalEl === 0) currentCalc.electroCost = 0;
-                else if (document.getElementById('isWinterInput').checked) {
-                    if (totalEl <= tariffs.winterLimit) currentCalc.electroCost = (dVol * tariffs.electroWinter) + (nVol * tariffs.electroWinter * tariffs.nightCoef);
-                    else { let dProp = dVol/totalEl, nProp = nVol/totalEl; currentCalc.electroCost = (tariffs.winterLimit * dProp * tariffs.electroWinter) + (tariffs.winterLimit * nProp * tariffs.electroWinter * tariffs.nightCoef) + ((totalEl - tariffs.winterLimit) * dProp * tariffs.electroBase) + ((totalEl - tariffs.winterLimit) * nProp * tariffs.electroBase * tariffs.nightCoef); }
-                } else currentCalc.electroCost = (dVol * tariffs.electroBase) + (nVol * tariffs.electroBase * tariffs.nightCoef);
+                let dVol = Math.max(0, getVal('dCur') - getVal('dPrev'));
+                let nVol = prefs.electroTwoZone ? Math.max(0, getVal('nCur') - getVal('nPrev')) : 0;
+                let totalEl = dVol + nVol;
+
+                if (totalEl === 0) {
+                    currentCalc.electroCost = 0;
+                } else if (prefs.electroWinter && document.getElementById('isWinterInput').checked) {
+                    if (totalEl <= tariffs.winterLimit) {
+                        currentCalc.electroCost = (dVol * tariffs.electroWinter) + (nVol * tariffs.electroWinter * tariffs.nightCoef);
+                    } else { 
+                        let dProp = dVol/totalEl, nProp = nVol/totalEl; 
+                        currentCalc.electroCost = (tariffs.winterLimit * dProp * tariffs.electroWinter) + (tariffs.winterLimit * nProp * tariffs.electroWinter * tariffs.nightCoef) + ((totalEl - tariffs.winterLimit) * dProp * tariffs.electroBase) + ((totalEl - tariffs.winterLimit) * nProp * tariffs.electroBase * tariffs.nightCoef); 
+                    }
+                } else {
+                    currentCalc.electroCost = (dVol * tariffs.electroBase) + (nVol * tariffs.electroBase * tariffs.nightCoef);
+                }
             } else currentCalc.electroCost = 0;
+
             if(prefs.showGas) currentCalc.gasCost = Math.max(0, getVal('gCur') - getVal('gPrev')) * (tariffs.gas || defaultTariffs.gas); else currentCalc.gasCost = 0;
 
             currentCalc.customCost = 0;
@@ -455,7 +510,7 @@
                 id: Date.now(), month: monthInput.value,
                 wPrev: prefs.showWater ? (parseFloat(document.getElementById('wPrev').value)||0) : 0, wCur: prefs.showWater ? (parseFloat(document.getElementById('wCur').value)||0) : 0,
                 dPrev: prefs.showElectro ? (parseFloat(document.getElementById('dPrev').value)||0) : 0, dCur: prefs.showElectro ? (parseFloat(document.getElementById('dCur').value)||0) : 0,
-                nPrev: prefs.showElectro ? (parseFloat(document.getElementById('nPrev').value)||0) : 0, nCur: prefs.showElectro ? (parseFloat(document.getElementById('nCur').value)||0) : 0,
+                nPrev: (prefs.showElectro && prefs.electroTwoZone) ? (parseFloat(document.getElementById('nPrev').value)||0) : 0, nCur: (prefs.showElectro && prefs.electroTwoZone) ? (parseFloat(document.getElementById('nCur').value)||0) : 0,
                 gPrev: prefs.showGas ? (parseFloat(document.getElementById('gPrev').value)||0) : 0, gCur: prefs.showGas ? (parseFloat(document.getElementById('gCur').value)||0) : 0,
                 customData: customData, waterCost: currentCalc.waterCost, electroCost: currentCalc.electroCost, gasCost: currentCalc.gasCost, customCost: currentCalc.customCost, total: currentCalc.total, paid: false
             };
@@ -489,8 +544,16 @@
                     let dateStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); 
                     
                     let customServicesHTML = ''; if (rec.customData && Object.keys(rec.customData).length > 0) { let itemsHTML = Object.values(rec.customData).map(item => `${item.name}: ${item.val} ₴`).join(' <span class="text-slate-300 mx-1">|</span> '); customServicesHTML = `<div class="flex justify-between pb-1"><div><span class="font-bold text-purple-500 text-[11px] uppercase">Інші</span><div class="text-[10px] text-slate-500 mt-0.5">${itemsHTML}</div></div><span class="font-bold text-xs">${rec.customCost.toFixed(2)} ₴</span></div>`; }
+                    
+                    // Якщо в записі немає нічних показників, відображаємо просто "Покази"
+                    let electroDetailsHTML = '';
+                    if (rec.electroCost > 0) {
+                        const hasNight = rec.nCur > 0 || rec.nPrev > 0;
+                        electroDetailsHTML = `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-yellow-500 text-[11px] uppercase">Світло</span><div class="text-[10px] text-slate-500 mt-0.5">${hasNight ? `День: <b>${rec.dPrev}</b> → <b>${rec.dCur}</b>` : `Покази: <b>${rec.dPrev}</b> → <b>${rec.dCur}</b>`}</div>${hasNight ? `<div class="text-[10px] text-slate-500">Ніч: <b>${rec.nPrev}</b> → <b>${rec.nCur}</b></div>` : ''}</div><span class="font-bold">${rec.electroCost.toFixed(2)} ₴</span></div>`;
+                    }
+
                     let headerHTML = `<div class="p-4 flex justify-between items-center cursor-pointer" onclick="toggleRecord(${index})"><div class="flex items-center gap-3"><div id="chev-${index}" class="chevron w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div><div><h4 class="font-bold capitalize text-slate-800 dark:text-white leading-none mb-1.5">${dateStr}</h4><span class="text-[9px] font-black uppercase px-2 py-0.5 rounded ${rec.paid ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600'}">${rec.paid ? 'Оплачено' : 'Борг'}</span></div></div><span class="font-black text-lg text-slate-900 dark:text-white">${rec.total.toFixed(2)} ₴</span></div>`;
-                    let detailsHTML = `<div id="details-${index}" class="details-content bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 px-4"><div class="py-3 space-y-3 text-xs">${rec.waterCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-blue-500 text-[11px] uppercase">Вода</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.wPrev}</b> → Пот: <b>${rec.wCur}</b> (Витрата: ${rec.wCur - rec.wPrev} м³)</div></div><span class="font-bold">${rec.waterCost.toFixed(2)} ₴</span></div>` : ''}${rec.electroCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-yellow-500 text-[11px] uppercase">Світло</span><div class="text-[10px] text-slate-500 mt-0.5">День: <b>${rec.dPrev}</b> → <b>${rec.dCur}</b></div><div class="text-[10px] text-slate-500">Ніч: <b>${rec.nPrev}</b> → <b>${rec.nCur}</b></div></div><span class="font-bold">${rec.electroCost.toFixed(2)} ₴</span></div>` : ''}${rec.gasCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-orange-500 text-[11px] uppercase">Газ</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.gPrev||0}</b> → Пот: <b>${rec.gCur||0}</b></div></div><span class="font-bold">${rec.gasCost.toFixed(2)} ₴</span></div>` : ''}${customServicesHTML}</div><div class="pb-4 pt-1 flex gap-2"><button onclick="togglePaid(${index})" class="flex-1 py-2 rounded-lg font-bold text-xs ${rec.paid ? 'bg-slate-200 dark:bg-slate-700 text-slate-700' : 'bg-blue-600 text-white shadow-md'}">${rec.paid ? 'Скасувати' : '💳 Відмітити сплаченим'}</button><button onclick="editRecord(${index})" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-slate-700 dark:text-white" title="Редагувати"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button><button onclick="deleteRecord(${index})" class="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg" title="Видалити"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></div></div>`;
+                    let detailsHTML = `<div id="details-${index}" class="details-content bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 px-4"><div class="py-3 space-y-3 text-xs">${rec.waterCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-blue-500 text-[11px] uppercase">Вода</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.wPrev}</b> → Пот: <b>${rec.wCur}</b> (Витрата: ${rec.wCur - rec.wPrev} м³)</div></div><span class="font-bold">${rec.waterCost.toFixed(2)} ₴</span></div>` : ''}${electroDetailsHTML}${rec.gasCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-orange-500 text-[11px] uppercase">Газ</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.gPrev||0}</b> → Пот: <b>${rec.gCur||0}</b></div></div><span class="font-bold">${rec.gasCost.toFixed(2)} ₴</span></div>` : ''}${customServicesHTML}</div><div class="pb-4 pt-1 flex gap-2"><button onclick="togglePaid(${index})" class="flex-1 py-2 rounded-lg font-bold text-xs ${rec.paid ? 'bg-slate-200 dark:bg-slate-700 text-slate-700' : 'bg-blue-600 text-white shadow-md'}">${rec.paid ? 'Скасувати' : '💳 Відмітити сплаченим'}</button><button onclick="editRecord(${index})" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-slate-700 dark:text-white" title="Редагувати"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button><button onclick="deleteRecord(${index})" class="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg" title="Видалити"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></div></div>`;
                     card.innerHTML = headerHTML + detailsHTML; list.appendChild(card);
                 });
             });
@@ -499,7 +562,7 @@
         window.editRecord = function(index) {
             let rec = records[index]; document.getElementById('monthInput').value = rec.month;
             if(prefs.showWater){ document.getElementById('wPrev').value = rec.wPrev; document.getElementById('wCur').value = rec.wCur; }
-            if(prefs.showElectro){ document.getElementById('dPrev').value = rec.dPrev; document.getElementById('dCur').value = rec.dCur; document.getElementById('nPrev').value = rec.nPrev; document.getElementById('nCur').value = rec.nCur; }
+            if(prefs.showElectro){ document.getElementById('dPrev').value = rec.dPrev; document.getElementById('dCur').value = rec.dCur; document.getElementById('nPrev').value = rec.nPrev || ''; document.getElementById('nCur').value = rec.nCur || ''; }
             if(prefs.showGas){ document.getElementById('gPrev').value = rec.gPrev || ''; document.getElementById('gCur').value = rec.gCur || ''; }
             if(rec.customData) { Object.keys(rec.customData).forEach(srvId => { let el = document.getElementById(`custom_${srvId}`); if(el) el.value = rec.customData[srvId].val; }); }
             document.getElementById('isWinterInput').checked = (new Date(rec.month).getMonth() + 1 >= 10 || new Date(rec.month).getMonth() + 1 <= 4);
