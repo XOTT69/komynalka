@@ -2,7 +2,6 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <!-- Додано viewport-fit=cover для правильної роботи Safe Area на iPhone -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Комуналка</title>
     <link rel="manifest" href="manifest.json">
@@ -12,11 +11,8 @@
     </script>
     <meta name="theme-color" content="#f8fafc">
     <link rel="apple-touch-icon" href="icon.png">
-    
-    <!-- Додаємо підтримку iOS PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    
     <style>
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
@@ -67,7 +63,7 @@
     <!-- Основний застосунок -->
     <div id="appScreen" class="hidden flex-col h-full w-full max-w-md mx-auto relative">
         
-        <!-- Шапка з урахуванням safe-area для iPhone -->
+        <!-- Шапка -->
         <div class="px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3 flex justify-between items-center bg-slate-50 dark:bg-slate-900 z-10 sticky top-0">
             <h1 class="text-2xl font-black text-blue-600 dark:text-blue-500 tracking-tight">Комуналка</h1>
             <div class="flex gap-2">
@@ -80,13 +76,11 @@
             </div>
         </div>
 
-        <!-- Контейнер з відступом під нижню панель (щоб можна було доскролити до кінця) -->
-        <div class="flex-1 overflow-y-auto no-scrollbar pb-[calc(80px+env(safe-area-inset-bottom))] px-4 relative">
+        <div class="flex-1 overflow-y-auto no-scrollbar pb-[calc(100px+env(safe-area-inset-bottom))] px-4 relative">
             
             <!-- ВКЛАДКА 1: РОЗРАХУНОК -->
             <div id="tabCalc" class="tab-content block space-y-4">
                 
-                <!-- Місяць і Зима -->
                 <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
                     <input type="month" id="monthInput" class="font-bold text-lg outline-none bg-transparent" required>
                     <label class="flex items-center space-x-1.5 text-sm font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1.5 rounded-xl cursor-pointer">
@@ -94,101 +88,109 @@
                     </label>
                 </div>
 
-                <form id="utilityForm" class="space-y-3">
+                <form id="utilityForm" class="space-y-4">
                     
-                    <!-- Вода (Компактна) -->
-                    <div id="blockWater" class="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-bold text-blue-500 flex items-center gap-1.5 text-sm">
+                    <!-- Вода (Супер компактна) -->
+                    <div id="blockWater" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+                        <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800/80 px-4 py-2 border-b border-slate-100 dark:border-slate-700">
+                            <span class="font-bold text-blue-500 flex items-center gap-1.5 text-[13px] uppercase tracking-wide">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg> 
                                 Вода
                             </span>
-                            <span id="waterCostDisplay" class="font-bold text-base text-slate-800 dark:text-white">0.00 ₴</span>
+                            <span id="waterCostDisplay" class="font-black text-slate-800 dark:text-white">0.00 ₴</span>
                         </div>
-                        <div class="flex gap-2 items-center">
-                            <div class="flex-1">
-                                <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5 ml-1">Минулі</label>
-                                <input type="number" id="wPrev" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg p-2 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none text-center" required>
+                        <div class="flex items-center px-2 py-2 gap-1">
+                            <div class="flex-1 relative">
+                                <span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Минулі</span>
+                                <input type="number" id="wPrev" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none text-center" required>
                             </div>
-                            <div class="text-slate-300 dark:text-slate-600 mt-3">
+                            <div class="text-slate-300 dark:text-slate-600 px-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                             </div>
-                            <div class="flex-1">
-                                <label class="block text-[9px] font-bold text-blue-500 uppercase mb-0.5 ml-1">Поточні</label>
-                                <input type="number" id="wCur" class="w-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2 text-sm font-bold text-blue-700 dark:text-blue-400 outline-none focus:ring-2 focus:ring-blue-500 text-center" required>
+                            <div class="flex-1 relative">
+                                <span class="absolute top-1 left-2 text-[8px] font-bold text-blue-500 uppercase">Поточні</span>
+                                <input type="number" id="wCur" class="w-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-blue-700 dark:text-blue-400 outline-none focus:ring-2 focus:ring-blue-500 text-center" required>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Світло (Компактне) -->
-                    <div id="blockElectro" class="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-bold text-yellow-500 flex items-center gap-1.5 text-sm">
+                    <!-- Світло (Супер компактне) -->
+                    <div id="blockElectro" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+                        <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800/80 px-4 py-2 border-b border-slate-100 dark:border-slate-700">
+                            <span class="font-bold text-yellow-500 flex items-center gap-1.5 text-[13px] uppercase tracking-wide">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                                 Світло
                             </span>
-                            <span id="electroCostDisplay" class="font-bold text-base text-slate-800 dark:text-white">0.00 ₴</span>
+                            <span id="electroCostDisplay" class="font-black text-slate-800 dark:text-white">0.00 ₴</span>
                         </div>
                         
-                        <div class="space-y-2">
+                        <div class="px-2 py-2 flex flex-col gap-2">
                             <!-- День -->
-                            <div class="flex gap-2 items-center">
-                                <div class="w-8 text-[9px] font-bold text-yellow-500 uppercase mt-3 text-right pr-1">День</div>
-                                <div class="flex-1"><label class="block text-[8px] font-bold text-slate-400 uppercase mb-0.5 ml-1">Минулі</label><input type="number" id="dPrev" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg p-1.5 text-xs font-bold text-center outline-none" required></div>
-                                <div class="text-slate-300 dark:text-slate-600 mt-3"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></div>
-                                <div class="flex-1"><label class="block text-[8px] font-bold text-yellow-500 uppercase mb-0.5 ml-1">Поточні</label><input type="number" id="dCur" class="w-full bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-1.5 text-xs font-bold text-yellow-700 dark:text-yellow-400 text-center outline-none focus:ring-2 focus:ring-yellow-400" required></div>
+                            <div class="flex gap-1 items-center">
+                                <div class="w-10 text-[9px] font-bold text-yellow-500 uppercase text-center tracking-wider">День</div>
+                                <div class="flex-1">
+                                    <input type="number" id="dPrev" placeholder="Минулі" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg py-2 px-1 text-sm font-bold text-center outline-none" required>
+                                </div>
+                                <div class="text-slate-300 dark:text-slate-600 px-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></div>
+                                <div class="flex-1">
+                                    <input type="number" id="dCur" placeholder="Поточні" class="w-full bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg py-2 px-1 text-sm font-bold text-yellow-700 dark:text-yellow-400 text-center outline-none focus:ring-2 focus:ring-yellow-400" required>
+                                </div>
                             </div>
                             <!-- Ніч -->
-                            <div class="flex gap-2 items-center">
-                                <div class="w-8 text-[9px] font-bold text-indigo-400 uppercase mt-3 text-right pr-1">Ніч</div>
-                                <div class="flex-1"><label class="block text-[8px] font-bold text-slate-400 uppercase mb-0.5 ml-1">Минулі</label><input type="number" id="nPrev" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg p-1.5 text-xs font-bold text-center outline-none" required></div>
-                                <div class="text-slate-300 dark:text-slate-600 mt-3"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></div>
-                                <div class="flex-1"><label class="block text-[8px] font-bold text-indigo-400 uppercase mb-0.5 ml-1">Поточні</label><input type="number" id="nCur" class="w-full bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-400 text-center outline-none focus:ring-2 focus:ring-indigo-400" required></div>
+                            <div class="flex gap-1 items-center">
+                                <div class="w-10 text-[9px] font-bold text-indigo-400 uppercase text-center tracking-wider">Ніч</div>
+                                <div class="flex-1">
+                                    <input type="number" id="nPrev" placeholder="Минулі" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg py-2 px-1 text-sm font-bold text-center outline-none" required>
+                                </div>
+                                <div class="text-slate-300 dark:text-slate-600 px-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></div>
+                                <div class="flex-1">
+                                    <input type="number" id="nCur" placeholder="Поточні" class="w-full bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg py-2 px-1 text-sm font-bold text-indigo-700 dark:text-indigo-400 text-center outline-none focus:ring-2 focus:ring-indigo-400" required>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Газ (Компактний) -->
-                    <div id="blockGas" class="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-bold text-orange-500 flex items-center gap-1.5 text-sm">
+                    <!-- Газ (Супер компактний) -->
+                    <div id="blockGas" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+                        <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800/80 px-4 py-2 border-b border-slate-100 dark:border-slate-700">
+                            <span class="font-bold text-orange-500 flex items-center gap-1.5 text-[13px] uppercase tracking-wide">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"></path></svg>
                                 Газ
                             </span>
-                            <span id="gasCostDisplay" class="font-bold text-base text-slate-800 dark:text-white">0.00 ₴</span>
+                            <span id="gasCostDisplay" class="font-black text-slate-800 dark:text-white">0.00 ₴</span>
                         </div>
-                        <div class="flex gap-2 items-center">
-                            <div class="flex-1">
-                                <label class="block text-[9px] font-bold text-slate-400 uppercase mb-0.5 ml-1">Минулі</label>
-                                <input type="number" id="gPrev" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg p-2 text-sm font-bold text-center outline-none">
+                        <div class="flex items-center px-2 py-2 gap-1">
+                            <div class="flex-1 relative">
+                                <span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Минулі</span>
+                                <input type="number" id="gPrev" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-center outline-none">
                             </div>
-                            <div class="text-slate-300 dark:text-slate-600 mt-3">
+                            <div class="text-slate-300 dark:text-slate-600 px-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                             </div>
-                            <div class="flex-1">
-                                <label class="block text-[9px] font-bold text-orange-500 uppercase mb-0.5 ml-1">Поточні</label>
-                                <input type="number" id="gCur" class="w-full bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-2 text-sm font-bold text-orange-600 dark:text-orange-400 text-center outline-none focus:ring-2 focus:ring-orange-400">
+                            <div class="flex-1 relative">
+                                <span class="absolute top-1 left-2 text-[8px] font-bold text-orange-500 uppercase">Поточні</span>
+                                <input type="number" id="gCur" class="w-full bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-orange-600 dark:text-orange-400 text-center outline-none focus:ring-2 focus:ring-orange-400">
                             </div>
                         </div>
                     </div>
 
-                    <!-- Динамічні послуги (Компактні) -->
-                    <div id="blockCustomServices" class="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-bold text-purple-500 flex items-center gap-1.5 text-sm">
+                    <!-- Динамічні послуги -->
+                    <div id="blockCustomServices" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+                        <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800/80 px-4 py-2 border-b border-slate-100 dark:border-slate-700">
+                            <span class="font-bold text-purple-500 flex items-center gap-1.5 text-[13px] uppercase tracking-wide">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
                                 Інші послуги
                             </span>
-                            <span id="customCostDisplay" class="font-bold text-base text-slate-800 dark:text-white">0.00 ₴</span>
+                            <span id="customCostDisplay" class="font-black text-slate-800 dark:text-white">0.00 ₴</span>
                         </div>
-                        <div id="customServicesContainer" class="grid grid-cols-2 gap-2 empty:hidden">
-                            <!-- Інпути генеруються автоматично -->
+                        <div class="p-3">
+                            <div id="customServicesContainer" class="grid grid-cols-2 gap-2 empty:hidden"></div>
+                            <p id="customEmptyMsg" class="text-[10px] text-center text-slate-400 hidden">Додайте послуги в налаштуваннях</p>
                         </div>
-                        <p id="customEmptyMsg" class="text-[10px] text-center text-slate-400 hidden">Додайте послуги в налаштуваннях</p>
                     </div>
 
-                    <!-- Тотал (Компактний) -->
-                    <div class="bg-slate-900 dark:bg-slate-800 p-4 rounded-2xl mt-4 shadow-xl border border-slate-800 dark:border-slate-700">
+                    <!-- Тотал -->
+                    <div class="bg-slate-900 dark:bg-slate-800 p-4 rounded-2xl mt-5 shadow-xl border border-slate-800 dark:border-slate-700">
                         <div class="flex justify-between items-center mb-3">
                             <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">До сплати:</span>
                             <span id="totalCostDisplay" class="font-black text-2xl text-white">0.00 ₴</span>
@@ -216,7 +218,7 @@
             </div>
 
             <!-- ВКЛАДКА 3: НАЛАШТУВАННЯ -->
-            <div id="tabSettings" class="tab-content hidden space-y-3">
+            <div id="tabSettings" class="tab-content hidden space-y-4">
                 
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
                     <h3 class="font-bold mb-3 text-sm text-slate-800 dark:text-white flex items-center gap-1.5">
@@ -265,20 +267,21 @@
             </div>
         </div>
 
-        <!-- НИЖНЯ ПАНЕЛЬ (З урахуванням Safe Area) -->
-        <div class="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 pb-[max(env(safe-area-inset-bottom),10px)] z-[60]">
-            <div class="flex justify-around items-center px-2 py-1 max-w-md mx-auto w-full">
+        <!-- ЗБІЛЬШЕНА НИЖНЯ ПАНЕЛЬ НАВІГАЦІЇ -->
+        <div class="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 pb-[max(env(safe-area-inset-bottom),16px)] z-[60]">
+            <div class="flex justify-around items-center px-4 py-2 max-w-md mx-auto w-full">
+                <!-- Збільшені іконки: w-8 h-8 -->
                 <button onclick="switchTab('tabCalc')" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center p-2 text-blue-600">
-                    <svg class="w-6 h-6 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                    <span class="text-[10px] font-bold">Розрахунок</span>
+                    <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    <span class="text-[11px] font-bold">Розрахунок</span>
                 </button>
                 <button onclick="switchTab('tabHistory')" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center p-2 text-slate-400">
-                    <svg class="w-6 h-6 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    <span class="text-[10px] font-bold">Історія</span>
+                    <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <span class="text-[11px] font-bold">Історія</span>
                 </button>
                 <button onclick="switchTab('tabSettings')" id="btnTabSettings" class="nav-btn flex-1 flex flex-col items-center p-2 text-slate-400">
-                    <svg class="w-6 h-6 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                    <span class="text-[10px] font-bold">Налаштування</span>
+                    <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span class="text-[11px] font-bold">Налаштування</span>
                 </button>
             </div>
         </div>
@@ -286,21 +289,11 @@
 
     <script>
         const WORKER_URL = "https://komynalka.mikolenko-anton1.workers.dev";
-        
-        let sessionPhone = localStorage.getItem('k_phoneHash');
-        let sessionPass = localStorage.getItem('k_passHash');
-        
+        let sessionPhone = localStorage.getItem('k_phoneHash'); let sessionPass = localStorage.getItem('k_passHash');
         let defaultTariffs = { water: 30.38, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
         let defaultPrefs = { showWater: true, showElectro: true, showGas: false };
-        let customServices = [
-            {id: "s1", name: "Квартплата", defaultSum: ""},
-            {id: "s2", name: "Сміття", defaultSum: ""},
-            {id: "s3", name: "Абон. вода", defaultSum: ""}
-        ];
-        
-        let tariffs = { ...defaultTariffs };
-        let prefs = { ...defaultPrefs };
-        let records = [];
+        let customServices = [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}, {id: "s3", name: "Абон. вода", defaultSum: ""}];
+        let tariffs = { ...defaultTariffs }; let prefs = { ...defaultPrefs }; let records = [];
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -308,8 +301,7 @@
             document.querySelectorAll('.nav-btn').forEach(el => { el.classList.remove('text-blue-600'); el.classList.add('text-slate-400'); });
             let btnId = tabId === 'tabCalc' ? 'btnTabCalc' : (tabId === 'tabHistory' ? 'btnTabHistory' : 'btnTabSettings');
             document.getElementById(btnId).classList.remove('text-slate-400'); document.getElementById(btnId).classList.add('text-blue-600');
-            if(tabId === 'tabHistory') renderRecords();
-            if(tabId === 'tabSettings') renderSettingsCustomServices();
+            if(tabId === 'tabHistory') renderRecords(); if(tabId === 'tabSettings') renderSettingsCustomServices();
         }
 
         function toggleTheme() {
@@ -329,27 +321,18 @@
             const data = await res.json();
             if (res.status === 403) throw new Error("WRONG_PASSWORD");
             if (res.status === 404) return false; 
-            if (res.ok && data.success) {
-                tariffs = data.data.tariffs || defaultTariffs;
-                prefs = data.data.prefs || defaultPrefs;
-                records = data.data.records || [];
-                customServices = data.data.customServices || customServices;
-                return true;
-            }
+            if (res.ok && data.success) { tariffs = data.data.tariffs || defaultTariffs; prefs = data.data.prefs || defaultPrefs; records = data.data.records || []; customServices = data.data.customServices || customServices; return true; }
             throw new Error("SERVER_ERROR");
         }
 
         async function syncToCloud() {
             if (!sessionPhone) return;
-            await fetch(`${WORKER_URL}?phone=${sessionPhone}&pass=${sessionPass}`, {
-                method: 'POST', body: JSON.stringify({ tariffs, records, prefs, customServices })
-            });
+            await fetch(`${WORKER_URL}?phone=${sessionPhone}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify({ tariffs, records, prefs, customServices }) });
         }
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const phoneStr = document.getElementById('phoneInput').value.toLowerCase().trim();
-            const passStr = document.getElementById('passInput').value;
+            const phoneStr = document.getElementById('phoneInput').value.toLowerCase().trim(); const passStr = document.getElementById('passInput').value;
             document.getElementById('loginBtn').innerText = "Завантаження...";
             try {
                 const phoneH = await getHash(phoneStr); const passH = await getHash(passStr);
@@ -360,8 +343,7 @@
                 initAppUI();
             } catch (err) {
                 document.getElementById('loginBtn').innerText = "Увійти";
-                document.getElementById('loginError').innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль" : "Помилка мережі";
-                document.getElementById('loginError').classList.remove('hidden');
+                document.getElementById('loginError').innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль" : "Помилка мережі"; document.getElementById('loginError').classList.remove('hidden');
             }
         });
 
@@ -385,48 +367,30 @@
 
         function renderCalcCustomServices() {
             const container = document.getElementById('customServicesContainer');
-            if(customServices.length === 0) {
-                container.innerHTML = ''; document.getElementById('customEmptyMsg').classList.remove('hidden'); return;
-            }
+            if(customServices.length === 0) { container.innerHTML = ''; document.getElementById('customEmptyMsg').classList.remove('hidden'); return; }
             document.getElementById('customEmptyMsg').classList.add('hidden');
             container.innerHTML = customServices.map(srv => `
-                <div class="flex flex-col bg-slate-50 dark:bg-slate-900/50 p-2 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                    <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1 truncate" title="${srv.name}">${srv.name || 'Послуга'}</label>
-                    <input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-center text-xs font-bold outline-none focus:ring-2 focus:ring-purple-400" placeholder="${srv.defaultSum ? srv.defaultSum : '0.00'}">
+                <div class="flex flex-col bg-slate-50 dark:bg-slate-900/50 p-2 rounded-xl border border-slate-100 dark:border-slate-700/50 relative">
+                    <span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase truncate max-w-[80%]" title="${srv.name}">${srv.name || 'Послуга'}</span>
+                    <input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pt-3 pb-1 px-1.5 text-center text-xs font-bold outline-none focus:ring-2 focus:ring-purple-400" placeholder="${srv.defaultSum ? srv.defaultSum : '0.00'}">
                 </div>
             `).join('');
-            
             document.querySelectorAll('.custom-srv-input').forEach(input => input.addEventListener('input', calculatePreview));
         }
 
         function applyPreferences() {
-            document.getElementById('prefWater').checked = prefs.showWater;
-            document.getElementById('prefElectro').checked = prefs.showElectro;
-            document.getElementById('prefGas').checked = prefs.showGas;
-
-            document.getElementById('blockWater').style.display = prefs.showWater ? 'flex' : 'none';
-            document.getElementById('blockElectro').style.display = prefs.showElectro ? 'flex' : 'none';
-            document.getElementById('blockGas').style.display = prefs.showGas ? 'flex' : 'none';
+            document.getElementById('prefWater').checked = prefs.showWater; document.getElementById('prefElectro').checked = prefs.showElectro; document.getElementById('prefGas').checked = prefs.showGas;
+            document.getElementById('blockWater').style.display = prefs.showWater ? 'flex' : 'none'; document.getElementById('blockElectro').style.display = prefs.showElectro ? 'flex' : 'none'; document.getElementById('blockGas').style.display = prefs.showGas ? 'flex' : 'none';
             document.getElementById('blockCustomServices').style.display = customServices.length > 0 ? 'flex' : 'none';
         }
 
         function initAppUI() {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('appScreen').classList.remove('hidden'); document.getElementById('appScreen').classList.add('flex');
-            
-            document.getElementById('tWater').value = tariffs.water || defaultTariffs.water;
-            document.getElementById('tElectroBase').value = tariffs.electroBase || defaultTariffs.electroBase;
-            document.getElementById('tElectroWinter').value = tariffs.electroWinter || defaultTariffs.electroWinter;
-            document.getElementById('tGas').value = tariffs.gas || defaultTariffs.gas;
-
+            document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); document.getElementById('appScreen').classList.add('flex');
+            document.getElementById('tWater').value = tariffs.water || defaultTariffs.water; document.getElementById('tElectroBase').value = tariffs.electroBase || defaultTariffs.electroBase; document.getElementById('tElectroWinter').value = tariffs.electroWinter || defaultTariffs.electroWinter; document.getElementById('tGas').value = tariffs.gas || defaultTariffs.gas;
             applyPreferences(); renderCalcCustomServices(); fillPreviousReadings(); switchTab('tabCalc'); calculatePreview();
         }
 
-        if (sessionPhone && sessionPass) {
-            fetchFromCloud(sessionPhone, sessionPass).then(() => initAppUI()).catch(() => {
-                document.getElementById('loginScreen').classList.remove('hidden'); localStorage.clear();
-            });
-        }
+        if (sessionPhone && sessionPass) { fetchFromCloud(sessionPhone, sessionPass).then(() => initAppUI()).catch(() => { document.getElementById('loginScreen').classList.remove('hidden'); localStorage.clear(); }); }
 
         window.saveSettings = () => {
             tariffs = { water: parseFloat(document.getElementById('tWater').value)||defaultTariffs.water, electroBase: parseFloat(document.getElementById('tElectroBase').value)||defaultTariffs.electroBase, electroWinter: parseFloat(document.getElementById('tElectroWinter').value)||defaultTariffs.electroWinter, winterLimit: 2000, gas: parseFloat(document.getElementById('tGas').value)||defaultTariffs.gas, nightCoef: 0.5 };
@@ -443,27 +407,17 @@
                 if(prefs.showWater) document.getElementById('wPrev').value = lastRecord.wCur || 0;
                 if(prefs.showElectro) { document.getElementById('dPrev').value = lastRecord.dCur || 0; document.getElementById('nPrev').value = lastRecord.nCur || 0; }
                 if(prefs.showGas) document.getElementById('gPrev').value = lastRecord.gCur || 0;
-                
-                customServices.forEach(srv => {
-                    let el = document.getElementById(`custom_${srv.id}`);
-                    if(el) el.value = (lastRecord.customData && lastRecord.customData[srv.id]) !== undefined ? lastRecord.customData[srv.id].val : srv.defaultSum;
-                });
-                
-                let m = new Date(monthInput.value).getMonth() + 1;
-                document.getElementById('isWinterInput').checked = (m >= 10 || m <= 4);
-            } else {
-                customServices.forEach(srv => { let el = document.getElementById(`custom_${srv.id}`); if(el && srv.defaultSum) el.value = srv.defaultSum; });
-            }
+                customServices.forEach(srv => { let el = document.getElementById(`custom_${srv.id}`); if(el) el.value = (lastRecord.customData && lastRecord.customData[srv.id]) !== undefined ? lastRecord.customData[srv.id].val : srv.defaultSum; });
+                document.getElementById('isWinterInput').checked = (new Date(monthInput.value).getMonth() + 1 >= 10 || new Date(monthInput.value).getMonth() + 1 <= 4);
+            } else { customServices.forEach(srv => { let el = document.getElementById(`custom_${srv.id}`); if(el && srv.defaultSum) el.value = srv.defaultSum; }); }
         }
 
-        const inputs = ['wPrev', 'wCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'gPrev', 'gCur', 'isWinterInput'];
-        inputs.forEach(id => document.getElementById(id).addEventListener('input', calculatePreview));
+        const inputs = ['wPrev', 'wCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'gPrev', 'gCur', 'isWinterInput']; inputs.forEach(id => document.getElementById(id).addEventListener('input', calculatePreview));
 
         let currentCalc = { waterCost: 0, electroCost: 0, gasCost: 0, customCost: 0, total: 0 };
 
         function calculatePreview() {
             let getVal = id => Math.max(0, parseFloat(document.getElementById(id)?.value) || 0);
-            
             if(prefs.showWater) currentCalc.waterCost = Math.max(0, getVal('wCur') - getVal('wPrev')) * tariffs.water; else currentCalc.waterCost = 0;
             if(prefs.showElectro) {
                 let dVol = Math.max(0, getVal('dCur') - getVal('dPrev')), nVol = Math.max(0, getVal('nCur') - getVal('nPrev')), totalEl = dVol + nVol;
@@ -476,113 +430,40 @@
             if(prefs.showGas) currentCalc.gasCost = Math.max(0, getVal('gCur') - getVal('gPrev')) * (tariffs.gas || defaultTariffs.gas); else currentCalc.gasCost = 0;
 
             currentCalc.customCost = 0;
-            customServices.forEach(srv => {
-                let val = parseFloat(document.getElementById(`custom_${srv.id}`)?.value);
-                if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum);
-                if (!isNaN(val)) currentCalc.customCost += val;
-            });
+            customServices.forEach(srv => { let val = parseFloat(document.getElementById(`custom_${srv.id}`)?.value); if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum); if (!isNaN(val)) currentCalc.customCost += val; });
 
             currentCalc.total = currentCalc.waterCost + currentCalc.electroCost + currentCalc.gasCost + currentCalc.customCost;
-
-            document.getElementById('waterCostDisplay').innerText = currentCalc.waterCost.toFixed(2) + ' ₴';
-            document.getElementById('electroCostDisplay').innerText = currentCalc.electroCost.toFixed(2) + ' ₴';
-            document.getElementById('gasCostDisplay').innerText = currentCalc.gasCost.toFixed(2) + ' ₴';
-            document.getElementById('customCostDisplay').innerText = currentCalc.customCost.toFixed(2) + ' ₴';
-            document.getElementById('totalCostDisplay').innerText = currentCalc.total.toFixed(2) + ' ₴';
+            document.getElementById('waterCostDisplay').innerText = currentCalc.waterCost.toFixed(2) + ' ₴'; document.getElementById('electroCostDisplay').innerText = currentCalc.electroCost.toFixed(2) + ' ₴'; document.getElementById('gasCostDisplay').innerText = currentCalc.gasCost.toFixed(2) + ' ₴'; document.getElementById('customCostDisplay').innerText = currentCalc.customCost.toFixed(2) + ' ₴'; document.getElementById('totalCostDisplay').innerText = currentCalc.total.toFixed(2) + ' ₴';
         }
 
         document.getElementById('utilityForm').addEventListener('submit', (e) => {
             e.preventDefault();
             let customData = {};
-            customServices.forEach(srv => {
-                let val = parseFloat(document.getElementById(`custom_${srv.id}`)?.value);
-                if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum);
-                if (!isNaN(val)) customData[srv.id] = { name: srv.name, val: val };
-            });
-
+            customServices.forEach(srv => { let val = parseFloat(document.getElementById(`custom_${srv.id}`)?.value); if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum); if (!isNaN(val)) customData[srv.id] = { name: srv.name, val: val }; });
             const newRecord = {
                 id: Date.now(), month: monthInput.value,
                 wPrev: prefs.showWater ? (parseFloat(document.getElementById('wPrev').value)||0) : 0, wCur: prefs.showWater ? (parseFloat(document.getElementById('wCur').value)||0) : 0,
                 dPrev: prefs.showElectro ? (parseFloat(document.getElementById('dPrev').value)||0) : 0, dCur: prefs.showElectro ? (parseFloat(document.getElementById('dCur').value)||0) : 0,
                 nPrev: prefs.showElectro ? (parseFloat(document.getElementById('nPrev').value)||0) : 0, nCur: prefs.showElectro ? (parseFloat(document.getElementById('nCur').value)||0) : 0,
                 gPrev: prefs.showGas ? (parseFloat(document.getElementById('gPrev').value)||0) : 0, gCur: prefs.showGas ? (parseFloat(document.getElementById('gCur').value)||0) : 0,
-                customData: customData,
-                waterCost: currentCalc.waterCost, electroCost: currentCalc.electroCost, gasCost: currentCalc.gasCost, customCost: currentCalc.customCost, total: currentCalc.total, paid: false
+                customData: customData, waterCost: currentCalc.waterCost, electroCost: currentCalc.electroCost, gasCost: currentCalc.gasCost, customCost: currentCalc.customCost, total: currentCalc.total, paid: false
             };
-
-            const exIdx = records.findIndex(r => r.month === newRecord.month);
-            if(exIdx >= 0) { if(confirm('Оновити запис?')) records[exIdx] = newRecord; else return; } else records.push(newRecord);
-
-            syncToCloud(); 
-            let [y, m] = monthInput.value.split('-'); let nextDate = new Date(y, m); 
-            monthInput.value = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+            const exIdx = records.findIndex(r => r.month === newRecord.month); if(exIdx >= 0) { if(confirm('Оновити запис?')) records[exIdx] = newRecord; else return; } else records.push(newRecord);
+            syncToCloud(); let [y, m] = monthInput.value.split('-'); let nextDate = new Date(y, m); monthInput.value = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
             fillPreviousReadings(); calculatePreview(); switchTab('tabHistory');
         });
 
-        window.toggleRecord = function(index) {
-            document.getElementById(`details-${index}`).classList.toggle('open');
-            document.getElementById(`chev-${index}`).classList.toggle('open');
-        };
+        window.toggleRecord = function(index) { document.getElementById(`details-${index}`).classList.toggle('open'); document.getElementById(`chev-${index}`).classList.toggle('open'); };
 
         function renderRecords() {
-            const list = document.getElementById('recordsList');
-            list.innerHTML = '';
-            
-            let totalSum = records.reduce((sum, r) => sum + r.total, 0);
-            document.getElementById('statsTotal').innerText = totalSum.toFixed(0) + ' ₴';
-            document.getElementById('statsAvg').innerText = (records.length ? (totalSum / records.length) : 0).toFixed(0) + ' ₴';
-
+            const list = document.getElementById('recordsList'); list.innerHTML = '';
+            let totalSum = records.reduce((sum, r) => sum + r.total, 0); document.getElementById('statsTotal').innerText = totalSum.toFixed(0) + ' ₴'; document.getElementById('statsAvg').innerText = (records.length ? (totalSum / records.length) : 0).toFixed(0) + ' ₴';
             records.sort((a, b) => new Date(b.month) - new Date(a.month)).forEach((rec, index) => {
-                const card = document.createElement('div');
-                card.className = `rounded-2xl shadow-sm border bg-white dark:bg-slate-800 overflow-hidden ${rec.paid ? 'border-green-400 dark:border-green-500/50' : 'border-slate-100 dark:border-slate-700 border-l-[4px] border-l-red-500'}`;
-                
+                const card = document.createElement('div'); card.className = `rounded-2xl shadow-sm border bg-white dark:bg-slate-800 overflow-hidden ${rec.paid ? 'border-green-400 dark:border-green-500/50' : 'border-slate-100 dark:border-slate-700 border-l-[4px] border-l-red-500'}`;
                 let dateStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long', year:'numeric'}).replace(' р.','');
-
-                let customServicesHTML = '';
-                if (rec.customData && Object.keys(rec.customData).length > 0) {
-                    let itemsHTML = Object.values(rec.customData).map(item => `${item.name}: ${item.val} ₴`).join(' <span class="text-slate-300 mx-1">|</span> ');
-                    customServicesHTML = `
-                        <div class="flex justify-between pb-1">
-                            <div><span class="font-bold text-purple-500 text-[11px] uppercase">Інші</span><div class="text-[10px] text-slate-500 mt-0.5">${itemsHTML}</div></div>
-                            <span class="font-bold text-xs">${rec.customCost.toFixed(2)} ₴</span>
-                        </div>
-                    `;
-                }
-
-                let headerHTML = `
-                    <div class="p-4 flex justify-between items-center cursor-pointer" onclick="toggleRecord(${index})">
-                        <div class="flex items-center gap-3">
-                            <div id="chev-${index}" class="chevron w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </div>
-                            <div>
-                                <h4 class="font-bold capitalize text-slate-800 dark:text-white leading-none mb-1.5">${dateStr}</h4>
-                                <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded ${rec.paid ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600'}">${rec.paid ? 'Оплачено' : 'Борг'}</span>
-                            </div>
-                        </div>
-                        <span class="font-black text-lg text-slate-900 dark:text-white">${rec.total.toFixed(2)} ₴</span>
-                    </div>
-                `;
-
-                let detailsHTML = `
-                    <div id="details-${index}" class="details-content bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 px-4">
-                        <div class="py-3 space-y-3 text-xs">
-                            ${rec.waterCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-blue-500 text-[11px] uppercase">Вода</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.wPrev}</b> → Пот: <b>${rec.wCur}</b> (Витрата: ${rec.wCur - rec.wPrev} м³)</div></div><span class="font-bold">${rec.waterCost.toFixed(2)} ₴</span></div>` : ''}
-                            ${rec.electroCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-yellow-500 text-[11px] uppercase">Світло</span><div class="text-[10px] text-slate-500 mt-0.5">День: <b>${rec.dPrev}</b> → <b>${rec.dCur}</b></div><div class="text-[10px] text-slate-500">Ніч: <b>${rec.nPrev}</b> → <b>${rec.nCur}</b></div></div><span class="font-bold">${rec.electroCost.toFixed(2)} ₴</span></div>` : ''}
-                            ${rec.gasCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-orange-500 text-[11px] uppercase">Газ</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.gPrev||0}</b> → Пот: <b>${rec.gCur||0}</b></div></div><span class="font-bold">${rec.gasCost.toFixed(2)} ₴</span></div>` : ''}
-                            ${customServicesHTML}
-                        </div>
-                        <div class="pb-4 pt-1 flex gap-2">
-                            <button onclick="togglePaid(${index})" class="flex-1 py-2 rounded-lg font-bold text-xs ${rec.paid ? 'bg-slate-200 dark:bg-slate-700 text-slate-700' : 'bg-blue-600 text-white shadow-md'}">${rec.paid ? 'Скасувати' : '💳 Відмітити сплаченим'}</button>
-                            <button onclick="editRecord(${index})" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-slate-700 dark:text-white" title="Редагувати">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                            </button>
-                            <button onclick="deleteRecord(${index})" class="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg" title="Видалити">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
-                        </div>
-                    </div>
-                `;
+                let customServicesHTML = ''; if (rec.customData && Object.keys(rec.customData).length > 0) { let itemsHTML = Object.values(rec.customData).map(item => `${item.name}: ${item.val} ₴`).join(' <span class="text-slate-300 mx-1">|</span> '); customServicesHTML = `<div class="flex justify-between pb-1"><div><span class="font-bold text-purple-500 text-[11px] uppercase">Інші</span><div class="text-[10px] text-slate-500 mt-0.5">${itemsHTML}</div></div><span class="font-bold text-xs">${rec.customCost.toFixed(2)} ₴</span></div>`; }
+                let headerHTML = `<div class="p-4 flex justify-between items-center cursor-pointer" onclick="toggleRecord(${index})"><div class="flex items-center gap-3"><div id="chev-${index}" class="chevron w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div><div><h4 class="font-bold capitalize text-slate-800 dark:text-white leading-none mb-1.5">${dateStr}</h4><span class="text-[9px] font-black uppercase px-2 py-0.5 rounded ${rec.paid ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600'}">${rec.paid ? 'Оплачено' : 'Борг'}</span></div></div><span class="font-black text-lg text-slate-900 dark:text-white">${rec.total.toFixed(2)} ₴</span></div>`;
+                let detailsHTML = `<div id="details-${index}" class="details-content bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 px-4"><div class="py-3 space-y-3 text-xs">${rec.waterCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-blue-500 text-[11px] uppercase">Вода</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.wPrev}</b> → Пот: <b>${rec.wCur}</b> (Витрата: ${rec.wCur - rec.wPrev} м³)</div></div><span class="font-bold">${rec.waterCost.toFixed(2)} ₴</span></div>` : ''}${rec.electroCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-yellow-500 text-[11px] uppercase">Світло</span><div class="text-[10px] text-slate-500 mt-0.5">День: <b>${rec.dPrev}</b> → <b>${rec.dCur}</b></div><div class="text-[10px] text-slate-500">Ніч: <b>${rec.nPrev}</b> → <b>${rec.nCur}</b></div></div><span class="font-bold">${rec.electroCost.toFixed(2)} ₴</span></div>` : ''}${rec.gasCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-orange-500 text-[11px] uppercase">Газ</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.gPrev||0}</b> → Пот: <b>${rec.gCur||0}</b></div></div><span class="font-bold">${rec.gasCost.toFixed(2)} ₴</span></div>` : ''}${customServicesHTML}</div><div class="pb-4 pt-1 flex gap-2"><button onclick="togglePaid(${index})" class="flex-1 py-2 rounded-lg font-bold text-xs ${rec.paid ? 'bg-slate-200 dark:bg-slate-700 text-slate-700' : 'bg-blue-600 text-white shadow-md'}">${rec.paid ? 'Скасувати' : '💳 Відмітити сплаченим'}</button><button onclick="editRecord(${index})" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-slate-700 dark:text-white" title="Редагувати"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button><button onclick="deleteRecord(${index})" class="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg" title="Видалити"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></div></div>`;
                 card.innerHTML = headerHTML + detailsHTML; list.appendChild(card);
             });
         }
@@ -592,21 +473,13 @@
             if(prefs.showWater){ document.getElementById('wPrev').value = rec.wPrev; document.getElementById('wCur').value = rec.wCur; }
             if(prefs.showElectro){ document.getElementById('dPrev').value = rec.dPrev; document.getElementById('dCur').value = rec.dCur; document.getElementById('nPrev').value = rec.nPrev; document.getElementById('nCur').value = rec.nCur; }
             if(prefs.showGas){ document.getElementById('gPrev').value = rec.gPrev || ''; document.getElementById('gCur').value = rec.gCur || ''; }
-            
-            if(rec.customData) {
-                Object.keys(rec.customData).forEach(srvId => {
-                    let el = document.getElementById(`custom_${srvId}`);
-                    if(el) el.value = rec.customData[srvId].val;
-                });
-            }
-            
-            let m = new Date(rec.month).getMonth() + 1; document.getElementById('isWinterInput').checked = (m >= 10 || m <= 4);
+            if(rec.customData) { Object.keys(rec.customData).forEach(srvId => { let el = document.getElementById(`custom_${srvId}`); if(el) el.value = rec.customData[srvId].val; }); }
+            document.getElementById('isWinterInput').checked = (new Date(rec.month).getMonth() + 1 >= 10 || new Date(rec.month).getMonth() + 1 <= 4);
             switchTab('tabCalc'); calculatePreview();
         };
 
         window.togglePaid = function(index) { records[index].paid = !records[index].paid; renderRecords(); syncToCloud(); };
         window.deleteRecord = function(index) { if(confirm('Видалити місяць?')) { records.splice(index, 1); renderRecords(); syncToCloud(); } };
-
     </script>
 </body>
 </html>
