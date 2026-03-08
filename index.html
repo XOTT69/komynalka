@@ -3,29 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Комуналка</title>
+    <title>Мої Комунальні</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: '#3b82f6' } } } }
+        tailwind.config = { darkMode: 'class', theme: { extend: { 
+            colors: { brand: '#1d4ed8' },
+            fontFamily: { sans: ['System-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'] }
+        } } }
     </script>
-    <meta name="theme-color" content="#f8fafc">
+    <meta name="theme-color" content="#f1f5f9">
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <style>
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
-        .details-content { transition: max-height 0.3s ease-in-out; overflow: hidden; max-height: 0; }
-        .details-content.open { max-height: 800px; }
-        .chevron { transition: transform 0.3s; }
-        .chevron.open { transform: rotate(180deg); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Тумблери iOS style */
         .toggle-checkbox:checked { right: 0; border-color: #3b82f6; }
         .toggle-checkbox:checked + .toggle-label { background-color: #3b82f6; }
         .toggle-checkbox { right: 0; z-index: 1; border-color: #e2e8f0; transition: all 0.3s; }
-        .toggle-label { background-color: #cbd5e1; transition: all 0.3s; }
+        .toggle-label { background-color: #e2e8f0; transition: all 0.3s; }
+        
+        .glass-nav { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+        .dark .glass-nav { background: rgba(15, 23, 42, 0.85); }
     </style>
     <script>
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -34,26 +38,27 @@
         }
     </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans flex flex-col transition-colors duration-300 overflow-hidden" style="height: 100dvh;">
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans flex flex-col transition-colors duration-300 overflow-hidden selection:bg-blue-200" style="height: 100dvh;">
 
     <!-- Екран Логіну -->
     <div id="loginScreen" class="absolute inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-900">
-        <div class="bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-xl border border-slate-100 dark:border-slate-700 w-full max-w-sm">
+        <div class="bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-2xl shadow-blue-500/10 border border-slate-100 dark:border-slate-700 w-full max-w-sm">
             <div class="text-center mb-8">
-                <h1 class="text-4xl font-black text-blue-600 dark:text-blue-500 mb-2">Комуналка</h1>
-                <p class="text-slate-500 text-sm font-medium">Синхронізація даних</p>
+                <div class="w-20 h-20 bg-blue-50 text-blue-500 dark:bg-blue-900/30 dark:text-blue-400 rounded-[1.5rem] flex items-center justify-center mx-auto mb-4 text-4xl shadow-inner">
+                    🏠
+                </div>
+                <h1 class="text-3xl font-black text-slate-800 dark:text-white mb-2">Вітаємо!</h1>
+                <p class="text-slate-500 text-sm font-medium">Увійдіть до свого облікового запису</p>
             </div>
             <form id="loginForm" class="space-y-4">
                 <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 ml-1">Телефон або Нік</label>
-                    <input type="text" id="phoneInput" required class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-2xl p-4 text-lg font-bold outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="phoneInput" placeholder="Телефон або Нік" required class="w-full bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-700 transition-all placeholder:text-slate-400 placeholder:font-normal">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 ml-1">Пароль</label>
-                    <input type="password" id="passInput" required class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-2xl p-4 text-lg font-bold outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="password" id="passInput" placeholder="Пароль" required class="w-full bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-700 transition-all placeholder:text-slate-400 placeholder:font-normal">
                 </div>
-                <p id="loginError" class="text-red-500 text-sm hidden text-center font-medium bg-red-50 dark:bg-red-900/30 p-2 rounded-xl mt-2"></p>
-                <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg mt-6 transition-colors">
+                <p id="loginError" class="text-red-500 text-sm hidden text-center font-medium mt-2"></p>
+                <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/30 mt-8 transition-transform active:scale-[0.98]">
                     Увійти
                 </button>
             </form>
@@ -64,240 +69,251 @@
     <div id="appScreen" class="hidden flex-col h-full w-full max-w-md mx-auto relative">
         
         <!-- Шапка -->
-        <div class="px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3 flex justify-between items-center bg-slate-50 dark:bg-slate-900 z-10 sticky top-0">
-            <h1 class="text-2xl font-black text-blue-600 dark:text-blue-500 tracking-tight">Комуналка</h1>
-            <div class="flex gap-2">
-                <button onclick="toggleTheme()" class="w-9 h-9 flex items-center justify-center bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400" id="themeIcon">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+        <div class="px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-2 flex justify-between items-center bg-slate-100 dark:bg-slate-900 z-10 sticky top-0">
+            <h1 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Мої Комунальні</h1>
+            <div class="flex gap-3">
+                <button onclick="toggleTheme()" class="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-blue-500 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
                 </button>
-                <button onclick="logout()" class="w-9 h-9 flex items-center justify-center bg-red-50 dark:bg-red-500/10 text-red-500 rounded-full">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                <button onclick="logout()" class="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-200 dark:border-slate-700 text-red-500 hover:bg-red-50 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                 </button>
             </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto no-scrollbar px-4 relative">
+        <div class="flex-1 overflow-y-auto no-scrollbar px-5 relative pt-4 pb-[140px]">
             
-            <!-- ВКЛАДКА 1: РОЗРАХУНОК -->
-            <div id="tabCalc" class="tab-content block space-y-4">
+            <!-- ВКЛАДКА 1: ГОЛОВНА -->
+            <div id="tabCalc" class="tab-content block space-y-5">
                 
-                <div class="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
-                    <input type="month" id="monthInput" class="font-bold text-lg outline-none bg-transparent" required>
-                    <label id="winterCheckboxWrapper" class="flex items-center space-x-1.5 text-sm font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1.5 rounded-xl cursor-pointer">
-                        <input type="checkbox" id="isWinterInput" class="rounded accent-blue-600 w-4 h-4"><span>❄️ Зима</span>
-                    </label>
+                <!-- Тотал Градієнтна Картка -->
+                <div class="bg-gradient-to-br from-blue-500 to-blue-700 p-6 rounded-[2rem] shadow-xl shadow-blue-500/30 text-white relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-2xl translate-x-12 -translate-y-12"></div>
+                    <div class="absolute bottom-0 left-0 w-32 h-32 bg-blue-400/30 rounded-full blur-xl -translate-x-10 translate-y-10"></div>
+                    
+                    <div class="relative z-10 flex justify-between items-start">
+                        <div>
+                            <p class="text-blue-100 text-sm font-medium mb-1">Ваш баланс за місяць</p>
+                            <h2 class="text-4xl font-black tracking-tight flex items-baseline gap-1" id="heroTotal">0 <span class="text-xl font-bold text-blue-200">₴</span></h2>
+                        </div>
+                        <input type="month" id="monthInput" class="bg-white/20 hover:bg-white/30 transition-colors border-none outline-none font-bold text-white text-sm py-2 px-3 rounded-xl cursor-pointer backdrop-blur-sm" required>
+                    </div>
                 </div>
 
                 <form id="utilityForm" class="space-y-4">
                     
                     <!-- Вода -->
-                    <div id="blockWater" class="bg-white dark:bg-slate-800 p-3.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
-                        <div class="flex justify-between items-center mb-3">
-                            <span class="font-bold text-blue-500 flex items-center gap-1.5 text-sm">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg> 
-                                Вода
-                            </span>
-                            <span id="waterCostDisplay" class="font-black text-lg text-slate-800 dark:text-white">0.00 ₴</span>
+                    <div id="blockWater" class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
+                        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-700">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-500 text-xl shadow-sm">💧</div>
+                                <span class="font-bold text-lg text-slate-800 dark:text-white">Вода</span>
+                            </div>
+                            <span id="waterCostDisplay" class="font-black text-xl text-slate-800 dark:text-white">0.00 ₴</span>
                         </div>
-                        <div class="flex gap-2 items-center">
-                            <div class="flex-1 relative">
-                                <span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase tracking-wide">Минулі</span>
-                                <input type="number" id="wPrev" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none text-center">
+                        <div class="flex gap-4 items-center">
+                            <div class="flex-1">
+                                <label class="block text-[11px] text-slate-400 font-bold uppercase mb-1.5 text-center">Минулі покази</label>
+                                <input type="number" id="wPrev" class="w-full bg-slate-50 dark:bg-slate-700 p-3 rounded-xl text-center text-lg font-bold text-slate-700 dark:text-slate-200 outline-none border border-transparent focus:border-blue-500 focus:bg-white transition-all">
                             </div>
-                            <div class="text-slate-300 dark:text-slate-600">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                            </div>
-                            <div class="flex-1 relative">
-                                <span class="absolute top-1 left-2 text-[8px] font-bold text-blue-500 uppercase tracking-wide">Поточні</span>
-                                <input type="number" id="wCur" class="w-full bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-blue-700 dark:text-blue-400 outline-none focus:ring-2 focus:ring-blue-500 text-center">
+                            <div class="flex-1">
+                                <label class="block text-[11px] text-blue-500 font-bold uppercase mb-1.5 text-center">Нові покази</label>
+                                <input type="number" id="wCur" class="w-full bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl text-center text-lg font-bold text-blue-600 dark:text-blue-400 outline-none border border-transparent focus:border-blue-500 transition-all">
                             </div>
                         </div>
                     </div>
 
                     <!-- Світло -->
-                    <div id="blockElectro" class="bg-white dark:bg-slate-800 p-3.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
-                        <div class="flex justify-between items-center mb-3">
-                            <span class="font-bold text-yellow-500 flex items-center gap-1.5 text-sm">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                                Світло
-                            </span>
-                            <span id="electroCostDisplay" class="font-black text-lg text-slate-800 dark:text-white">0.00 ₴</span>
+                    <div id="blockElectro" class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col relative overflow-hidden">
+                        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-700 relative z-10">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-yellow-50 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center text-yellow-500 text-xl shadow-sm">⚡️</div>
+                                <span class="font-bold text-lg text-slate-800 dark:text-white">Світло</span>
+                            </div>
+                            <span id="electroCostDisplay" class="font-black text-xl text-slate-800 dark:text-white">0.00 ₴</span>
+                        </div>
+
+                        <!-- Опція Зими для світла (вбудована в блок) -->
+                        <div id="winterCheckboxWrapper" class="absolute top-5 left-32 z-10">
+                            <label class="flex items-center space-x-1.5 text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
+                                <input type="checkbox" id="isWinterInput" class="rounded accent-blue-600 w-3 h-3"><span>❄️ Зима</span>
+                            </label>
                         </div>
                         
-                        <div class="space-y-2">
+                        <div class="space-y-4 relative z-10">
                             <!-- День / База -->
-                            <div class="flex gap-2 items-center" id="electroDayRow">
-                                <div id="electroDayLabel" class="w-8 text-[9px] font-bold text-yellow-500 uppercase text-right pr-1">День</div>
-                                <div class="flex-1 relative">
-                                    <span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase tracking-wide">Минулі</span>
-                                    <input type="number" id="dPrev" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-center outline-none">
+                            <div id="electroDayRow">
+                                <div class="flex justify-between text-[10px] font-bold uppercase mb-1.5">
+                                    <span class="text-slate-400 text-center w-[45%]">Минулі (День)</span>
+                                    <span class="text-yellow-500 text-center w-[45%]">Нові (День)</span>
                                 </div>
-                                <div class="text-slate-300 dark:text-slate-600"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></div>
-                                <div class="flex-1 relative">
-                                    <span class="absolute top-1 left-2 text-[8px] font-bold text-yellow-600 uppercase tracking-wide">Поточні</span>
-                                    <input type="number" id="dCur" class="w-full bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-yellow-700 dark:text-yellow-400 text-center outline-none focus:ring-2 focus:ring-yellow-400">
+                                <div class="flex gap-4 items-center">
+                                    <input type="number" id="dPrev" class="w-[45%] bg-slate-50 dark:bg-slate-700 p-3 rounded-xl text-center text-lg font-bold outline-none border border-transparent focus:border-yellow-400">
+                                    <div class="text-slate-300"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></div>
+                                    <input type="number" id="dCur" class="w-[45%] bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 p-3 rounded-xl text-center text-lg font-bold outline-none border border-transparent focus:border-yellow-400">
                                 </div>
                             </div>
                             <!-- Ніч -->
-                            <div class="flex gap-2 items-center" id="electroNightRow">
-                                <div class="w-8 text-[9px] font-bold text-indigo-400 uppercase text-right pr-1">Ніч</div>
-                                <div class="flex-1 relative">
-                                    <span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase tracking-wide">Минулі</span>
-                                    <input type="number" id="nPrev" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-center outline-none">
+                            <div id="electroNightRow">
+                                <div class="flex justify-between text-[10px] font-bold uppercase mb-1.5">
+                                    <span class="text-slate-400 text-center w-[45%]">Минулі (Ніч)</span>
+                                    <span class="text-indigo-400 text-center w-[45%]">Нові (Ніч)</span>
                                 </div>
-                                <div class="text-slate-300 dark:text-slate-600"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></div>
-                                <div class="flex-1 relative">
-                                    <span class="absolute top-1 left-2 text-[8px] font-bold text-indigo-500 uppercase tracking-wide">Поточні</span>
-                                    <input type="number" id="nCur" class="w-full bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-indigo-700 dark:text-indigo-400 text-center outline-none focus:ring-2 focus:ring-indigo-400">
+                                <div class="flex gap-4 items-center">
+                                    <input type="number" id="nPrev" class="w-[45%] bg-slate-50 dark:bg-slate-700 p-3 rounded-xl text-center text-lg font-bold outline-none border border-transparent focus:border-indigo-400">
+                                    <div class="text-slate-300"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></div>
+                                    <input type="number" id="nCur" class="w-[45%] bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 dark:text-indigo-400 p-3 rounded-xl text-center text-lg font-bold outline-none border border-transparent focus:border-indigo-400">
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Газ -->
-                    <div id="blockGas" class="bg-white dark:bg-slate-800 p-3.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
-                        <div class="flex justify-between items-center mb-3">
-                            <span class="font-bold text-orange-500 flex items-center gap-1.5 text-sm">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"></path></svg>
-                                Газ
-                            </span>
-                            <span id="gasCostDisplay" class="font-black text-lg text-slate-800 dark:text-white">0.00 ₴</span>
+                    <div id="blockGas" class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
+                        <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-100 dark:border-slate-700">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-orange-50 dark:bg-orange-900/30 rounded-xl flex items-center justify-center text-orange-500 text-xl shadow-sm">🔥</div>
+                                <span class="font-bold text-lg text-slate-800 dark:text-white">Газ</span>
+                            </div>
+                            <span id="gasCostDisplay" class="font-black text-xl text-slate-800 dark:text-white">0.00 ₴</span>
                         </div>
-                        <div class="flex gap-2 items-center">
-                            <div class="flex-1 relative">
-                                <span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase tracking-wide">Минулі</span>
-                                <input type="number" id="gPrev" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-center outline-none">
+                        <div class="flex gap-4 items-center">
+                            <div class="flex-1">
+                                <label class="block text-[11px] text-slate-400 font-bold uppercase mb-1.5 text-center">Минулі</label>
+                                <input type="number" id="gPrev" class="w-full bg-slate-50 dark:bg-slate-700 p-3 rounded-xl text-center text-lg font-bold text-slate-700 dark:text-slate-200 outline-none border border-transparent focus:border-orange-400">
                             </div>
-                            <div class="text-slate-300 dark:text-slate-600">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                            </div>
-                            <div class="flex-1 relative">
-                                <span class="absolute top-1 left-2 text-[8px] font-bold text-orange-500 uppercase tracking-wide">Поточні</span>
-                                <input type="number" id="gCur" class="w-full bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg pt-4 pb-1.5 px-2 text-sm font-bold text-orange-600 dark:text-orange-400 text-center outline-none focus:ring-2 focus:ring-orange-400">
+                            <div class="flex-1">
+                                <label class="block text-[11px] text-orange-500 font-bold uppercase mb-1.5 text-center">Нові</label>
+                                <input type="number" id="gCur" class="w-full bg-orange-50 dark:bg-orange-900/20 p-3 rounded-xl text-center text-lg font-bold text-orange-600 dark:text-orange-400 outline-none border border-transparent focus:border-orange-400">
                             </div>
                         </div>
                     </div>
 
                     <!-- Динамічні послуги -->
-                    <div id="blockCustomServices" class="bg-white dark:bg-slate-800 p-3.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
-                        <div class="flex justify-between items-center mb-3">
-                            <span class="font-bold text-purple-500 flex items-center gap-1.5 text-sm">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                                Інші послуги
-                            </span>
-                            <span id="customCostDisplay" class="font-black text-lg text-slate-800 dark:text-white">0.00 ₴</span>
+                    <div id="blockCustomServices" class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
+                        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100 dark:border-slate-700">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-purple-50 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-500 text-xl shadow-sm">📦</div>
+                                <span class="font-bold text-lg text-slate-800 dark:text-white">Інші послуги</span>
+                            </div>
+                            <span id="customCostDisplay" class="font-black text-xl text-slate-800 dark:text-white">0.00 ₴</span>
                         </div>
-                        <div id="customServicesContainer" class="grid grid-cols-2 gap-2 empty:hidden"></div>
-                        <p id="customEmptyMsg" class="text-[10px] text-center text-slate-400 hidden">Додайте послуги в налаштуваннях</p>
+                        <div id="customServicesContainer" class="grid grid-cols-2 gap-3 empty:hidden"></div>
+                        <p id="customEmptyMsg" class="text-xs text-center text-slate-400 hidden">Додайте послуги в налаштуваннях</p>
                     </div>
 
-                    <!-- Тотал -->
-                    <div class="bg-slate-900 dark:bg-slate-800 p-4 rounded-2xl mt-5 shadow-xl border border-slate-800 dark:border-slate-700">
-                        <div class="flex justify-between items-center mb-3">
-                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">До сплати:</span>
-                            <span id="totalCostDisplay" class="font-black text-2xl text-white">0.00 ₴</span>
-                        </div>
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-colors text-sm">
-                            Зберегти запис
-                        </button>
-                    </div>
+                    <!-- Велика кнопка збереження -->
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-2xl shadow-xl shadow-blue-500/30 transition-transform active:scale-[0.98] text-lg mt-6">
+                        Зберегти показники
+                    </button>
                 </form>
             </div>
 
             <!-- ВКЛАДКА 2: ІСТОРІЯ -->
-            <div id="tabHistory" class="tab-content hidden space-y-4">
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div class="bg-blue-600 p-3 rounded-2xl text-white shadow-md">
-                        <p class="text-blue-200 text-[9px] font-bold uppercase mb-0.5">Загалом</p>
-                        <p id="statsTotal" class="font-black text-xl">0 ₴</p>
+            <div id="tabHistory" class="tab-content hidden space-y-6">
+                
+                <!-- Графік -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-bold text-lg text-slate-800 dark:text-white">Аналітика</h3>
+                        <p id="statsAvg" class="text-xs font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1 rounded-xl">Сер: 0 ₴</p>
                     </div>
-                    <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-center">
-                        <p class="text-slate-400 text-[9px] font-bold uppercase mb-0.5">Середнє / міс</p>
-                        <p id="statsAvg" class="font-black text-xl text-slate-800 dark:text-white">0 ₴</p>
+                    <!-- Стовпці графіка -->
+                    <div id="chartContainer" class="flex justify-between items-end h-32 gap-2 mt-2">
+                        <!-- Динамічно рендериться -->
                     </div>
                 </div>
-                <div id="recordsList" class="space-y-5"></div>
+
+                <!-- Список -->
+                <div id="recordsList" class="space-y-4"></div>
             </div>
 
             <!-- ВКЛАДКА 3: НАЛАШТУВАННЯ -->
-            <div id="tabSettings" class="tab-content hidden space-y-4">
+            <div id="tabSettings" class="tab-content hidden space-y-5">
                 
-                <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
-                    <h3 class="font-bold mb-3 text-sm text-slate-800 dark:text-white flex items-center gap-1.5">
-                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Тарифи (₴)
-                    </h3>
-                    <div class="grid grid-cols-2 gap-2 text-sm">
-                        <div class="relative"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Вода</span><input type="number" id="tWater" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
-                        <div class="relative"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Газ</span><input type="number" id="tGas" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
-                        <div class="relative"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Світло (база)</span><input type="number" id="tElectroBase" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
-                        <div class="relative" id="settingElectroWinterWrap"><span class="absolute top-1 left-2 text-[8px] font-bold text-slate-400 uppercase">Світло (зима)</span><input type="number" id="tElectroWinter" step="0.01" class="w-full bg-slate-100 dark:bg-slate-700/50 border-none rounded-lg pt-4 pb-1.5 px-2 font-bold outline-none text-slate-800 dark:text-white text-center"></div>
-                    </div>
-                </div>
-
-                <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
-                    <h3 class="font-bold mb-3 text-sm text-slate-800 dark:text-white">Відображення блоків</h3>
+                <!-- Тарифи -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+                    <h3 class="font-bold mb-4 text-lg text-slate-800 dark:text-white">Тарифи (₴)</h3>
                     <div class="space-y-3">
-                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-300">
-                            <span class="flex items-center gap-1.5"><span class="text-blue-500">💧</span> Вода</span>
-                            <div class="relative inline-block w-10 mr-2 align-middle select-none"><input type="checkbox" id="prefWater" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"></div></div>
-                        </label>
-                        
-                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-300">
-                            <span class="flex items-center gap-1.5"><span class="text-yellow-500">⚡️</span> Світло</span>
-                            <div class="relative inline-block w-10 mr-2 align-middle select-none"><input type="checkbox" id="prefElectro" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"></div></div>
-                        </label>
-                        
-                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-300 pl-6 border-l-2 border-slate-100 dark:border-slate-700 ml-2">
-                            <span class="flex items-center gap-1.5 text-xs text-slate-500">Двозонний (День/Ніч)</span>
-                            <div class="relative inline-block w-10 mr-2 align-middle select-none"><input type="checkbox" id="prefElectroTwoZone" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"></div></div>
-                        </label>
-                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-300 pl-6 border-l-2 border-slate-100 dark:border-slate-700 ml-2">
-                            <span class="flex items-center gap-1.5 text-xs text-slate-500">Зимовий/Пільговий</span>
-                            <div class="relative inline-block w-10 mr-2 align-middle select-none"><input type="checkbox" id="prefElectroWinter" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"></div></div>
-                        </label>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-700 pb-2">
+                            <span class="text-sm font-bold text-slate-500">Вода</span>
+                            <input type="number" id="tWater" step="0.01" class="w-24 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right">
+                        </div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-700 pb-2">
+                            <span class="text-sm font-bold text-slate-500">Світло (база)</span>
+                            <input type="number" id="tElectroBase" step="0.01" class="w-24 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right">
+                        </div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-700 pb-2" id="settingElectroWinterWrap">
+                            <span class="text-sm font-bold text-slate-500">Світло (зима)</span>
+                            <input type="number" id="tElectroWinter" step="0.01" class="w-24 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-bold text-slate-500">Газ</span>
+                            <input type="number" id="tGas" step="0.01" class="w-24 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right">
+                        </div>
+                    </div>
+                </div>
 
-                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-300 mt-2">
-                            <span class="flex items-center gap-1.5"><span class="text-orange-500">🔥</span> Газ</span>
-                            <div class="relative inline-block w-10 mr-2 align-middle select-none"><input type="checkbox" id="prefGas" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"></div></div>
+                <!-- Відображення -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+                    <h3 class="font-bold mb-4 text-lg text-slate-800 dark:text-white">Послуги</h3>
+                    <div class="space-y-4">
+                        <label class="flex justify-between items-center text-base font-bold text-slate-700 dark:text-slate-200">
+                            <span class="flex items-center gap-2">💧 Вода</span>
+                            <div class="relative inline-block w-12 align-middle select-none"><input type="checkbox" id="prefWater" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-6 rounded-full cursor-pointer"></div></div>
+                        </label>
+                        
+                        <div class="space-y-3 pt-2 border-t border-slate-50 dark:border-slate-700">
+                            <label class="flex justify-between items-center text-base font-bold text-slate-700 dark:text-slate-200">
+                                <span class="flex items-center gap-2">⚡️ Світло</span>
+                                <div class="relative inline-block w-12 align-middle select-none"><input type="checkbox" id="prefElectro" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-6 rounded-full cursor-pointer"></div></div>
+                            </label>
+                            <label class="flex justify-between items-center text-sm font-bold text-slate-500 pl-6 border-l-2 border-slate-100 dark:border-slate-700 ml-2">
+                                <span>Двозонний (День/Ніч)</span>
+                                <div class="relative inline-block w-10 align-middle select-none"><input type="checkbox" id="prefElectroTwoZone" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"></div></div>
+                            </label>
+                            <label class="flex justify-between items-center text-sm font-bold text-slate-500 pl-6 border-l-2 border-slate-100 dark:border-slate-700 ml-2">
+                                <span>Зимовий тариф</span>
+                                <div class="relative inline-block w-10 align-middle select-none"><input type="checkbox" id="prefElectroWinter" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-5 rounded-full cursor-pointer"></div></div>
+                            </label>
+                        </div>
+
+                        <label class="flex justify-between items-center text-base font-bold text-slate-700 dark:text-slate-200 pt-2 border-t border-slate-50 dark:border-slate-700">
+                            <span class="flex items-center gap-2">🔥 Газ</span>
+                            <div class="relative inline-block w-12 align-middle select-none"><input type="checkbox" id="prefGas" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block overflow-hidden h-6 rounded-full cursor-pointer"></div></div>
                         </label>
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
-                    <h3 class="font-bold mb-1 text-sm text-slate-800 dark:text-white flex items-center gap-1.5">
-                        <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                        Інші послуги
-                    </h3>
-                    <p class="text-[9px] text-slate-400 mb-3 leading-tight">Створіть свої поля. Суму можна залишити порожньою.</p>
-                    <div id="customServicesSettingsList" class="space-y-2 mb-3"></div>
-                    <button onclick="addCustomServiceField()" class="w-full py-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-xs font-bold text-blue-600 dark:text-blue-400 border border-dashed border-slate-200 dark:border-slate-600 hover:bg-slate-100 transition-colors">+ Додати нову послугу</button>
+                <!-- Інші послуги -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+                    <h3 class="font-bold mb-1 text-lg text-slate-800 dark:text-white">Інші послуги</h3>
+                    <p class="text-[10px] text-slate-400 mb-4 leading-tight">Створіть свої поля (Квартплата, Сміття тощо).</p>
+                    <div id="customServicesSettingsList" class="space-y-3 mb-4"></div>
+                    <button onclick="addCustomServiceField()" class="w-full py-3 bg-slate-50 dark:bg-slate-700 rounded-xl text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-slate-100 transition-colors border border-slate-200 dark:border-slate-600">+ Додати послугу</button>
                 </div>
                 
-                <button type="button" onclick="saveSettings()" class="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl py-3.5 font-bold shadow-lg transition-transform active:scale-[0.98]">
+                <button type="button" onclick="saveSettings()" class="w-full bg-slate-800 dark:bg-white text-white dark:text-slate-900 rounded-2xl py-4 font-bold shadow-lg transition-transform active:scale-[0.98] text-lg">
                     Зберегти налаштування
                 </button>
             </div>
-
-            <!-- ФІЗИЧНА РОЗПІРКА ДЛЯ СКРОЛУ -->
-            <div class="h-32 shrink-0 w-full"></div>
             
         </div>
 
-        <!-- НИЖНЯ ПАНЕЛЬ НАВІГАЦІЇ -->
-        <div class="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 pb-[max(env(safe-area-inset-bottom),16px)] z-[60]">
-            <div class="flex justify-around items-center px-4 py-2 max-w-md mx-auto w-full">
-                <button onclick="switchTab('tabCalc')" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center p-2 text-blue-600 transition-colors">
-                    <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                    <span class="text-[11px] font-bold">Розрахунок</span>
+        <!-- НИЖНЯ ПАНЕЛЬ НАВІГАЦІЇ (Скляна) -->
+        <div class="fixed bottom-0 left-0 right-0 glass-nav border-t border-slate-200/50 dark:border-slate-700/50 pb-[max(env(safe-area-inset-bottom),20px)] z-[60] shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+            <div class="flex justify-around items-center px-2 py-3 max-w-md mx-auto w-full">
+                <button onclick="switchTab('tabCalc')" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center gap-1 text-blue-600 transition-all scale-105">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    <span class="text-[10px] font-bold">Головна</span>
                 </button>
-                <button onclick="switchTab('tabHistory')" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center p-2 text-slate-400 transition-colors">
-                    <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    <span class="text-[11px] font-bold">Історія</span>
+                <button onclick="switchTab('tabHistory')" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center gap-1 text-slate-400 transition-all">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    <span class="text-[10px] font-bold">Історія</span>
                 </button>
-                <button onclick="switchTab('tabSettings')" id="btnTabSettings" class="nav-btn flex-1 flex flex-col items-center p-2 text-slate-400 transition-colors">
-                    <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                    <span class="text-[11px] font-bold">Налаштування</span>
+                <button onclick="switchTab('tabSettings')" id="btnTabSettings" class="nav-btn flex-1 flex flex-col items-center gap-1 text-slate-400 transition-all">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span class="text-[10px] font-bold">Налаштування</span>
                 </button>
             </div>
         </div>
@@ -308,16 +324,24 @@
         let sessionPhone = localStorage.getItem('k_phoneHash'); let sessionPass = localStorage.getItem('k_passHash');
         let defaultTariffs = { water: 30.38, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
         let defaultPrefs = { showWater: true, showElectro: true, showGas: false, electroTwoZone: true, electroWinter: true };
-        let customServices = [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}, {id: "s3", name: "Абон. вода", defaultSum: ""}];
+        let customServices = [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}];
         let tariffs = { ...defaultTariffs }; let prefs = { ...defaultPrefs }; let records = [];
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
-            document.querySelectorAll('.nav-btn').forEach(el => { el.classList.remove('text-blue-600'); el.classList.add('text-slate-400'); });
+            
+            document.querySelectorAll('.nav-btn').forEach(el => { 
+                el.classList.remove('text-blue-600', 'scale-105'); 
+                el.classList.add('text-slate-400'); 
+            });
             let btnId = tabId === 'tabCalc' ? 'btnTabCalc' : (tabId === 'tabHistory' ? 'btnTabHistory' : 'btnTabSettings');
-            document.getElementById(btnId).classList.remove('text-slate-400'); document.getElementById(btnId).classList.add('text-blue-600');
-            if(tabId === 'tabHistory') renderRecords(); if(tabId === 'tabSettings') renderSettingsCustomServices();
+            let btn = document.getElementById(btnId);
+            btn.classList.remove('text-slate-400'); 
+            btn.classList.add('text-blue-600', 'scale-105');
+            
+            if(tabId === 'tabHistory') renderRecords(); 
+            if(tabId === 'tabSettings') renderSettingsCustomServices();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -325,7 +349,7 @@
             document.documentElement.classList.toggle('dark');
             const isDark = document.documentElement.classList.contains('dark');
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            document.querySelector('meta[name="theme-color"]').setAttribute('content', isDark ? '#0f172a' : '#f8fafc');
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', isDark ? '#0f172a' : '#f1f5f9');
         }
 
         async function getHash(text) {
@@ -375,10 +399,10 @@
         function renderSettingsCustomServices() {
             const container = document.getElementById('customServicesSettingsList');
             container.innerHTML = customServices.map((srv, index) => `
-                <div class="flex gap-2 items-center bg-slate-100 dark:bg-slate-700/50 p-2 rounded-xl border border-slate-200 dark:border-slate-600">
-                    <input type="text" value="${srv.name}" onchange="customServices[${index}].name = this.value" placeholder="Назва" class="flex-1 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold outline-none px-2 py-2 text-slate-800 dark:text-white">
-                    <input type="number" step="0.01" value="${srv.defaultSum}" onchange="customServices[${index}].defaultSum = this.value" placeholder="Сума" class="w-16 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold outline-none px-1 py-2 text-center text-slate-800 dark:text-white">
-                    <button type="button" onclick="removeCustomService(${index})" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors">
+                <div class="flex gap-2 items-center bg-slate-50 dark:bg-slate-700/50 p-2 rounded-xl border border-slate-100 dark:border-slate-600">
+                    <input type="text" value="${srv.name}" onchange="customServices[${index}].name = this.value" placeholder="Назва" class="flex-1 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold outline-none px-3 py-3 text-slate-800 dark:text-white shadow-sm">
+                    <input type="number" step="0.01" value="${srv.defaultSum}" onchange="customServices[${index}].defaultSum = this.value" placeholder="Сума" class="w-20 bg-white dark:bg-slate-800 rounded-lg text-sm font-bold outline-none px-2 py-3 text-center text-slate-800 dark:text-white shadow-sm">
+                    <button type="button" onclick="removeCustomService(${index})" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-red-500 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 </div>
@@ -393,11 +417,9 @@
             if(customServices.length === 0) { container.innerHTML = ''; document.getElementById('customEmptyMsg').classList.remove('hidden'); return; }
             document.getElementById('customEmptyMsg').classList.add('hidden');
             container.innerHTML = customServices.map(srv => `
-                <div class="flex flex-col bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 relative overflow-hidden">
-                    <div class="px-2 py-1 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
-                        <span class="block text-[8px] font-bold text-slate-500 uppercase truncate" title="${srv.name}">${srv.name || 'Послуга'}</span>
-                    </div>
-                    <input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-transparent p-2 text-center text-sm font-bold outline-none focus:ring-2 focus:ring-purple-400 focus:bg-white dark:focus:bg-slate-800" placeholder="${srv.defaultSum ? srv.defaultSum : '0.00'}">
+                <div class="flex flex-col bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3 border border-slate-100 dark:border-slate-600">
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase truncate mb-2 text-center" title="${srv.name}">${srv.name || 'Послуга'}</span>
+                    <input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-white dark:bg-slate-800 p-2 rounded-lg text-center text-sm font-bold outline-none border border-transparent focus:border-purple-400 shadow-sm" placeholder="${srv.defaultSum ? srv.defaultSum : '0.00'}">
                 </div>
             `).join('');
             document.querySelectorAll('.custom-srv-input').forEach(input => input.addEventListener('input', calculatePreview));
@@ -416,15 +438,13 @@
             document.getElementById('blockCustomServices').style.display = customServices.length > 0 ? 'flex' : 'none';
 
             if (prefs.electroTwoZone) {
-                document.getElementById('electroNightRow').style.display = 'flex';
-                document.getElementById('electroDayLabel').style.display = 'block';
+                document.getElementById('electroNightRow').style.display = 'block';
             } else {
                 document.getElementById('electroNightRow').style.display = 'none';
-                document.getElementById('electroDayLabel').style.display = 'none'; 
             }
 
-            document.getElementById('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none';
-            document.getElementById('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'block' : 'none';
+            document.getElementById('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'block' : 'none';
+            document.getElementById('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'flex' : 'none';
         }
 
         function initAppUI() {
@@ -445,7 +465,7 @@
                 electroWinter: document.getElementById('prefElectroWinter').checked
             };
             customServices = customServices.filter(s => s.name.trim() !== "");
-            syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); alert('✅ Налаштування збережено');
+            syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); alert('Налаштування збережено');
         };
 
         const monthInput = document.getElementById('monthInput'); monthInput.value = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
@@ -453,15 +473,15 @@
         function fillPreviousReadings() {
             if(records.length > 0) {
                 let lastRecord = records.sort((a, b) => new Date(b.month) - new Date(a.month))[0];
-                if(prefs.showWater) document.getElementById('wPrev').value = lastRecord.wCur || 0;
-                if(prefs.showElectro) { document.getElementById('dPrev').value = lastRecord.dCur || 0; document.getElementById('nPrev').value = lastRecord.nCur || 0; }
-                if(prefs.showGas) document.getElementById('gPrev').value = lastRecord.gCur || 0;
+                if(prefs.showWater) document.getElementById('wPrev').value = lastRecord.wCur || '';
+                if(prefs.showElectro) { document.getElementById('dPrev').value = lastRecord.dCur || ''; document.getElementById('nPrev').value = lastRecord.nCur || ''; }
+                if(prefs.showGas) document.getElementById('gPrev').value = lastRecord.gCur || '';
                 customServices.forEach(srv => { let el = document.getElementById(`custom_${srv.id}`); if(el) el.value = (lastRecord.customData && lastRecord.customData[srv.id]) !== undefined ? lastRecord.customData[srv.id].val : srv.defaultSum; });
                 document.getElementById('isWinterInput').checked = (new Date(monthInput.value).getMonth() + 1 >= 10 || new Date(monthInput.value).getMonth() + 1 <= 4);
             } else { customServices.forEach(srv => { let el = document.getElementById(`custom_${srv.id}`); if(el && srv.defaultSum) el.value = srv.defaultSum; }); }
         }
 
-        const inputs = ['wPrev', 'wCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'gPrev', 'gCur', 'isWinterInput']; inputs.forEach(id => document.getElementById(id).addEventListener('input', calculatePreview));
+        const inputs = ['wPrev', 'wCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'gPrev', 'gCur', 'isWinterInput', 'monthInput']; inputs.forEach(id => document.getElementById(id).addEventListener('input', calculatePreview));
 
         let currentCalc = { waterCost: 0, electroCost: 0, gasCost: 0, customCost: 0, total: 0 };
 
@@ -495,7 +515,12 @@
             customServices.forEach(srv => { let val = parseFloat(document.getElementById(`custom_${srv.id}`)?.value); if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum); if (!isNaN(val)) currentCalc.customCost += val; });
 
             currentCalc.total = currentCalc.waterCost + currentCalc.electroCost + currentCalc.gasCost + currentCalc.customCost;
-            document.getElementById('waterCostDisplay').innerText = currentCalc.waterCost.toFixed(2) + ' ₴'; document.getElementById('electroCostDisplay').innerText = currentCalc.electroCost.toFixed(2) + ' ₴'; document.getElementById('gasCostDisplay').innerText = currentCalc.gasCost.toFixed(2) + ' ₴'; document.getElementById('customCostDisplay').innerText = currentCalc.customCost.toFixed(2) + ' ₴'; document.getElementById('totalCostDisplay').innerText = currentCalc.total.toFixed(2) + ' ₴';
+            
+            document.getElementById('heroTotal').innerHTML = `${currentCalc.total.toFixed(2)} <span class="text-xl font-bold text-blue-200">₴</span>`;
+            document.getElementById('waterCostDisplay').innerText = currentCalc.waterCost.toFixed(2) + ' ₴'; 
+            document.getElementById('electroCostDisplay').innerText = currentCalc.electroCost.toFixed(2) + ' ₴'; 
+            document.getElementById('gasCostDisplay').innerText = currentCalc.gasCost.toFixed(2) + ' ₴'; 
+            document.getElementById('customCostDisplay').innerText = currentCalc.customCost.toFixed(2) + ' ₴'; 
         }
 
         document.getElementById('utilityForm').addEventListener('submit', (e) => {
@@ -510,46 +535,89 @@
                 gPrev: prefs.showGas ? (parseFloat(document.getElementById('gPrev').value)||0) : 0, gCur: prefs.showGas ? (parseFloat(document.getElementById('gCur').value)||0) : 0,
                 customData: customData, waterCost: currentCalc.waterCost, electroCost: currentCalc.electroCost, gasCost: currentCalc.gasCost, customCost: currentCalc.customCost, total: currentCalc.total, paid: false
             };
-            const exIdx = records.findIndex(r => r.month === newRecord.month); if(exIdx >= 0) { if(confirm('Оновити запис?')) records[exIdx] = newRecord; else return; } else records.push(newRecord);
+            const exIdx = records.findIndex(r => r.month === newRecord.month); if(exIdx >= 0) { if(!confirm('Оновити існуючий запис за цей місяць?')) return; records[exIdx] = newRecord; } else records.push(newRecord);
             syncToCloud(); let [y, m] = monthInput.value.split('-'); let nextDate = new Date(y, m); monthInput.value = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
             fillPreviousReadings(); calculatePreview(); switchTab('tabHistory');
         });
 
-        window.toggleRecord = function(index) { document.getElementById(`details-${index}`).classList.toggle('open'); document.getElementById(`chev-${index}`).classList.toggle('open'); };
+        // Графік історії
+        function renderChart(sortedRecords) {
+            const chartContainer = document.getElementById('chartContainer');
+            const recent = sortedRecords.slice(-6).reverse(); // Останні 6 місяців
+            if (!recent.length) { chartContainer.innerHTML = '<span class="text-sm text-slate-400 m-auto">Немає даних</span>'; return; }
+            
+            const maxTotal = Math.max(...recent.map(r => r.total));
+            chartContainer.innerHTML = recent.map(r => {
+                const heightPercent = maxTotal > 0 ? (r.total / maxTotal) * 100 : 0;
+                const monthName = new Date(r.month + '-01').toLocaleString('uk-UA', {month: 'short'}).slice(0, 3);
+                const isPaid = r.paid;
+                return `
+                    <div class="flex flex-col items-center gap-2 flex-1 group" title="${r.total.toFixed(0)} ₴">
+                        <span class="text-[9px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity absolute -mt-4">${r.total.toFixed(0)}</span>
+                        <div class="w-full h-24 flex items-end bg-slate-50 dark:bg-slate-700/30 rounded-lg overflow-hidden">
+                            <div class="${isPaid ? 'bg-blue-500' : 'bg-orange-400'} w-full rounded-lg transition-all duration-700 hover:opacity-80" style="height: ${Math.max(10, heightPercent)}%"></div>
+                        </div>
+                        <span class="text-[10px] text-slate-500 uppercase font-bold">${monthName}</span>
+                    </div>
+                `;
+            }).join('');
+        }
 
         function renderRecords() {
             const list = document.getElementById('recordsList'); list.innerHTML = '';
-            let totalSum = records.reduce((sum, r) => sum + r.total, 0); document.getElementById('statsTotal').innerText = totalSum.toFixed(0) + ' ₴'; document.getElementById('statsAvg').innerText = (records.length ? (totalSum / records.length) : 0).toFixed(0) + ' ₴';
+            let totalSum = records.reduce((sum, r) => sum + r.total, 0); 
+            document.getElementById('statsAvg').innerText = 'Сер: ' + (records.length ? (totalSum / records.length) : 0).toFixed(0) + ' ₴';
             
+            let sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month));
+            renderChart(sorted);
+
             let groupedRecords = {};
-            records.sort((a, b) => new Date(b.month) - new Date(a.month)).forEach((rec, index) => {
+            sorted.forEach((rec, index) => {
                 let year = rec.month.split('-')[0];
                 if (!groupedRecords[year]) groupedRecords[year] = [];
-                groupedRecords[year].push({rec, index});
+                groupedRecords[year].push({rec, index: records.indexOf(rec)});
             });
 
             Object.keys(groupedRecords).sort((a, b) => b - a).forEach(year => {
                 let yearHeader = document.createElement('div');
-                yearHeader.className = "sticky top-0 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md py-2 z-10 -mx-4 px-4 flex items-center justify-between";
-                yearHeader.innerHTML = `<h2 class="text-xl font-black text-slate-800 dark:text-white">${year}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-700 ml-4"></div>`;
+                yearHeader.className = "flex items-center gap-3 mt-6 mb-3";
+                yearHeader.innerHTML = `<h2 class="text-xl font-black text-slate-800 dark:text-white">${year}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-700"></div>`;
                 list.appendChild(yearHeader);
 
                 groupedRecords[year].forEach(item => {
                     let {rec, index} = item;
-                    const card = document.createElement('div'); card.className = `rounded-2xl shadow-sm border bg-white dark:bg-slate-800 overflow-hidden mb-3 ${rec.paid ? 'border-green-400 dark:border-green-500/50' : 'border-slate-100 dark:border-slate-700 border-l-[4px] border-l-red-500'}`;
+                    const card = document.createElement('div'); 
+                    card.className = `p-5 rounded-[2rem] shadow-sm border bg-white dark:bg-slate-800 mb-4 transition-all ${rec.paid ? 'border-slate-100 dark:border-slate-700' : 'border-orange-200 dark:border-orange-500/30 shadow-orange-100 dark:shadow-none'}`;
+                    
                     let dateStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); 
                     
-                    let customServicesHTML = ''; if (rec.customData && Object.keys(rec.customData).length > 0) { let itemsHTML = Object.values(rec.customData).map(item => `${item.name}: ${item.val} ₴`).join(' <span class="text-slate-300 mx-1">|</span> '); customServicesHTML = `<div class="flex justify-between pb-1"><div><span class="font-bold text-purple-500 text-[11px] uppercase">Інші</span><div class="text-[10px] text-slate-500 mt-0.5">${itemsHTML}</div></div><span class="font-bold text-xs">${rec.customCost.toFixed(2)} ₴</span></div>`; }
-                    
-                    let electroDetailsHTML = '';
-                    if (rec.electroCost > 0) {
-                        const hasNight = rec.nCur > 0 || rec.nPrev > 0;
-                        electroDetailsHTML = `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-yellow-500 text-[11px] uppercase">Світло</span><div class="text-[10px] text-slate-500 mt-0.5">${hasNight ? `День: <b>${rec.dPrev}</b> → <b>${rec.dCur}</b>` : `Покази: <b>${rec.dPrev}</b> → <b>${rec.dCur}</b>`}</div>${hasNight ? `<div class="text-[10px] text-slate-500">Ніч: <b>${rec.nPrev}</b> → <b>${rec.nCur}</b></div>` : ''}</div><span class="font-bold">${rec.electroCost.toFixed(2)} ₴</span></div>`;
-                    }
+                    let topRow = `
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h4 class="font-bold text-lg capitalize text-slate-800 dark:text-white">${dateStr}</h4>
+                                <span class="text-[10px] font-black uppercase tracking-wider ${rec.paid ? 'text-blue-500' : 'text-orange-500'}">${rec.paid ? 'Оплачено' : 'Очікує оплати'}</span>
+                            </div>
+                            <span class="font-black text-2xl text-slate-900 dark:text-white">${rec.total.toFixed(2)} ₴</span>
+                        </div>
+                    `;
 
-                    let headerHTML = `<div class="p-4 flex justify-between items-center cursor-pointer" onclick="toggleRecord(${index})"><div class="flex items-center gap-3"><div id="chev-${index}" class="chevron w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div><div><h4 class="font-bold capitalize text-slate-800 dark:text-white leading-none mb-1.5">${dateStr}</h4><span class="text-[9px] font-black uppercase px-2 py-0.5 rounded ${rec.paid ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600'}">${rec.paid ? 'Оплачено' : 'Борг'}</span></div></div><span class="font-black text-lg text-slate-900 dark:text-white">${rec.total.toFixed(2)} ₴</span></div>`;
-                    let detailsHTML = `<div id="details-${index}" class="details-content bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 px-4"><div class="py-3 space-y-3 text-xs">${rec.waterCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-blue-500 text-[11px] uppercase">Вода</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.wPrev}</b> → Пот: <b>${rec.wCur}</b> (Витрата: ${rec.wCur - rec.wPrev} м³)</div></div><span class="font-bold">${rec.waterCost.toFixed(2)} ₴</span></div>` : ''}${electroDetailsHTML}${rec.gasCost > 0 ? `<div class="flex justify-between border-b border-dashed border-slate-200 dark:border-slate-700 pb-2"><div><span class="font-bold text-orange-500 text-[11px] uppercase">Газ</span><div class="text-[10px] text-slate-500 mt-0.5">Мин: <b>${rec.gPrev||0}</b> → Пот: <b>${rec.gCur||0}</b></div></div><span class="font-bold">${rec.gasCost.toFixed(2)} ₴</span></div>` : ''}${customServicesHTML}</div><div class="pb-4 pt-1 flex gap-2"><button type="button" onclick="togglePaid(${index})" class="flex-1 py-2 rounded-lg font-bold text-xs ${rec.paid ? 'bg-slate-200 dark:bg-slate-700 text-slate-700' : 'bg-blue-600 text-white shadow-md'}">${rec.paid ? 'Скасувати' : '💳 Відмітити сплаченим'}</button><button type="button" onclick="editRecord(${index})" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-slate-700 dark:text-white" title="Редагувати"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button><button type="button" onclick="deleteRecord(${index})" class="px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-500 rounded-lg" title="Видалити"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></div></div>`;
-                    card.innerHTML = headerHTML + detailsHTML; list.appendChild(card);
+                    let details = `<div class="space-y-2 text-sm border-t border-slate-100 dark:border-slate-700 pt-3">`;
+                    if (rec.waterCost > 0) details += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex gap-2"><span class="text-blue-500">💧</span> Вода</span><span class="font-bold">${rec.waterCost.toFixed(2)} ₴</span></div>`;
+                    if (rec.electroCost > 0) details += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex gap-2"><span class="text-yellow-500">⚡️</span> Світло</span><span class="font-bold">${rec.electroCost.toFixed(2)} ₴</span></div>`;
+                    if (rec.gasCost > 0) details += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex gap-2"><span class="text-orange-500">🔥</span> Газ</span><span class="font-bold">${rec.gasCost.toFixed(2)} ₴</span></div>`;
+                    if (rec.customCost > 0) details += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex gap-2"><span class="text-purple-500">📦</span> Інше</span><span class="font-bold">${rec.customCost.toFixed(2)} ₴</span></div>`;
+                    details += `</div>`;
+
+                    let actions = `
+                        <div class="flex gap-2 mt-5">
+                            <button type="button" onclick="togglePaid(${index})" class="flex-1 py-3 rounded-xl font-bold text-sm transition-colors ${rec.paid ? 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300' : 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'}">${rec.paid ? 'Скасувати' : '💳 Відмітити сплаченим'}</button>
+                            <button type="button" onclick="editRecord(${index})" class="w-12 h-12 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                            <button type="button" onclick="deleteRecord(${index})" class="w-12 h-12 flex items-center justify-center bg-red-50 dark:bg-red-900/20 rounded-xl text-red-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                        </div>
+                    `;
+
+                    card.innerHTML = topRow + details + actions;
+                    list.appendChild(card);
                 });
             });
         }
