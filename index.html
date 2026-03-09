@@ -69,15 +69,15 @@
     <!-- ОСНОВНИЙ ДОДАТОК -->
     <div id="appScreen" class="hidden flex-col h-full w-full max-w-md mx-auto relative overflow-hidden">
         
-        <!-- Шапка з вибором адреси -->
+        <!-- Шапка -->
         <div class="px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center bg-slate-50 dark:bg-slate-950 z-20 shrink-0">
-            <div class="flex items-center gap-3 cursor-pointer" onclick="openAddressModal()">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="openAddressModal()" id="addressHeaderTrigger">
                 <div class="w-12 h-12 bg-gradient-to-tr from-indigo-500 to-blue-400 rounded-full flex items-center justify-center text-white shadow-md text-xl">🏡</div>
                 <div>
                     <p class="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider" id="userGreeting">Вітаю!</p>
                     <h2 class="text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-1 active:opacity-70 transition-opacity">
                         <span id="currentAddressDisplay" class="truncate max-w-[150px]">Мій дім</span>
-                        <svg class="w-4 h-4 text-indigo-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg id="addressArrowIcon" class="w-4 h-4 text-indigo-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
                     </h2>
                 </div>
             </div>
@@ -240,7 +240,7 @@
                 <div id="navIndicator" class="absolute top-2 left-[12%] w-[10%] h-1 bg-indigo-500 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(79,70,229,0.8)]"></div>
                 <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center gap-1.5 text-indigo-600 transition-all scale-105 relative z-10 pt-2"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm4 4a1 1 0 100 2h8a1 1 0 100-2H8zm0 4a1 1 0 100 2h4a1 1 0 100-2H8zm0 4a1 1 0 100 2h4a1 1 0 100-2H8z"></path></svg><span class="text-[10px] font-bold tracking-wide">Розрахунок</span></button>
                 <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center gap-1.5 text-slate-400 transition-all relative z-10 pt-2 hover:text-slate-600 dark:hover:text-slate-200"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span class="text-[10px] font-bold tracking-wide">Історія</span></button>
-                <button onclick="switchTab('tabSettings', 2)" id="btnTabSettings" class="nav-btn flex-1 flex flex-col items-center gap-1.5 text-slate-400 transition-all relative z-10 pt-2 hover:text-slate-600 dark:hover:text-slate-200"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg><span class="text-[10px] font-bold tracking-wide">Налаштування</span></button>
+                <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center gap-1.5 text-slate-400 transition-all relative z-10 pt-2 hover:text-slate-600 dark:hover:text-slate-200"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg><span class="text-[10px] font-bold tracking-wide">Налаштування</span></button>
             </div>
         </div>
     </div>
@@ -270,75 +270,53 @@
         
         let addresses = [];
         let currentAddressId = 'default';
+        let isGuest = false;
 
         let tariffs = {}; let prefs = {}; let records = []; let customServices = [];
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlShareToken = urlParams.get('share');
 
         async function getHash(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
 
         document.getElementById('authForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const rawPhone = document.getElementById('authLogin').value.toLowerCase().trim();
-            const rawPass = document.getElementById('authPass').value;
-            const btn = document.getElementById('authSubmitBtn');
-            const errEl = document.getElementById('authError');
-            errEl.classList.add('hidden'); btn.innerText = "Завантаження...";
-
+            e.preventDefault(); const rawPhone = document.getElementById('authLogin').value.toLowerCase().trim(); const rawPass = document.getElementById('authPass').value; const btn = document.getElementById('authSubmitBtn'); const errEl = document.getElementById('authError'); errEl.classList.add('hidden'); btn.innerText = "Завантаження...";
             try {
-                const passHash = await getHash(rawPass);
-                const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(rawPhone)}&pass=${passHash}&t=${Date.now()}`, { cache: "no-store" });
-                const data = await res.json();
-
+                const passHash = await getHash(rawPass); const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(rawPhone)}&pass=${passHash}&t=${Date.now()}`, { cache: "no-store" }); const data = await res.json();
                 if (res.status === 403 || data.error === "WRONG_PASSWORD") throw new Error("WRONG_PASSWORD");
-                
                 sessionPhone = rawPhone; sessionPass = passHash;
-                
-                if (res.status === 404 || !data.success) {
-                    profile.login = rawPhone; profile.name = rawPhone;
-                    addresses = [{ id: 'default', name: 'Мій дім', tariffs: {...defaultTariffs}, prefs: {...defaultPrefs}, records: [], customServices: [...defaultCustomServices] }];
-                    currentAddressId = 'default';
-                    await syncToCloud();
-                } else {
-                    if (data.data.addresses) {
-                        addresses = data.data.addresses;
-                        currentAddressId = data.data.currentAddressId || addresses[0].id;
-                    } else {
-                        addresses = [{
-                            id: 'default', name: 'Мій дім',
-                            tariffs: data.data.tariffs || {...defaultTariffs},
-                            prefs: { ...defaultPrefs, ...(data.data.prefs || {}) },
-                            records: data.data.records || [],
-                            customServices: data.data.customServices || [...defaultCustomServices]
-                        }];
-                        currentAddressId = 'default';
-                    }
+                if (res.status === 404 || !data.success) { profile.login = rawPhone; profile.name = rawPhone; addresses = [{ id: 'default', name: 'Мій дім', tariffs: {...defaultTariffs}, prefs: {...defaultPrefs}, records: [], customServices: [...defaultCustomServices] }]; currentAddressId = 'default'; await syncToCloud(); } else {
+                    if (data.data.addresses) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId || addresses[0].id; } else { addresses = [{ id: 'default', name: 'Мій дім', tariffs: data.data.tariffs || {...defaultTariffs}, prefs: { ...defaultPrefs, ...(data.data.prefs || {}) }, records: data.data.records || [], customServices: data.data.customServices || [...defaultCustomServices] }]; currentAddressId = 'default'; }
                     profile.login = rawPhone; profile.name = rawPhone;
                 }
-
-                localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_passHash', sessionPass); localStorage.setItem('k_profile', JSON.stringify(profile));
-                loadCurrentAddress();
-            } catch (err) {
-                btn.innerText = "Увійти";
-                errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль!" : "Помилка підключення";
-                errEl.classList.remove('hidden');
-            }
+                localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_passHash', sessionPass); localStorage.setItem('k_profile', JSON.stringify(profile)); loadCurrentAddress();
+            } catch (err) { btn.innerText = "Увійти"; errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль!" : "Помилка підключення"; errEl.classList.remove('hidden'); }
         });
 
         function loadCurrentAddress() {
             const addr = addresses.find(a => a.id === currentAddressId) || addresses[0];
             currentAddressId = addr.id; tariffs = addr.tariffs || {...defaultTariffs}; prefs = addr.prefs || {...defaultPrefs}; records = addr.records || []; customServices = addr.customServices || [...defaultCustomServices];
-            document.getElementById('currentAddressDisplay').innerText = addr.name; initAppUI();
+            document.getElementById('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : ''); initAppUI();
         }
 
-        function syncCurrentAddress() {
-            const addrIndex = addresses.findIndex(a => a.id === currentAddressId);
-            if(addrIndex >= 0) { addresses[addrIndex].tariffs = tariffs; addresses[addrIndex].prefs = prefs; addresses[addrIndex].records = records; addresses[addrIndex].customServices = customServices; }
-        }
+        function syncCurrentAddress() { const addrIndex = addresses.findIndex(a => a.id === currentAddressId); if(addrIndex >= 0) { addresses[addrIndex].tariffs = tariffs; addresses[addrIndex].prefs = prefs; addresses[addrIndex].records = records; addresses[addrIndex].customServices = customServices; } }
 
         function openAddressModal() { document.getElementById('addressModal').classList.remove('hidden'); setTimeout(() => document.getElementById('addressModalContent').classList.remove('translate-y-full'), 10); renderAddressModal(); }
         function closeAddressModal() { document.getElementById('addressModalContent').classList.add('translate-y-full'); setTimeout(() => document.getElementById('addressModal').classList.add('hidden'), 300); }
 
-        function shareAddressAccess() {
-            alert("Щоб мешканець міг вносити дані за вашим посиланням без пароля, потрібно додати 10 рядків у бекенд (Cloudflare Worker).\n\nПоки що ви можете ділитися готовими квитанціями через кнопку 📤 в Історії!");
+        async function shareAddressAccess(event) {
+            event.stopPropagation(); if(!sessionPhone) return;
+            const btn = event.currentTarget; const oldHtml = btn.innerHTML; btn.innerHTML = '⏳';
+            try {
+                const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify({ action: "generate_share", addressId: currentAddressId }) });
+                const data = await res.json();
+                if(data.success) {
+                    const shareUrl = window.location.origin + window.location.pathname + '?share=' + data.shareToken;
+                    navigator.clipboard.writeText(shareUrl);
+                    alert("✅ Гостьове посилання скопійовано!\n\nВідправте його квартиранту. Він зможе вносити показники тільки для об'єкта '" + document.getElementById('currentAddressDisplay').innerText + "' без пароля і доступу до налаштувань.");
+                } else alert("Помилка генерації");
+            } catch(e) { alert("Помилка з'єднання"); }
+            btn.innerHTML = oldHtml;
         }
 
         function renderAddressModal() {
@@ -349,7 +327,7 @@
                     <div class="flex gap-1.5 shrink-0 items-center">
                         ${a.id === currentAddressId ? '<svg class="w-5 h-5 text-white mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>' : ''}
                         
-                        <button onclick="shareAddressAccess(); event.stopPropagation();" class="p-2 transition-colors rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-white dark:bg-slate-900 text-slate-400 hover:text-indigo-500'}" title="Шерінг доступу"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg></button>
+                        <button onclick="shareAddressAccess(event);" class="p-2 transition-colors rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-white dark:bg-slate-900 text-slate-400 hover:text-indigo-500'}" title="Шерінг доступу"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg></button>
                         
                         <button onclick="editAddressName(event, '${a.id}')" class="p-2 transition-colors rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-white dark:bg-slate-900 text-slate-400 hover:text-indigo-500'}"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
                         
@@ -366,7 +344,7 @@
 
         let touchstartX = 0; let touchendX = 0; const swipeZone = document.getElementById('swipeContainer');
         swipeZone.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, {passive: true}); swipeZone.addEventListener('touchend', e => { touchendX = e.changedTouches[0].screenX; handleSwipe(); }, {passive: true});
-        function handleSwipe() { const dist = touchstartX - touchendX; const tabs = ['tabCalc', 'tabHistory', 'tabSettings']; const curIdx = tabs.findIndex(id => document.getElementById(id).classList.contains('tab-active')); if (dist > 70 && curIdx < 2) switchTab(tabs[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabs[curIdx - 1], curIdx - 1); }
+        function handleSwipe() { if(isGuest) return; const dist = touchstartX - touchendX; const tabs = ['tabCalc', 'tabHistory', 'tabSettings']; const curIdx = tabs.findIndex(id => document.getElementById(id).classList.contains('tab-active')); if (dist > 70 && curIdx < 2) switchTab(tabs[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabs[curIdx - 1], curIdx - 1); }
 
         function switchTab(tabId, index = -1) {
             document.querySelectorAll('.tab-transition').forEach(el => { el.classList.remove('tab-active'); el.classList.add('tab-hidden'); });
@@ -380,8 +358,21 @@
         }
 
         function toggleTheme() { document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.classList.contains('dark') ? '#020617' : '#f8fafc'); if(document.getElementById('tabHistory').classList.contains('tab-active')) renderRecords(); }
-        async function syncToCloud() { if (!sessionPhone) return; syncCurrentAddress(); const body = { addresses: addresses, currentAddressId: currentAddressId }; const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify(body) }); const data = await res.json(); if (res.status === 403 || data.error === "WRONG_PASSWORD") logout(); }
-        window.logout = function() { if(confirm('Вийти з акаунту?')){ localStorage.clear(); location.reload(); } };
+        
+        async function syncToCloud() { 
+            syncCurrentAddress(); 
+            if(isGuest && urlShareToken) {
+                await fetch(`${WORKER_URL}?share=${urlShareToken}`, { method: 'POST', body: JSON.stringify({ addresses: addresses }) });
+                return;
+            }
+            if (!sessionPhone) return;
+            const body = { addresses: addresses, currentAddressId: currentAddressId }; 
+            const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify(body) }); 
+            const data = await res.json(); 
+            if (res.status === 403 || data.error === "WRONG_PASSWORD") logout(); 
+        }
+
+        window.logout = function() { if(isGuest) { window.location.href = window.location.pathname; return; } if(confirm('Вийти з акаунту?')){ localStorage.clear(); location.reload(); } };
 
         function updateSmartBadges() {
             const getV = id => Math.max(0, parseFloat(document.getElementById(id)?.value) || 0);
@@ -478,31 +469,15 @@
         };
 
         window.shareRecordReceipt = async function(index, event) {
-            event.stopPropagation();
-            let r = records[index];
-            let dStr = new Date(r.month + '-01').toLocaleString('uk-UA', {month:'long', year:'numeric'}).replace(' р.','');
-            let addrName = document.getElementById('currentAddressDisplay').innerText;
-            
+            event.stopPropagation(); let r = records[index]; let dStr = new Date(r.month + '-01').toLocaleString('uk-UA', {month:'long', year:'numeric'}).replace(' р.',''); let addrName = document.getElementById('currentAddressDisplay').innerText;
             let txt = `🧾 *Комуналка за ${dStr}*\n📍 Об'єкт: ${addrName}\n➖➖➖➖➖➖➖➖➖➖\n`;
             if(r.waterCost > 0 || r.wCur > 0) txt += `💧 Вода: ${r.waterCost} ₴  (${r.wPrev} ➡️ ${r.wCur})\n`;
-            if(r.electroCost > 0 || r.dCur > 0) {
-                txt += `⚡️ Світло: ${r.electroCost} ₴\n   ├ День: ${r.dPrev} ➡️ ${r.dCur}\n`;
-                if(r.nCur > 0 || r.nPrev > 0) txt += `   └ Ніч: ${r.nPrev} ➡️ ${r.nCur}\n`;
-            }
+            if(r.electroCost > 0 || r.dCur > 0) { txt += `⚡️ Світло: ${r.electroCost} ₴\n   ├ День: ${r.dPrev} ➡️ ${r.dCur}\n`; if(r.nCur > 0 || r.nPrev > 0) txt += `   └ Ніч: ${r.nPrev} ➡️ ${r.nCur}\n`; }
             if(r.gasCost > 0 || r.gCur > 0) txt += `🔥 Газ: ${r.gasCost} ₴  (${r.gPrev} ➡️ ${r.gCur})\n`;
-            if(r.customCost > 0) {
-                txt += `📦 Інше: ${r.customCost} ₴\n`;
-                if(r.customData) Object.values(r.customData).forEach(srv => { if(srv.val>0) txt += `   └ ${srv.name}: ${srv.val} ₴\n`; });
-            }
-            txt += `➖➖➖➖➖➖➖➖➖➖\n💰 *Всього до сплати: ${r.total} ₴*\n`;
-            txt += r.paid ? `✅ Статус: Оплачено` : `⏳ Статус: Очікує оплати`;
-
-            if (navigator.share) {
-                try { await navigator.share({ title: `Комуналка ${dStr}`, text: txt }); return; } catch(e) { console.log("Share API error", e); }
-            }
-            
-            navigator.clipboard.writeText(txt);
-            alert("✅ Квитанцію скопійовано в буфер обміну! Можете вставити її в Telegram чи Viber.");
+            if(r.customCost > 0) { txt += `📦 Інше: ${r.customCost} ₴\n`; if(r.customData) Object.values(r.customData).forEach(srv => { if(srv.val>0) txt += `   └ ${srv.name}: ${srv.val} ₴\n`; }); }
+            txt += `➖➖➖➖➖➖➖➖➖➖\n💰 *Всього до сплати: ${r.total} ₴*\n` + (r.paid ? `✅ Статус: Оплачено` : `⏳ Статус: Очікує оплати`);
+            if (navigator.share) { try { await navigator.share({ title: `Комуналка ${dStr}`, text: txt }); return; } catch(e) { } }
+            navigator.clipboard.writeText(txt); alert("✅ Квитанцію скопійовано в буфер обміну! Можете вставити її в Telegram чи Viber.");
         };
 
         function renderRecords() {
@@ -520,76 +495,27 @@
                     if(!rec.paid) card.innerHTML += `<div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-orange-400/20 to-transparent rounded-bl-[4rem]"></div>`;
                     
                     let dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); 
-                    
-                    // ЛОГІКА РІК ДО РОКУ
-                    let [rY, rM] = rec.month.split('-');
-                    let prevYearMonth = (parseInt(rY) - 1) + '-' + rM;
-                    let prevRec = records.find(r => r.month === prevYearMonth);
-                    let yoyHtml = '';
-                    if (prevRec && prevRec.total > 0 && rec.total > 0) {
-                        let diff = rec.total - prevRec.total;
-                        let percent = Math.round((diff / prevRec.total) * 100);
-                        if (percent < 0) yoyHtml = `<span class="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-lg ml-2">📉 ${percent}% рік до року</span>`;
-                        else if (percent > 0) yoyHtml = `<span class="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-lg ml-2">📈 +${percent}% рік до року</span>`;
-                    }
+                    let [rY, rM] = rec.month.split('-'); let prevRec = records.find(r => r.month === (parseInt(rY) - 1) + '-' + rM); let yoyHtml = '';
+                    if (prevRec && prevRec.total > 0 && rec.total > 0) { let percent = Math.round(((rec.total - prevRec.total) / prevRec.total) * 100); if (percent < 0) yoyHtml = `<span class="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-lg ml-2">📉 ${percent}% рік до року</span>`; else if (percent > 0) yoyHtml = `<span class="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-lg ml-2">📈 +${percent}% рік до року</span>`; }
 
-                    // ЛОГІКА КРУГОВОЇ ДІАГРАМИ (Pie Chart)
-                    let pW = (rec.waterCost / rec.total) * 100 || 0;
-                    let pE = (rec.electroCost / rec.total) * 100 || 0;
-                    let pG = (rec.gasCost / rec.total) * 100 || 0;
+                    let pW = (rec.waterCost / rec.total) * 100 || 0; let pE = (rec.electroCost / rec.total) * 100 || 0; let pG = (rec.gasCost / rec.total) * 100 || 0;
                     let conic = `conic-gradient( #3b82f6 0% ${pW}%, #eab308 ${pW}% ${pW+pE}%, #f97316 ${pW+pE}% ${pW+pE+pG}%, #a855f7 ${pW+pE+pG}% 100% )`;
 
-                    let html = `<div class="flex justify-between items-center relative z-10">
-                        <div>
-                            <h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4>
-                            <div class="flex items-center">
-                                <span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Очікує оплати'}</span>
-                                ${yoyHtml}
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span>
-                            <div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-full text-slate-400 shadow-sm"><svg id="chevron-${index}" class="w-5 h-5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
-                        </div>
-                    </div>
-                    <div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()">
-                        <div class="border-t border-slate-100 dark:border-slate-800/80 pt-5 mt-5 relative z-10">
-                            
-                            <!-- КРУГОВА ДІАГРАМА -->
-                            ${rec.total > 0 ? `
-                            <div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 mb-5">
-                                <div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-slate-700" style="background: ${conic}"></div>
-                                <div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">
-                                   ${pW>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>Вода</span><span>${Math.round(pW)}%</span></div>`:''}
-                                   ${pE>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>Світло</span><span>${Math.round(pE)}%</span></div>`:''}
-                                   ${pG>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-orange-500"></div>Газ</span><span>${Math.round(pG)}%</span></div>`:''}
-                                   ${(100-pW-pE-pG)>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-purple-500"></div>Інше</span><span>${Math.round(100-pW-pE-pG)}%</span></div>`:''}
-                                </div>
-                            </div>` : ''}
-
+                    let html = `<div class="flex justify-between items-center relative z-10"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4><div class="flex items-center"><span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Очікує оплати'}</span>${yoyHtml}</div></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-full text-slate-400 shadow-sm"><svg id="chevron-${index}" class="w-5 h-5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div></div></div>
+                    <div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()"><div class="border-t border-slate-100 dark:border-slate-800/80 pt-5 mt-5 relative z-10">
+                            ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-slate-700" style="background: ${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-orange-500"></div>Газ</span><span>${Math.round(pG)}%</span></div>`:''}${(100-pW-pE-pG)>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-purple-500"></div>Інше</span><span>${Math.round(100-pW-pE-pG)}%</span></div>`:''}</div></div>` : ''}
                             <div class="space-y-4">`;
                     
                     if (rec.waterCost > 0 || rec.wCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-blue-500 text-lg">💧</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Вода</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between items-center ml-7 text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span>${rec.wPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.wCur}</span><span class="text-blue-500">+${rec.wCur - rec.wPrev} м³</span></div></div>`;
-                    if (rec.electroCost > 0 || rec.dCur > 0) {
-                        html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-yellow-500 text-lg">⚡️</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Світло</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex flex-col gap-1.5 ml-7"><div class="flex justify-between items-center text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span><span class="text-slate-400 mr-1 hidden sm:inline">День:</span>${rec.dPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.dCur}</span><span class="text-yellow-600 dark:text-yellow-500">+${rec.dCur - rec.dPrev} кВт</span></div>`;
-                        if(rec.nCur > 0 || rec.nPrev > 0) html += `<div class="flex justify-between items-center text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span><span class="text-slate-400 mr-1 hidden sm:inline">Ніч:</span>${rec.nPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur - rec.nPrev} кВт</span></div>`;
-                        html += `</div></div>`;
-                    }
+                    if (rec.electroCost > 0 || rec.dCur > 0) { html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-yellow-500 text-lg">⚡️</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Світло</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex flex-col gap-1.5 ml-7"><div class="flex justify-between items-center text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span><span class="text-slate-400 mr-1 hidden sm:inline">День:</span>${rec.dPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.dCur}</span><span class="text-yellow-600 dark:text-yellow-500">+${rec.dCur - rec.dPrev} кВт</span></div>`; if(rec.nCur > 0 || rec.nPrev > 0) html += `<div class="flex justify-between items-center text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span><span class="text-slate-400 mr-1 hidden sm:inline">Ніч:</span>${rec.nPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur - rec.nPrev} кВт</span></div>`; html += `</div></div>`; }
                     if (rec.gasCost > 0 || rec.gCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-orange-500 text-lg">🔥</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Газ</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between items-center ml-7 text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span>${rec.gPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.gCur}</span><span class="text-orange-500">+${rec.gCur - rec.gPrev} м³</span></div></div>`;
-                    if (rec.customCost > 0) {
-                        html += `<div class="flex flex-col pb-1"><div class="flex justify-between items-center"><span class="flex items-center gap-2"><span class="text-purple-500 text-lg">📦</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Інше</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.customCost)} ₴</span></div>`;
-                        if(rec.customData) { html += `<div class="flex flex-col gap-1 ml-7 mt-2 text-[11px]">`; Object.values(rec.customData).forEach(srv => { if(srv.val > 0) html += `<div class="flex justify-between text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span class="font-bold">${srv.name}</span><span class="font-black text-purple-500">${fmt.format(srv.val)} ₴</span></div>`; }); html += `</div>`; }
-                        html += `</div>`;
-                    }
+                    if (rec.customCost > 0) { html += `<div class="flex flex-col pb-1"><div class="flex justify-between items-center"><span class="flex items-center gap-2"><span class="text-purple-500 text-lg">📦</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Інше</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.customCost)} ₴</span></div>`; if(rec.customData) { html += `<div class="flex flex-col gap-1 ml-7 mt-2 text-[11px]">`; Object.values(rec.customData).forEach(srv => { if(srv.val > 0) html += `<div class="flex justify-between text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span class="font-bold">${srv.name}</span><span class="font-black text-purple-500">${fmt.format(srv.val)} ₴</span></div>`; }); html += `</div>`; } html += `</div>`; }
                     
                     html += `</div></div>
                         <div class="flex gap-2.5 mt-6 relative z-10 pt-2">
                             <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-2xl font-bold text-xs transition-all border ${rec.paid ? 'bg-white text-slate-500 dark:bg-slate-900 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-700 text-white border-transparent shadow-lg shadow-indigo-500/20'}">${rec.paid ? 'Скасувати' : 'Оплачено'}</button>
-                            
                             <button type="button" onclick="shareRecordReceipt(${index}, event);" class="w-12 flex items-center justify-center bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-2xl text-blue-500 transition-colors hover:bg-blue-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg></button>
-                            
                             <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-400 transition-colors hover:text-indigo-500 hover:border-indigo-200 dark:hover:border-indigo-500/50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                            
                             <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 flex items-center justify-center bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-2xl text-red-400 transition-colors hover:bg-red-100 hover:text-red-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                         </div>
                     </div>`;
@@ -602,7 +528,25 @@
         window.togglePaid = function(index) { records[index].paid = !records[index].paid; renderRecords(); syncToCloud(); };
         window.deleteRecord = function(index) { if(confirm('Видалити розрахунок?')) { records.splice(index, 1); renderRecords(); syncToCloud(); } };
 
-        if (sessionPhone && sessionPass) { 
+        // ЗАВАНТАЖЕННЯ: Гостьовий режим чи звичайний?
+        if (urlShareToken) {
+            isGuest = true;
+            document.getElementById('authScreen').classList.add('hidden'); 
+            document.getElementById('appScreen').classList.remove('hidden'); 
+            document.getElementById('appScreen').classList.add('flex');
+            
+            // Ховаємо налаштування для гостя
+            document.getElementById('btnTabSettings').style.display = 'none';
+            document.getElementById('addressHeaderTrigger').onclick = null;
+            document.getElementById('addressArrowIcon').style.display = 'none';
+            
+            fetch(`${WORKER_URL}?share=${urlShareToken}`, { cache: "no-store" })
+            .then(r => r.json()).then(data => {
+                if(data.success) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId; loadCurrentAddress(); } 
+                else { alert("Це посилання недійсне або було видалене."); document.getElementById('appScreen').innerHTML = '<div class="m-auto text-center p-5 font-bold text-red-500">Доступ закрито</div>'; }
+            });
+        } 
+        else if (sessionPhone && sessionPass) { 
             fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}&t=${Date.now()}`, { cache: "no-store" })
             .then(r => r.json()).then(data => {
                 if(data.success) {
