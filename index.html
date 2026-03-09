@@ -281,7 +281,7 @@
 
         document.getElementById('authForm').addEventListener('submit', async (e) => {
             e.preventDefault(); 
-            const rawPhone = document.getElementById('authLogin').value.trim(); // ПРИБРАВ toLowerCase() ТУТ
+            const rawPhone = document.getElementById('authLogin').value.trim(); 
             const rawPass = document.getElementById('authPass').value; 
             const btn = document.getElementById('authSubmitBtn'); 
             const errEl = document.getElementById('authError'); 
@@ -319,17 +319,33 @@
         function closeAddressModal() { document.getElementById('addressModalContent').classList.add('translate-y-full'); setTimeout(() => document.getElementById('addressModal').classList.add('hidden'), 300); }
 
         async function shareAddressAccess(event) {
-            event.stopPropagation(); if(!sessionPhone) return;
-            const btn = event.currentTarget; const oldHtml = btn.innerHTML; btn.innerHTML = '⏳';
+            event.stopPropagation(); 
+            if(!sessionPhone) return;
+            const btn = event.currentTarget; 
+            const oldHtml = btn.innerHTML; 
+            btn.innerHTML = '⏳';
+            
             try {
-                const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify({ action: "generate_share", addressId: currentAddressId }) });
+                const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}`, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ action: "generate_share", addressId: currentAddressId }) 
+                });
                 const data = await res.json();
+                
                 if(data.success) {
                     const shareUrl = window.location.origin + window.location.pathname + '?share=' + data.shareToken;
-                    navigator.clipboard.writeText(shareUrl);
-                    alert("✅ Гостьове посилання скопійовано!\n\nВідправте його квартиранту. Він зможе вносити показники тільки для об'єкта '" + document.getElementById('currentAddressDisplay').innerText + "' без пароля і доступу до налаштувань.");
-                } else alert("Помилка генерації");
-            } catch(e) { alert("Помилка з'єднання"); }
+                    try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        alert("✅ Гостьове посилання скопійовано!\n\nВідправте його квартиранту. Він зможе вносити показники тільки для об'єкта '" + document.getElementById('currentAddressDisplay').innerText + "'.");
+                    } catch (err) {
+                        prompt("Браузер заблокував авто-копіювання. Скопіюйте посилання вручну:", shareUrl);
+                    }
+                } else {
+                    alert("Помилка генерації");
+                }
+            } catch(e) { 
+                alert("Помилка з'єднання"); 
+            }
             btn.innerHTML = oldHtml;
         }
 
@@ -491,7 +507,13 @@
             if(r.customCost > 0) { txt += `📦 Інше: ${r.customCost} ₴\n`; if(r.customData) Object.values(r.customData).forEach(srv => { if(srv.val>0) txt += `   └ ${srv.name}: ${srv.val} ₴\n`; }); }
             txt += `➖➖➖➖➖➖➖➖➖➖\n💰 *Всього до сплати: ${r.total} ₴*\n` + (r.paid ? `✅ Статус: Оплачено` : `⏳ Статус: Очікує оплати`);
             if (navigator.share) { try { await navigator.share({ title: `Комуналка ${dStr}`, text: txt }); return; } catch(e) { } }
-            navigator.clipboard.writeText(txt); alert("✅ Квитанцію скопійовано в буфер обміну! Можете вставити її в Telegram чи Viber.");
+            
+            try {
+                await navigator.clipboard.writeText(txt); 
+                alert("✅ Квитанцію скопійовано в буфер обміну! Можете вставити її в Telegram чи Viber.");
+            } catch(e) {
+                prompt("Скопіюйте квитанцію вручну:", txt);
+            }
         };
 
         function renderRecords() {
