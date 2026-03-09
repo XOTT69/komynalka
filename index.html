@@ -14,45 +14,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <style>
-        /* Фікс скролу та відключення гумового ефекту */
-        body, html { 
-            overflow: hidden; 
-            width: 100vw; 
-            height: 100dvh; 
-            position: fixed; 
-        }
-        
+        body, html { overflow: hidden; width: 100vw; height: 100dvh; position: fixed; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
-        .toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
-        .toggle-checkbox { right: 0; z-index: 1; border-color: #e2e8f0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .toggle-label { background-color: #e2e8f0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
         .dark .glass-panel { background: rgba(15, 23, 42, 0.85); }
-        
-        /* Фікс для рівного переходу без з'їзду вбік */
-        .tab-transition { 
-            transition: opacity 0.2s ease; 
-            width: 100%;
-        }
-        .tab-hidden { 
-            display: none !important; 
-            opacity: 0; 
-        }
-        .tab-active { 
-            display: block !important; 
-            opacity: 1; 
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .tab-transition { transition: opacity 0.2s ease; width: 100%; }
+        .tab-hidden { display: none !important; opacity: 0; }
+        .tab-active { display: block !important; opacity: 1; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
     <script>
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -75,18 +47,14 @@
                 <form id="authForm" class="space-y-4">
                     <div>
                         <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2">Email або Логін</label>
-                        <input type="text" id="authLogin" placeholder="Ваш логін" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white">
+                        <input type="text" id="authLogin" placeholder="Ваш логін" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white transition-all">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2">Пароль</label>
-                        <input type="password" id="authPass" placeholder="••••••••" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white">
+                        <input type="password" id="authPass" placeholder="••••••••" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white transition-all">
                     </div>
-                    
                     <p id="authError" class="text-red-500 text-sm hidden text-center font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-xl"></p>
-                    
-                    <button type="submit" id="authSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/30 mt-4 transition-transform active:scale-[0.98] text-lg">
-                        Увійти
-                    </button>
+                    <button type="submit" id="authSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/30 mt-4 transition-transform active:scale-[0.98] text-lg">Увійти</button>
                 </form>
             </div>
         </div>
@@ -94,7 +62,6 @@
 
     <!-- ОСНОВНИЙ ДОДАТОК -->
     <div id="appScreen" class="hidden flex-col h-full w-full max-w-md mx-auto relative overflow-hidden">
-        
         <!-- Шапка -->
         <div class="px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center bg-slate-50 dark:bg-slate-950 z-20 shrink-0">
             <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('tabSettings', 2)">
@@ -104,7 +71,7 @@
             <button onclick="toggleTheme()" class="w-11 h-11 flex items-center justify-center bg-white dark:bg-slate-900 rounded-full shadow-sm border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-indigo-500 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg></button>
         </div>
 
-        <!-- Контейнер для скролу (фіксований) -->
+        <!-- Контейнер для скролу -->
         <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 relative pb-[120px] w-full h-full">
             
             <!-- ВКЛАДКА 1: РОЗРАХУНОК -->
@@ -121,26 +88,45 @@
                 </div>
 
                 <form id="utilityForm" class="space-y-4 pb-6">
+                    <!-- ВОДА -->
                     <div id="blockWater" class="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-500 text-xl">💧</div><span class="font-bold text-lg text-slate-900 dark:text-white">Вода</span></div><span id="waterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
-                        <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded-2xl border border-slate-100 dark:border-slate-700/50"><div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase px-2 mb-1">Минулі</label><input type="number" id="wPrev" class="w-full bg-transparent p-2 text-center text-xl font-black text-slate-700 dark:text-slate-300 outline-none"></div><div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-blue-500 whitespace-nowrap" id="wDiffBadge">0 м³</div><div class="flex-1"><label class="block text-[10px] text-blue-500 font-bold uppercase px-2 mb-1 text-right">Нові</label><input type="number" id="wCur" class="w-full bg-transparent p-2 text-center text-xl font-black text-blue-600 outline-none"></div></div>
+                        <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                            <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase px-1 mb-1.5">Минулі</label><input type="number" id="wPrev" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all"></div>
+                            <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-blue-500 whitespace-nowrap" id="wDiffBadge">0 м³</div>
+                            <div class="flex-1"><label class="block text-[10px] text-blue-500 font-bold uppercase px-1 mb-1.5 text-right">Нові</label><input type="number" id="wCur" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 text-center text-xl font-black text-blue-600 dark:text-blue-400 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all"></div>
+                        </div>
                     </div>
+                    <!-- СВІТЛО -->
                     <div id="blockElectro" class="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl flex items-center justify-center text-yellow-500 text-xl">⚡️</div><span class="font-bold text-lg text-slate-900 dark:text-white">Світло</span></div><span id="electroCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div class="space-y-3">
-                            <div id="electroDayRow" class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded-2xl border border-slate-100 dark:border-slate-700/50"><div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase px-2 mb-1">Мин <span id="lblDay1">(День)</span></label><input type="number" id="dPrev" class="w-full bg-transparent p-2 text-center text-xl font-black text-slate-700 dark:text-slate-300 outline-none"></div><div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-yellow-500 whitespace-nowrap" id="dDiffBadge">0 кВт</div><div class="flex-1"><label class="block text-[10px] text-yellow-500 font-bold uppercase px-2 mb-1 text-right">Нові <span id="lblDay2">(День)</span></label><input type="number" id="dCur" class="w-full bg-transparent p-2 text-center text-xl font-black text-yellow-600 dark:text-yellow-500 outline-none"></div></div>
-                            <div id="electroNightRow" class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded-2xl border border-slate-100 dark:border-slate-700/50"><div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase px-2 mb-1">Мин (Ніч)</label><input type="number" id="nPrev" class="w-full bg-transparent p-2 text-center text-xl font-black text-slate-700 dark:text-slate-300 outline-none"></div><div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-indigo-500 whitespace-nowrap" id="nDiffBadge">0 кВт</div><div class="flex-1"><label class="block text-[10px] text-indigo-500 font-bold uppercase px-2 mb-1 text-right">Нові (Ніч)</label><input type="number" id="nCur" class="w-full bg-transparent p-2 text-center text-xl font-black text-indigo-500 outline-none"></div></div>
+                            <div id="electroDayRow" class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                                <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase px-1 mb-1.5">Мин <span id="lblDay1">(День)</span></label><input type="number" id="dPrev" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 shadow-sm transition-all"></div>
+                                <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-yellow-500 whitespace-nowrap" id="dDiffBadge">0 кВт</div>
+                                <div class="flex-1"><label class="block text-[10px] text-yellow-500 font-bold uppercase px-1 mb-1.5 text-right">Нові <span id="lblDay2">(День)</span></label><input type="number" id="dCur" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 text-center text-xl font-black text-yellow-600 dark:text-yellow-500 rounded-xl outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 shadow-sm transition-all"></div>
+                            </div>
+                            <div id="electroNightRow" class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                                <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase px-1 mb-1.5">Мин (Ніч)</label><input type="number" id="nPrev" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"></div>
+                                <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-indigo-500 whitespace-nowrap" id="nDiffBadge">0 кВт</div>
+                                <div class="flex-1"><label class="block text-[10px] text-indigo-500 font-bold uppercase px-1 mb-1.5 text-right">Нові (Ніч)</label><input type="number" id="nCur" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 text-center text-xl font-black text-indigo-500 dark:text-indigo-400 rounded-xl outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"></div>
+                            </div>
                         </div>
                     </div>
+                    <!-- ГАЗ -->
                     <div id="blockGas" class="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center text-orange-500 text-xl">🔥</div><span class="font-bold text-lg text-slate-900 dark:text-white">Газ</span></div><span id="gasCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
-                        <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded-2xl border border-slate-100 dark:border-slate-700/50"><div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase px-2 mb-1">Минулі</label><input type="number" id="gPrev" class="w-full bg-transparent p-2 text-center text-xl font-black text-slate-700 dark:text-slate-300 outline-none"></div><div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-orange-500 whitespace-nowrap" id="gDiffBadge">0 м³</div><div class="flex-1"><label class="block text-[10px] text-orange-500 font-bold uppercase px-2 mb-1 text-right">Нові</label><input type="number" id="gCur" class="w-full bg-transparent p-2 text-center text-xl font-black text-orange-500 outline-none"></div></div>
+                        <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                            <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase px-1 mb-1.5">Минулі</label><input type="number" id="gPrev" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 shadow-sm transition-all"></div>
+                            <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-orange-500 whitespace-nowrap" id="gDiffBadge">0 м³</div>
+                            <div class="flex-1"><label class="block text-[10px] text-orange-500 font-bold uppercase px-1 mb-1.5 text-right">Нові</label><input type="number" id="gCur" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 text-center text-xl font-black text-orange-500 dark:text-orange-400 rounded-xl outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 shadow-sm transition-all"></div>
+                        </div>
                     </div>
+                    <!-- ІНШЕ -->
                     <div id="blockCustomServices" class="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
                         <div class="flex justify-between items-center mb-4"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-purple-50 dark:bg-purple-900/20 rounded-2xl flex items-center justify-center text-purple-500 text-xl">📦</div><span class="font-bold text-lg text-slate-900 dark:text-white">Інші послуги</span></div><span id="customCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div id="customServicesContainer" class="grid grid-cols-2 gap-3 empty:hidden"></div>
                     </div>
-                    
                     <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 rounded-[1.5rem] shadow-xl shadow-indigo-500/30 transition-transform active:scale-[0.98] text-lg mt-4 border border-indigo-500">Зберегти розрахунок</button>
                 </form>
             </div>
@@ -159,22 +145,52 @@
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
                     <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-indigo-500">💰</span> Тарифи</h3>
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Вода (₴/м³)</span><input type="number" id="tWater" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-indigo-500"></div>
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло База (₴/кВт)</span><input type="number" id="tElectroBase" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-indigo-500"></div>
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3" id="settingElectroWinterWrap"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Зима (₴/кВт)</span><input type="number" id="tElectroWinter" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-indigo-500"></div>
-                        <div class="flex justify-between items-center"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Газ (₴/м³)</span><input type="number" id="tGas" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-indigo-500"></div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Вода (₴/м³)</span><input type="number" id="tWater" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло База (₴/кВт)</span><input type="number" id="tElectroBase" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3" id="settingElectroWinterWrap"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Зима (₴/кВт)</span><input type="number" id="tElectroWinter" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></div>
+                        <div class="flex justify-between items-center"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Газ (₴/м³)</span><input type="number" id="tGas" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></div>
                     </div>
                 </div>
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
                     <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-indigo-500">⚙️</span> Блоки послуг</h3>
                     <div class="space-y-5">
-                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-200"><span class="flex items-center gap-2">💧 Водопостачання</span><div class="relative w-12"><input type="checkbox" id="prefWater" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block h-6 rounded-full cursor-pointer"></div></div></label>
+                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer">
+                            <span class="flex items-center gap-2">💧 Водопостачання</span>
+                            <div class="relative inline-flex items-center">
+                                <input type="checkbox" id="prefWater" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
+                            </div>
+                        </label>
                         <div class="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800/50">
-                            <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-200"><span class="flex items-center gap-2">⚡️ Електроенергія</span><div class="relative w-12"><input type="checkbox" id="prefElectro" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block h-6 rounded-full cursor-pointer"></div></div></label>
-                            <label class="flex justify-between items-center text-xs font-bold text-slate-500 pl-6 border-l-2 border-slate-100 dark:border-slate-700 ml-2"><span>Двозонний</span><div class="relative w-10"><input type="checkbox" id="prefElectroTwoZone" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block h-5 rounded-full cursor-pointer"></div></div></label>
-                            <label class="flex justify-between items-center text-xs font-bold text-slate-500 pl-6 border-l-2 border-slate-100 dark:border-slate-700 ml-2"><span>Зимовий тариф</span><div class="relative w-10"><input type="checkbox" id="prefElectroWinter" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block h-5 rounded-full cursor-pointer"></div></div></label>
+                            <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer">
+                                <span class="flex items-center gap-2">⚡️ Електроенергія</span>
+                                <div class="relative inline-flex items-center">
+                                    <input type="checkbox" id="prefElectro" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
+                                </div>
+                            </label>
+                            <label class="flex justify-between items-center text-xs font-bold text-slate-500 pl-6 border-l-2 border-slate-100 dark:border-slate-700 ml-2 cursor-pointer">
+                                <span>Двозонний тариф</span>
+                                <div class="relative inline-flex items-center">
+                                    <input type="checkbox" id="prefElectroTwoZone" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
+                                </div>
+                            </label>
+                            <label class="flex justify-between items-center text-xs font-bold text-slate-500 pl-6 border-l-2 border-slate-100 dark:border-slate-700 ml-2 cursor-pointer">
+                                <span>Зимовий тариф</span>
+                                <div class="relative inline-flex items-center">
+                                    <input type="checkbox" id="prefElectroWinter" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
+                                </div>
+                            </label>
                         </div>
-                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-200 pt-4 border-t border-slate-50 dark:border-slate-800/50"><span class="flex items-center gap-2">🔥 Газопостачання</span><div class="relative w-12"><input type="checkbox" id="prefGas" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block h-6 rounded-full cursor-pointer"></div></div></label>
+                        <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-200 pt-4 border-t border-slate-50 dark:border-slate-800/50 cursor-pointer">
+                            <span class="flex items-center gap-2">🔥 Газопостачання</span>
+                            <div class="relative inline-flex items-center">
+                                <input type="checkbox" id="prefGas" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
+                            </div>
+                        </label>
                     </div>
                 </div>
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
@@ -222,9 +238,7 @@
             btn.innerText = "Завантаження...";
 
             try {
-                // ПОВЕРНУВ СТАРУ ЛОГІКУ, ЩОБ ЗНАЙТИ ТВОЇ ДАНІ
                 const passHash = await getHash(rawPass);
-                
                 const exists = await fetchFromCloud(rawPhone, passHash);
                 
                 sessionPhone = rawPhone;
@@ -290,7 +304,9 @@
         async function getHash(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
 
         async function fetchFromCloud(ph, ps) {
-            const res = await fetch(`${WORKER_URL}?phone=${ph}&pass=${ps}`); const data = await res.json();
+            // Додано &t=... і cache: "no-store", щоб ноут не тягнув старий кеш
+            const res = await fetch(`${WORKER_URL}?phone=${ph}&pass=${ps}&t=${Date.now()}`, { cache: "no-store" });
+            const data = await res.json();
             if (res.status === 403) throw new Error("WRONG_PASSWORD"); if (res.status === 404 || !data.success) return false; 
             tariffs = data.data.tariffs || defaultTariffs; prefs = { ...defaultPrefs, ...(data.data.prefs || {}) }; records = data.data.records || []; customServices = data.data.customServices || customServices;
             return true; 
@@ -305,12 +321,12 @@
 
         function updateSmartBadges() {
             const getV = id => Math.max(0, parseFloat(document.getElementById(id)?.value) || 0);
-            if(prefs.showWater) { let d = getV('wCur') - getV('wPrev'); document.getElementById('wDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; document.getElementById('wDiffBadge').className = d > 0 ? 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
+            if(prefs.showWater) { let d = getV('wCur') - getV('wPrev'); document.getElementById('wDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; document.getElementById('wDiffBadge').className = d > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
             if(prefs.showElectro) {
-                let dd = getV('dCur') - getV('dPrev'); document.getElementById('dDiffBadge').innerText = dd > 0 ? `+${dd} кВт` : '0 кВт'; document.getElementById('dDiffBadge').className = dd > 0 ? 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap';
-                if(prefs.electroTwoZone) { let nd = getV('nCur') - getV('nPrev'); document.getElementById('nDiffBadge').innerText = nd > 0 ? `+${nd} кВт` : '0 кВт'; document.getElementById('nDiffBadge').className = nd > 0 ? 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
+                let dd = getV('dCur') - getV('dPrev'); document.getElementById('dDiffBadge').innerText = dd > 0 ? `+${dd} кВт` : '0 кВт'; document.getElementById('dDiffBadge').className = dd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap';
+                if(prefs.electroTwoZone) { let nd = getV('nCur') - getV('nPrev'); document.getElementById('nDiffBadge').innerText = nd > 0 ? `+${nd} кВт` : '0 кВт'; document.getElementById('nDiffBadge').className = nd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
             }
-            if(prefs.showGas) { let gd = getV('gCur') - getV('gPrev'); document.getElementById('gDiffBadge').innerText = gd > 0 ? `+${gd} м³` : '0 м³'; document.getElementById('gDiffBadge').className = gd > 0 ? 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-orange-100 dark:bg-orange-900/40 text-orange-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
+            if(prefs.showGas) { let gd = getV('gCur') - getV('gPrev'); document.getElementById('gDiffBadge').innerText = gd > 0 ? `+${gd} м³` : '0 м³'; document.getElementById('gDiffBadge').className = gd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-orange-100 dark:bg-orange-900/40 text-orange-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
         }
 
         const inputs = ['wPrev', 'wCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'gPrev', 'gCur', 'isWinterInput', 'monthInput']; inputs.forEach(id => document.getElementById(id)?.addEventListener('input', () => { calculatePreview(); updateSmartBadges(); }));
@@ -369,9 +385,9 @@
         function renderCalcCustomServices() {
             const c = document.getElementById('customServicesContainer'); if(customServices.length === 0) { c.innerHTML = ''; return; }
             c.innerHTML = customServices.map(srv => `
-                <div class="flex flex-col bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-2.5 border border-slate-100 dark:border-slate-700/50">
-                    <span class="block text-[10px] font-bold text-slate-400 uppercase truncate mb-1 text-center">${srv.name || 'Послуга'}</span>
-                    <input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-white dark:bg-slate-700 p-2.5 rounded-xl text-center text-[15px] font-black outline-none border border-transparent focus:border-purple-400 shadow-sm" placeholder="${srv.defaultSum ? srv.defaultSum : '0.00'}">
+                <div class="flex flex-col bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase truncate mb-1.5 text-center">${srv.name || 'Послуга'}</span>
+                    <input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-white dark:bg-slate-900 p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-slate-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 shadow-sm transition-all" placeholder="${srv.defaultSum ? srv.defaultSum : '0.00'}">
                 </div>`).join('');
             document.querySelectorAll('.custom-srv-input').forEach(input => input.addEventListener('input', calculatePreview));
         }
@@ -422,15 +438,46 @@
                 let header = document.createElement('div'); header.className = "flex items-center gap-4 mt-8 mb-4"; header.innerHTML = `<h2 class="text-lg font-black text-slate-400">${year}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800"></div>`; list.appendChild(header);
                 grouped[year].forEach(item => {
                     let {rec, index} = item; const card = document.createElement('div'); 
-                    card.className = `p-6 rounded-[2.5rem] shadow-sm border bg-white dark:bg-slate-900 mb-4 transition-all relative overflow-hidden cursor-pointer select-none ${rec.paid ? 'border-slate-100 dark:border-slate-800' : 'border-orange-200 dark:border-orange-500/30'}`;
+                    card.className = `p-5 sm:p-6 rounded-[2.5rem] shadow-sm border bg-white dark:bg-slate-900 mb-4 transition-all relative overflow-hidden cursor-pointer select-none ${rec.paid ? 'border-slate-100 dark:border-slate-800' : 'border-orange-200 dark:border-orange-500/30'}`;
                     card.setAttribute('onclick', `toggleDetails(${index})`);
                     if(!rec.paid) card.innerHTML += `<div class="absolute top-0 right-0 w-16 h-16 bg-orange-500/10 dark:bg-orange-500/5 rounded-bl-[4rem]"></div>`;
                     let dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); 
-                    let html = `<div class="flex justify-between items-center relative z-10"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1">${dStr}</h4><span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400' : 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Очікує оплати'}</span></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-full text-slate-400"><svg id="chevron-${index}" class="w-5 h-5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div></div></div><div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()"><div class="space-y-2.5 text-sm border-t border-slate-50 dark:border-slate-800/50 pt-4 mt-5 relative z-10">`;
-                    if (rec.waterCost > 0) html += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex items-center gap-2"><span class="text-blue-500 text-lg">💧</span> Вода</span><span class="font-bold">${fmt.format(rec.waterCost)} ₴</span></div>`;
-                    if (rec.electroCost > 0) html += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex items-center gap-2"><span class="text-yellow-500 text-lg">⚡️</span> Світло</span><span class="font-bold">${fmt.format(rec.electroCost)} ₴</span></div>`;
-                    if (rec.gasCost > 0) html += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex items-center gap-2"><span class="text-orange-500 text-lg">🔥</span> Газ</span><span class="font-bold">${fmt.format(rec.gasCost)} ₴</span></div>`;
-                    if (rec.customCost > 0) html += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex items-center gap-2"><span class="text-purple-500 text-lg">📦</span> Інше</span><span class="font-bold">${fmt.format(rec.customCost)} ₴</span></div>`;
+                    
+                    let html = `<div class="flex justify-between items-center relative z-10"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1">${dStr}</h4><span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400' : 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Очікує оплати'}</span></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-full text-slate-400"><svg id="chevron-${index}" class="w-5 h-5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div></div></div><div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()"><div class="border-t border-slate-50 dark:border-slate-800/50 pt-4 mt-5 relative z-10">`;
+                    
+                    if (rec.waterCost > 0 || rec.wCur > 0) {
+                        html += `<div class="flex flex-col border-b border-slate-50 dark:border-slate-800/50 pb-3 mb-3 last:border-0 last:pb-0 last:mb-0">
+                                    <div class="flex justify-between items-center mb-1.5"><span class="flex items-center gap-2"><span class="text-blue-500 text-lg">💧</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Вода</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.waterCost)} ₴</span></div>
+                                    <div class="flex justify-between items-center ml-7 text-[11px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800"><span>${rec.wPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.wCur}</span><span class="text-blue-500">+${rec.wCur - rec.wPrev} м³</span></div>
+                                 </div>`;
+                    }
+                    if (rec.electroCost > 0 || rec.dCur > 0) {
+                        html += `<div class="flex flex-col border-b border-slate-50 dark:border-slate-800/50 pb-3 mb-3 last:border-0 last:pb-0 last:mb-0">
+                                    <div class="flex justify-between items-center mb-1.5"><span class="flex items-center gap-2"><span class="text-yellow-500 text-lg">⚡️</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Світло</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.electroCost)} ₴</span></div>
+                                    <div class="flex flex-col gap-1.5 ml-7">
+                                        <div class="flex justify-between items-center text-[11px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800"><span><span class="text-slate-400 mr-1 hidden sm:inline">День:</span>${rec.dPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.dCur}</span><span class="text-yellow-600 dark:text-yellow-500">+${rec.dCur - rec.dPrev} кВт</span></div>`;
+                        if(rec.nCur > 0 || rec.nPrev > 0) {
+                            html += `   <div class="flex justify-between items-center text-[11px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800"><span><span class="text-slate-400 mr-1 hidden sm:inline">Ніч:</span>${rec.nPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur - rec.nPrev} кВт</span></div>`;
+                        }
+                        html += `   </div></div>`;
+                    }
+                    if (rec.gasCost > 0 || rec.gCur > 0) {
+                        html += `<div class="flex flex-col border-b border-slate-50 dark:border-slate-800/50 pb-3 mb-3 last:border-0 last:pb-0 last:mb-0">
+                                    <div class="flex justify-between items-center mb-1.5"><span class="flex items-center gap-2"><span class="text-orange-500 text-lg">🔥</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Газ</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.gasCost)} ₴</span></div>
+                                    <div class="flex justify-between items-center ml-7 text-[11px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800"><span>${rec.gPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.gCur}</span><span class="text-orange-500">+${rec.gCur - rec.gPrev} м³</span></div>
+                                 </div>`;
+                    }
+                    if (rec.customCost > 0) {
+                        html += `<div class="flex flex-col border-b border-slate-50 dark:border-slate-800/50 pb-3 mb-3 last:border-0 last:pb-0 last:mb-0">
+                                    <div class="flex justify-between items-center"><span class="flex items-center gap-2"><span class="text-purple-500 text-lg">📦</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Інше</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.customCost)} ₴</span></div>`;
+                        if(rec.customData) {
+                            html += `<div class="flex flex-col gap-1 ml-7 mt-2 text-[11px]">`;
+                            Object.values(rec.customData).forEach(srv => { if(srv.val > 0) { html += `<div class="flex justify-between text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800"><span class="font-bold">${srv.name}</span><span class="font-black text-purple-500">${fmt.format(srv.val)} ₴</span></div>`; } });
+                            html += `</div>`;
+                        }
+                        html += `</div>`;
+                    }
+
                     html += `</div><div class="flex gap-2 mt-6 relative z-10"><button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-[1rem] font-bold text-sm transition-all shadow-sm ${rec.paid ? 'bg-slate-50 text-slate-500 dark:bg-slate-800 border border-slate-200 dark:border-slate-700' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'}">${rec.paid ? 'Скасувати оплату' : 'Позначити оплаченим'}</button><button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 h-12 flex items-center justify-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[1rem] text-slate-600 dark:text-slate-300 transition-colors hover:text-indigo-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button><button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 h-12 flex items-center justify-center bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-[1rem] text-red-500 transition-colors hover:bg-red-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></div></div>`;
                     card.innerHTML = html; list.appendChild(card);
                 });
