@@ -37,26 +37,31 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans flex flex-col transition-colors duration-300 h-[100dvh] selection:bg-indigo-200">
 
+    <!-- ЕКРАН АВТОРИЗАЦІЇ -->
     <div id="authScreen" class="absolute inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
         <div class="w-full max-w-sm py-10">
             <div class="text-center mb-10">
                 <div class="w-24 h-24 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-500/30 text-white text-5xl">⚡️</div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Комуналка<span class="text-indigo-500">.</span></h1>
-                <p class="text-slate-500 font-medium text-sm" id="authSubtitle">Увійдіть до свого облікового запису</p>
+                <p class="text-slate-500 font-medium text-sm">Увійдіть або зареєструйтесь</p>
             </div>
+
             <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl shadow-indigo-500/5 border border-slate-100 dark:border-slate-800">
-                <div class="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl mb-8" id="authTabs">
-                    <button onclick="switchAuthMode('login')" id="tabBtnLogin" class="flex-1 py-2.5 rounded-xl font-bold text-sm bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400 transition-all">Вхід</button>
-                    <button onclick="switchAuthMode('register')" id="tabBtnReg" class="flex-1 py-2.5 rounded-xl font-bold text-sm text-slate-500 transition-all">Реєстрація</button>
-                </div>
                 <form id="authForm" class="space-y-4">
-                    <div id="nameField" class="hidden"><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2">Ваше ім'я</label><input type="text" id="authName" placeholder="Наприклад, Антон" class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"></div>
-                    <div><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2">Email або Телефон</label><input type="text" id="authLogin" placeholder="mail@example.com" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"></div>
-                    <div id="secretField" class="hidden"><label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 text-indigo-500" id="secretLabel">Секретне слово (для відновлення)</label><input type="text" id="authSecret" placeholder="Кличка кота..." class="w-full bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/50 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"></div>
-                    <div id="passField"><label class="flex justify-between text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 pr-2"><span id="passLabel">Пароль</span><span class="text-indigo-500 cursor-pointer normal-case" id="forgotPassBtn" onclick="switchAuthMode('forgot')">Забули?</span></label><input type="password" id="authPass" placeholder="••••••••" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white"></div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2">Email або Логін</label>
+                        <input type="text" id="authLogin" placeholder="Ваш логін" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2">Пароль</label>
+                        <input type="password" id="authPass" placeholder="••••••••" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white">
+                    </div>
+                    
                     <p id="authError" class="text-red-500 text-sm hidden text-center font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-xl"></p>
-                    <button type="submit" id="authSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/30 mt-4 transition-transform active:scale-[0.98] text-lg">Увійти</button>
-                    <div class="text-center mt-4 hidden" id="backToLoginWrap"><button type="button" onclick="switchAuthMode('login')" class="text-sm font-bold text-slate-500 hover:text-indigo-500 transition-colors">Повернутися до входу</button></div>
+                    
+                    <button type="submit" id="authSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-500/30 mt-4 transition-transform active:scale-[0.98] text-lg">
+                        Увійти / Зареєструватись
+                    </button>
                 </form>
             </div>
         </div>
@@ -66,7 +71,7 @@
     <div id="appScreen" class="hidden flex-col h-full w-full max-w-md mx-auto relative overflow-hidden">
         <div class="px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center bg-slate-50 dark:bg-slate-950 z-20 relative">
             <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('tabSettings', 2)">
-                <div class="w-12 h-12 bg-gradient-to-tr from-indigo-500 to-blue-400 rounded-full flex items-center justify-center text-white font-bold shadow-md" id="userAvatar">A</div>
+                <div class="w-12 h-12 bg-gradient-to-tr from-indigo-500 to-blue-400 rounded-full flex items-center justify-center text-white font-bold shadow-md" id="userAvatar">U</div>
                 <div><p class="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">З поверненням</p><h2 class="text-xl font-black text-slate-900 dark:text-white leading-tight" id="userGreeting">Вітаю! 👋</h2></div>
             </div>
             <button onclick="toggleTheme()" class="w-11 h-11 flex items-center justify-center bg-white dark:bg-slate-900 rounded-full shadow-sm border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-indigo-500 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg></button>
@@ -123,15 +128,6 @@
             <!-- ВКЛАДКА 3: НАЛАШТУВАННЯ -->
             <div id="tabSettings" class="tab-transition tab-hidden space-y-5">
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
-                    <h3 class="font-black mb-4 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-indigo-500">👤</span> Ваш профіль</h3>
-                    <div class="space-y-3">
-                        <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1 px-1">Ім'я</label><input type="text" id="editName" class="w-full bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-xl font-bold outline-none border border-slate-100 dark:border-slate-700 focus:border-indigo-500 text-sm text-slate-900 dark:text-white"></div>
-                        <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1 px-1">Email / Логін (Для входу)</label><input type="email" id="editEmail" class="w-full bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-xl font-bold outline-none border border-slate-100 dark:border-slate-700 focus:border-indigo-500 text-sm text-slate-900 dark:text-white"></div>
-                        <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1 px-1">Нове секретне слово</label><input type="text" id="editSecret" placeholder="Введіть щоб змінити..." class="w-full bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-xl font-bold outline-none border border-slate-100 dark:border-slate-700 focus:border-indigo-500 text-sm text-slate-900 dark:text-white"></div>
-                        <button onclick="updateProfileCredentials()" class="w-full py-3 bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 font-bold rounded-xl text-sm mt-2 hover:bg-indigo-100 transition-colors">Зберегти профіль</button>
-                    </div>
-                </div>
-                <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
                     <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-indigo-500">💰</span> Тарифи</h3>
                     <div class="space-y-4">
                         <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Вода (₴/м³)</span><input type="number" id="tWater" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-indigo-500"></div>
@@ -174,57 +170,60 @@
 
     <script>
         const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        // ВАЖЛИВО: Перевір що тут твоє посилання
         const WORKER_URL = "https://komynalka.mikolenko-anton1.workers.dev";
         
-        let sessionPhone = localStorage.getItem('k_phoneHash'); let sessionPass = localStorage.getItem('k_passHash'); let sessionSecret = localStorage.getItem('k_secretHash') || '';
-        let profile = JSON.parse(localStorage.getItem('k_profile') || '{"name":"Антон","login":""}');
+        let sessionPhone = localStorage.getItem('k_phoneHash'); 
+        let sessionPass = localStorage.getItem('k_passHash');
+        let profile = JSON.parse(localStorage.getItem('k_profile') || '{"name":"","login":""}');
+        
         let defaultTariffs = { water: 30.38, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
         let defaultPrefs = { showWater: true, showElectro: true, showGas: false, electroTwoZone: true, electroWinter: true };
         let customServices = [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}];
         let tariffs = { ...defaultTariffs }; let prefs = { ...defaultPrefs }; let records = [];
 
-        let authMode = 'login'; 
-        function switchAuthMode(mode) {
-            authMode = mode; document.getElementById('authError').classList.add('hidden');
-            const nF = document.getElementById('nameField'), pF = document.getElementById('passField'), sF = document.getElementById('secretField'), tabs = document.getElementById('authTabs'), backW = document.getElementById('backToLoginWrap'), btn = document.getElementById('authSubmitBtn');
-            document.getElementById('authPass').required = true; document.getElementById('authSecret').required = mode !== 'login';
-            if(mode === 'login') {
-                document.getElementById('authSubtitle').innerText = "Увійдіть до свого облікового запису"; nF.classList.add('hidden'); sF.classList.add('hidden'); pF.classList.remove('hidden'); document.getElementById('passLabel').innerText = "Пароль"; btn.innerText = "Увійти"; document.getElementById('forgotPassBtn').classList.remove('hidden'); tabs.classList.remove('hidden'); backW.classList.add('hidden'); document.getElementById('tabBtnLogin').className = "flex-1 py-2.5 rounded-xl font-bold text-sm bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400 transition-all"; document.getElementById('tabBtnReg').className = "flex-1 py-2.5 rounded-xl font-bold text-sm text-slate-500 hover:text-slate-700 transition-all"; document.getElementById('authName').removeAttribute('required');
-            } else if(mode === 'register') {
-                document.getElementById('authSubtitle').innerText = "Створіть новий обліковий запис"; nF.classList.remove('hidden'); sF.classList.remove('hidden'); pF.classList.remove('hidden'); document.getElementById('passLabel').innerText = "Придумайте пароль"; btn.innerText = "Створити акаунт"; document.getElementById('forgotPassBtn').classList.add('hidden'); tabs.classList.remove('hidden'); backW.classList.add('hidden'); document.getElementById('tabBtnReg').className = "flex-1 py-2.5 rounded-xl font-bold text-sm bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400 transition-all"; document.getElementById('tabBtnLogin').className = "flex-1 py-2.5 rounded-xl font-bold text-sm text-slate-500 hover:text-slate-700 transition-all"; document.getElementById('authName').setAttribute('required', 'true');
-            } else if(mode === 'forgot') {
-                document.getElementById('authSubtitle').innerText = "Відновлення пароля"; tabs.classList.add('hidden'); nF.classList.add('hidden'); sF.classList.remove('hidden'); pF.classList.remove('hidden'); document.getElementById('passLabel').innerText = "Новий пароль"; document.getElementById('forgotPassBtn').classList.add('hidden'); btn.innerText = "Змінити пароль"; backW.classList.remove('hidden');
-            }
-        }
-
+        // СТАБІЛЬНА АВТОРИЗАЦІЯ
         document.getElementById('authForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const logRaw = document.getElementById('authLogin').value.toLowerCase().trim(); const passRaw = document.getElementById('authPass').value; const secRaw = document.getElementById('authSecret').value.toLowerCase().trim();
-            const btn = document.getElementById('authSubmitBtn'); const errEl = document.getElementById('authError'); errEl.classList.add('hidden'); btn.innerText = "Завантаження...";
+            const rawPhone = document.getElementById('authLogin').value.toLowerCase().trim();
+            const rawPass = document.getElementById('authPass').value;
+            const btn = document.getElementById('authSubmitBtn');
+            const errEl = document.getElementById('authError');
+            
+            errEl.classList.add('hidden');
+            btn.innerText = "Завантаження...";
+
             try {
-                const phoneH = await getHash(logRaw); const passH = await getHash(passRaw); const secH = secRaw ? await getHash(secRaw) : '';
+                const phoneHash = await getHash(rawPhone);
+                const passHash = await getHash(rawPass);
                 
-                if (authMode === 'forgot') {
-                    const res = await fetch(`${WORKER_URL}?phone=${phoneH}&pass=${passH}&secret=${secH}&action=reset`, { method: 'POST' }); const data = await res.json();
-                    if (!res.ok || !data.success) throw new Error(data.error || "SERVER_ERROR");
-                    sessionPhone = phoneH; sessionPass = passH; sessionSecret = secH; localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_passHash', sessionPass); await fetchFromCloud(phoneH, passH); initAppUI();
-                } else if (authMode === 'login') {
-                    const exists = await fetchFromCloud(phoneH, passH); if (!exists) throw new Error("NOT_FOUND");
-                    sessionPhone = phoneH; sessionPass = passH; profile.login = logRaw; localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_passHash', sessionPass); localStorage.setItem('k_profile', JSON.stringify(profile)); initAppUI();
-                } else if (authMode === 'register') {
-                    const checkRes = await fetch(`${WORKER_URL}?phone=${phoneH}&pass=${passH}`);
-                    if (checkRes.status === 200 || checkRes.status === 403) throw new Error("ALREADY_EXISTS");
-                    
-                    profile = { name: document.getElementById('authName').value.trim() || 'Користувач', login: logRaw }; records = []; tariffs = {...defaultTariffs}; prefs = {...defaultPrefs}; sessionPhone = phoneH; sessionPass = passH; sessionSecret = secH; 
-                    localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_passHash', sessionPass); localStorage.setItem('k_secretHash', sessionSecret); localStorage.setItem('k_profile', JSON.stringify(profile)); 
-                    await syncToCloud(true); initAppUI();
+                const exists = await fetchFromCloud(phoneHash, passHash);
+                
+                sessionPhone = phoneHash;
+                sessionPass = passHash;
+                
+                if (!exists) {
+                    profile.login = rawPhone;
+                    profile.name = rawPhone.split('@')[0];
+                    tariffs = {...defaultTariffs};
+                    prefs = {...defaultPrefs};
+                    records = [];
+                    await syncToCloud();
                 }
+
+                localStorage.setItem('k_phoneHash', sessionPhone);
+                localStorage.setItem('k_passHash', sessionPass);
+                localStorage.setItem('k_profile', JSON.stringify(profile));
+                
+                initAppUI();
             } catch (err) {
-                btn.innerText = authMode === 'login' ? "Увійти" : authMode === 'register' ? "Створити акаунт" : "Змінити пароль";
-                errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний логін або пароль" : err.message === "WRONG_SECRET" ? "Секретне слово не співпадає!" : err.message === "NOT_FOUND" ? "Акаунт не знайдено." : err.message === "ALREADY_EXISTS" ? "Email вже зайнятий!" : "Помилка мережі"; errEl.classList.remove('hidden');
+                btn.innerText = "Увійти / Зареєструватись";
+                errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль!" : "Помилка сервера";
+                errEl.classList.remove('hidden');
             }
         });
 
+        // СВАЙПИ
         let touchstartX = 0; let touchendX = 0; const swipeZone = document.getElementById('swipeContainer');
         swipeZone.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, {passive: true});
         swipeZone.addEventListener('touchend', e => { touchendX = e.changedTouches[0].screenX; handleSwipe(); }, {passive: true});
@@ -234,6 +233,7 @@
             if (dist > 70 && curIdx < 2) switchTab(tabs[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabs[curIdx - 1], curIdx - 1);
         }
 
+        // НАВІГАЦІЯ
         function switchTab(tabId, index = -1) {
             document.querySelectorAll('.tab-transition').forEach(el => { el.classList.remove('tab-active'); el.classList.add('tab-hidden'); });
             document.getElementById(tabId).classList.remove('tab-hidden'); document.getElementById(tabId).classList.add('tab-active');
@@ -257,28 +257,15 @@
             const res = await fetch(`${WORKER_URL}?phone=${ph}&pass=${ps}`); const data = await res.json();
             if (res.status === 403) throw new Error("WRONG_PASSWORD"); if (res.status === 404 || !data.success) return false; 
             tariffs = data.data.tariffs || defaultTariffs; prefs = { ...defaultPrefs, ...(data.data.prefs || {}) }; records = data.data.records || []; customServices = data.data.customServices || customServices;
-            if(data.data.profile) { profile = data.data.profile; localStorage.setItem('k_profile', JSON.stringify(profile)); }
             return true; 
         }
 
-        async function syncToCloud(isReg = false) {
-            if (!sessionPhone) return; let u = `${WORKER_URL}?phone=${sessionPhone}&pass=${sessionPass}`; if (isReg && sessionSecret) u += `&secret=${sessionSecret}`;
-            await fetch(u, { method: 'POST', body: JSON.stringify({ profile, tariffs, records, prefs, customServices }) });
+        async function syncToCloud() {
+            if (!sessionPhone) return;
+            await fetch(`${WORKER_URL}?phone=${sessionPhone}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify({ tariffs, records, prefs, customServices }) });
         }
 
         window.logout = function() { if(confirm('Вийти з акаунту?')){ localStorage.clear(); location.reload(); } };
-
-        window.updateProfileCredentials = async () => {
-            const newName = document.getElementById('editName').value.trim(); const newEmail = document.getElementById('editEmail').value.toLowerCase().trim(); const newSecRaw = document.getElementById('editSecret').value.toLowerCase().trim();
-            if(!newEmail) return alert("Email не може бути пустим!");
-            try {
-                const newPhoneH = await getHash(newEmail); const newSecH = newSecRaw ? await getHash(newSecRaw) : sessionSecret;
-                profile.name = newName || profile.name; profile.login = newEmail;
-                const res = await fetch(`${WORKER_URL}?phone=${sessionPhone}&pass=${sessionPass}&action=update_credentials`, { method: 'POST', body: JSON.stringify({ newPhone: newPhoneH, newPass: sessionPass, newSecret: newSecH, profileData: profile }) });
-                const data = await res.json();
-                if(data.success) { sessionPhone = newPhoneH; sessionSecret = newSecH; localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_secretHash', sessionSecret); localStorage.setItem('k_profile', JSON.stringify(profile)); document.getElementById('editSecret').value = ""; alert("Профіль успішно оновлено!"); initAppUI(); } else alert("Помилка на сервері.");
-            } catch(e) { alert("Помилка мережі"); }
-        };
 
         function updateSmartBadges() {
             const getV = id => Math.max(0, parseFloat(document.getElementById(id)?.value) || 0);
@@ -321,7 +308,6 @@
         function initAppUI() {
             document.getElementById('authScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); document.getElementById('appScreen').classList.add('flex');
             const n = profile.name || "Користувач"; document.getElementById('userGreeting').innerText = `Вітаю, ${n} 👋`; document.getElementById('userAvatar').innerText = n.charAt(0).toUpperCase();
-            document.getElementById('editName').value = n; document.getElementById('editEmail').value = profile.login || "";
             document.getElementById('tWater').value = tariffs.water; document.getElementById('tElectroBase').value = tariffs.electroBase; document.getElementById('tElectroWinter').value = tariffs.electroWinter; document.getElementById('tGas').value = tariffs.gas;
             applyPreferences(); renderCalcCustomServices(); fillPreviousReadings(); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges();
         }
