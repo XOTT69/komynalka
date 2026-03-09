@@ -274,16 +274,13 @@
         let sessionPass = localStorage.getItem('k_passHash');
         let profile = JSON.parse(localStorage.getItem('k_profile') || '{"name":"","login":""}');
         
-        // Базові шаблони
         let defaultTariffs = { water: 30.38, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
         let defaultPrefs = { showWater: true, showElectro: true, showGas: false, electroTwoZone: true, electroWinter: true };
         let defaultCustomServices = [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}];
         
-        // Змінні для Мульти-адрес
         let addresses = [];
         let currentAddressId = 'default';
 
-        // Поточні активні змінні (для обраної адреси)
         let tariffs = {}; let prefs = {}; let records = []; let customServices = [];
 
         async function getHash(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
@@ -311,7 +308,6 @@
                     currentAddressId = 'default';
                     await syncToCloud();
                 } else {
-                    // Міграція для старих користувачів (якщо адреси ще не були створені)
                     if (data.data.addresses) {
                         addresses = data.data.addresses;
                         currentAddressId = data.data.currentAddressId || addresses[0].id;
@@ -337,7 +333,6 @@
             }
         });
 
-        // ЛОГІКА МУЛЬТИ-АДРЕС
         function loadCurrentAddress() {
             const addr = addresses.find(a => a.id === currentAddressId) || addresses[0];
             currentAddressId = addr.id;
@@ -375,19 +370,20 @@
             const list = document.getElementById('addressListModal');
             list.innerHTML = addresses.map(a => `
                 <div class="flex items-center justify-between p-4 rounded-2xl border transition-all ${a.id === currentAddressId ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'} cursor-pointer" onclick="selectAddress('${a.id}')">
-                    <span class="font-bold text-lg truncate pr-2">${a.name}</span>
-                    ${a.id !== currentAddressId ? `<div class="flex gap-1 shrink-0">
-                        <button onclick="editAddressName(event, '${a.id}')" class="p-2 text-slate-400 hover:text-indigo-500 transition-colors bg-white dark:bg-slate-900 rounded-xl shadow-sm"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                        ${addresses.length > 1 ? `<button onclick="deleteAddress(event, '${a.id}')" class="p-2 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-slate-900 rounded-xl shadow-sm"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>` : ''}
-                    </div>` : '<svg class="w-6 h-6 text-white shrink-0 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'}
+                    <span class="font-bold text-lg truncate pr-2 flex-1">${a.name}</span>
+                    <div class="flex gap-1.5 shrink-0 items-center">
+                        ${a.id === currentAddressId ? '<svg class="w-5 h-5 text-white mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>' : ''}
+                        <button onclick="editAddressName(event, '${a.id}')" class="p-2 transition-colors rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-white dark:bg-slate-900 text-slate-400 hover:text-indigo-500'}"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                        ${a.id !== currentAddressId && addresses.length > 1 ? `<button onclick="deleteAddress(event, '${a.id}')" class="p-2 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-slate-900 rounded-xl shadow-sm"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>` : ''}
+                    </div>
                 </div>
             `).join('');
         }
 
         function selectAddress(id) {
-            syncCurrentAddress(); // Зберігаємо поточну
+            syncCurrentAddress(); 
             currentAddressId = id;
-            loadCurrentAddress(); // Завантажуємо нову
+            loadCurrentAddress(); 
             syncToCloud(); 
             closeAddressModal();
         }
@@ -469,7 +465,7 @@
 
         async function syncToCloud() {
             if (!sessionPhone) return;
-            syncCurrentAddress(); // Обов'язково зберігаємо в масив перед відправкою
+            syncCurrentAddress(); 
             const body = { addresses: addresses, currentAddressId: currentAddressId };
             const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify(body) });
             const data = await res.json();
@@ -556,7 +552,6 @@
 
         document.getElementById('monthInput').value = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
         function fillPreviousReadings() {
-            // Очищаємо поля при зміні адреси
             document.getElementById('wPrev').value = ''; document.getElementById('wCur').value = '';
             document.getElementById('dPrev').value = ''; document.getElementById('dCur').value = '';
             document.getElementById('nPrev').value = ''; document.getElementById('nCur').value = '';
