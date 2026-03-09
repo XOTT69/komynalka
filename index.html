@@ -14,22 +14,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <style>
-        /* Блокуємо горизонтальний скрол */
         body, html { overflow-x: hidden; max-width: 100vw; position: relative; overscroll-behavior-y: none; }
-        
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"] { -moz-appearance: textfield; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
         .toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
         .toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
         .toggle-checkbox { right: 0; z-index: 1; border-color: #e2e8f0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .toggle-label { background-color: #e2e8f0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        
         .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
         .dark .glass-panel { background: rgba(15, 23, 42, 0.85); }
-        
         .tab-transition { transition: opacity 0.25s ease, transform 0.25s ease; }
         .tab-hidden { opacity: 0; transform: translateY(15px); pointer-events: none; position: absolute; visibility: hidden; }
         .tab-active { opacity: 1; transform: translateY(0); position: relative; visibility: visible; }
@@ -42,7 +37,6 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans flex flex-col transition-colors duration-300 h-[100dvh] selection:bg-indigo-200">
 
-    <!-- ЕКРАН АВТОРИЗАЦІЇ -->
     <div id="authScreen" class="absolute inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
         <div class="w-full max-w-sm py-10">
             <div class="text-center mb-10">
@@ -70,7 +64,6 @@
 
     <!-- ОСНОВНИЙ ДОДАТОК -->
     <div id="appScreen" class="hidden flex-col h-full w-full max-w-md mx-auto relative overflow-hidden">
-        
         <div class="px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center bg-slate-50 dark:bg-slate-950 z-20 relative">
             <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('tabSettings', 2)">
                 <div class="w-12 h-12 bg-gradient-to-tr from-indigo-500 to-blue-400 rounded-full flex items-center justify-center text-white font-bold shadow-md" id="userAvatar">A</div>
@@ -79,7 +72,6 @@
             <button onclick="toggleTheme()" class="w-11 h-11 flex items-center justify-center bg-white dark:bg-slate-900 rounded-full shadow-sm border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-indigo-500 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg></button>
         </div>
 
-        <!-- Контейнер для жестів -->
         <div id="swipeContainer" class="flex-1 overflow-y-auto no-scrollbar px-5 relative pt-2 pb-[120px] w-full">
             
             <!-- ВКЛАДКА 1: РОЗРАХУНОК -->
@@ -96,12 +88,10 @@
                 </div>
 
                 <form id="utilityForm" class="space-y-4">
-                    <!-- ВОДА -->
                     <div id="blockWater" class="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-500 text-xl">💧</div><span class="font-bold text-lg text-slate-900 dark:text-white">Вода</span></div><span id="waterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded-2xl border border-slate-100 dark:border-slate-700/50"><div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase px-2 mb-1">Минулі</label><input type="number" id="wPrev" class="w-full bg-transparent p-2 text-center text-xl font-black text-slate-700 dark:text-slate-300 outline-none"></div><div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-blue-500 whitespace-nowrap" id="wDiffBadge">0 м³</div><div class="flex-1"><label class="block text-[10px] text-blue-500 font-bold uppercase px-2 mb-1 text-right">Нові</label><input type="number" id="wCur" class="w-full bg-transparent p-2 text-center text-xl font-black text-blue-600 outline-none"></div></div>
                     </div>
-                    <!-- СВІТЛО -->
                     <div id="blockElectro" class="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl flex items-center justify-center text-yellow-500 text-xl">⚡️</div><span class="font-bold text-lg text-slate-900 dark:text-white">Світло</span></div><span id="electroCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div class="space-y-3">
@@ -109,12 +99,10 @@
                             <div id="electroNightRow" class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded-2xl border border-slate-100 dark:border-slate-700/50"><div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase px-2 mb-1">Мин (Ніч)</label><input type="number" id="nPrev" class="w-full bg-transparent p-2 text-center text-xl font-black text-slate-700 dark:text-slate-300 outline-none"></div><div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-indigo-500 whitespace-nowrap" id="nDiffBadge">0 кВт</div><div class="flex-1"><label class="block text-[10px] text-indigo-500 font-bold uppercase px-2 mb-1 text-right">Нові (Ніч)</label><input type="number" id="nCur" class="w-full bg-transparent p-2 text-center text-xl font-black text-indigo-500 outline-none"></div></div>
                         </div>
                     </div>
-                    <!-- ГАЗ -->
                     <div id="blockGas" class="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center text-orange-500 text-xl">🔥</div><span class="font-bold text-lg text-slate-900 dark:text-white">Газ</span></div><span id="gasCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded-2xl border border-slate-100 dark:border-slate-700/50"><div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase px-2 mb-1">Минулі</label><input type="number" id="gPrev" class="w-full bg-transparent p-2 text-center text-xl font-black text-slate-700 dark:text-slate-300 outline-none"></div><div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-orange-500 whitespace-nowrap" id="gDiffBadge">0 м³</div><div class="flex-1"><label class="block text-[10px] text-orange-500 font-bold uppercase px-2 mb-1 text-right">Нові</label><input type="number" id="gCur" class="w-full bg-transparent p-2 text-center text-xl font-black text-orange-500 outline-none"></div></div>
                     </div>
-                    <!-- ІНШЕ -->
                     <div id="blockCustomServices" class="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
                         <div class="flex justify-between items-center mb-4"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-purple-50 dark:bg-purple-900/20 rounded-2xl flex items-center justify-center text-purple-500 text-xl">📦</div><span class="font-bold text-lg text-slate-900 dark:text-white">Інші послуги</span></div><span id="customCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div id="customServicesContainer" class="grid grid-cols-2 gap-3 empty:hidden"></div>
@@ -123,7 +111,7 @@
                 </form>
             </div>
 
-            <!-- ВКЛАДКА 2: ІСТОРІЯ (З АКОРДЕОНАМИ) -->
+            <!-- ВКЛАДКА 2: ІСТОРІЯ -->
             <div id="tabHistory" class="tab-transition tab-hidden space-y-6">
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
                     <div class="flex justify-between items-end mb-6"><div><p class="text-[11px] font-bold uppercase text-slate-400 mb-1">Середній чек</p><h3 class="font-black text-2xl text-slate-900 dark:text-white" id="statsAvg">0 ₴</h3></div><div class="text-[11px] font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 rounded-xl">За 6 місяців</div></div>
@@ -132,20 +120,17 @@
                 <div id="recordsList" class="space-y-4"></div>
             </div>
 
-            <!-- ВКЛАДКА 3: НАЛАШТУВАННЯ І ПРОФІЛЬ -->
+            <!-- ВКЛАДКА 3: НАЛАШТУВАННЯ -->
             <div id="tabSettings" class="tab-transition tab-hidden space-y-5">
-                
-                <!-- Редагування Профілю -->
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
                     <h3 class="font-black mb-4 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-indigo-500">👤</span> Ваш профіль</h3>
                     <div class="space-y-3">
                         <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1 px-1">Ім'я</label><input type="text" id="editName" class="w-full bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-xl font-bold outline-none border border-slate-100 dark:border-slate-700 focus:border-indigo-500 text-sm text-slate-900 dark:text-white"></div>
                         <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1 px-1">Email / Логін (Для входу)</label><input type="email" id="editEmail" class="w-full bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-xl font-bold outline-none border border-slate-100 dark:border-slate-700 focus:border-indigo-500 text-sm text-slate-900 dark:text-white"></div>
-                        <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1 px-1">Нове секретне слово (Опціонально)</label><input type="text" id="editSecret" placeholder="Введіть щоб змінити..." class="w-full bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-xl font-bold outline-none border border-slate-100 dark:border-slate-700 focus:border-indigo-500 text-sm text-slate-900 dark:text-white"></div>
+                        <div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-1 px-1">Нове секретне слово</label><input type="text" id="editSecret" placeholder="Введіть щоб змінити..." class="w-full bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-xl font-bold outline-none border border-slate-100 dark:border-slate-700 focus:border-indigo-500 text-sm text-slate-900 dark:text-white"></div>
                         <button onclick="updateProfileCredentials()" class="w-full py-3 bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 font-bold rounded-xl text-sm mt-2 hover:bg-indigo-100 transition-colors">Зберегти профіль</button>
                     </div>
                 </div>
-
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
                     <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-indigo-500">💰</span> Тарифи</h3>
                     <div class="space-y-4">
@@ -155,7 +140,6 @@
                         <div class="flex justify-between items-center"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Газ (₴/м³)</span><input type="number" id="tGas" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-indigo-500"></div>
                     </div>
                 </div>
-
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
                     <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-indigo-500">⚙️</span> Блоки послуг</h3>
                     <div class="space-y-5">
@@ -168,13 +152,11 @@
                         <label class="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-200 pt-4 border-t border-slate-50 dark:border-slate-800/50"><span class="flex items-center gap-2">🔥 Газопостачання</span><div class="relative w-12"><input type="checkbox" id="prefGas" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/><div class="toggle-label block h-6 rounded-full cursor-pointer"></div></div></label>
                     </div>
                 </div>
-
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
                     <h3 class="font-black mb-2 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-indigo-500">📦</span> Додаткові послуги</h3>
                     <div id="customServicesSettingsList" class="space-y-3 mb-4 mt-4"></div>
                     <button onclick="addCustomServiceField()" class="w-full py-3.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-bold text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700">+ Додати нову</button>
                 </div>
-                
                 <button type="button" onclick="saveSettings()" class="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[1.5rem] py-5 font-bold shadow-xl shadow-slate-900/20 dark:shadow-white/10 text-lg">Зберегти налаштування</button>
                 <button type="button" onclick="logout()" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-[1.5rem] py-4 mt-2 mb-4">Вийти з акаунту</button>
             </div>
@@ -201,7 +183,6 @@
         let customServices = [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}];
         let tariffs = { ...defaultTariffs }; let prefs = { ...defaultPrefs }; let records = [];
 
-        // АВТОРИЗАЦІЯ
         let authMode = 'login'; 
         function switchAuthMode(mode) {
             authMode = mode; document.getElementById('authError').classList.add('hidden');
@@ -222,6 +203,7 @@
             const btn = document.getElementById('authSubmitBtn'); const errEl = document.getElementById('authError'); errEl.classList.add('hidden'); btn.innerText = "Завантаження...";
             try {
                 const phoneH = await getHash(logRaw); const passH = await getHash(passRaw); const secH = secRaw ? await getHash(secRaw) : '';
+                
                 if (authMode === 'forgot') {
                     const res = await fetch(`${WORKER_URL}?phone=${phoneH}&pass=${passH}&secret=${secH}&action=reset`, { method: 'POST' }); const data = await res.json();
                     if (!res.ok || !data.success) throw new Error(data.error || "SERVER_ERROR");
@@ -230,30 +212,28 @@
                     const exists = await fetchFromCloud(phoneH, passH); if (!exists) throw new Error("NOT_FOUND");
                     sessionPhone = phoneH; sessionPass = passH; profile.login = logRaw; localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_passHash', sessionPass); localStorage.setItem('k_profile', JSON.stringify(profile)); initAppUI();
                 } else if (authMode === 'register') {
-                    try { const exists = await fetchFromCloud(phoneH, passH); if (exists) throw new Error("ALREADY_EXISTS"); } catch(err) {
-                        if(err.message !== "WRONG_PASSWORD" && err.message !== "ALREADY_EXISTS") {
-                            profile = { name: document.getElementById('authName').value.trim() || 'Користувач', login: logRaw }; records = []; tariffs = {...defaultTariffs}; prefs = {...defaultPrefs}; sessionPhone = phoneH; sessionPass = passH; sessionSecret = secH; localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_passHash', sessionPass); localStorage.setItem('k_secretHash', sessionSecret); localStorage.setItem('k_profile', JSON.stringify(profile)); await syncToCloud(true); initAppUI();
-                        } else throw new Error("ALREADY_EXISTS");
-                    }
+                    const checkRes = await fetch(`${WORKER_URL}?phone=${phoneH}&pass=${passH}`);
+                    if (checkRes.status === 200 || checkRes.status === 403) throw new Error("ALREADY_EXISTS");
+                    
+                    profile = { name: document.getElementById('authName').value.trim() || 'Користувач', login: logRaw }; records = []; tariffs = {...defaultTariffs}; prefs = {...defaultPrefs}; sessionPhone = phoneH; sessionPass = passH; sessionSecret = secH; 
+                    localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_passHash', sessionPass); localStorage.setItem('k_secretHash', sessionSecret); localStorage.setItem('k_profile', JSON.stringify(profile)); 
+                    await syncToCloud(true); initAppUI();
                 }
             } catch (err) {
                 btn.innerText = authMode === 'login' ? "Увійти" : authMode === 'register' ? "Створити акаунт" : "Змінити пароль";
-                errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний логін або пароль" : err.message === "WRONG_SECRET" ? "Секретне слово не співпадає!" : err.message === "NOT_FOUND" ? "Акаунт не знайдено." : err.message === "ALREADY_EXISTS" ? "Логін зайнятий." : "Помилка сервера"; errEl.classList.remove('hidden');
+                errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний логін або пароль" : err.message === "WRONG_SECRET" ? "Секретне слово не співпадає!" : err.message === "NOT_FOUND" ? "Акаунт не знайдено." : err.message === "ALREADY_EXISTS" ? "Email вже зайнятий!" : "Помилка мережі"; errEl.classList.remove('hidden');
             }
         });
 
-        // СВАЙПИ
         let touchstartX = 0; let touchendX = 0; const swipeZone = document.getElementById('swipeContainer');
         swipeZone.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, {passive: true});
         swipeZone.addEventListener('touchend', e => { touchendX = e.changedTouches[0].screenX; handleSwipe(); }, {passive: true});
         function handleSwipe() {
             const dist = touchstartX - touchendX; const tabs = ['tabCalc', 'tabHistory', 'tabSettings'];
             const curIdx = tabs.findIndex(id => document.getElementById(id).classList.contains('tab-active'));
-            if (dist > 70 && curIdx < 2) switchTab(tabs[curIdx + 1], curIdx + 1); // Свайп вліво (наступна)
-            else if (dist < -70 && curIdx > 0) switchTab(tabs[curIdx - 1], curIdx - 1); // Свайп вправо (попередня)
+            if (dist > 70 && curIdx < 2) switchTab(tabs[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabs[curIdx - 1], curIdx - 1);
         }
 
-        // НАВІГАЦІЯ
         function switchTab(tabId, index = -1) {
             document.querySelectorAll('.tab-transition').forEach(el => { el.classList.remove('tab-active'); el.classList.add('tab-hidden'); });
             document.getElementById(tabId).classList.remove('tab-hidden'); document.getElementById(tabId).classList.add('tab-active');
@@ -288,28 +268,15 @@
 
         window.logout = function() { if(confirm('Вийти з акаунту?')){ localStorage.clear(); location.reload(); } };
 
-        // ЗМІНА ПРОФІЛЮ (Емейл, Ім'я, Слово)
         window.updateProfileCredentials = async () => {
-            const newName = document.getElementById('editName').value.trim();
-            const newEmail = document.getElementById('editEmail').value.toLowerCase().trim();
-            const newSecRaw = document.getElementById('editSecret').value.toLowerCase().trim();
+            const newName = document.getElementById('editName').value.trim(); const newEmail = document.getElementById('editEmail').value.toLowerCase().trim(); const newSecRaw = document.getElementById('editSecret').value.toLowerCase().trim();
             if(!newEmail) return alert("Email не може бути пустим!");
-            
             try {
-                const newPhoneH = await getHash(newEmail);
-                const newSecH = newSecRaw ? await getHash(newSecRaw) : sessionSecret;
+                const newPhoneH = await getHash(newEmail); const newSecH = newSecRaw ? await getHash(newSecRaw) : sessionSecret;
                 profile.name = newName || profile.name; profile.login = newEmail;
-                
-                const res = await fetch(`${WORKER_URL}?phone=${sessionPhone}&pass=${sessionPass}&action=update_credentials`, {
-                    method: 'POST', body: JSON.stringify({ newPhone: newPhoneH, newPass: sessionPass, newSecret: newSecH, profileData: profile })
-                });
+                const res = await fetch(`${WORKER_URL}?phone=${sessionPhone}&pass=${sessionPass}&action=update_credentials`, { method: 'POST', body: JSON.stringify({ newPhone: newPhoneH, newPass: sessionPass, newSecret: newSecH, profileData: profile }) });
                 const data = await res.json();
-                if(data.success) {
-                    sessionPhone = newPhoneH; sessionSecret = newSecH;
-                    localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_secretHash', sessionSecret); localStorage.setItem('k_profile', JSON.stringify(profile));
-                    document.getElementById('editSecret').value = ""; // очистити поле
-                    alert("Профіль успішно оновлено!"); initAppUI();
-                } else alert("Помилка оновлення на сервері.");
+                if(data.success) { sessionPhone = newPhoneH; sessionSecret = newSecH; localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_secretHash', sessionSecret); localStorage.setItem('k_profile', JSON.stringify(profile)); document.getElementById('editSecret').value = ""; alert("Профіль успішно оновлено!"); initAppUI(); } else alert("Помилка на сервері.");
             } catch(e) { alert("Помилка мережі"); }
         };
 
@@ -413,11 +380,10 @@
             const max = Math.max(...recent.map(r => r.total));
             container.innerHTML = recent.map(r => {
                 const h = max > 0 ? (r.total / max) * 100 : 0; const mName = new Date(r.month + '-01').toLocaleString('uk-UA', {month: 'short'}).slice(0, 3);
-                return `<div class="flex flex-col items-center gap-2 flex-1 group relative"><div class="w-full h-full flex items-end bg-slate-50 dark:bg-slate-800/50 rounded-xl overflow-hidden"><div class="${r.paid ? 'bg-gradient-to-t from-indigo-600 to-blue-400' : 'bg-gradient-to-t from-orange-400 to-yellow-400'} w-full rounded-xl transition-all duration-1000 group-hover:opacity-80 shadow-inner" style="height: ${Math.max(8, h)}%"></div></div><span class="text-[10px] text-slate-500 uppercase font-bold">${mName}</span></div>`;
+                return `<div class="flex flex-col items-center gap-2 flex-1 group relative"><div class="w-full h-full flex items-end bg-slate-50 dark:bg-slate-800/50 rounded-xl overflow-hidden"><div class="${r.paid ? 'bg-gradient-to-t from-indigo-600 to-blue-400' : 'bg-gradient-to-t from-orange-400 to-yellow-400'} w-full rounded-xl transition-all duration-1000 shadow-inner" style="height: ${Math.max(8, h)}%"></div></div><span class="text-[10px] text-slate-500 uppercase font-bold">${mName}</span></div>`;
             }).join('');
         }
 
-        // АКОРДЕОН В ІСТОРІЇ
         window.toggleDetails = function(index) {
             const el = document.getElementById(`details-${index}`); const ch = document.getElementById(`chevron-${index}`);
             if(el.classList.contains('hidden')) { el.classList.remove('hidden'); ch.classList.add('rotate-180'); } 
@@ -437,38 +403,13 @@
                     card.className = `p-6 rounded-[2.5rem] shadow-sm border bg-white dark:bg-slate-900 mb-4 transition-all relative overflow-hidden cursor-pointer select-none ${rec.paid ? 'border-slate-100 dark:border-slate-800' : 'border-orange-200 dark:border-orange-500/30'}`;
                     card.setAttribute('onclick', `toggleDetails(${index})`);
                     if(!rec.paid) card.innerHTML += `<div class="absolute top-0 right-0 w-16 h-16 bg-orange-500/10 dark:bg-orange-500/5 rounded-bl-[4rem]"></div>`;
-                    
                     let dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); 
-                    
-                    // Верхня частина (Завжди видима)
-                    let html = `
-                        <div class="flex justify-between items-center relative z-10">
-                            <div>
-                                <h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1">${dStr}</h4>
-                                <span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400' : 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Очікує оплати'}</span>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span>
-                                <div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-full text-slate-400"><svg id="chevron-${index}" class="w-5 h-5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
-                            </div>
-                        </div>
-                        
-                        <!-- Нижня частина (Акордеон) -->
-                        <div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()">
-                            <div class="space-y-2.5 text-sm border-t border-slate-50 dark:border-slate-800/50 pt-4 mt-5 relative z-10">`;
-                            
-                            if (rec.waterCost > 0) html += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex items-center gap-2"><span class="text-blue-500 text-lg">💧</span> Вода</span><span class="font-bold">${fmt.format(rec.waterCost)} ₴</span></div>`;
-                            if (rec.electroCost > 0) html += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex items-center gap-2"><span class="text-yellow-500 text-lg">⚡️</span> Світло</span><span class="font-bold">${fmt.format(rec.electroCost)} ₴</span></div>`;
-                            if (rec.gasCost > 0) html += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex items-center gap-2"><span class="text-orange-500 text-lg">🔥</span> Газ</span><span class="font-bold">${fmt.format(rec.gasCost)} ₴</span></div>`;
-                            if (rec.customCost > 0) html += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex items-center gap-2"><span class="text-purple-500 text-lg">📦</span> Інше</span><span class="font-bold">${fmt.format(rec.customCost)} ₴</span></div>`;
-                            
-                            html += `</div>
-                            <div class="flex gap-2 mt-6 relative z-10">
-                                <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-[1rem] font-bold text-sm transition-all shadow-sm ${rec.paid ? 'bg-slate-50 text-slate-500 dark:bg-slate-800 border border-slate-200 dark:border-slate-700' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'}">${rec.paid ? 'Скасувати оплату' : 'Позначити оплаченим'}</button>
-                                <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 h-12 flex items-center justify-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[1rem] text-slate-600 dark:text-slate-300 transition-colors hover:text-indigo-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                                <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 h-12 flex items-center justify-center bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-[1rem] text-red-500 transition-colors hover:bg-red-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-                            </div>
-                        </div>`;
+                    let html = `<div class="flex justify-between items-center relative z-10"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1">${dStr}</h4><span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400' : 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Очікує оплати'}</span></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-full text-slate-400"><svg id="chevron-${index}" class="w-5 h-5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div></div></div><div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()"><div class="space-y-2.5 text-sm border-t border-slate-50 dark:border-slate-800/50 pt-4 mt-5 relative z-10">`;
+                    if (rec.waterCost > 0) html += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex items-center gap-2"><span class="text-blue-500 text-lg">💧</span> Вода</span><span class="font-bold">${fmt.format(rec.waterCost)} ₴</span></div>`;
+                    if (rec.electroCost > 0) html += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex items-center gap-2"><span class="text-yellow-500 text-lg">⚡️</span> Світло</span><span class="font-bold">${fmt.format(rec.electroCost)} ₴</span></div>`;
+                    if (rec.gasCost > 0) html += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex items-center gap-2"><span class="text-orange-500 text-lg">🔥</span> Газ</span><span class="font-bold">${fmt.format(rec.gasCost)} ₴</span></div>`;
+                    if (rec.customCost > 0) html += `<div class="flex justify-between text-slate-600 dark:text-slate-300"><span class="flex items-center gap-2"><span class="text-purple-500 text-lg">📦</span> Інше</span><span class="font-bold">${fmt.format(rec.customCost)} ₴</span></div>`;
+                    html += `</div><div class="flex gap-2 mt-6 relative z-10"><button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-[1rem] font-bold text-sm transition-all shadow-sm ${rec.paid ? 'bg-slate-50 text-slate-500 dark:bg-slate-800 border border-slate-200 dark:border-slate-700' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'}">${rec.paid ? 'Скасувати оплату' : 'Позначити оплаченим'}</button><button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 h-12 flex items-center justify-center bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[1rem] text-slate-600 dark:text-slate-300 transition-colors hover:text-indigo-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button><button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 h-12 flex items-center justify-center bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-[1rem] text-red-500 transition-colors hover:bg-red-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></div></div>`;
                     card.innerHTML = html; list.appendChild(card);
                 });
             });
