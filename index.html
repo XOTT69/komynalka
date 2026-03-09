@@ -34,7 +34,6 @@
         .tab-active { display: block !important; opacity: 1; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Стилі для кастомних тумблерів */
         .toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
         .toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
         .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
@@ -69,11 +68,18 @@
 
     <!-- ОСНОВНИЙ ДОДАТОК -->
     <div id="appScreen" class="hidden flex-col h-full w-full max-w-md mx-auto relative overflow-hidden">
-        <!-- Шапка -->
+        
+        <!-- Шапка з вибором адреси -->
         <div class="px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center bg-slate-50 dark:bg-slate-950 z-20 shrink-0">
-            <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('tabSettings', 2)">
-                <div class="w-12 h-12 bg-gradient-to-tr from-indigo-500 to-blue-400 rounded-full flex items-center justify-center text-white font-bold shadow-md" id="userAvatar">U</div>
-                <div><p class="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">З поверненням</p><h2 class="text-xl font-black text-slate-900 dark:text-white leading-tight" id="userGreeting">Вітаю! 👋</h2></div>
+            <div class="flex items-center gap-3 cursor-pointer" onclick="openAddressModal()">
+                <div class="w-12 h-12 bg-gradient-to-tr from-indigo-500 to-blue-400 rounded-full flex items-center justify-center text-white shadow-md text-xl">🏡</div>
+                <div>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider" id="userGreeting">Вітаю!</p>
+                    <h2 class="text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-1 active:opacity-70 transition-opacity">
+                        <span id="currentAddressDisplay" class="truncate max-w-[150px]">Мій дім</span>
+                        <svg class="w-4 h-4 text-indigo-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                    </h2>
+                </div>
             </div>
             <button onclick="toggleTheme()" class="w-11 h-11 flex items-center justify-center bg-white dark:bg-slate-900 rounded-full shadow-sm border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-indigo-500 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg></button>
         </div>
@@ -149,14 +155,12 @@
                     </div>
                     <!-- ОНОВЛЕНИЙ ГРАФІК -->
                     <div class="relative h-44 w-full mt-4">
-                        <!-- Сітка фону -->
                         <div class="absolute inset-0 flex flex-col justify-between z-0">
                             <div class="border-t border-slate-100 dark:border-slate-800/50 w-full h-0"></div>
                             <div class="border-t border-slate-100 dark:border-slate-800/50 w-full h-0"></div>
                             <div class="border-t border-slate-100 dark:border-slate-800/50 w-full h-0"></div>
                             <div class="border-t border-slate-300 dark:border-slate-700 w-full h-0"></div>
                         </div>
-                        <!-- Самі стовпчики -->
                         <div id="chartContainer" class="absolute inset-0 flex justify-around items-end h-full pt-4 pb-1 z-10 px-2"></div>
                     </div>
                 </div>
@@ -176,11 +180,10 @@
                     </div>
                 </div>
 
-                <!-- ОНОВЛЕНІ БЛОКИ ПОСЛУГ З ГАРНИМИ ТУМБЛЕРАМИ -->
+                <!-- БЛОКИ ПОСЛУГ З ГАРНИМИ ТУМБЛЕРАМИ -->
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-slate-800">
                     <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-indigo-500 text-xl">⚙️</span> Блоки послуг</h3>
                     <div class="space-y-5">
-                        
                         <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
                             <span class="flex items-center gap-2">💧 Водопостачання</span>
                             <div class="relative inline-flex items-center">
@@ -194,7 +197,7 @@
                             <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
                                 <span class="flex items-center gap-2">⚡️ Електроенергія</span>
                                 <div class="relative inline-flex items-center">
-                                    <input type="checkbox" id="prefElectro" class="sr-only peer">
+                                    <input type="checkbox" id="prefElectro" class="sr-only toggle-checkbox peer">
                                     <div class="w-12 h-7 bg-slate-200 dark:bg-slate-700 rounded-full peer-checked:bg-indigo-600 transition-colors duration-300"></div>
                                     <div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div>
                                 </div>
@@ -204,7 +207,7 @@
                                 <label class="flex justify-between items-center text-xs font-bold text-slate-500 cursor-pointer">
                                     <span>Двозонний тариф</span>
                                     <div class="relative inline-flex items-center">
-                                        <input type="checkbox" id="prefElectroTwoZone" class="sr-only peer">
+                                        <input type="checkbox" id="prefElectroTwoZone" class="sr-only toggle-checkbox peer">
                                         <div class="w-10 h-6 bg-slate-200 dark:bg-slate-700 rounded-full peer-checked:bg-indigo-500 transition-colors duration-300"></div>
                                         <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-4"></div>
                                     </div>
@@ -212,7 +215,7 @@
                                 <label class="flex justify-between items-center text-xs font-bold text-slate-500 cursor-pointer">
                                     <span>Зимовий тариф</span>
                                     <div class="relative inline-flex items-center">
-                                        <input type="checkbox" id="prefElectroWinter" class="sr-only peer">
+                                        <input type="checkbox" id="prefElectroWinter" class="sr-only toggle-checkbox peer">
                                         <div class="w-10 h-6 bg-slate-200 dark:bg-slate-700 rounded-full peer-checked:bg-indigo-500 transition-colors duration-300"></div>
                                         <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-4"></div>
                                     </div>
@@ -223,7 +226,7 @@
                         <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 pt-4 border-t border-slate-100 dark:border-slate-800/80 cursor-pointer">
                             <span class="flex items-center gap-2">🔥 Газопостачання</span>
                             <div class="relative inline-flex items-center">
-                                <input type="checkbox" id="prefGas" class="sr-only peer">
+                                <input type="checkbox" id="prefGas" class="sr-only toggle-checkbox peer">
                                 <div class="w-12 h-7 bg-slate-200 dark:bg-slate-700 rounded-full peer-checked:bg-indigo-600 transition-colors duration-300"></div>
                                 <div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div>
                             </div>
@@ -252,6 +255,17 @@
         </div>
     </div>
 
+    <!-- МОДАЛЬНЕ ВІКНО МУЛЬТИ-АДРЕС -->
+    <div id="addressModal" class="hidden fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm flex items-end justify-center transition-opacity">
+        <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-t-[2.5rem] p-6 pb-[max(env(safe-area-inset-bottom),2rem)] transition-transform transform translate-y-full duration-300 shadow-[0_-20px_40px_rgba(0,0,0,0.1)]" id="addressModalContent">
+            <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6"></div>
+            <h3 class="font-black text-2xl text-slate-900 dark:text-white mb-4 flex items-center gap-2">🏡 Мої об'єкти</h3>
+            <div id="addressListModal" class="space-y-3 mb-4 max-h-[50vh] overflow-y-auto no-scrollbar"></div>
+            <button onclick="addNewAddress()" class="w-full py-4 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold rounded-2xl border border-indigo-100 dark:border-indigo-500/20 transition-colors">+ Додати нову адресу</button>
+            <button onclick="closeAddressModal()" class="w-full py-4 mt-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-2xl transition-colors">Закрити</button>
+        </div>
+    </div>
+
     <script>
         const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
@@ -260,10 +274,17 @@
         let sessionPass = localStorage.getItem('k_passHash');
         let profile = JSON.parse(localStorage.getItem('k_profile') || '{"name":"","login":""}');
         
+        // Базові шаблони
         let defaultTariffs = { water: 30.38, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
         let defaultPrefs = { showWater: true, showElectro: true, showGas: false, electroTwoZone: true, electroWinter: true };
-        let customServices = [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}];
-        let tariffs = { ...defaultTariffs }; let prefs = { ...defaultPrefs }; let records = [];
+        let defaultCustomServices = [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}];
+        
+        // Змінні для Мульти-адрес
+        let addresses = [];
+        let currentAddressId = 'default';
+
+        // Поточні активні змінні (для обраної адреси)
+        let tariffs = {}; let prefs = {}; let records = []; let customServices = [];
 
         async function getHash(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
 
@@ -273,9 +294,7 @@
             const rawPass = document.getElementById('authPass').value;
             const btn = document.getElementById('authSubmitBtn');
             const errEl = document.getElementById('authError');
-            
-            errEl.classList.add('hidden');
-            btn.innerText = "Завантаження...";
+            errEl.classList.add('hidden'); btn.innerText = "Завантаження...";
 
             try {
                 const passHash = await getHash(rawPass);
@@ -284,24 +303,138 @@
 
                 if (res.status === 403 || data.error === "WRONG_PASSWORD") throw new Error("WRONG_PASSWORD");
                 
-                sessionPhone = rawPhone;
-                sessionPass = passHash;
+                sessionPhone = rawPhone; sessionPass = passHash;
                 
                 if (res.status === 404 || !data.success) {
-                    profile.login = rawPhone; profile.name = rawPhone; tariffs = {...defaultTariffs}; prefs = {...defaultPrefs}; records = [];
+                    profile.login = rawPhone; profile.name = rawPhone;
+                    addresses = [{ id: 'default', name: 'Мій дім', tariffs: {...defaultTariffs}, prefs: {...defaultPrefs}, records: [], customServices: [...defaultCustomServices] }];
+                    currentAddressId = 'default';
                     await syncToCloud();
                 } else {
-                    tariffs = data.data.tariffs || defaultTariffs; prefs = { ...defaultPrefs, ...(data.data.prefs || {}) }; records = data.data.records || []; customServices = data.data.customServices || customServices; profile.login = rawPhone; profile.name = rawPhone;
+                    // Міграція для старих користувачів (якщо адреси ще не були створені)
+                    if (data.data.addresses) {
+                        addresses = data.data.addresses;
+                        currentAddressId = data.data.currentAddressId || addresses[0].id;
+                    } else {
+                        addresses = [{
+                            id: 'default', name: 'Мій дім',
+                            tariffs: data.data.tariffs || {...defaultTariffs},
+                            prefs: { ...defaultPrefs, ...(data.data.prefs || {}) },
+                            records: data.data.records || [],
+                            customServices: data.data.customServices || [...defaultCustomServices]
+                        }];
+                        currentAddressId = 'default';
+                    }
+                    profile.login = rawPhone; profile.name = rawPhone;
                 }
 
                 localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_passHash', sessionPass); localStorage.setItem('k_profile', JSON.stringify(profile));
-                initAppUI();
+                loadCurrentAddress();
             } catch (err) {
                 btn.innerText = "Увійти";
                 errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль!" : "Помилка підключення";
                 errEl.classList.remove('hidden');
             }
         });
+
+        // ЛОГІКА МУЛЬТИ-АДРЕС
+        function loadCurrentAddress() {
+            const addr = addresses.find(a => a.id === currentAddressId) || addresses[0];
+            currentAddressId = addr.id;
+            tariffs = addr.tariffs || {...defaultTariffs};
+            prefs = addr.prefs || {...defaultPrefs};
+            records = addr.records || [];
+            customServices = addr.customServices || [...defaultCustomServices];
+            
+            document.getElementById('currentAddressDisplay').innerText = addr.name;
+            initAppUI();
+        }
+
+        function syncCurrentAddress() {
+            const addrIndex = addresses.findIndex(a => a.id === currentAddressId);
+            if(addrIndex >= 0) {
+                addresses[addrIndex].tariffs = tariffs;
+                addresses[addrIndex].prefs = prefs;
+                addresses[addrIndex].records = records;
+                addresses[addrIndex].customServices = customServices;
+            }
+        }
+
+        function openAddressModal() {
+            document.getElementById('addressModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('addressModalContent').classList.remove('translate-y-full'), 10);
+            renderAddressModal();
+        }
+
+        function closeAddressModal() {
+            document.getElementById('addressModalContent').classList.add('translate-y-full');
+            setTimeout(() => document.getElementById('addressModal').classList.add('hidden'), 300);
+        }
+
+        function renderAddressModal() {
+            const list = document.getElementById('addressListModal');
+            list.innerHTML = addresses.map(a => `
+                <div class="flex items-center justify-between p-4 rounded-2xl border transition-all ${a.id === currentAddressId ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'} cursor-pointer" onclick="selectAddress('${a.id}')">
+                    <span class="font-bold text-lg truncate pr-2">${a.name}</span>
+                    ${a.id !== currentAddressId ? `<div class="flex gap-1 shrink-0">
+                        <button onclick="editAddressName(event, '${a.id}')" class="p-2 text-slate-400 hover:text-indigo-500 transition-colors bg-white dark:bg-slate-900 rounded-xl shadow-sm"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                        ${addresses.length > 1 ? `<button onclick="deleteAddress(event, '${a.id}')" class="p-2 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-slate-900 rounded-xl shadow-sm"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>` : ''}
+                    </div>` : '<svg class="w-6 h-6 text-white shrink-0 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'}
+                </div>
+            `).join('');
+        }
+
+        function selectAddress(id) {
+            syncCurrentAddress(); // Зберігаємо поточну
+            currentAddressId = id;
+            loadCurrentAddress(); // Завантажуємо нову
+            syncToCloud(); 
+            closeAddressModal();
+        }
+
+        function addNewAddress() {
+            const name = prompt("Введіть назву нової адреси (наприклад, Квартира Київ):");
+            if(name && name.trim()) {
+                syncCurrentAddress();
+                const newId = 'addr_' + Date.now();
+                addresses.push({
+                    id: newId,
+                    name: name.trim(),
+                    tariffs: {...defaultTariffs},
+                    prefs: {...defaultPrefs},
+                    records: [],
+                    customServices: [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}]
+                });
+                currentAddressId = newId;
+                loadCurrentAddress();
+                syncToCloud();
+                closeAddressModal();
+            }
+        }
+
+        function editAddressName(e, id) {
+            e.stopPropagation();
+            const addr = addresses.find(a => a.id === id);
+            const newName = prompt("Нова назва:", addr.name);
+            if(newName && newName.trim()) {
+                addr.name = newName.trim();
+                renderAddressModal();
+                if(id === currentAddressId) document.getElementById('currentAddressDisplay').innerText = addr.name;
+                syncToCloud();
+            }
+        }
+
+        function deleteAddress(e, id) {
+            e.stopPropagation();
+            if(addresses.length <= 1) return alert("Не можна видалити єдину адресу!");
+            if(confirm("Видалити цю адресу і всі її розрахунки? Цю дію неможливо скасувати.")) {
+                addresses = addresses.filter(a => a.id !== id);
+                if(currentAddressId === id) currentAddressId = addresses[0].id;
+                loadCurrentAddress();
+                syncToCloud();
+                renderAddressModal();
+            }
+        }
 
         let touchstartX = 0; let touchendX = 0; const swipeZone = document.getElementById('swipeContainer');
         swipeZone.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, {passive: true});
@@ -331,12 +464,14 @@
         function toggleTheme() {
             document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
             document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.classList.contains('dark') ? '#020617' : '#f8fafc');
-            if(document.getElementById('tabHistory').classList.contains('tab-active')) renderRecords(); // перемалювати графік
+            if(document.getElementById('tabHistory').classList.contains('tab-active')) renderRecords();
         }
 
         async function syncToCloud() {
             if (!sessionPhone) return;
-            const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify({ tariffs, records, prefs, customServices }) });
+            syncCurrentAddress(); // Обов'язково зберігаємо в масив перед відправкою
+            const body = { addresses: addresses, currentAddressId: currentAddressId };
+            const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify(body) });
             const data = await res.json();
             if (res.status === 403 || data.error === "WRONG_PASSWORD") logout(); 
         }
@@ -386,7 +521,6 @@
 
         function initAppUI() {
             document.getElementById('authScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); document.getElementById('appScreen').classList.add('flex');
-            const n = profile.name || "Користувач"; document.getElementById('userGreeting').innerText = `Вітаю, ${n} 👋`; document.getElementById('userAvatar').innerText = n.charAt(0).toUpperCase();
             document.getElementById('tWater').value = tariffs.water; document.getElementById('tElectroBase').value = tariffs.electroBase; document.getElementById('tElectroWinter').value = tariffs.electroWinter; document.getElementById('tGas').value = tariffs.gas;
             applyPreferences(); renderCalcCustomServices(); fillPreviousReadings(); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges();
         }
@@ -394,7 +528,8 @@
         window.saveSettings = () => {
             tariffs = { water: parseFloat(document.getElementById('tWater').value)||defaultTariffs.water, electroBase: parseFloat(document.getElementById('tElectroBase').value)||defaultTariffs.electroBase, electroWinter: parseFloat(document.getElementById('tElectroWinter').value)||defaultTariffs.electroWinter, winterLimit: 2000, gas: parseFloat(document.getElementById('tGas').value)||defaultTariffs.gas, nightCoef: 0.5 };
             prefs = { showWater: document.getElementById('prefWater').checked, showElectro: document.getElementById('prefElectro').checked, showGas: document.getElementById('prefGas').checked, electroTwoZone: document.getElementById('prefElectroTwoZone').checked, electroWinter: document.getElementById('prefElectroWinter').checked };
-            customServices = customServices.filter(s => s.name.trim() !== ""); syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); updateSmartBadges();
+            customServices = customServices.filter(s => s.name.trim() !== ""); 
+            syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); updateSmartBadges();
             alert("Налаштування збережено");
         };
 
@@ -421,6 +556,13 @@
 
         document.getElementById('monthInput').value = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
         function fillPreviousReadings() {
+            // Очищаємо поля при зміні адреси
+            document.getElementById('wPrev').value = ''; document.getElementById('wCur').value = '';
+            document.getElementById('dPrev').value = ''; document.getElementById('dCur').value = '';
+            document.getElementById('nPrev').value = ''; document.getElementById('nCur').value = '';
+            document.getElementById('gPrev').value = ''; document.getElementById('gCur').value = '';
+            document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
+
             if(records.length > 0) {
                 let lr = records.sort((a, b) => new Date(b.month) - new Date(a.month))[0];
                 if(prefs.showWater) { document.getElementById('wPrev').value = lr.wCur || ''; document.getElementById('wCur').value = lr.wCur || ''; }
@@ -439,10 +581,9 @@
             fillPreviousReadings(); calculatePreview(); updateSmartBadges(); switchTab('tabHistory', 1);
         });
 
-        // ОНОВЛЕНИЙ ГРАФІК
         function renderChart(sortedRecords) {
             const container = document.getElementById('chartContainer'); 
-            const recent = sortedRecords.slice(0, 6).reverse(); // Беремо 6 останніх місяців
+            const recent = sortedRecords.slice(0, 6).reverse(); 
             
             if (!recent.length) { 
                 container.innerHTML = '<span class="text-sm text-slate-400 m-auto absolute inset-0 flex items-center justify-center">Ще немає даних</span>'; 
@@ -452,12 +593,9 @@
             const max = Math.max(...recent.map(r => r.total));
             const isDark = document.documentElement.classList.contains('dark');
             
-            // Якщо записів мало (наприклад, 1), робимо заглушки, щоб він не розтягувався на всю ширину
             let chartHtml = '';
             const emptySlots = 6 - recent.length;
-            for(let i = 0; i < emptySlots; i++) {
-                chartHtml += `<div class="flex flex-col items-center gap-2 flex-1 opacity-0"><div class="w-full h-full"></div></div>`;
-            }
+            for(let i = 0; i < emptySlots; i++) chartHtml += `<div class="flex flex-col items-center gap-2 flex-1 opacity-0"><div class="w-full h-full"></div></div>`;
 
             chartHtml += recent.map(r => {
                 const h = max > 0 ? (r.total / max) * 100 : 0; 
@@ -482,7 +620,6 @@
             if(el.classList.contains('hidden')) { el.classList.remove('hidden'); ch.classList.add('rotate-180'); } else { el.classList.add('hidden'); ch.classList.remove('rotate-180'); }
         };
 
-        // ОНОВЛЕНІ КАРТКИ ІСТОРІЇ ТА КНОПКИ
         function renderRecords() {
             const list = document.getElementById('recordsList'); list.innerHTML = '';
             let tSum = records.reduce((sum, r) => sum + r.total, 0); document.getElementById('statsAvg').innerText = fmt.format(records.length ? (tSum / records.length) : 0) + ' ₴';
@@ -529,7 +666,6 @@
                         html += `</div>`;
                     }
                     
-                    // ОНОВЛЕНІ КНОПКИ ДІЙ
                     html += `</div>
                         <div class="flex gap-3 mt-6 relative z-10 pt-2">
                             <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-2xl font-bold text-sm transition-all border ${rec.paid ? 'bg-white text-slate-500 dark:bg-slate-900 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-700 text-white border-transparent shadow-lg shadow-indigo-500/20'}">${rec.paid ? 'Скасувати оплату' : 'Позначити оплаченим'}</button>
@@ -550,7 +686,14 @@
             fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}&t=${Date.now()}`, { cache: "no-store" })
             .then(r => r.json()).then(data => {
                 if(data.success) {
-                    tariffs = data.data.tariffs || defaultTariffs; prefs = { ...defaultPrefs, ...(data.data.prefs || {}) }; records = data.data.records || []; customServices = data.data.customServices || customServices; initAppUI();
+                    if (data.data.addresses) {
+                        addresses = data.data.addresses;
+                        currentAddressId = data.data.currentAddressId || addresses[0].id;
+                    } else {
+                        addresses = [{ id: 'default', name: 'Мій дім', tariffs: data.data.tariffs || {...defaultTariffs}, prefs: { ...defaultPrefs, ...(data.data.prefs || {}) }, records: data.data.records || [], customServices: data.data.customServices || [...defaultCustomServices] }];
+                        currentAddressId = 'default';
+                    }
+                    loadCurrentAddress();
                 } else throw new Error();
             }).catch(() => { document.getElementById('authScreen').classList.remove('hidden'); localStorage.clear(); });
         }
