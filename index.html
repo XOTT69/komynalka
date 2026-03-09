@@ -53,7 +53,7 @@
                 <form id="authForm" class="space-y-4">
                     <div>
                         <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2">Email або Логін</label>
-                        <input type="text" id="authLogin" placeholder="Новий логін" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white transition-all">
+                        <input type="text" id="authLogin" placeholder="Логін" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white transition-all">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2">Пароль</label>
@@ -280,13 +280,27 @@
         async function getHash(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
 
         document.getElementById('authForm').addEventListener('submit', async (e) => {
-            e.preventDefault(); const rawPhone = document.getElementById('authLogin').value.toLowerCase().trim(); const rawPass = document.getElementById('authPass').value; const btn = document.getElementById('authSubmitBtn'); const errEl = document.getElementById('authError'); errEl.classList.add('hidden'); btn.innerText = "Завантаження...";
+            e.preventDefault(); 
+            const rawPhone = document.getElementById('authLogin').value.trim(); // ПРИБРАВ toLowerCase() ТУТ
+            const rawPass = document.getElementById('authPass').value; 
+            const btn = document.getElementById('authSubmitBtn'); 
+            const errEl = document.getElementById('authError'); 
+            errEl.classList.add('hidden'); btn.innerText = "Завантаження...";
             try {
-                const passHash = await getHash(rawPass); const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(rawPhone)}&pass=${passHash}&t=${Date.now()}`, { cache: "no-store" }); const data = await res.json();
+                const passHash = await getHash(rawPass); 
+                const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(rawPhone)}&pass=${passHash}&t=${Date.now()}`, { cache: "no-store" }); 
+                const data = await res.json();
                 if (res.status === 403 || data.error === "WRONG_PASSWORD") throw new Error("WRONG_PASSWORD");
                 sessionPhone = rawPhone; sessionPass = passHash;
-                if (res.status === 404 || !data.success) { profile.login = rawPhone; profile.name = rawPhone; addresses = [{ id: 'default', name: 'Мій дім', tariffs: {...defaultTariffs}, prefs: {...defaultPrefs}, records: [], customServices: [...defaultCustomServices] }]; currentAddressId = 'default'; await syncToCloud(); } else {
-                    if (data.data.addresses) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId || addresses[0].id; } else { addresses = [{ id: 'default', name: 'Мій дім', tariffs: data.data.tariffs || {...defaultTariffs}, prefs: { ...defaultPrefs, ...(data.data.prefs || {}) }, records: data.data.records || [], customServices: data.data.customServices || [...defaultCustomServices] }]; currentAddressId = 'default'; }
+                
+                if (res.status === 404 || !data.success) { 
+                    profile.login = rawPhone; profile.name = rawPhone; 
+                    addresses = [{ id: 'default', name: 'Мій дім', tariffs: {...defaultTariffs}, prefs: {...defaultPrefs}, records: [], customServices: [...defaultCustomServices] }]; 
+                    currentAddressId = 'default'; 
+                    await syncToCloud(); 
+                } else {
+                    if (data.data.addresses) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId || addresses[0].id; } 
+                    else { addresses = [{ id: 'default', name: 'Мій дім', tariffs: data.data.tariffs || {...defaultTariffs}, prefs: { ...defaultPrefs, ...(data.data.prefs || {}) }, records: data.data.records || [], customServices: data.data.customServices || [...defaultCustomServices] }]; currentAddressId = 'default'; }
                     profile.login = rawPhone; profile.name = rawPhone;
                 }
                 localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_passHash', sessionPass); localStorage.setItem('k_profile', JSON.stringify(profile)); loadCurrentAddress();
@@ -528,23 +542,10 @@
         window.togglePaid = function(index) { records[index].paid = !records[index].paid; renderRecords(); syncToCloud(); };
         window.deleteRecord = function(index) { if(confirm('Видалити розрахунок?')) { records.splice(index, 1); renderRecords(); syncToCloud(); } };
 
-        // ЗАВАНТАЖЕННЯ: Гостьовий режим чи звичайний?
         if (urlShareToken) {
-            isGuest = true;
-            document.getElementById('authScreen').classList.add('hidden'); 
-            document.getElementById('appScreen').classList.remove('hidden'); 
-            document.getElementById('appScreen').classList.add('flex');
-            
-            // Ховаємо налаштування для гостя
-            document.getElementById('btnTabSettings').style.display = 'none';
-            document.getElementById('addressHeaderTrigger').onclick = null;
-            document.getElementById('addressArrowIcon').style.display = 'none';
-            
+            isGuest = true; document.getElementById('authScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); document.getElementById('appScreen').classList.add('flex'); document.getElementById('btnTabSettings').style.display = 'none'; document.getElementById('addressHeaderTrigger').onclick = null; document.getElementById('addressArrowIcon').style.display = 'none';
             fetch(`${WORKER_URL}?share=${urlShareToken}`, { cache: "no-store" })
-            .then(r => r.json()).then(data => {
-                if(data.success) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId; loadCurrentAddress(); } 
-                else { alert("Це посилання недійсне або було видалене."); document.getElementById('appScreen').innerHTML = '<div class="m-auto text-center p-5 font-bold text-red-500">Доступ закрито</div>'; }
-            });
+            .then(r => r.json()).then(data => { if(data.success) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId; loadCurrentAddress(); } else { alert("Це посилання недійсне або було видалене."); document.getElementById('appScreen').innerHTML = '<div class="m-auto text-center p-5 font-bold text-red-500">Доступ закрито</div>'; } });
         } 
         else if (sessionPhone && sessionPass) { 
             fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}&t=${Date.now()}`, { cache: "no-store" })
