@@ -234,9 +234,9 @@
             btn.innerText = "Завантаження...";
 
             try {
+                // Хешуємо тільки пароль! Логін передаємо як є, щоб знаходити старі акаунти
                 const passHash = await getHash(rawPass);
                 
-                // Якщо помилка, fetchFromCloud кине Exception
                 const exists = await fetchFromCloud(rawPhone, passHash);
                 
                 sessionPhone = rawPhone;
@@ -258,7 +258,6 @@
                 initAppUI();
             } catch (err) {
                 btn.innerText = "Увійти";
-                // Обробляємо саме нашу помилку
                 if (err.message === "WRONG_PASSWORD") {
                     errEl.innerText = "Неправильний пароль!";
                 } else {
@@ -310,11 +309,9 @@
             const res = await fetch(`${WORKER_URL}?phone=${ph}&pass=${ps}&t=${Date.now()}`, { cache: "no-store" });
             const data = await res.json();
             
-            // Якщо статус 403 - кидаємо виняток, який зловить catch вище
             if (res.status === 403 || data.error === "WRONG_PASSWORD") {
                 throw new Error("WRONG_PASSWORD");
             }
-            // Якщо 404 - користувача нема, повертаємо false
             if (res.status === 404 || !data.success) {
                 return false; 
             }
@@ -328,7 +325,7 @@
             const res = await fetch(`${WORKER_URL}?phone=${sessionPhone}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify({ tariffs, records, prefs, customServices }) });
             const data = await res.json();
             if (res.status === 403 || data.error === "WRONG_PASSWORD") {
-                logout(); // Якщо пароль змінився і не підходить - викидаємо з акаунту
+                logout(); 
             }
         }
 
