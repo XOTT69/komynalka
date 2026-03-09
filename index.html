@@ -332,19 +332,21 @@
                 });
                 const data = await res.json();
                 
-                if(data.success) {
-                    const shareUrl = window.location.origin + window.location.pathname + '?share=' + data.shareToken;
+                if(data.success && data.shareToken) {
+                    const cleanUrl = window.location.href.split('?')[0];
+                    const shareUrl = cleanUrl + '?share=' + data.shareToken;
+                    
                     try {
                         await navigator.clipboard.writeText(shareUrl);
-                        alert("✅ Гостьове посилання скопійовано!\n\nВідправте його квартиранту. Він зможе вносити показники тільки для об'єкта '" + document.getElementById('currentAddressDisplay').innerText + "'.");
+                        alert("✅ Гостьове посилання скопійовано!\n\n" + shareUrl);
                     } catch (err) {
                         prompt("Браузер заблокував авто-копіювання. Скопіюйте посилання вручну:", shareUrl);
                     }
                 } else {
-                    alert("Помилка генерації");
+                    alert("⚠️ Worker не згенерував токен!\nБудь ласка, переконайтеся, що ви повністю оновили код Worker'а у Cloudflare і натиснули кнопку Deploy.");
                 }
             } catch(e) { 
-                alert("Помилка з'єднання"); 
+                alert("Помилка з'єднання: " + e.message); 
             }
             btn.innerHTML = oldHtml;
         }
