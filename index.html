@@ -100,7 +100,6 @@
                 </div>
 
                 <form id="utilityForm" class="space-y-4 pb-6">
-                    <!-- ВОДА -->
                     <div id="blockWater" class="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-slate-800">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-500 text-xl">💧</div><span class="font-bold text-lg text-slate-900 dark:text-white">Вода</span></div><span id="waterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-700/50">
@@ -109,7 +108,6 @@
                             <div class="flex-1"><label class="block text-[10px] text-blue-500 font-bold uppercase px-1 mb-1.5 text-right">Нові</label><input type="number" id="wCur" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 text-center text-xl font-black text-blue-600 dark:text-blue-400 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all"></div>
                         </div>
                     </div>
-                    <!-- СВІТЛО -->
                     <div id="blockElectro" class="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-slate-800">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl flex items-center justify-center text-yellow-500 text-xl">⚡️</div><span class="font-bold text-lg text-slate-900 dark:text-white">Світло</span></div><span id="electroCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div class="space-y-3">
@@ -125,7 +123,6 @@
                             </div>
                         </div>
                     </div>
-                    <!-- ГАЗ -->
                     <div id="blockGas" class="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-slate-800">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center text-orange-500 text-xl">🔥</div><span class="font-bold text-lg text-slate-900 dark:text-white">Газ</span></div><span id="gasCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-700/50">
@@ -134,7 +131,6 @@
                             <div class="flex-1"><label class="block text-[10px] text-orange-500 font-bold uppercase px-1 mb-1.5 text-right">Нові</label><input type="number" id="gCur" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 text-center text-xl font-black text-orange-500 dark:text-orange-400 rounded-xl outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 shadow-sm transition-all"></div>
                         </div>
                     </div>
-                    <!-- ІНШЕ -->
                     <div id="blockCustomServices" class="bg-white dark:bg-slate-900 p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-slate-800">
                         <div class="flex justify-between items-center mb-4"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-purple-50 dark:bg-purple-900/20 rounded-2xl flex items-center justify-center text-purple-500 text-xl">📦</div><span class="font-bold text-lg text-slate-900 dark:text-white">Інші послуги</span></div><span id="customCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div id="customServicesContainer" class="grid grid-cols-2 gap-3 empty:hidden"></div>
@@ -153,7 +149,6 @@
                         </div>
                         <div class="text-[11px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 rounded-xl">За 6 місяців</div>
                     </div>
-                    <!-- ОНОВЛЕНИЙ ГРАФІК -->
                     <div class="relative h-44 w-full mt-4">
                         <div class="absolute inset-0 flex flex-col justify-between z-0">
                             <div class="border-t border-slate-100 dark:border-slate-800/50 w-full h-0"></div>
@@ -169,7 +164,6 @@
 
             <!-- ВКЛАДКА 3: НАЛАШТУВАННЯ -->
             <div id="tabSettings" class="tab-transition tab-hidden space-y-5 mt-2 pb-6">
-                <!-- ТАРИФИ -->
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-slate-800">
                     <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-indigo-500 text-xl">💰</span> Тарифи</h3>
                     <div class="space-y-4">
@@ -180,7 +174,6 @@
                     </div>
                 </div>
 
-                <!-- БЛОКИ ПОСЛУГ З ГАРНИМИ ТУМБЛЕРАМИ -->
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-slate-800">
                     <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-indigo-500 text-xl">⚙️</span> Блоки послуг</h3>
                     <div class="space-y-5">
@@ -192,7 +185,6 @@
                                 <div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div>
                             </div>
                         </label>
-                        
                         <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800/80">
                             <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
                                 <span class="flex items-center gap-2">⚡️ Електроенергія</span>
@@ -202,7 +194,6 @@
                                     <div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div>
                                 </div>
                             </label>
-                            
                             <div class="pl-7 space-y-3 relative before:absolute before:left-3 before:top-0 before:bottom-2 before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
                                 <label class="flex justify-between items-center text-xs font-bold text-slate-500 cursor-pointer">
                                     <span>Двозонний тариф</span>
@@ -222,7 +213,6 @@
                                 </label>
                             </div>
                         </div>
-
                         <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 pt-4 border-t border-slate-100 dark:border-slate-800/80 cursor-pointer">
                             <span class="flex items-center gap-2">🔥 Газопостачання</span>
                             <div class="relative inline-flex items-center">
@@ -261,8 +251,8 @@
             <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6"></div>
             <h3 class="font-black text-2xl text-slate-900 dark:text-white mb-4 flex items-center gap-2">🏡 Мої об'єкти</h3>
             <div id="addressListModal" class="space-y-3 mb-4 max-h-[50vh] overflow-y-auto no-scrollbar"></div>
-            <button onclick="addNewAddress()" class="w-full py-4 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold rounded-2xl border border-indigo-100 dark:border-indigo-500/20 transition-colors">+ Додати нову адресу</button>
-            <button onclick="closeAddressModal()" class="w-full py-4 mt-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-2xl transition-colors">Закрити</button>
+            <button onclick="addNewAddress()" class="w-full py-4 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold rounded-2xl border border-indigo-100 dark:border-indigo-500/20 transition-colors mb-2">+ Додати нову адресу</button>
+            <button onclick="closeAddressModal()" class="w-full py-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-2xl transition-colors">Закрити</button>
         </div>
     </div>
 
@@ -335,35 +325,20 @@
 
         function loadCurrentAddress() {
             const addr = addresses.find(a => a.id === currentAddressId) || addresses[0];
-            currentAddressId = addr.id;
-            tariffs = addr.tariffs || {...defaultTariffs};
-            prefs = addr.prefs || {...defaultPrefs};
-            records = addr.records || [];
-            customServices = addr.customServices || [...defaultCustomServices];
-            
-            document.getElementById('currentAddressDisplay').innerText = addr.name;
-            initAppUI();
+            currentAddressId = addr.id; tariffs = addr.tariffs || {...defaultTariffs}; prefs = addr.prefs || {...defaultPrefs}; records = addr.records || []; customServices = addr.customServices || [...defaultCustomServices];
+            document.getElementById('currentAddressDisplay').innerText = addr.name; initAppUI();
         }
 
         function syncCurrentAddress() {
             const addrIndex = addresses.findIndex(a => a.id === currentAddressId);
-            if(addrIndex >= 0) {
-                addresses[addrIndex].tariffs = tariffs;
-                addresses[addrIndex].prefs = prefs;
-                addresses[addrIndex].records = records;
-                addresses[addrIndex].customServices = customServices;
-            }
+            if(addrIndex >= 0) { addresses[addrIndex].tariffs = tariffs; addresses[addrIndex].prefs = prefs; addresses[addrIndex].records = records; addresses[addrIndex].customServices = customServices; }
         }
 
-        function openAddressModal() {
-            document.getElementById('addressModal').classList.remove('hidden');
-            setTimeout(() => document.getElementById('addressModalContent').classList.remove('translate-y-full'), 10);
-            renderAddressModal();
-        }
+        function openAddressModal() { document.getElementById('addressModal').classList.remove('hidden'); setTimeout(() => document.getElementById('addressModalContent').classList.remove('translate-y-full'), 10); renderAddressModal(); }
+        function closeAddressModal() { document.getElementById('addressModalContent').classList.add('translate-y-full'); setTimeout(() => document.getElementById('addressModal').classList.add('hidden'), 300); }
 
-        function closeAddressModal() {
-            document.getElementById('addressModalContent').classList.add('translate-y-full');
-            setTimeout(() => document.getElementById('addressModal').classList.add('hidden'), 300);
+        function shareAddressAccess() {
+            alert("Щоб мешканець міг вносити дані за вашим посиланням без пароля, потрібно додати 10 рядків у бекенд (Cloudflare Worker).\n\nПоки що ви можете ділитися готовими квитанціями через кнопку 📤 в Історії!");
         }
 
         function renderAddressModal() {
@@ -373,114 +348,45 @@
                     <span class="font-bold text-lg truncate pr-2 flex-1">${a.name}</span>
                     <div class="flex gap-1.5 shrink-0 items-center">
                         ${a.id === currentAddressId ? '<svg class="w-5 h-5 text-white mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>' : ''}
+                        
+                        <button onclick="shareAddressAccess(); event.stopPropagation();" class="p-2 transition-colors rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-white dark:bg-slate-900 text-slate-400 hover:text-indigo-500'}" title="Шерінг доступу"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg></button>
+                        
                         <button onclick="editAddressName(event, '${a.id}')" class="p-2 transition-colors rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-white dark:bg-slate-900 text-slate-400 hover:text-indigo-500'}"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                        
                         ${a.id !== currentAddressId && addresses.length > 1 ? `<button onclick="deleteAddress(event, '${a.id}')" class="p-2 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-slate-900 rounded-xl shadow-sm"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>` : ''}
                     </div>
                 </div>
             `).join('');
         }
 
-        function selectAddress(id) {
-            syncCurrentAddress(); 
-            currentAddressId = id;
-            loadCurrentAddress(); 
-            syncToCloud(); 
-            closeAddressModal();
-        }
-
-        function addNewAddress() {
-            const name = prompt("Введіть назву нової адреси (наприклад, Квартира Київ):");
-            if(name && name.trim()) {
-                syncCurrentAddress();
-                const newId = 'addr_' + Date.now();
-                addresses.push({
-                    id: newId,
-                    name: name.trim(),
-                    tariffs: {...defaultTariffs},
-                    prefs: {...defaultPrefs},
-                    records: [],
-                    customServices: [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}]
-                });
-                currentAddressId = newId;
-                loadCurrentAddress();
-                syncToCloud();
-                closeAddressModal();
-            }
-        }
-
-        function editAddressName(e, id) {
-            e.stopPropagation();
-            const addr = addresses.find(a => a.id === id);
-            const newName = prompt("Нова назва:", addr.name);
-            if(newName && newName.trim()) {
-                addr.name = newName.trim();
-                renderAddressModal();
-                if(id === currentAddressId) document.getElementById('currentAddressDisplay').innerText = addr.name;
-                syncToCloud();
-            }
-        }
-
-        function deleteAddress(e, id) {
-            e.stopPropagation();
-            if(addresses.length <= 1) return alert("Не можна видалити єдину адресу!");
-            if(confirm("Видалити цю адресу і всі її розрахунки? Цю дію неможливо скасувати.")) {
-                addresses = addresses.filter(a => a.id !== id);
-                if(currentAddressId === id) currentAddressId = addresses[0].id;
-                loadCurrentAddress();
-                syncToCloud();
-                renderAddressModal();
-            }
-        }
+        function selectAddress(id) { syncCurrentAddress(); currentAddressId = id; loadCurrentAddress(); syncToCloud(); closeAddressModal(); }
+        function addNewAddress() { const name = prompt("Введіть назву нової адреси:"); if(name && name.trim()) { syncCurrentAddress(); const newId = 'addr_' + Date.now(); addresses.push({ id: newId, name: name.trim(), tariffs: {...defaultTariffs}, prefs: {...defaultPrefs}, records: [], customServices: [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}] }); currentAddressId = newId; loadCurrentAddress(); syncToCloud(); closeAddressModal(); } }
+        function editAddressName(e, id) { e.stopPropagation(); const addr = addresses.find(a => a.id === id); const newName = prompt("Нова назва:", addr.name); if(newName && newName.trim()) { addr.name = newName.trim(); renderAddressModal(); if(id === currentAddressId) document.getElementById('currentAddressDisplay').innerText = addr.name; syncToCloud(); } }
+        function deleteAddress(e, id) { e.stopPropagation(); if(addresses.length <= 1) return alert("Не можна видалити єдину адресу!"); if(confirm("Видалити цю адресу?")) { addresses = addresses.filter(a => a.id !== id); if(currentAddressId === id) currentAddressId = addresses[0].id; loadCurrentAddress(); syncToCloud(); renderAddressModal(); } }
 
         let touchstartX = 0; let touchendX = 0; const swipeZone = document.getElementById('swipeContainer');
-        swipeZone.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, {passive: true});
-        swipeZone.addEventListener('touchend', e => { touchendX = e.changedTouches[0].screenX; handleSwipe(); }, {passive: true});
-        
-        function handleSwipe() {
-            const dist = touchstartX - touchendX; const tabs = ['tabCalc', 'tabHistory', 'tabSettings'];
-            const curIdx = tabs.findIndex(id => document.getElementById(id).classList.contains('tab-active'));
-            if (dist > 70 && curIdx < 2) switchTab(tabs[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabs[curIdx - 1], curIdx - 1);
-        }
+        swipeZone.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, {passive: true}); swipeZone.addEventListener('touchend', e => { touchendX = e.changedTouches[0].screenX; handleSwipe(); }, {passive: true});
+        function handleSwipe() { const dist = touchstartX - touchendX; const tabs = ['tabCalc', 'tabHistory', 'tabSettings']; const curIdx = tabs.findIndex(id => document.getElementById(id).classList.contains('tab-active')); if (dist > 70 && curIdx < 2) switchTab(tabs[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabs[curIdx - 1], curIdx - 1); }
 
         function switchTab(tabId, index = -1) {
             document.querySelectorAll('.tab-transition').forEach(el => { el.classList.remove('tab-active'); el.classList.add('tab-hidden'); });
             document.getElementById(tabId).classList.remove('tab-hidden'); document.getElementById(tabId).classList.add('tab-active');
-            
             if(index >= 0) {
                 document.querySelectorAll('.nav-btn').forEach(el => { el.classList.remove('text-indigo-600', 'scale-105'); el.classList.add('text-slate-400'); });
                 let btnId = tabId === 'tabCalc' ? 'btnTabCalc' : (tabId === 'tabHistory' ? 'btnTabHistory' : 'btnTabSettings');
-                document.getElementById(btnId).classList.remove('text-slate-400'); document.getElementById(btnId).classList.add('text-indigo-600', 'scale-105');
-                document.getElementById('navIndicator').style.left = ['12%', '45%', '78%'][index];
+                document.getElementById(btnId).classList.remove('text-slate-400'); document.getElementById(btnId).classList.add('text-indigo-600', 'scale-105'); document.getElementById('navIndicator').style.left = ['12%', '45%', '78%'][index];
             }
-            if(tabId === 'tabHistory') renderRecords(); 
-            if(tabId === 'tabSettings') renderSettingsCustomServices(); 
-            document.getElementById('swipeContainer').scrollTo({ top: 0, behavior: 'smooth' });
+            if(tabId === 'tabHistory') renderRecords(); if(tabId === 'tabSettings') renderSettingsCustomServices(); document.getElementById('swipeContainer').scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function toggleTheme() {
-            document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-            document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.classList.contains('dark') ? '#020617' : '#f8fafc');
-            if(document.getElementById('tabHistory').classList.contains('tab-active')) renderRecords();
-        }
-
-        async function syncToCloud() {
-            if (!sessionPhone) return;
-            syncCurrentAddress(); 
-            const body = { addresses: addresses, currentAddressId: currentAddressId };
-            const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify(body) });
-            const data = await res.json();
-            if (res.status === 403 || data.error === "WRONG_PASSWORD") logout(); 
-        }
-
+        function toggleTheme() { document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); document.querySelector('meta[name="theme-color"]').setAttribute('content', document.documentElement.classList.contains('dark') ? '#020617' : '#f8fafc'); if(document.getElementById('tabHistory').classList.contains('tab-active')) renderRecords(); }
+        async function syncToCloud() { if (!sessionPhone) return; syncCurrentAddress(); const body = { addresses: addresses, currentAddressId: currentAddressId }; const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify(body) }); const data = await res.json(); if (res.status === 403 || data.error === "WRONG_PASSWORD") logout(); }
         window.logout = function() { if(confirm('Вийти з акаунту?')){ localStorage.clear(); location.reload(); } };
 
         function updateSmartBadges() {
             const getV = id => Math.max(0, parseFloat(document.getElementById(id)?.value) || 0);
             if(prefs.showWater) { let d = getV('wCur') - getV('wPrev'); document.getElementById('wDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; document.getElementById('wDiffBadge').className = d > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
-            if(prefs.showElectro) {
-                let dd = getV('dCur') - getV('dPrev'); document.getElementById('dDiffBadge').innerText = dd > 0 ? `+${dd} кВт` : '0 кВт'; document.getElementById('dDiffBadge').className = dd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap';
-                if(prefs.electroTwoZone) { let nd = getV('nCur') - getV('nPrev'); document.getElementById('nDiffBadge').innerText = nd > 0 ? `+${nd} кВт` : '0 кВт'; document.getElementById('nDiffBadge').className = nd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
-            }
+            if(prefs.showElectro) { let dd = getV('dCur') - getV('dPrev'); document.getElementById('dDiffBadge').innerText = dd > 0 ? `+${dd} кВт` : '0 кВт'; document.getElementById('dDiffBadge').className = dd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; if(prefs.electroTwoZone) { let nd = getV('nCur') - getV('nPrev'); document.getElementById('nDiffBadge').innerText = nd > 0 ? `+${nd} кВт` : '0 кВт'; document.getElementById('nDiffBadge').className = nd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; } }
             if(prefs.showGas) { let gd = getV('gCur') - getV('gPrev'); document.getElementById('gDiffBadge').innerText = gd > 0 ? `+${gd} м³` : '0 м³'; document.getElementById('gDiffBadge').className = gd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-orange-100 dark:bg-orange-900/40 text-orange-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-slate-700 shadow-sm border border-slate-100 dark:border-slate-600 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
         }
 
@@ -490,46 +396,21 @@
         function calculatePreview() {
             let getV = id => Math.max(0, parseFloat(document.getElementById(id)?.value) || 0);
             if(prefs.showWater) currentCalc.waterCost = Math.max(0, getV('wCur') - getV('wPrev')) * tariffs.water; else currentCalc.waterCost = 0;
-            if(prefs.showElectro) {
-                let dV = Math.max(0, getV('dCur') - getV('dPrev')), nV = prefs.electroTwoZone ? Math.max(0, getV('nCur') - getV('nPrev')) : 0, tEl = dV + nV;
-                if (tEl === 0) currentCalc.electroCost = 0;
-                else if (prefs.electroWinter && document.getElementById('isWinterInput').checked) {
-                    if (tEl <= tariffs.winterLimit) currentCalc.electroCost = (dV * tariffs.electroWinter) + (nV * tariffs.electroWinter * tariffs.nightCoef);
-                    else { let dp = dV/tEl, np = nV/tEl; currentCalc.electroCost = (tariffs.winterLimit * dp * tariffs.electroWinter) + (tariffs.winterLimit * np * tariffs.electroWinter * tariffs.nightCoef) + ((tEl - tariffs.winterLimit) * dp * tariffs.electroBase) + ((tEl - tariffs.winterLimit) * np * tariffs.electroBase * tariffs.nightCoef); }
-                } else currentCalc.electroCost = (dV * tariffs.electroBase) + (nV * tariffs.electroBase * tariffs.nightCoef);
-            } else currentCalc.electroCost = 0;
+            if(prefs.showElectro) { let dV = Math.max(0, getV('dCur') - getV('dPrev')), nV = prefs.electroTwoZone ? Math.max(0, getV('nCur') - getV('nPrev')) : 0, tEl = dV + nV; if (tEl === 0) currentCalc.electroCost = 0; else if (prefs.electroWinter && document.getElementById('isWinterInput').checked) { if (tEl <= tariffs.winterLimit) currentCalc.electroCost = (dV * tariffs.electroWinter) + (nV * tariffs.electroWinter * tariffs.nightCoef); else { let dp = dV/tEl, np = nV/tEl; currentCalc.electroCost = (tariffs.winterLimit * dp * tariffs.electroWinter) + (tariffs.winterLimit * np * tariffs.electroWinter * tariffs.nightCoef) + ((tEl - tariffs.winterLimit) * dp * tariffs.electroBase) + ((tEl - tariffs.winterLimit) * np * tariffs.electroBase * tariffs.nightCoef); } } else currentCalc.electroCost = (dV * tariffs.electroBase) + (nV * tariffs.electroBase * tariffs.nightCoef); } else currentCalc.electroCost = 0;
             if(prefs.showGas) currentCalc.gasCost = Math.max(0, getV('gCur') - getV('gPrev')) * tariffs.gas; else currentCalc.gasCost = 0;
-            currentCalc.customCost = 0; customServices.forEach(srv => { let val = parseFloat(document.getElementById(`custom_${srv.id}`)?.value); if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum); if (!isNaN(val)) currentCalc.customCost += val; });
-            currentCalc.total = currentCalc.waterCost + currentCalc.electroCost + currentCalc.gasCost + currentCalc.customCost;
-            document.getElementById('heroTotal').innerHTML = `${fmt.format(currentCalc.total)} <span class="text-2xl font-bold text-slate-400">₴</span>`;
-            document.getElementById('waterCostDisplay').innerText = fmt.format(currentCalc.waterCost) + ' ₴'; document.getElementById('electroCostDisplay').innerText = fmt.format(currentCalc.electroCost) + ' ₴'; document.getElementById('gasCostDisplay').innerText = fmt.format(currentCalc.gasCost) + ' ₴'; document.getElementById('customCostDisplay').innerText = fmt.format(currentCalc.customCost) + ' ₴'; 
+            currentCalc.customCost = 0; customServices.forEach(srv => { let val = parseFloat(document.getElementById(`custom_${srv.id}`)?.value); if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum); if (!isNaN(val)) currentCalc.customCost += val; }); currentCalc.total = currentCalc.waterCost + currentCalc.electroCost + currentCalc.gasCost + currentCalc.customCost;
+            document.getElementById('heroTotal').innerHTML = `${fmt.format(currentCalc.total)} <span class="text-2xl font-bold text-slate-400">₴</span>`; document.getElementById('waterCostDisplay').innerText = fmt.format(currentCalc.waterCost) + ' ₴'; document.getElementById('electroCostDisplay').innerText = fmt.format(currentCalc.electroCost) + ' ₴'; document.getElementById('gasCostDisplay').innerText = fmt.format(currentCalc.gasCost) + ' ₴'; document.getElementById('customCostDisplay').innerText = fmt.format(currentCalc.customCost) + ' ₴'; 
         }
 
-        // ОНОВЛЕНА ФУНКЦІЯ
         function applyPreferences() {
             if(document.getElementById('prefWater')) document.getElementById('prefWater').checked = prefs.showWater === true;
             if(document.getElementById('prefElectro')) document.getElementById('prefElectro').checked = prefs.showElectro === true;
             if(document.getElementById('prefGas')) document.getElementById('prefGas').checked = prefs.showGas === true;
             if(document.getElementById('prefElectroTwoZone')) document.getElementById('prefElectroTwoZone').checked = prefs.electroTwoZone === true;
             if(document.getElementById('prefElectroWinter')) document.getElementById('prefElectroWinter').checked = prefs.electroWinter === true;
-
-            document.getElementById('blockWater').style.display = prefs.showWater ? 'block' : 'none'; 
-            document.getElementById('blockElectro').style.display = prefs.showElectro ? 'block' : 'none'; 
-            document.getElementById('blockGas').style.display = prefs.showGas ? 'block' : 'none'; 
-            document.getElementById('blockCustomServices').style.display = customServices.length > 0 ? 'block' : 'none';
-            
-            if (prefs.electroTwoZone) { 
-                document.getElementById('electroNightRow').style.display = 'flex'; 
-                document.getElementById('lblDay1').innerText = "(День)"; 
-                document.getElementById('lblDay2').innerText = "(День)"; 
-            } else { 
-                document.getElementById('electroNightRow').style.display = 'none'; 
-                document.getElementById('lblDay1').innerText = ""; 
-                document.getElementById('lblDay2').innerText = ""; 
-            }
-            
-            document.getElementById('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none'; 
-            document.getElementById('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'flex' : 'none';
+            document.getElementById('blockWater').style.display = prefs.showWater ? 'block' : 'none'; document.getElementById('blockElectro').style.display = prefs.showElectro ? 'block' : 'none'; document.getElementById('blockGas').style.display = prefs.showGas ? 'block' : 'none'; document.getElementById('blockCustomServices').style.display = customServices.length > 0 ? 'block' : 'none';
+            if (prefs.electroTwoZone) { document.getElementById('electroNightRow').style.display = 'flex'; document.getElementById('lblDay1').innerText = "(День)"; document.getElementById('lblDay2').innerText = "(День)"; } else { document.getElementById('electroNightRow').style.display = 'none'; document.getElementById('lblDay1').innerText = ""; document.getElementById('lblDay2').innerText = ""; }
+            document.getElementById('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none'; document.getElementById('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'flex' : 'none';
         }
 
         function initAppUI() {
@@ -541,9 +422,7 @@
         window.saveSettings = () => {
             tariffs = { water: parseFloat(document.getElementById('tWater').value)||defaultTariffs.water, electroBase: parseFloat(document.getElementById('tElectroBase').value)||defaultTariffs.electroBase, electroWinter: parseFloat(document.getElementById('tElectroWinter').value)||defaultTariffs.electroWinter, winterLimit: 2000, gas: parseFloat(document.getElementById('tGas').value)||defaultTariffs.gas, nightCoef: 0.5 };
             prefs = { showWater: document.getElementById('prefWater').checked, showElectro: document.getElementById('prefElectro').checked, showGas: document.getElementById('prefGas').checked, electroTwoZone: document.getElementById('prefElectroTwoZone').checked, electroWinter: document.getElementById('prefElectroWinter').checked };
-            customServices = customServices.filter(s => s.name.trim() !== ""); 
-            syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); updateSmartBadges();
-            alert("Налаштування збережено");
+            customServices = customServices.filter(s => s.name.trim() !== ""); syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); updateSmartBadges(); alert("Налаштування збережено");
         };
 
         function renderSettingsCustomServices() {
@@ -559,24 +438,15 @@
 
         function renderCalcCustomServices() {
             const c = document.getElementById('customServicesContainer'); if(customServices.length === 0) { c.innerHTML = ''; return; }
-            c.innerHTML = customServices.map(srv => `
-                <div class="flex flex-col bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
-                    <span class="block text-[10px] font-bold text-slate-400 uppercase truncate mb-1.5 text-center">${srv.name || 'Послуга'}</span>
-                    <input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-white dark:bg-slate-900 p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-slate-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 shadow-sm transition-all" placeholder="${srv.defaultSum ? srv.defaultSum : '0.00'}">
-                </div>`).join('');
+            c.innerHTML = customServices.map(srv => `<div class="flex flex-col bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50"><span class="block text-[10px] font-bold text-slate-400 uppercase truncate mb-1.5 text-center">${srv.name || 'Послуга'}</span><input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-white dark:bg-slate-900 p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-slate-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 shadow-sm transition-all" placeholder="${srv.defaultSum ? srv.defaultSum : '0.00'}"></div>`).join('');
             document.querySelectorAll('.custom-srv-input').forEach(input => input.addEventListener('input', calculatePreview));
         }
 
         document.getElementById('monthInput').value = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
         function fillPreviousReadings() {
-            document.getElementById('wPrev').value = ''; document.getElementById('wCur').value = '';
-            document.getElementById('dPrev').value = ''; document.getElementById('dCur').value = '';
-            document.getElementById('nPrev').value = ''; document.getElementById('nCur').value = '';
-            document.getElementById('gPrev').value = ''; document.getElementById('gCur').value = '';
-            document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
-
+            document.getElementById('wPrev').value = ''; document.getElementById('wCur').value = ''; document.getElementById('dPrev').value = ''; document.getElementById('dCur').value = ''; document.getElementById('nPrev').value = ''; document.getElementById('nCur').value = ''; document.getElementById('gPrev').value = ''; document.getElementById('gCur').value = ''; document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
             if(records.length > 0) {
-                let lr = records.sort((a, b) => new Date(b.month) - new Date(a.month))[0];
+                let lr = [...records].sort((a, b) => new Date(b.month) - new Date(a.month))[0];
                 if(prefs.showWater) { document.getElementById('wPrev').value = lr.wCur || ''; document.getElementById('wCur').value = lr.wCur || ''; }
                 if(prefs.showElectro) { document.getElementById('dPrev').value = lr.dCur || ''; document.getElementById('dCur').value = lr.dCur || ''; document.getElementById('nPrev').value = lr.nCur || ''; document.getElementById('nCur').value = lr.nCur || ''; }
                 if(prefs.showGas) { document.getElementById('gPrev').value = lr.gCur || ''; document.getElementById('gCur').value = lr.gCur || ''; }
@@ -589,42 +459,17 @@
             e.preventDefault(); let cData = {}; customServices.forEach(srv => { let v = parseFloat(document.getElementById(`custom_${srv.id}`)?.value); if (isNaN(v) && srv.defaultSum) v = parseFloat(srv.defaultSum); if (!isNaN(v)) cData[srv.id] = { name: srv.name, val: v }; });
             const nRec = { id: Date.now(), month: document.getElementById('monthInput').value, wPrev: prefs.showWater ? (parseFloat(document.getElementById('wPrev').value)||0) : 0, wCur: prefs.showWater ? (parseFloat(document.getElementById('wCur').value)||0) : 0, dPrev: prefs.showElectro ? (parseFloat(document.getElementById('dPrev').value)||0) : 0, dCur: prefs.showElectro ? (parseFloat(document.getElementById('dCur').value)||0) : 0, nPrev: (prefs.showElectro && prefs.electroTwoZone) ? (parseFloat(document.getElementById('nPrev').value)||0) : 0, nCur: (prefs.showElectro && prefs.electroTwoZone) ? (parseFloat(document.getElementById('nCur').value)||0) : 0, gPrev: prefs.showGas ? (parseFloat(document.getElementById('gPrev').value)||0) : 0, gCur: prefs.showGas ? (parseFloat(document.getElementById('gCur').value)||0) : 0, customData: cData, waterCost: currentCalc.waterCost, electroCost: currentCalc.electroCost, gasCost: currentCalc.gasCost, customCost: currentCalc.customCost, total: currentCalc.total, paid: false };
             const eI = records.findIndex(r => r.month === nRec.month); if(eI >= 0) { if(!confirm('Оновити запис за цей місяць?')) return; records[eI] = nRec; } else records.push(nRec);
-            syncToCloud(); let [y, m] = document.getElementById('monthInput').value.split('-'); let nD = new Date(y, m); document.getElementById('monthInput').value = `${nD.getFullYear()}-${String(nD.getMonth() + 1).padStart(2, '0')}`;
-            fillPreviousReadings(); calculatePreview(); updateSmartBadges(); switchTab('tabHistory', 1);
+            syncToCloud(); let [y, m] = document.getElementById('monthInput').value.split('-'); let nD = new Date(y, m); document.getElementById('monthInput').value = `${nD.getFullYear()}-${String(nD.getMonth() + 1).padStart(2, '0')}`; fillPreviousReadings(); calculatePreview(); updateSmartBadges(); switchTab('tabHistory', 1);
         });
 
         function renderChart(sortedRecords) {
-            const container = document.getElementById('chartContainer'); 
-            const recent = sortedRecords.slice(0, 6).reverse(); 
-            
-            if (!recent.length) { 
-                container.innerHTML = '<span class="text-sm text-slate-400 m-auto absolute inset-0 flex items-center justify-center">Ще немає даних</span>'; 
-                return; 
-            }
-            
-            const max = Math.max(...recent.map(r => r.total));
-            const isDark = document.documentElement.classList.contains('dark');
-            
-            let chartHtml = '';
-            const emptySlots = 6 - recent.length;
-            for(let i = 0; i < emptySlots; i++) chartHtml += `<div class="flex flex-col items-center gap-2 flex-1 opacity-0"><div class="w-full h-full"></div></div>`;
-
+            const container = document.getElementById('chartContainer'); const recent = sortedRecords.slice(0, 6).reverse(); 
+            if (!recent.length) { container.innerHTML = '<span class="text-sm text-slate-400 m-auto absolute inset-0 flex items-center justify-center">Ще немає даних</span>'; return; }
+            const max = Math.max(...recent.map(r => r.total)); const isDark = document.documentElement.classList.contains('dark'); let chartHtml = ''; const emptySlots = 6 - recent.length; for(let i = 0; i < emptySlots; i++) chartHtml += `<div class="flex flex-col items-center gap-2 flex-1 opacity-0"><div class="w-full h-full"></div></div>`;
             chartHtml += recent.map(r => {
-                const h = max > 0 ? (r.total / max) * 100 : 0; 
-                const mName = new Date(r.month + '-01').toLocaleString('uk-UA', {month: 'short'}).slice(0, 3);
-                const bgClass = r.paid ? 'bg-gradient-to-t from-indigo-600 to-indigo-400' : 'bg-gradient-to-t from-orange-400 to-amber-300';
-                const shadow = isDark ? 'shadow-[0_-5px_15px_rgba(0,0,0,0.3)]' : 'shadow-sm';
-                
-                return `
-                <div class="flex flex-col items-center flex-1 group relative h-full justify-end px-1">
-                    <div class="w-full relative flex items-end justify-center rounded-t-lg bg-slate-100 dark:bg-slate-800/80 overflow-hidden" style="height: 100%;">
-                        <div class="${bgClass} w-full rounded-t-lg transition-all duration-1000 ${shadow}" style="height: ${Math.max(4, h)}%"></div>
-                    </div>
-                    <span class="text-[10px] text-slate-500 uppercase font-bold mt-2">${mName}</span>
-                </div>`;
-            }).join('');
-            
-            container.innerHTML = chartHtml;
+                const h = max > 0 ? (r.total / max) * 100 : 0; const mName = new Date(r.month + '-01').toLocaleString('uk-UA', {month: 'short'}).slice(0, 3); const bgClass = r.paid ? 'bg-gradient-to-t from-indigo-600 to-indigo-400' : 'bg-gradient-to-t from-orange-400 to-amber-300'; const shadow = isDark ? 'shadow-[0_-5px_15px_rgba(0,0,0,0.3)]' : 'shadow-sm';
+                return `<div class="flex flex-col items-center flex-1 group relative h-full justify-end px-1"><div class="w-full relative flex items-end justify-center rounded-t-lg bg-slate-100 dark:bg-slate-800/80 overflow-hidden" style="height: 100%;"><div class="${bgClass} w-full rounded-t-lg transition-all duration-1000 ${shadow}" style="height: ${Math.max(4, h)}%"></div></div><span class="text-[10px] text-slate-500 uppercase font-bold mt-2">${mName}</span></div>`;
+            }).join(''); container.innerHTML = chartHtml;
         }
 
         window.toggleDetails = function(index) {
@@ -632,11 +477,38 @@
             if(el.classList.contains('hidden')) { el.classList.remove('hidden'); ch.classList.add('rotate-180'); } else { el.classList.add('hidden'); ch.classList.remove('rotate-180'); }
         };
 
+        window.shareRecordReceipt = async function(index, event) {
+            event.stopPropagation();
+            let r = records[index];
+            let dStr = new Date(r.month + '-01').toLocaleString('uk-UA', {month:'long', year:'numeric'}).replace(' р.','');
+            let addrName = document.getElementById('currentAddressDisplay').innerText;
+            
+            let txt = `🧾 *Комуналка за ${dStr}*\n📍 Об'єкт: ${addrName}\n➖➖➖➖➖➖➖➖➖➖\n`;
+            if(r.waterCost > 0 || r.wCur > 0) txt += `💧 Вода: ${r.waterCost} ₴  (${r.wPrev} ➡️ ${r.wCur})\n`;
+            if(r.electroCost > 0 || r.dCur > 0) {
+                txt += `⚡️ Світло: ${r.electroCost} ₴\n   ├ День: ${r.dPrev} ➡️ ${r.dCur}\n`;
+                if(r.nCur > 0 || r.nPrev > 0) txt += `   └ Ніч: ${r.nPrev} ➡️ ${r.nCur}\n`;
+            }
+            if(r.gasCost > 0 || r.gCur > 0) txt += `🔥 Газ: ${r.gasCost} ₴  (${r.gPrev} ➡️ ${r.gCur})\n`;
+            if(r.customCost > 0) {
+                txt += `📦 Інше: ${r.customCost} ₴\n`;
+                if(r.customData) Object.values(r.customData).forEach(srv => { if(srv.val>0) txt += `   └ ${srv.name}: ${srv.val} ₴\n`; });
+            }
+            txt += `➖➖➖➖➖➖➖➖➖➖\n💰 *Всього до сплати: ${r.total} ₴*\n`;
+            txt += r.paid ? `✅ Статус: Оплачено` : `⏳ Статус: Очікує оплати`;
+
+            if (navigator.share) {
+                try { await navigator.share({ title: `Комуналка ${dStr}`, text: txt }); return; } catch(e) { console.log("Share API error", e); }
+            }
+            
+            navigator.clipboard.writeText(txt);
+            alert("✅ Квитанцію скопійовано в буфер обміну! Можете вставити її в Telegram чи Viber.");
+        };
+
         function renderRecords() {
             const list = document.getElementById('recordsList'); list.innerHTML = '';
             let tSum = records.reduce((sum, r) => sum + r.total, 0); document.getElementById('statsAvg').innerText = fmt.format(records.length ? (tSum / records.length) : 0) + ' ₴';
-            let sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)); 
-            renderChart(sorted);
+            let sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)); renderChart(sorted);
             let grouped = {}; sorted.forEach((rec, index) => { let yr = rec.month.split('-')[0]; if (!grouped[yr]) grouped[yr] = []; grouped[yr].push({rec, index: records.indexOf(rec)}); });
             
             Object.keys(grouped).sort((a, b) => b - a).forEach(year => {
@@ -646,12 +518,34 @@
                     card.className = `p-5 sm:p-6 rounded-[2rem] shadow-soft border bg-white dark:bg-slate-900 mb-4 transition-all relative overflow-hidden cursor-pointer select-none ${rec.paid ? 'border-slate-100 dark:border-slate-800' : 'border-orange-200 dark:border-orange-500/30 ring-1 ring-orange-400/20'}`;
                     card.setAttribute('onclick', `toggleDetails(${index})`);
                     if(!rec.paid) card.innerHTML += `<div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-orange-400/20 to-transparent rounded-bl-[4rem]"></div>`;
+                    
                     let dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); 
                     
+                    // ЛОГІКА РІК ДО РОКУ
+                    let [rY, rM] = rec.month.split('-');
+                    let prevYearMonth = (parseInt(rY) - 1) + '-' + rM;
+                    let prevRec = records.find(r => r.month === prevYearMonth);
+                    let yoyHtml = '';
+                    if (prevRec && prevRec.total > 0 && rec.total > 0) {
+                        let diff = rec.total - prevRec.total;
+                        let percent = Math.round((diff / prevRec.total) * 100);
+                        if (percent < 0) yoyHtml = `<span class="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-lg ml-2">📉 ${percent}% рік до року</span>`;
+                        else if (percent > 0) yoyHtml = `<span class="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-lg ml-2">📈 +${percent}% рік до року</span>`;
+                    }
+
+                    // ЛОГІКА КРУГОВОЇ ДІАГРАМИ (Pie Chart)
+                    let pW = (rec.waterCost / rec.total) * 100 || 0;
+                    let pE = (rec.electroCost / rec.total) * 100 || 0;
+                    let pG = (rec.gasCost / rec.total) * 100 || 0;
+                    let conic = `conic-gradient( #3b82f6 0% ${pW}%, #eab308 ${pW}% ${pW+pE}%, #f97316 ${pW+pE}% ${pW+pE+pG}%, #a855f7 ${pW+pE+pG}% 100% )`;
+
                     let html = `<div class="flex justify-between items-center relative z-10">
                         <div>
                             <h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4>
-                            <span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Очікує оплати'}</span>
+                            <div class="flex items-center">
+                                <span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Очікує оплати'}</span>
+                                ${yoyHtml}
+                            </div>
                         </div>
                         <div class="flex items-center gap-3">
                             <span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span>
@@ -659,7 +553,21 @@
                         </div>
                     </div>
                     <div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()">
-                        <div class="border-t border-slate-100 dark:border-slate-800/80 pt-5 mt-5 relative z-10 space-y-4">`;
+                        <div class="border-t border-slate-100 dark:border-slate-800/80 pt-5 mt-5 relative z-10">
+                            
+                            <!-- КРУГОВА ДІАГРАМА -->
+                            ${rec.total > 0 ? `
+                            <div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 mb-5">
+                                <div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-slate-700" style="background: ${conic}"></div>
+                                <div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">
+                                   ${pW>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>Вода</span><span>${Math.round(pW)}%</span></div>`:''}
+                                   ${pE>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>Світло</span><span>${Math.round(pE)}%</span></div>`:''}
+                                   ${pG>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-orange-500"></div>Газ</span><span>${Math.round(pG)}%</span></div>`:''}
+                                   ${(100-pW-pE-pG)>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-purple-500"></div>Інше</span><span>${Math.round(100-pW-pE-pG)}%</span></div>`:''}
+                                </div>
+                            </div>` : ''}
+
+                            <div class="space-y-4">`;
                     
                     if (rec.waterCost > 0 || rec.wCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-blue-500 text-lg">💧</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Вода</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between items-center ml-7 text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span>${rec.wPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.wCur}</span><span class="text-blue-500">+${rec.wCur - rec.wPrev} м³</span></div></div>`;
                     if (rec.electroCost > 0 || rec.dCur > 0) {
@@ -670,19 +578,19 @@
                     if (rec.gasCost > 0 || rec.gCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-orange-500 text-lg">🔥</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Газ</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between items-center ml-7 text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span>${rec.gPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.gCur}</span><span class="text-orange-500">+${rec.gCur - rec.gPrev} м³</span></div></div>`;
                     if (rec.customCost > 0) {
                         html += `<div class="flex flex-col pb-1"><div class="flex justify-between items-center"><span class="flex items-center gap-2"><span class="text-purple-500 text-lg">📦</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Інше</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.customCost)} ₴</span></div>`;
-                        if(rec.customData) {
-                            html += `<div class="flex flex-col gap-1 ml-7 mt-2 text-[11px]">`;
-                            Object.values(rec.customData).forEach(srv => { if(srv.val > 0) html += `<div class="flex justify-between text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span class="font-bold">${srv.name}</span><span class="font-black text-purple-500">${fmt.format(srv.val)} ₴</span></div>`; });
-                            html += `</div>`;
-                        }
+                        if(rec.customData) { html += `<div class="flex flex-col gap-1 ml-7 mt-2 text-[11px]">`; Object.values(rec.customData).forEach(srv => { if(srv.val > 0) html += `<div class="flex justify-between text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span class="font-bold">${srv.name}</span><span class="font-black text-purple-500">${fmt.format(srv.val)} ₴</span></div>`; }); html += `</div>`; }
                         html += `</div>`;
                     }
                     
-                    html += `</div>
-                        <div class="flex gap-3 mt-6 relative z-10 pt-2">
-                            <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-2xl font-bold text-sm transition-all border ${rec.paid ? 'bg-white text-slate-500 dark:bg-slate-900 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-700 text-white border-transparent shadow-lg shadow-indigo-500/20'}">${rec.paid ? 'Скасувати оплату' : 'Позначити оплаченим'}</button>
-                            <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-[3.25rem] flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-400 dark:text-slate-400 transition-colors hover:text-indigo-500 hover:border-indigo-200 dark:hover:border-indigo-500/50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                            <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-[3.25rem] flex items-center justify-center bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-2xl text-red-400 transition-colors hover:bg-red-100 hover:text-red-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                    html += `</div></div>
+                        <div class="flex gap-2.5 mt-6 relative z-10 pt-2">
+                            <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-2xl font-bold text-xs transition-all border ${rec.paid ? 'bg-white text-slate-500 dark:bg-slate-900 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-700 text-white border-transparent shadow-lg shadow-indigo-500/20'}">${rec.paid ? 'Скасувати' : 'Оплачено'}</button>
+                            
+                            <button type="button" onclick="shareRecordReceipt(${index}, event);" class="w-12 flex items-center justify-center bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-2xl text-blue-500 transition-colors hover:bg-blue-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg></button>
+                            
+                            <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-400 transition-colors hover:text-indigo-500 hover:border-indigo-200 dark:hover:border-indigo-500/50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                            
+                            <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 flex items-center justify-center bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-2xl text-red-400 transition-colors hover:bg-red-100 hover:text-red-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                         </div>
                     </div>`;
                     card.innerHTML = html; list.appendChild(card);
@@ -698,13 +606,8 @@
             fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}&t=${Date.now()}`, { cache: "no-store" })
             .then(r => r.json()).then(data => {
                 if(data.success) {
-                    if (data.data.addresses) {
-                        addresses = data.data.addresses;
-                        currentAddressId = data.data.currentAddressId || addresses[0].id;
-                    } else {
-                        addresses = [{ id: 'default', name: 'Мій дім', tariffs: data.data.tariffs || {...defaultTariffs}, prefs: { ...defaultPrefs, ...(data.data.prefs || {}) }, records: data.data.records || [], customServices: data.data.customServices || [...defaultCustomServices] }];
-                        currentAddressId = 'default';
-                    }
+                    if (data.data.addresses) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId || addresses[0].id; } 
+                    else { addresses = [{ id: 'default', name: 'Мій дім', tariffs: data.data.tariffs || {...defaultTariffs}, prefs: { ...defaultPrefs, ...(data.data.prefs || {}) }, records: data.data.records || [], customServices: data.data.customServices || [...defaultCustomServices] }]; currentAddressId = 'default'; }
                     loadCurrentAddress();
                 } else throw new Error();
             }).catch(() => { document.getElementById('authScreen').classList.remove('hidden'); localStorage.clear(); });
