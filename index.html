@@ -505,14 +505,31 @@
             document.getElementById('waterCostDisplay').innerText = fmt.format(currentCalc.waterCost) + ' ₴'; document.getElementById('electroCostDisplay').innerText = fmt.format(currentCalc.electroCost) + ' ₴'; document.getElementById('gasCostDisplay').innerText = fmt.format(currentCalc.gasCost) + ' ₴'; document.getElementById('customCostDisplay').innerText = fmt.format(currentCalc.customCost) + ' ₴'; 
         }
 
+        // ОНОВЛЕНА ФУНКЦІЯ
         function applyPreferences() {
-            ['prefWater','prefElectro','prefGas','prefElectroTwoZone','prefElectroWinter'].forEach(id => {
-                let el = document.getElementById(id);
-                if(el) el.checked = prefs[id.replace('pref','').charAt(0).toLowerCase() + id.replace('pref','').slice(1)];
-            });
-            document.getElementById('blockWater').style.display = prefs.showWater ? 'block' : 'none'; document.getElementById('blockElectro').style.display = prefs.showElectro ? 'block' : 'none'; document.getElementById('blockGas').style.display = prefs.showGas ? 'block' : 'none'; document.getElementById('blockCustomServices').style.display = customServices.length > 0 ? 'block' : 'none';
-            if (prefs.electroTwoZone) { document.getElementById('electroNightRow').style.display = 'flex'; document.getElementById('lblDay1').innerText = "(День)"; document.getElementById('lblDay2').innerText = "(День)"; } else { document.getElementById('electroNightRow').style.display = 'none'; document.getElementById('lblDay1').innerText = ""; document.getElementById('lblDay2').innerText = ""; }
-            document.getElementById('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none'; document.getElementById('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'flex' : 'none';
+            if(document.getElementById('prefWater')) document.getElementById('prefWater').checked = prefs.showWater === true;
+            if(document.getElementById('prefElectro')) document.getElementById('prefElectro').checked = prefs.showElectro === true;
+            if(document.getElementById('prefGas')) document.getElementById('prefGas').checked = prefs.showGas === true;
+            if(document.getElementById('prefElectroTwoZone')) document.getElementById('prefElectroTwoZone').checked = prefs.electroTwoZone === true;
+            if(document.getElementById('prefElectroWinter')) document.getElementById('prefElectroWinter').checked = prefs.electroWinter === true;
+
+            document.getElementById('blockWater').style.display = prefs.showWater ? 'block' : 'none'; 
+            document.getElementById('blockElectro').style.display = prefs.showElectro ? 'block' : 'none'; 
+            document.getElementById('blockGas').style.display = prefs.showGas ? 'block' : 'none'; 
+            document.getElementById('blockCustomServices').style.display = customServices.length > 0 ? 'block' : 'none';
+            
+            if (prefs.electroTwoZone) { 
+                document.getElementById('electroNightRow').style.display = 'flex'; 
+                document.getElementById('lblDay1').innerText = "(День)"; 
+                document.getElementById('lblDay2').innerText = "(День)"; 
+            } else { 
+                document.getElementById('electroNightRow').style.display = 'none'; 
+                document.getElementById('lblDay1').innerText = ""; 
+                document.getElementById('lblDay2').innerText = ""; 
+            }
+            
+            document.getElementById('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none'; 
+            document.getElementById('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'flex' : 'none';
         }
 
         function initAppUI() {
