@@ -59,18 +59,18 @@
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Комуналка<span class="text-brand">.</span></h1>
                 <p class="text-slate-500 font-medium text-sm">Увійдіть або зареєструйтесь</p>
             </div>
-            <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-slate-800">
-                <form id="authForm" class="space-y-4">
+            <div class="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-200 dark:border-slate-800">
+                <form id="authForm" class="space-y-5">
                     <div>
                         <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2">Email або Логін</label>
-                        <input type="text" id="authLogin" placeholder="Логін" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-brand text-slate-900 dark:text-white transition-all">
+                        <input type="text" id="authLogin" placeholder="Логін" required autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-brand text-slate-900 dark:text-white transition-all shadow-inner">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2">Пароль</label>
-                        <input type="password" id="authPass" placeholder="••••••••" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-brand text-slate-900 dark:text-white transition-all">
+                        <input type="password" id="authPass" placeholder="••••••••" required class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-brand text-slate-900 dark:text-white transition-all shadow-inner">
                     </div>
                     <p id="authError" class="text-red-500 text-sm hidden text-center font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-xl"></p>
-                    <button type="submit" id="authSubmitBtn" class="w-full bg-brand hover:bg-brand-hover text-white font-bold py-4 rounded-2xl shadow-lg mt-4 transition-transform active:scale-[0.98] text-lg">Увійти</button>
+                    <button type="submit" id="authSubmitBtn" class="w-full bg-brand hover:bg-brand-hover text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 mt-2 transition-transform active:scale-[0.98] text-lg">Увійти</button>
                 </form>
             </div>
         </div>
@@ -145,7 +145,7 @@
                         <div class="flex justify-between items-center mb-4"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-purple-50 dark:bg-purple-900/20 rounded-2xl flex items-center justify-center text-purple-500 text-xl">📦</div><span class="font-bold text-lg text-slate-900 dark:text-white">Інші послуги</span></div><span id="customCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div id="customServicesContainer" class="grid grid-cols-2 gap-3 empty:hidden"></div>
                     </div>
-                    <button type="submit" class="w-full bg-brand hover:bg-brand-hover text-white font-bold py-5 rounded-[1.5rem] shadow-xl transition-transform active:scale-[0.98] text-lg mt-4 border border-brand">Зберегти розрахунок</button>
+                    <button type="submit" class="w-full bg-brand hover:bg-brand-hover text-white font-bold py-5 rounded-[1.5rem] shadow-xl shadow-brand/20 transition-transform active:scale-[0.98] text-lg mt-4 border border-brand">Зберегти розрахунок</button>
                 </form>
             </div>
 
@@ -289,7 +289,7 @@
         </div>
     </div>
 
-    <!-- МОДАЛЬНЕ ВІКНО МУЛЬТИ-АДРЕС (Тут працює закриття по кліку зовні) -->
+    <!-- МОДАЛЬНЕ ВІКНО МУЛЬТИ-АДРЕС -->
     <div id="addressModal" class="hidden fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm flex items-end justify-center transition-opacity" onclick="if(event.target === this) closeAddressModal()">
         <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-t-[2.5rem] p-6 pb-[max(env(safe-area-inset-bottom),2rem)] transition-transform transform translate-y-full duration-300 shadow-[0_-20px_40px_rgba(0,0,0,0.1)]" id="addressModalContent">
             <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6"></div>
@@ -309,7 +309,9 @@
         let profile = JSON.parse(localStorage.getItem('k_profile') || '{"name":"","login":""}');
         
         let defaultTariffs = { water: 30.38, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
-        let defaultPrefs = { showWater: true, showElectro: true, showGas: false, electroTwoZone: true, electroWinter: true };
+        
+        // Тепер всі послуги (включно з газом) за замовчуванням УВІМКНЕНІ для нових адрес та юзерів
+        let defaultPrefs = { showWater: true, showElectro: true, showGas: true, electroTwoZone: true, electroWinter: true };
         let defaultCustomServices = [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}];
         
         let addresses = [];
@@ -322,7 +324,7 @@
         const urlShareToken = urlParams.get('share');
 
         // ВІБРАЦІЯ
-        let hapticEnabled = localStorage.getItem('k_haptic') !== 'false'; // За замовчуванням увімкнено
+        let hapticEnabled = localStorage.getItem('k_haptic') !== 'false'; 
         window.vibe = function() { if(hapticEnabled && navigator.vibrate) navigator.vibrate(50); };
         window.toggleHaptic = function(checked) {
             hapticEnabled = checked;
@@ -426,13 +428,23 @@
                     profile.login = rawPhone; profile.name = rawPhone;
                 }
                 localStorage.setItem('k_phoneHash', sessionPhone); localStorage.setItem('k_passHash', sessionPass); localStorage.setItem('k_profile', JSON.stringify(profile)); loadCurrentAddress();
-            } catch (err) { btn.innerText = "Увійти"; errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль!" : "Помилка підключення"; errEl.classList.remove('hidden'); }
+            } catch (err) { btn.innerText = "Увійти"; errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль або логін!" : "Помилка підключення до сервера"; errEl.classList.remove('hidden'); }
         });
 
         function loadCurrentAddress() {
             const addr = addresses.find(a => a.id === currentAddressId) || addresses[0];
-            currentAddressId = addr.id; tariffs = addr.tariffs || {...defaultTariffs}; prefs = addr.prefs || {...defaultPrefs}; records = addr.records || []; customServices = addr.customServices || [...defaultCustomServices];
-            document.getElementById('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : ''); initAppUI();
+            currentAddressId = addr.id; 
+            
+            // Надійно зливаємо налаштування: беремо дефолтні і ПЕРЕЗАПИСУЄМО їх тими, що є в базі
+            // Це гарантує, що якщо в базі prefs порожній, послуги все одно будуть увімкнені
+            tariffs = { ...defaultTariffs, ...(addr.tariffs || {}) }; 
+            prefs = { ...defaultPrefs, ...(addr.prefs || {}) }; 
+            
+            records = addr.records || []; 
+            customServices = addr.customServices || [...defaultCustomServices];
+            
+            document.getElementById('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : ''); 
+            initAppUI();
         }
 
         function syncCurrentAddress() { const addrIndex = addresses.findIndex(a => a.id === currentAddressId); if(addrIndex >= 0) { addresses[addrIndex].tariffs = tariffs; addresses[addrIndex].prefs = prefs; addresses[addrIndex].records = records; addresses[addrIndex].customServices = customServices; } }
@@ -541,7 +553,7 @@
         function initAppUI() {
             document.getElementById('authScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); document.getElementById('appScreen').classList.add('flex');
             document.getElementById('tWater').value = tariffs.water; document.getElementById('tElectroBase').value = tariffs.electroBase; document.getElementById('tElectroWinter').value = tariffs.electroWinter; document.getElementById('tGas').value = tariffs.gas;
-            document.getElementById('prefHaptic').checked = hapticEnabled; // Ініціалізація тумблера вібрації
+            document.getElementById('prefHaptic').checked = hapticEnabled; 
             applyPreferences(); renderCalcCustomServices(); fillPreviousReadings(); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges();
         }
 
@@ -637,7 +649,6 @@
 
                     let pW = (rec.waterCost / rec.total) * 100 || 0; let pE = (rec.electroCost / rec.total) * 100 || 0; let pG = (rec.gasCost / rec.total) * 100 || 0;
                     let conic = `conic-gradient( #3b82f6 0% ${pW}%, #eab308 ${pW}% ${pW+pE}%, #f97316 ${pW+pE}% ${pW+pE+pG}%, #a855f7 ${pW+pE+pG}% 100% )`;
-
                     let html = `<div class="flex justify-between items-center relative z-10"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4><div class="flex items-center"><span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-brand-light text-brand' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Очікує оплати'}</span>${yoyHtml}</div></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-full text-slate-400 shadow-sm"><svg id="chevron-${index}" class="w-5 h-5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div></div></div>
                     <div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()"><div class="border-t border-slate-100 dark:border-slate-800/80 pt-5 mt-5 relative z-10">
                             ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-slate-700" style="background: ${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-orange-500"></div>Газ</span><span>${Math.round(pG)}%</span></div>`:''}${(100-pW-pE-pG)>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-purple-500"></div>Інше</span><span>${Math.round(100-pW-pE-pG)}%</span></div>`:''}</div></div>` : ''}
