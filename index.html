@@ -7,37 +7,17 @@
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Тепер кольори задані у форматі RGB, щоб Tailwind міг генерувати прозорість (тіні, градієнти) */
-        :root, .theme-indigo { 
-            --brand-main: 79 70 229;     /* #4f46e5 */
-            --brand-hover: 67 56 202;    /* #4338ca */
-        }
-        .theme-emerald { 
-            --brand-main: 16 185 129;    /* #10b981 */
-            --brand-hover: 5 150 105;    /* #059669 */
-        }
-        .theme-rose { 
-            --brand-main: 244 63 94;     /* #f43f5e */
-            --brand-hover: 225 29 72;    /* #e11d48 */
-        }
-        .theme-zinc { 
-            --brand-main: 82 82 91;      /* #52525b */
-            --brand-hover: 63 63 70;     /* #3f3f46 */
-        }
+        :root, .theme-indigo { --brand-main: #4f46e5; --brand-hover: #4338ca; --brand-light: rgba(79, 70, 229, 0.1); --brand-border: rgba(79, 70, 229, 0.25); }
+        .theme-emerald { --brand-main: #10b981; --brand-hover: #059669; --brand-light: rgba(16, 185, 129, 0.1); --brand-border: rgba(16, 185, 129, 0.25); }
+        .theme-rose { --brand-main: #f43f5e; --brand-hover: #e11d48; --brand-light: rgba(244, 63, 94, 0.1); --brand-border: rgba(244, 63, 94, 0.25); }
+        .theme-zinc { --brand-main: #52525b; --brand-hover: #3f3f46; --brand-light: rgba(82, 82, 91, 0.1); --brand-border: rgba(82, 82, 91, 0.25); }
     </style>
     <script>
         tailwind.config = { 
             darkMode: 'class', 
             theme: { 
                 extend: { 
-                    colors: { 
-                        brand: { 
-                            DEFAULT: 'rgb(var(--brand-main) / <alpha-value>)', 
-                            hover: 'rgb(var(--brand-hover) / <alpha-value>)', 
-                            light: 'rgb(var(--brand-main) / 0.15)', 
-                            border: 'rgb(var(--brand-main) / 0.3)' 
-                        } 
-                    },
+                    colors: { brand: { DEFAULT: 'var(--brand-main)', hover: 'var(--brand-hover)', light: 'var(--brand-light)', border: 'var(--brand-border)' } },
                     boxShadow: { 'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)' }
                 } 
             } 
@@ -59,12 +39,12 @@
         .tab-hidden { display: none !important; opacity: 0; }
         .tab-active { display: block !important; opacity: 1; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .toggle-checkbox:checked { right: 0; border-color: rgb(var(--brand-main)); }
-        .toggle-checkbox:checked + .toggle-label { background-color: rgb(var(--brand-main)); }
+        .toggle-checkbox:checked { right: 0; border-color: var(--brand-main); }
+        .toggle-checkbox:checked + .toggle-label { background-color: var(--brand-main); }
         .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans flex flex-col transition-colors duration-300 h-[100dvh] selection:bg-brand/20">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-sans flex flex-col transition-colors duration-300 h-[100dvh] selection:bg-brand-light">
 
     <!-- Спливаюче Toast сповіщення -->
     <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[300] bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3.5 rounded-full shadow-2xl font-bold text-sm transition-all duration-300 transform -translate-y-24 opacity-0 flex items-center gap-2 pointer-events-none">
@@ -75,7 +55,7 @@
     <div id="authScreen" class="absolute inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
         <div class="w-full max-w-sm py-10">
             <div class="text-center mb-10">
-                <div class="w-24 h-24 bg-gradient-to-br from-brand to-brand-hover rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-brand/40 text-white text-5xl">⚡️</div>
+                <div class="w-24 h-24 bg-gradient-to-br from-brand to-brand-hover rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-xl text-white text-5xl">⚡️</div>
                 <h1 class="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Комуналка<span class="text-brand">.</span></h1>
                 <p class="text-slate-500 font-medium text-sm">Увійдіть або зареєструйтесь</p>
             </div>
@@ -83,11 +63,11 @@
                 <form id="authForm" class="space-y-5">
                     <div>
                         <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2">Email або Логін</label>
-                        <input type="text" id="authLogin" placeholder="Логін" required autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-brand focus:border-brand text-slate-900 dark:text-white transition-all shadow-inner">
+                        <input type="text" id="authLogin" placeholder="Логін" required autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-brand text-slate-900 dark:text-white transition-all shadow-inner">
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2">Пароль</label>
-                        <input type="password" id="authPass" placeholder="••••••••" required class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-brand focus:border-brand text-slate-900 dark:text-white transition-all shadow-inner">
+                        <input type="password" id="authPass" placeholder="••••••••" required class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-brand text-slate-900 dark:text-white transition-all shadow-inner">
                     </div>
                     <p id="authError" class="text-red-500 text-sm hidden text-center font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-xl"></p>
                     <button type="submit" id="authSubmitBtn" class="w-full bg-brand hover:bg-brand-hover text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 mt-2 transition-transform active:scale-[0.98] text-lg">Увійти</button>
@@ -102,7 +82,7 @@
         <!-- Шапка -->
         <div class="px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center bg-slate-50 dark:bg-slate-950 z-20 shrink-0">
             <div class="flex items-center gap-3 cursor-pointer" onclick="openAddressModal()" id="addressHeaderTrigger">
-                <div class="w-12 h-12 bg-gradient-to-tr from-brand to-brand-hover rounded-full flex items-center justify-center text-white shadow-md shadow-brand/30 text-xl">🏡</div>
+                <div class="w-12 h-12 bg-gradient-to-tr from-brand to-brand-hover rounded-full flex items-center justify-center text-white shadow-md text-xl">🏡</div>
                 <div>
                     <p class="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider" id="userGreeting">Вітаю!</p>
                     <h2 class="text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-1 active:opacity-70 transition-opacity">
@@ -118,9 +98,8 @@
             
             <!-- ВКЛАДКА 1: РОЗРАХУНОК -->
             <div id="tabCalc" class="tab-transition tab-active space-y-5">
-                <!-- Картка "До сплати" тепер також адаптується під тему! -->
-                <div class="bg-slate-900 p-6 rounded-[2.5rem] shadow-xl shadow-brand/10 text-white relative overflow-hidden border border-brand/20 mt-2">
-                    <div class="absolute top-0 right-0 w-64 h-64 bg-brand/30 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3 pointer-events-none transition-colors duration-500"></div>
+                <div class="bg-slate-900 p-6 rounded-[2.5rem] shadow-xl shadow-slate-900/20 text-white relative overflow-hidden border border-slate-800 mt-2">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-brand-light rounded-full blur-3xl translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
                     <div class="relative z-10 flex flex-col justify-between h-full">
                         <div class="flex justify-between items-start mb-6">
                             <input type="month" id="monthInput" class="bg-white/10 hover:bg-white/20 transition-colors border-none outline-none font-bold text-white text-sm py-2.5 px-4 rounded-xl cursor-pointer backdrop-blur-md" required>
@@ -166,7 +145,7 @@
                         <div class="flex justify-between items-center mb-4"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-purple-50 dark:bg-purple-900/20 rounded-2xl flex items-center justify-center text-purple-500 text-xl">📦</div><span class="font-bold text-lg text-slate-900 dark:text-white">Інші послуги</span></div><span id="customCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div id="customServicesContainer" class="grid grid-cols-2 gap-3 empty:hidden"></div>
                     </div>
-                    <button type="submit" class="w-full bg-brand hover:bg-brand-hover text-white font-bold py-5 rounded-[1.5rem] shadow-xl shadow-brand/30 transition-transform active:scale-[0.98] text-lg mt-4 border border-brand/50">Зберегти розрахунок</button>
+                    <button type="submit" class="w-full bg-brand hover:bg-brand-hover text-white font-bold py-5 rounded-[1.5rem] shadow-xl shadow-brand/20 transition-transform active:scale-[0.98] text-lg mt-4 border border-brand">Зберегти розрахунок</button>
                 </form>
             </div>
 
@@ -178,7 +157,7 @@
                             <p class="text-[11px] font-bold uppercase text-slate-400 mb-1">Середній чек</p>
                             <h3 class="font-black text-2xl text-slate-900 dark:text-white" id="statsAvg">0 ₴</h3>
                         </div>
-                        <div class="text-[11px] font-bold text-brand bg-brand/10 px-3 py-1.5 rounded-xl">За 6 місяців</div>
+                        <div class="text-[11px] font-bold text-brand bg-brand-light px-3 py-1.5 rounded-xl">За 6 місяців</div>
                     </div>
                     <div class="relative h-44 w-full mt-4">
                         <div class="absolute inset-0 flex flex-col justify-between z-0">
@@ -201,7 +180,7 @@
             <div id="tabSettings" class="tab-transition tab-hidden space-y-5 mt-2 pb-6">
                 <!-- PWA Install -->
                 <div id="pwaInstallBlock" class="hidden mb-5">
-                    <button onclick="installPWA()" class="w-full bg-gradient-to-r from-brand to-brand-hover text-white rounded-[1.5rem] py-4 font-bold shadow-xl shadow-brand/30 flex justify-center items-center gap-2 text-lg transition-transform active:scale-[0.98]">
+                    <button onclick="installPWA()" class="w-full bg-gradient-to-r from-brand to-brand-hover text-white rounded-[1.5rem] py-4 font-bold shadow-xl flex justify-center items-center gap-2 text-lg transition-transform active:scale-[0.98]">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                         Встановити як додаток
                     </button>
@@ -220,10 +199,10 @@
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-slate-800">
                     <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-brand text-xl">💰</span> Тарифи</h3>
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Вода (₴/м³)</span><input type="number" id="tWater" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right focus:border-brand focus:ring-2 focus:ring-brand/30"></div>
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло База (₴/кВт)</span><input type="number" id="tElectroBase" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right focus:border-brand focus:ring-2 focus:ring-brand/30"></div>
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3" id="settingElectroWinterWrap"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Зима (₴/кВт)</span><input type="number" id="tElectroWinter" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right focus:border-brand focus:ring-2 focus:ring-brand/30"></div>
-                        <div class="flex justify-between items-center"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Газ (₴/м³)</span><input type="number" id="tGas" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right focus:border-brand focus:ring-2 focus:ring-brand/30"></div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Вода (₴/м³)</span><input type="number" id="tWater" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right focus:border-brand focus:ring-1 focus:ring-brand"></div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло База (₴/кВт)</span><input type="number" id="tElectroBase" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right focus:border-brand focus:ring-1 focus:ring-brand"></div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-slate-800/50 pb-3" id="settingElectroWinterWrap"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Зима (₴/кВт)</span><input type="number" id="tElectroWinter" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right focus:border-brand focus:ring-1 focus:ring-brand"></div>
+                        <div class="flex justify-between items-center"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Газ (₴/м³)</span><input type="number" id="tGas" step="0.01" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-xl font-bold outline-none text-right focus:border-brand focus:ring-1 focus:ring-brand"></div>
                     </div>
                 </div>
 
@@ -295,15 +274,14 @@
                     </label>
                 </div>
 
-                <!-- Кнопка збереження тепер теж підтримує тему! -->
-                <button type="button" onclick="saveSettings()" class="w-full bg-brand hover:bg-brand-hover text-white rounded-[1.5rem] py-5 font-bold shadow-xl shadow-brand/30 text-lg mt-2 transition-transform active:scale-[0.98]">Зберегти налаштування</button>
+                <button type="button" onclick="saveSettings()" class="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[1.5rem] py-5 font-bold shadow-xl shadow-slate-900/20 dark:shadow-white/10 text-lg mt-2">Зберегти налаштування</button>
                 <button type="button" onclick="logout()" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-[1.5rem] py-4 mt-2 mb-4 border border-red-100 dark:border-red-900/30">Вийти з акаунту</button>
             </div>
         </div>
 
         <div class="fixed bottom-0 left-0 right-0 glass-panel pb-[max(env(safe-area-inset-bottom),20px)] z-[60] border-t border-white/20 dark:border-slate-800/50 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] shrink-0">
             <div class="flex justify-around items-center px-4 py-3 max-w-md mx-auto w-full relative">
-                <div id="navIndicator" class="absolute top-2 left-[12%] w-[10%] h-1 bg-brand rounded-full transition-all duration-300 shadow-[0_0_8px_rgb(var(--brand-main)/0.6)]"></div>
+                <div id="navIndicator" class="absolute top-2 left-[12%] w-[10%] h-1 bg-brand rounded-full transition-all duration-300 shadow-sm"></div>
                 <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center gap-1.5 text-brand transition-all scale-105 relative z-10 pt-2"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm4 4a1 1 0 100 2h8a1 1 0 100-2H8zm0 4a1 1 0 100 2h4a1 1 0 100-2H8zm0 4a1 1 0 100 2h4a1 1 0 100-2H8z"></path></svg><span class="text-[10px] font-bold tracking-wide">Розрахунок</span></button>
                 <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center gap-1.5 text-slate-400 transition-all relative z-10 pt-2 hover:text-slate-600 dark:hover:text-slate-200"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span class="text-[10px] font-bold tracking-wide">Історія</span></button>
                 <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center gap-1.5 text-slate-400 transition-all relative z-10 pt-2 hover:text-slate-600 dark:hover:text-slate-200"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg><span class="text-[10px] font-bold tracking-wide">Налашт.</span></button>
@@ -317,7 +295,7 @@
             <div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6"></div>
             <h3 class="font-black text-2xl text-slate-900 dark:text-white mb-4 flex items-center gap-2">🏡 Мої об'єкти</h3>
             <div id="addressListModal" class="space-y-3 mb-4 max-h-[50vh] overflow-y-auto no-scrollbar"></div>
-            <button onclick="addNewAddress()" class="w-full py-4 bg-brand/10 hover:bg-brand/20 text-brand font-bold rounded-2xl border border-brand/30 transition-colors mb-2">+ Додати нову адресу</button>
+            <button onclick="addNewAddress()" class="w-full py-4 bg-brand-light hover:bg-brand-border text-brand font-bold rounded-2xl border border-brand-border transition-colors mb-2">+ Додати нову адресу</button>
             <button onclick="closeAddressModal()" class="w-full py-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-2xl transition-colors">Закрити</button>
         </div>
     </div>
@@ -331,6 +309,8 @@
         let profile = JSON.parse(localStorage.getItem('k_profile') || '{"name":"","login":""}');
         
         let defaultTariffs = { water: 30.38, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
+        
+        // Тепер всі послуги (включно з газом) за замовчуванням УВІМКНЕНІ для нових адрес та юзерів
         let defaultPrefs = { showWater: true, showElectro: true, showGas: true, electroTwoZone: true, electroWinter: true };
         let defaultCustomServices = [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}];
         
@@ -453,8 +433,18 @@
 
         function loadCurrentAddress() {
             const addr = addresses.find(a => a.id === currentAddressId) || addresses[0];
-            currentAddressId = addr.id; tariffs = { ...defaultTariffs, ...(addr.tariffs || {}) }; prefs = { ...defaultPrefs, ...(addr.prefs || {}) }; records = addr.records || []; customServices = addr.customServices || [...defaultCustomServices];
-            document.getElementById('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : ''); initAppUI();
+            currentAddressId = addr.id; 
+            
+            // Надійно зливаємо налаштування: беремо дефолтні і ПЕРЕЗАПИСУЄМО їх тими, що є в базі
+            // Це гарантує, що якщо в базі prefs порожній, послуги все одно будуть увімкнені
+            tariffs = { ...defaultTariffs, ...(addr.tariffs || {}) }; 
+            prefs = { ...defaultPrefs, ...(addr.prefs || {}) }; 
+            
+            records = addr.records || []; 
+            customServices = addr.customServices || [...defaultCustomServices];
+            
+            document.getElementById('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : ''); 
+            initAppUI();
         }
 
         function syncCurrentAddress() { const addrIndex = addresses.findIndex(a => a.id === currentAddressId); if(addrIndex >= 0) { addresses[addrIndex].tariffs = tariffs; addresses[addrIndex].prefs = prefs; addresses[addrIndex].records = records; addresses[addrIndex].customServices = customServices; } }
@@ -480,7 +470,7 @@
         function renderAddressModal() {
             const list = document.getElementById('addressListModal');
             list.innerHTML = addresses.map(a => `
-                <div class="flex items-center justify-between p-4 rounded-2xl border transition-all ${a.id === currentAddressId ? 'bg-brand border-brand text-white shadow-lg shadow-brand/30' : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'} cursor-pointer" onclick="selectAddress('${a.id}')">
+                <div class="flex items-center justify-between p-4 rounded-2xl border transition-all ${a.id === currentAddressId ? 'bg-brand border-brand text-white shadow-lg' : 'bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'} cursor-pointer" onclick="selectAddress('${a.id}')">
                     <span class="font-bold text-lg truncate pr-2 flex-1">${a.name}</span>
                     <div class="flex gap-1.5 shrink-0 items-center">
                         ${a.id === currentAddressId ? '<svg class="w-5 h-5 text-white mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>' : ''}
@@ -588,7 +578,7 @@
 
         function renderCalcCustomServices() {
             const c = document.getElementById('customServicesContainer'); if(customServices.length === 0) { c.innerHTML = ''; return; }
-            c.innerHTML = customServices.map(srv => `<div class="flex flex-col bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50"><span class="block text-[10px] font-bold text-slate-400 uppercase truncate mb-1.5 text-center">${srv.name || 'Послуга'}</span><input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-white dark:bg-slate-900 p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/30 shadow-sm transition-all" placeholder="${srv.defaultSum ? srv.defaultSum : '0.00'}"></div>`).join('');
+            c.innerHTML = customServices.map(srv => `<div class="flex flex-col bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50"><span class="block text-[10px] font-bold text-slate-400 uppercase truncate mb-1.5 text-center">${srv.name || 'Послуга'}</span><input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-white dark:bg-slate-900 p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-slate-700 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 shadow-sm transition-all" placeholder="${srv.defaultSum ? srv.defaultSum : '0.00'}"></div>`).join('');
             document.querySelectorAll('.custom-srv-input').forEach(input => input.addEventListener('input', calculatePreview));
         }
 
@@ -617,8 +607,8 @@
             if (!recent.length) { container.innerHTML = '<span class="text-sm text-slate-400 m-auto absolute inset-0 flex items-center justify-center">Ще немає даних</span>'; return; }
             const max = Math.max(...recent.map(r => r.total)); const isDark = document.documentElement.classList.contains('dark'); let chartHtml = ''; const emptySlots = 6 - recent.length; for(let i = 0; i < emptySlots; i++) chartHtml += `<div class="flex flex-col items-center gap-2 flex-1 opacity-0"><div class="w-full h-full"></div></div>`;
             chartHtml += recent.map(r => {
-                const h = max > 0 ? (r.total / max) * 100 : 0; const mName = new Date(r.month + '-01').toLocaleString('uk-UA', {month: 'short'}).slice(0, 3); const shadow = isDark ? 'shadow-[0_-5px_15px_rgba(var(--brand-main)/0.4)]' : 'shadow-[0_-3px_10px_rgba(var(--brand-main)/0.2)]';
-                return `<div class="flex flex-col items-center flex-1 group relative h-full justify-end px-1"><div class="w-full relative flex items-end justify-center rounded-t-lg bg-slate-100 dark:bg-slate-800/80 overflow-hidden" style="height: 100%;"><div class="w-full rounded-t-lg transition-all duration-1000 ${r.paid ? shadow : ''}" style="height: ${Math.max(4, h)}%; background: ${r.paid ? 'rgb(var(--brand-main))' : 'linear-gradient(to top, #fb923c, #fcd34d)'}"></div></div><span class="text-[10px] text-slate-500 uppercase font-bold mt-2">${mName}</span></div>`;
+                const h = max > 0 ? (r.total / max) * 100 : 0; const mName = new Date(r.month + '-01').toLocaleString('uk-UA', {month: 'short'}).slice(0, 3); const shadow = isDark ? 'shadow-[0_-5px_15px_var(--brand-light)]' : 'shadow-sm';
+                return `<div class="flex flex-col items-center flex-1 group relative h-full justify-end px-1"><div class="w-full relative flex items-end justify-center rounded-t-lg bg-slate-100 dark:bg-slate-800/80 overflow-hidden" style="height: 100%;"><div class="w-full rounded-t-lg transition-all duration-1000 ${shadow}" style="height: ${Math.max(4, h)}%; background: ${r.paid ? 'var(--brand-main)' : 'linear-gradient(to top, #fb923c, #fcd34d)'}"></div></div><span class="text-[10px] text-slate-500 uppercase font-bold mt-2">${mName}</span></div>`;
             }).join(''); container.innerHTML = chartHtml;
         }
 
@@ -641,4 +631,66 @@
 
         function renderRecords() {
             const list = document.getElementById('recordsList'); list.innerHTML = '';
-            let tSum = records.reduce((sum, r) => sum + r.total, 0); document.getElementById
+            let tSum = records.reduce((sum, r) => sum + r.total, 0); document.getElementById('statsAvg').innerText = fmt.format(records.length ? (tSum / records.length) : 0) + ' ₴';
+            let sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)); renderChart(sorted);
+            let grouped = {}; sorted.forEach((rec, index) => { let yr = rec.month.split('-')[0]; if (!grouped[yr]) grouped[yr] = []; grouped[yr].push({rec, index: records.indexOf(rec)}); });
+            
+            Object.keys(grouped).sort((a, b) => b - a).forEach(year => {
+                let header = document.createElement('div'); header.className = "flex items-center gap-4 mt-8 mb-4"; header.innerHTML = `<h2 class="text-lg font-black text-slate-400">${year}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-slate-800"></div>`; list.appendChild(header);
+                grouped[year].forEach(item => {
+                    let {rec, index} = item; const card = document.createElement('div'); 
+                    card.className = `p-5 sm:p-6 rounded-[2rem] shadow-soft border bg-white dark:bg-slate-900 mb-4 transition-all relative overflow-hidden cursor-pointer select-none ${rec.paid ? 'border-slate-100 dark:border-slate-800' : 'border-orange-200 dark:border-orange-500/30 ring-1 ring-orange-400/20'}`;
+                    card.setAttribute('onclick', `toggleDetails(${index})`);
+                    if(!rec.paid) card.innerHTML += `<div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-orange-400/20 to-transparent rounded-bl-[4rem]"></div>`;
+                    
+                    let dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); 
+                    let [rY, rM] = rec.month.split('-'); let prevRec = records.find(r => r.month === (parseInt(rY) - 1) + '-' + rM); let yoyHtml = '';
+                    if (prevRec && prevRec.total > 0 && rec.total > 0) { let percent = Math.round(((rec.total - prevRec.total) / prevRec.total) * 100); if (percent < 0) yoyHtml = `<span class="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-lg ml-2">📉 ${percent}% рік до року</span>`; else if (percent > 0) yoyHtml = `<span class="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-lg ml-2">📈 +${percent}% рік до року</span>`; }
+
+                    let pW = (rec.waterCost / rec.total) * 100 || 0; let pE = (rec.electroCost / rec.total) * 100 || 0; let pG = (rec.gasCost / rec.total) * 100 || 0;
+                    let conic = `conic-gradient( #3b82f6 0% ${pW}%, #eab308 ${pW}% ${pW+pE}%, #f97316 ${pW+pE}% ${pW+pE+pG}%, #a855f7 ${pW+pE+pG}% 100% )`;
+                    let html = `<div class="flex justify-between items-center relative z-10"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4><div class="flex items-center"><span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-brand-light text-brand' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Очікує оплати'}</span>${yoyHtml}</div></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-full text-slate-400 shadow-sm"><svg id="chevron-${index}" class="w-5 h-5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div></div></div>
+                    <div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()"><div class="border-t border-slate-100 dark:border-slate-800/80 pt-5 mt-5 relative z-10">
+                            ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-slate-700" style="background: ${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-orange-500"></div>Газ</span><span>${Math.round(pG)}%</span></div>`:''}${(100-pW-pE-pG)>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-purple-500"></div>Інше</span><span>${Math.round(100-pW-pE-pG)}%</span></div>`:''}</div></div>` : ''}
+                            <div class="space-y-4">`;
+                    
+                    if (rec.waterCost > 0 || rec.wCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-blue-500 text-lg">💧</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Вода</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between items-center ml-7 text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span>${rec.wPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.wCur}</span><span class="text-blue-500">+${rec.wCur - rec.wPrev} м³</span></div></div>`;
+                    if (rec.electroCost > 0 || rec.dCur > 0) { html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-yellow-500 text-lg">⚡️</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Світло</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex flex-col gap-1.5 ml-7"><div class="flex justify-between items-center text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span><span class="text-slate-400 mr-1 hidden sm:inline">День:</span>${rec.dPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.dCur}</span><span class="text-yellow-600 dark:text-yellow-500">+${rec.dCur - rec.dPrev} кВт</span></div>`; if(rec.nCur > 0 || rec.nPrev > 0) html += `<div class="flex justify-between items-center text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span><span class="text-slate-400 mr-1 hidden sm:inline">Ніч:</span>${rec.nPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur - rec.nPrev} кВт</span></div>`; html += `</div></div>`; }
+                    if (rec.gasCost > 0 || rec.gCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-orange-500 text-lg">🔥</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Газ</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between items-center ml-7 text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span>${rec.gPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.gCur}</span><span class="text-orange-500">+${rec.gCur - rec.gPrev} м³</span></div></div>`;
+                    if (rec.customCost > 0) { html += `<div class="flex flex-col pb-1"><div class="flex justify-between items-center"><span class="flex items-center gap-2"><span class="text-purple-500 text-lg">📦</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Інше</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.customCost)} ₴</span></div>`; if(rec.customData) { html += `<div class="flex flex-col gap-1 ml-7 mt-2 text-[11px]">`; Object.values(rec.customData).forEach(srv => { if(srv.val > 0) html += `<div class="flex justify-between text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800"><span class="font-bold">${srv.name}</span><span class="font-black text-purple-500">${fmt.format(srv.val)} ₴</span></div>`; }); html += `</div>`; } html += `</div>`; }
+                    
+                    html += `</div></div>
+                        <div class="flex gap-2.5 mt-6 relative z-10 pt-2">
+                            <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-2xl font-bold text-xs transition-all border ${rec.paid ? 'bg-white text-slate-500 dark:bg-slate-900 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800' : 'bg-brand hover:bg-brand-hover text-white border-brand shadow-lg shadow-brand/20'}">${rec.paid ? 'Скасувати' : 'Оплачено'}</button>
+                            <button type="button" onclick="shareRecordReceipt(${index}, event);" class="w-12 flex items-center justify-center bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-2xl text-blue-500 transition-colors hover:bg-blue-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg></button>
+                            <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-400 transition-colors hover:text-brand hover:border-brand dark:hover:border-brand-border"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                            <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 flex items-center justify-center bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-2xl text-red-400 transition-colors hover:bg-red-100 hover:text-red-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                        </div>
+                    </div>`;
+                    card.innerHTML = html; list.appendChild(card);
+                });
+            });
+        }
+
+        window.editRecord = function(index) { vibe(); let rec = records[index]; document.getElementById('monthInput').value = rec.month; if(prefs.showWater){ document.getElementById('wPrev').value = rec.wPrev || ''; document.getElementById('wCur').value = rec.wCur || ''; } if(prefs.showElectro){ document.getElementById('dPrev').value = rec.dPrev || ''; document.getElementById('dCur').value = rec.dCur || ''; document.getElementById('nPrev').value = rec.nPrev || ''; document.getElementById('nCur').value = rec.nCur || ''; } if(prefs.showGas){ document.getElementById('gPrev').value = rec.gPrev || ''; document.getElementById('gCur').value = rec.gCur || ''; } if(rec.customData) { Object.keys(rec.customData).forEach(srvId => { let el = document.getElementById(`custom_${srvId}`); if(el) el.value = rec.customData[srvId].val; }); } document.getElementById('isWinterInput').checked = (new Date(rec.month).getMonth() + 1 >= 10 || new Date(rec.month).getMonth() + 1 <= 4); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges(); };
+        window.togglePaid = function(index) { vibe(); records[index].paid = !records[index].paid; renderRecords(); syncToCloud(); };
+        window.deleteRecord = function(index) { vibe(); if(confirm('Видалити розрахунок?')) { records.splice(index, 1); renderRecords(); syncToCloud(); } };
+
+        if (urlShareToken) {
+            isGuest = true; document.getElementById('authScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); document.getElementById('appScreen').classList.add('flex'); document.getElementById('btnTabSettings').style.display = 'none'; document.getElementById('addressHeaderTrigger').onclick = null; document.getElementById('addressArrowIcon').style.display = 'none';
+            fetch(`${WORKER_URL}?share=${urlShareToken}`, { cache: "no-store" })
+            .then(r => r.json()).then(data => { if(data.success) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId; loadCurrentAddress(); } else { alert("Це посилання недійсне або було видалене."); document.getElementById('appScreen').innerHTML = '<div class="m-auto text-center p-5 font-bold text-red-500">Доступ закрито</div>'; } });
+        } 
+        else if (sessionPhone && sessionPass) { 
+            fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}&t=${Date.now()}`, { cache: "no-store" })
+            .then(r => r.json()).then(data => {
+                if(data.success) {
+                    if (data.data.addresses) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId || addresses[0].id; } 
+                    else { addresses = [{ id: 'default', name: 'Мій дім', tariffs: data.data.tariffs || {...defaultTariffs}, prefs: { ...defaultPrefs, ...(data.data.prefs || {}) }, records: data.data.records || [], customServices: data.data.customServices || [...defaultCustomServices] }]; currentAddressId = 'default'; }
+                    loadCurrentAddress();
+                } else throw new Error();
+            }).catch(() => { document.getElementById('authScreen').classList.remove('hidden'); localStorage.clear(); });
+        }
+    </script>
+</body>
+</html>
