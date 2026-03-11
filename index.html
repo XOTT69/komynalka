@@ -26,12 +26,11 @@
         input[type="number"], input[type="text"], input[type="password"] { -moz-appearance: textfield; font-family: inherit; }
         .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(32px) saturate(200%); -webkit-backdrop-filter: blur(32px) saturate(200%); }
-        .dark .glass-panel { background: rgba(28, 28, 30, 0.7); border-top-color: rgba(255,255,255,0.08); }
-        .spring-modal { transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1); }
-        .tab-transition { transition: opacity 0.25s ease; width: 100%; }
+        .dark .glass-panel { background: rgba(28, 28, 30, 0.75); border-top-color: rgba(255,255,255,0.08); }
+        .spring-modal { transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
         .tab-hidden { display: none !important; opacity: 0; }
-        .tab-active { display: block !important; opacity: 1; animation: fadeIn 0.35s cubic-bezier(0.32, 0.72, 0, 1); }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.97) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .tab-active { display: block !important; opacity: 1; animation: fastFade 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes fastFade { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
         .toggle-checkbox:checked { right: 0; border-color: var(--brand-main); }
         .toggle-checkbox:checked + .toggle-label { background-color: var(--brand-main); }
         .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
@@ -39,7 +38,7 @@
 </head>
 <body class="bg-apple-light dark:bg-apple-darker text-slate-800 dark:text-slate-200 flex flex-col transition-colors duration-300 h-[100dvh] selection:bg-brand-light">
 
-    <div id="toast" class="fixed top-[env(safe-area-inset-top,20px)] left-1/2 -translate-x-1/2 z-[300] bg-apple-darker/90 dark:bg-white/90 backdrop-blur-2xl text-white dark:text-apple-darker px-6 py-3.5 rounded-full shadow-2xl font-bold text-sm transition-all duration-400 transform -translate-y-24 opacity-0 flex items-center gap-2 pointer-events-none">
+    <div id="toast" class="fixed top-[env(safe-area-inset-top,20px)] left-1/2 -translate-x-1/2 z-[300] bg-apple-darker/90 dark:bg-white/90 backdrop-blur-2xl text-white dark:text-apple-darker px-6 py-3.5 rounded-full shadow-2xl font-bold text-sm transition-all duration-300 transform -translate-y-24 opacity-0 flex items-center gap-2 pointer-events-none">
         <span id="toastIcon">✅</span><span id="toastMsg">Повідомлення</span>
     </div>
 
@@ -55,7 +54,7 @@
                 <div class="absolute -top-20 -right-20 w-40 h-40 bg-brand-light rounded-full blur-3xl pointer-events-none"></div>
                 <form id="authForm" class="space-y-4 relative z-10">
                     <div>
-                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 tracking-wider">Email або Логін</label>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 tracking-wider">Логін</label>
                         <input type="text" id="authLogin" placeholder="Логін" required autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-brand text-slate-900 dark:text-white transition-all shadow-inner">
                     </div>
                     <div>
@@ -65,8 +64,8 @@
                     <p id="authError" class="text-red-500 text-sm hidden text-center font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-xl"></p>
                     
                     <div class="flex gap-2 mt-6 pt-2">
-                        <button type="submit" id="authSubmitBtn" class="flex-1 bg-brand hover:bg-brand-hover text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 transition-transform active:scale-[0.97] text-lg tracking-wide">Увійти</button>
-                        <button type="button" id="bioLoginBtn" onclick="tryBiometricAuth()" title="Вхід по FaceID" class="hidden w-16 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-black dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl transition-transform active:scale-[0.97]">
+                        <button type="submit" id="authSubmitBtn" class="flex-1 bg-brand hover:bg-brand-hover text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 transition-transform active:scale-[0.96] text-lg tracking-wide">Увійти</button>
+                        <button type="button" id="bioLoginBtn" onclick="tryBiometricAuth()" class="hidden w-16 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-black dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl transition-transform active:scale-[0.96]">
                             <svg class="w-7 h-7 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg>
                         </button>
                     </div>
@@ -78,7 +77,7 @@
     <!-- ОСНОВНИЙ ДОДАТОК -->
     <div id="appScreen" class="hidden flex-col h-full w-full max-w-md mx-auto relative overflow-hidden">
         
-        <div class="px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center bg-apple-light dark:bg-apple-darker z-20 shrink-0 border-b border-transparent transition-colors">
+        <div class="px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center bg-apple-light dark:bg-apple-darker z-20 shrink-0 border-b border-transparent">
             <div class="flex items-center gap-3 cursor-pointer group" onclick="openAddressModal()" id="addressHeaderTrigger">
                 <div class="w-12 h-12 bg-gradient-to-tr from-brand to-brand-hover rounded-full flex items-center justify-center text-white shadow-lg shadow-brand/20 text-xl group-active:scale-95 transition-transform">🏡</div>
                 <div>
@@ -96,7 +95,6 @@
             <!-- ВКЛАДКА 1: РОЗРАХУНОК -->
             <div id="tabCalc" class="tab-transition tab-active space-y-5">
                 
-                <!-- БАНЕР НАГАДУВАННЯ -->
                 <div id="reminderBanner" class="hidden relative overflow-hidden bg-gradient-to-r from-brand to-purple-500 p-4 rounded-[1.5rem] shadow-xl text-white mt-2 mb-2 transition-all">
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
                     <div class="flex items-center justify-between relative z-10">
@@ -129,40 +127,40 @@
                     <div id="blockWater" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 text-xl">💧</div><span class="font-bold text-lg text-slate-900 dark:text-white">Хол. Вода</span></div><span id="waterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
-                            <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="wPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm transition-all"></div>
+                            <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="wPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"></div>
                             <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-blue-500 whitespace-nowrap" id="wDiffBadge">0 м³</div>
-                            <div class="flex-1"><label class="block text-[10px] text-blue-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="wCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-blue-600 dark:text-blue-400 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm transition-all"></div>
+                            <div class="flex-1"><label class="block text-[10px] text-blue-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="wCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-blue-600 dark:text-blue-400 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"></div>
                         </div>
                     </div>
                     <div id="blockHotWater" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5 hidden">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-red-50 dark:bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 text-xl">🌡️</div><span class="font-bold text-lg text-slate-900 dark:text-white">Гар. Вода</span></div><span id="hotWaterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
-                            <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="hwPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-red-500/50 shadow-sm transition-all"></div>
+                            <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="hwPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-red-500/50 transition-all"></div>
                             <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-red-500 whitespace-nowrap" id="hwDiffBadge">0 м³</div>
-                            <div class="flex-1"><label class="block text-[10px] text-red-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="hwCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-red-600 dark:text-red-400 rounded-xl outline-none focus:ring-2 focus:ring-red-500/50 shadow-sm transition-all"></div>
+                            <div class="flex-1"><label class="block text-[10px] text-red-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="hwCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-red-600 dark:text-red-400 rounded-xl outline-none focus:ring-2 focus:ring-red-500/50 transition-all"></div>
                         </div>
                     </div>
                     <div id="blockElectro" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-yellow-50 dark:bg-yellow-500/10 rounded-2xl flex items-center justify-center text-yellow-500 text-xl">⚡️</div><span class="font-bold text-lg text-slate-900 dark:text-white">Світло</span></div><span id="electroCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div class="space-y-3">
                             <div id="electroDayRow" class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
-                                <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Мин <span id="lblDay1">(День)</span></label><input type="number" id="dPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/50 shadow-sm transition-all"></div>
+                                <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Мин <span id="lblDay1">(День)</span></label><input type="number" id="dPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all"></div>
                                 <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-yellow-500 whitespace-nowrap" id="dDiffBadge">0 кВт</div>
-                                <div class="flex-1"><label class="block text-[10px] text-yellow-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові <span id="lblDay2">(День)</span></label><input type="number" id="dCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-yellow-600 dark:text-yellow-400 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/50 shadow-sm transition-all"></div>
+                                <div class="flex-1"><label class="block text-[10px] text-yellow-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові <span id="lblDay2">(День)</span></label><input type="number" id="dCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-yellow-600 dark:text-yellow-400 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all"></div>
                             </div>
                             <div id="electroNightRow" class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
-                                <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Мин (Ніч)</label><input type="number" id="nPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm transition-all"></div>
+                                <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Мин (Ніч)</label><input type="number" id="nPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"></div>
                                 <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-indigo-500 whitespace-nowrap" id="nDiffBadge">0 кВт</div>
-                                <div class="flex-1"><label class="block text-[10px] text-indigo-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові (Ніч)</label><input type="number" id="nCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-indigo-500 dark:text-indigo-400 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm transition-all"></div>
+                                <div class="flex-1"><label class="block text-[10px] text-indigo-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові (Ніч)</label><input type="number" id="nCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-indigo-500 dark:text-indigo-400 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"></div>
                             </div>
                         </div>
                     </div>
                     <div id="blockGas" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
                         <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-orange-50 dark:bg-orange-500/10 rounded-2xl flex items-center justify-center text-orange-500 text-xl">🔥</div><span class="font-bold text-lg text-slate-900 dark:text-white">Газ</span></div><span id="gasCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
-                            <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="gPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/50 shadow-sm transition-all"></div>
+                            <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="gPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"></div>
                             <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-orange-500 whitespace-nowrap" id="gDiffBadge">0 м³</div>
-                            <div class="flex-1"><label class="block text-[10px] text-orange-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="gCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-orange-500 dark:text-orange-400 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/50 shadow-sm transition-all"></div>
+                            <div class="flex-1"><label class="block text-[10px] text-orange-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="gCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-orange-500 dark:text-orange-400 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"></div>
                         </div>
                     </div>
                     <div id="blockCustomServices" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
@@ -198,7 +196,6 @@
 
             <!-- ВКЛАДКА 3: НАЛАШТУВАННЯ -->
             <div id="tabSettings" class="tab-transition tab-hidden space-y-5 mt-2 pb-6">
-                <!-- Тема -->
                 <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5 mb-5">
                     <h3 class="font-black mb-4 text-base text-slate-900 dark:text-white flex items-center gap-2"><span class="text-brand text-xl">🎨</span> Оформлення</h3>
                     <div class="flex bg-slate-100 dark:bg-black/50 p-1.5 rounded-xl mb-5 relative">
@@ -268,17 +265,14 @@
                 
                 <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5 space-y-6">
                     <h3 class="font-black text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-brand text-xl">📱</span> Система</h3>
-                    
                     <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
                         <span class="flex items-center gap-2">📳 Вібрація</span>
                         <div class="relative inline-flex items-center"><input type="checkbox" id="prefHaptic" class="sr-only toggle-checkbox peer" onchange="toggleHaptic(this.checked)"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
                     </label>
-
                     <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer border-t border-slate-100 dark:border-white/5 pt-4">
                         <span class="flex items-center gap-2">🛡️ Вхід по Face ID</span>
                         <div class="relative inline-flex items-center"><input type="checkbox" id="prefBio" class="sr-only toggle-checkbox peer" onchange="toggleBiometrics(this.checked)"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
                     </label>
-                    
                     <div class="border-t border-slate-100 dark:border-white/5 pt-4">
                         <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer mb-4">
                             <span class="flex items-center gap-2">🔔 Нагадування (числа)</span>
@@ -287,19 +281,11 @@
                         <div id="remindersSettings" class="space-y-3 hidden">
                             <div class="flex justify-between items-center text-xs font-bold text-slate-500">
                                 <span class="flex gap-1.5"><span class="text-blue-500">💧</span> Вода (з - по)</span>
-                                <div class="flex gap-2 items-center">
-                                    <input type="number" id="remWaterStart" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none">
-                                    <span>-</span>
-                                    <input type="number" id="remWaterEnd" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none">
-                                </div>
+                                <div class="flex gap-2 items-center"><input type="number" id="remWaterStart" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none"><span>-</span><input type="number" id="remWaterEnd" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none"></div>
                             </div>
                             <div class="flex justify-between items-center text-xs font-bold text-slate-500">
                                 <span class="flex gap-1.5"><span class="text-yellow-500">⚡️</span> Світло (з - по)</span>
-                                <div class="flex gap-2 items-center">
-                                    <input type="number" id="remElectroStart" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none">
-                                    <span>-</span>
-                                    <input type="number" id="remElectroEnd" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none">
-                                </div>
+                                <div class="flex gap-2 items-center"><input type="number" id="remElectroStart" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none"><span>-</span><input type="number" id="remElectroEnd" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none"></div>
                             </div>
                         </div>
                     </div>
@@ -314,13 +300,20 @@
             </div>
         </div>
 
-        <div class="fixed bottom-0 left-0 right-0 glass-panel pb-[max(env(safe-area-inset-bottom),20px)] z-[60] border-t border-white/20 dark:border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] shrink-0">
-            <div class="flex justify-around items-center px-4 py-3 max-w-md mx-auto w-full relative">
-                <div id="navIndicator" class="absolute top-2 left-[12%] w-[10%] h-1 bg-brand rounded-full transition-all duration-300 shadow-sm"></div>
-                <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center gap-1.5 text-brand transition-all scale-105 relative z-10 pt-2 active:scale-95"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm4 4a1 1 0 100 2h8a1 1 0 100-2H8zm0 4a1 1 0 100 2h4a1 1 0 100-2H8zm0 4a1 1 0 100 2h4a1 1 0 100-2H8z"></path></svg><span class="text-[10px] font-bold tracking-wide">Рахунок</span></button>
-                <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center gap-1.5 text-slate-400 transition-all relative z-10 pt-2 hover:text-slate-600 dark:hover:text-slate-200 active:scale-95"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span class="text-[10px] font-bold tracking-wide">Історія</span></button>
-                <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center gap-1.5 text-slate-400 transition-all relative z-10 pt-2 hover:text-slate-600 dark:hover:text-slate-200 active:scale-95"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg><span class="text-[10px] font-bold tracking-wide">Налашт.</span></button>
-            </div>
+        <!-- Telegram-style Floating Bottom Nav -->
+        <div class="fixed bottom-[max(env(safe-area-inset-bottom,16px),16px)] left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-[360px] bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border border-slate-100/50 dark:border-white/5 rounded-[2rem] shadow-2xl shadow-brand/10 dark:shadow-black/50 z-[60] px-2 py-1.5 flex justify-around items-center">
+            <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-brand transition-colors duration-300 py-1 active:scale-[0.92]">
+                <div class="relative"><svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm4 4a1 1 0 100 2h8a1 1 0 100-2H8zm0 4a1 1 0 100 2h4a1 1 0 100-2H8zm0 4a1 1 0 100 2h4a1 1 0 100-2H8z"></path></svg></div>
+                <span class="text-[10px] font-bold tracking-wide">Рахунок</span>
+            </button>
+            <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 transition-colors duration-300 py-1 active:scale-[0.92]">
+                <div class="relative"><svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></div>
+                <span class="text-[10px] font-bold tracking-wide">Історія</span>
+            </button>
+            <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 transition-colors duration-300 py-1 active:scale-[0.92]">
+                <div class="relative"><svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg></div>
+                <span class="text-[10px] font-bold tracking-wide">Налашт.</span>
+            </button>
         </div>
     </div>
 
@@ -330,8 +323,8 @@
             <div class="w-12 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-6"></div>
             <h3 class="font-black text-2xl text-slate-900 dark:text-white mb-4">🏡 Мої об'єкти</h3>
             <div id="addressListModal" class="space-y-3 mb-4 max-h-[50vh] overflow-y-auto no-scrollbar"></div>
-            <button onclick="addNewAddress()" class="w-full py-4 bg-brand-light hover:bg-brand-border text-brand font-bold rounded-2xl transition-colors mb-2">+ Додати нову адресу</button>
-            <button onclick="closeAddressModal()" class="w-full py-4 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-bold rounded-2xl transition-colors">Закрити</button>
+            <button onclick="addNewAddress()" class="w-full py-4 bg-brand-light hover:bg-brand-border text-brand font-bold rounded-2xl transition-colors mb-2 active:scale-[0.98]">+ Додати нову адресу</button>
+            <button onclick="closeAddressModal()" class="w-full py-4 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-bold rounded-2xl transition-colors active:scale-[0.98]">Закрити</button>
         </div>
     </div>
 
@@ -485,7 +478,7 @@
         function syncCurrentAddress() { const idx = addresses.findIndex(a => a.id === currentAddressId); if(idx >= 0) { addresses[idx].tariffs = tariffs; addresses[idx].prefs = prefs; addresses[idx].records = records; addresses[idx].customServices = customServices; } }
 
         function openAddressModal() { vibe(); $('addressModal').classList.remove('hidden'); setTimeout(() => $('addressModalContent').classList.remove('translate-y-full'), 10); renderAddressModal(); }
-        function closeAddressModal() { $('addressModalContent').classList.add('translate-y-full'); setTimeout(() => $('addressModal').classList.add('hidden'), 500); }
+        function closeAddressModal() { $('addressModalContent').classList.add('translate-y-full'); setTimeout(() => $('addressModal').classList.add('hidden'), 400); }
 
         async function shareAddressAccess(event) {
             event.stopPropagation(); vibe(); if(!sessionPhone) return; const btn = event.currentTarget; const oldHtml = btn.innerHTML; btn.innerHTML = '⏳';
@@ -516,12 +509,13 @@
         function handleSwipe() { if(isGuest) return; const dist = touchstartX - touchendX; const tabs = ['tabCalc', 'tabHistory', 'tabSettings']; const curIdx = tabs.findIndex(id => $(id).classList.contains('tab-active')); if (dist > 70 && curIdx < 2) switchTab(tabs[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabs[curIdx - 1], curIdx - 1); }
 
         function switchTab(tabId, index = -1) {
-            if(index >= 0) vibe(); document.querySelectorAll('.tab-transition').forEach(el => { el.classList.remove('tab-active'); el.classList.add('tab-hidden'); });
+            if(index >= 0) vibe(); 
+            document.querySelectorAll('.tab-transition').forEach(el => { el.classList.remove('tab-active'); el.classList.add('tab-hidden'); });
             $(tabId).classList.remove('tab-hidden'); $(tabId).classList.add('tab-active');
             if(index >= 0) {
-                document.querySelectorAll('.nav-btn').forEach(el => { el.classList.remove('text-brand', 'scale-105'); el.classList.add('text-slate-400'); });
+                document.querySelectorAll('.nav-btn').forEach(el => { el.classList.remove('text-brand'); el.classList.add('text-slate-400', 'dark:text-slate-500'); });
                 let btnId = tabId === 'tabCalc' ? 'btnTabCalc' : (tabId === 'tabHistory' ? 'btnTabHistory' : 'btnTabSettings');
-                $(btnId).classList.remove('text-slate-400'); $(btnId).classList.add('text-brand', 'scale-105'); $('navIndicator').style.left = ['12%', '45%', '78%'][index];
+                $(btnId).classList.remove('text-slate-400', 'dark:text-slate-500'); $(btnId).classList.add('text-brand');
             }
             if(tabId === 'tabHistory') renderRecords(); if(tabId === 'tabSettings') renderSettingsCustomServices(); $('swipeContainer').scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -539,10 +533,10 @@
 
         function updateSmartBadges() {
             const getV = id => Math.max(0, parseFloat($(id)?.value) || 0);
-            if(prefs.showWater) { let d = getV('wCur') - getV('wPrev'); $('wDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; $('wDiffBadge').className = d > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-blue-100 text-blue-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400'; }
-            if(prefs.showHotWater) { let d = getV('hwCur') - getV('hwPrev'); $('hwDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; $('hwDiffBadge').className = d > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-red-100 text-red-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400'; }
-            if(prefs.showElectro) { let dd = getV('dCur') - getV('dPrev'); $('dDiffBadge').innerText = dd > 0 ? `+${dd} кВт` : '0 кВт'; $('dDiffBadge').className = dd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-yellow-100 text-yellow-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400'; if(prefs.electroTwoZone) { let nd = getV('nCur') - getV('nPrev'); $('nDiffBadge').innerText = nd > 0 ? `+${nd} кВт` : '0 кВт'; $('nDiffBadge').className = nd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-indigo-100 text-indigo-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400'; } }
-            if(prefs.showGas) { let gd = getV('gCur') - getV('gPrev'); $('gDiffBadge').innerText = gd > 0 ? `+${gd} м³` : '0 м³'; $('gDiffBadge').className = gd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-orange-100 text-orange-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400'; }
+            if(prefs.showWater) { let d = getV('wCur') - getV('wPrev'); $('wDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; $('wDiffBadge').className = d > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-blue-100 text-blue-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold transition-all' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 transition-all'; }
+            if(prefs.showHotWater) { let d = getV('hwCur') - getV('hwPrev'); $('hwDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; $('hwDiffBadge').className = d > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-red-100 text-red-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold transition-all' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 transition-all'; }
+            if(prefs.showElectro) { let dd = getV('dCur') - getV('dPrev'); $('dDiffBadge').innerText = dd > 0 ? `+${dd} кВт` : '0 кВт'; $('dDiffBadge').className = dd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-yellow-100 text-yellow-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold transition-all' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 transition-all'; if(prefs.electroTwoZone) { let nd = getV('nCur') - getV('nPrev'); $('nDiffBadge').innerText = nd > 0 ? `+${nd} кВт` : '0 кВт'; $('nDiffBadge').className = nd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-indigo-100 text-indigo-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold transition-all' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 transition-all'; } }
+            if(prefs.showGas) { let gd = getV('gCur') - getV('gPrev'); $('gDiffBadge').innerText = gd > 0 ? `+${gd} м³` : '0 м³'; $('gDiffBadge').className = gd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-orange-100 text-orange-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold transition-all' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 transition-all'; }
         }
 
         const inputs = ['wPrev', 'wCur', 'hwPrev', 'hwCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'gPrev', 'gCur', 'isWinterInput', 'monthInput']; 
@@ -662,12 +656,12 @@
                     let [rY, rM] = rec.month.split('-'); let prevRec = records.find(r => r.month === (parseInt(rY) - 1) + '-' + rM); let yoyHtml = '';
                     if (prevRec && prevRec.total > 0 && rec.total > 0) { let percent = Math.round(((rec.total - prevRec.total) / prevRec.total) * 100); if (percent < 0) yoyHtml = `<span class="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-lg ml-2">📉 ${percent}% рік до року</span>`; else if (percent > 0) yoyHtml = `<span class="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-lg ml-2">📈 +${percent}% рік до року</span>`; }
 
-                    let pW = ((rec.waterCost||0) / rec.total) * 100 || 0; let pHW = ((rec.hotWaterCost||0) / rec.total) * 100 || 0; let pE = ((rec.electroCost||0) / rec.total) * 100 || 0; let pG = ((rec.gasCost||0) / rec.total) * 100 || 0;
+                    let pW = ((rec.waterCost||0) / rec.total) * 100 || 0; let pHW = ((rec.hotWaterCost||0) / rec.total) * 100 || 0; let pE = ((rec.electroCost||0) / rec.total) * 100 || 0; let pG = ((rec.gasCost||0) / rec.total) * 100 || 0; let pC = ((rec.customCost||0) / rec.total) * 100 || 0;
                     let conic = `conic-gradient( #3b82f6 0% ${pW}%, #ef4444 ${pW}% ${pW+pHW}%, #eab308 ${pW+pHW}% ${pW+pHW+pE}%, #f97316 ${pW+pHW+pE}% ${pW+pHW+pE+pG}%, #a855f7 ${pW+pHW+pE+pG}% 100% )`;
 
                     let html = `<div class="flex justify-between items-center relative z-10"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4><div class="flex items-center"><span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-brand-light text-brand' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Борг'}</span>${yoyHtml}</div></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-full text-slate-400 shadow-sm"><span id="chevron-${index}" class="transition-transform duration-300">▼</span></div></div></div>
                     <div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()"><div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5 relative z-10">
-                            ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background: ${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span>💧 Хол. Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span>🌡️ Гар. Вода</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span>⚡ Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span>🔥 Газ</span><span>${Math.round(pG)}%</span></div>`:''}</div></div>` : ''}
+                            ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background: ${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span>💧 Хол. Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span>🌡️ Гар. Вода</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span>⚡ Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span>🔥 Газ</span><span>${Math.round(pG)}%</span></div>`:''}${pC>0?`<div class="flex justify-between"><span>📦 Інше</span><span>${Math.round(pC)}%</span></div>`:''}</div></div>` : ''}
                             <div class="space-y-4">`;
                     
                     if (rec.waterCost > 0 || rec.wCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">💧 Хол. Вода</span><span class="font-black">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.wPrev} → ${rec.wCur}</span><span class="text-blue-500">+${rec.wCur - rec.wPrev} м³</span></div></div>`;
@@ -677,10 +671,10 @@
                     if (rec.customCost > 0) { html += `<div class="flex flex-col"><div class="flex justify-between items-center"><span class="text-slate-700 dark:text-slate-200 font-bold">📦 Інше</span><span class="font-black">${fmt.format(rec.customCost)} ₴</span></div>`; if(rec.customData) { html += `<div class="flex flex-col gap-1 mt-2 text-[11px]">`; Object.values(rec.customData).forEach(srv => { if(srv.val > 0) html += `<div class="flex justify-between text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span class="font-bold">${srv.name}</span><span class="font-black text-purple-500">${fmt.format(srv.val)} ₴</span></div>`; }); html += `</div>`; } html += `</div>`; }
                     
                     html += `</div></div><div class="flex gap-2.5 mt-4 relative z-10 pt-2 border-t border-slate-100 dark:border-white/5">
-                            <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-2xl font-bold text-xs border ${rec.paid ? 'bg-slate-50 text-slate-500 dark:bg-[#2c2c2e] border-transparent' : 'bg-brand text-white shadow-lg'}">${rec.paid ? 'Скасувати' : 'Позначити оплаченим'}</button>
-                            <button type="button" onclick="shareRecordReceipt(${index}, event);" class="w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500">📤</button>
-                            <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400">✏️</button>
-                            <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400">🗑</button>
+                            <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-2xl font-bold text-xs border transition-colors active:scale-[0.98] ${rec.paid ? 'bg-slate-50 text-slate-500 dark:bg-[#2c2c2e] border-transparent' : 'bg-brand text-white shadow-lg'}">${rec.paid ? 'Скасувати' : 'Позначити оплаченим'}</button>
+                            <button type="button" onclick="shareRecordReceipt(${index}, event);" class="w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 transition-transform active:scale-[0.90]">📤</button>
+                            <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 transition-transform active:scale-[0.90]">✏️</button>
+                            <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 transition-transform active:scale-[0.90]">🗑</button>
                         </div></div>`;
                     card.innerHTML = html; list.appendChild(card);
                 });
