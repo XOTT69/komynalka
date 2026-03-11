@@ -7,7 +7,6 @@
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Оновлені кольори: замість зеленого додано нативний Apple Blue */
         :root, .theme-indigo { --brand-main: #4f46e5; --brand-hover: #4338ca; --brand-light: rgba(79, 70, 229, 0.1); --brand-border: rgba(79, 70, 229, 0.25); }
         .theme-blue { --brand-main: #007aff; --brand-hover: #005bb5; --brand-light: rgba(0, 122, 255, 0.1); --brand-border: rgba(0, 122, 255, 0.25); }
         .theme-rose { --brand-main: #f43f5e; --brand-hover: #e11d48; --brand-light: rgba(244, 63, 94, 0.1); --brand-border: rgba(244, 63, 94, 0.25); }
@@ -32,7 +31,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
-        /* Modern Apple System Font & Rendering */
         body, html { 
             overflow: hidden; width: 100vw; height: 100dvh; position: fixed; 
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -45,18 +43,15 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Ultra-modern Glassmorphism */
         .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(32px) saturate(200%); -webkit-backdrop-filter: blur(32px) saturate(200%); }
         .dark .glass-panel { background: rgba(28, 28, 30, 0.7); border-top-color: rgba(255,255,255,0.08); }
         
-        /* Spring Animations */
         .spring-modal { transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1); }
         .tab-transition { transition: opacity 0.25s ease; width: 100%; }
         .tab-hidden { display: none !important; opacity: 0; }
         .tab-active { display: block !important; opacity: 1; animation: fadeIn 0.35s cubic-bezier(0.32, 0.72, 0, 1); }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.97) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         
-        /* iOS Toggle Switch */
         .toggle-checkbox:checked { right: 0; border-color: var(--brand-main); }
         .toggle-checkbox:checked + .toggle-label { background-color: var(--brand-main); }
         .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
@@ -123,7 +118,6 @@
             
             <!-- ВКЛАДКА 1: РОЗРАХУНОК -->
             <div id="tabCalc" class="tab-transition tab-active space-y-5">
-                <!-- Картка "До сплати" -->
                 <div class="bg-apple-darker p-6 rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden border border-white/10 mt-2">
                     <div class="absolute top-0 right-0 w-64 h-64 bg-brand-light rounded-full blur-3xl translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
                     <div class="relative z-10 flex flex-col justify-between h-full">
@@ -139,13 +133,22 @@
                 </div>
 
                 <form id="utilityForm" class="space-y-4 pb-6">
-                    <!-- Блок Води -->
+                    <!-- Блок Холодної Води -->
                     <div id="blockWater" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
-                        <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 text-xl">💧</div><span class="font-bold text-lg text-slate-900 dark:text-white">Вода</span></div><span id="waterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
+                        <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 text-xl">💧</div><span class="font-bold text-lg text-slate-900 dark:text-white">Хол. Вода</span></div><span id="waterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
                         <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
                             <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="wPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm transition-all"></div>
                             <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-blue-500 whitespace-nowrap" id="wDiffBadge">0 м³</div>
                             <div class="flex-1"><label class="block text-[10px] text-blue-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="wCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-blue-600 dark:text-blue-400 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm transition-all"></div>
+                        </div>
+                    </div>
+                    <!-- Блок Гарячої Води -->
+                    <div id="blockHotWater" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5 hidden">
+                        <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-red-50 dark:bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 text-xl">🌡️</div><span class="font-bold text-lg text-slate-900 dark:text-white">Гар. Вода</span></div><span id="hotWaterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white">0 ₴</span></div>
+                        <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
+                            <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="hwPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-red-500/50 shadow-sm transition-all"></div>
+                            <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-red-500 whitespace-nowrap" id="hwDiffBadge">0 м³</div>
+                            <div class="flex-1"><label class="block text-[10px] text-red-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="hwCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-red-600 dark:text-red-400 rounded-xl outline-none focus:ring-2 focus:ring-red-500/50 shadow-sm transition-all"></div>
                         </div>
                     </div>
                     <!-- Блок Електроенергії -->
@@ -230,7 +233,8 @@
                 <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5">
                     <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-brand text-xl">💰</span> Тарифи</h3>
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Вода (₴/м³)</span><input type="number" id="tWater" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Хол. Вода (₴/м³)</span><input type="number" id="tWater" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3" id="settingHotWaterWrap" style="display:none;"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Гар. Вода (₴/м³)</span><input type="number" id="tHotWater" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
                         <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Баз. (₴/кВт)</span><input type="number" id="tElectroBase" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
                         <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3" id="settingElectroWinterWrap"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Зим. (₴/кВт)</span><input type="number" id="tElectroWinter" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
                         <div class="flex justify-between items-center"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Газ (₴/м³)</span><input type="number" id="tGas" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
@@ -241,8 +245,12 @@
                     <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-brand text-xl">⚙️</span> Блоки послуг</h3>
                     <div class="space-y-5">
                         <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
-                            <span class="flex items-center gap-2">💧 Водопостачання</span>
+                            <span class="flex items-center gap-2">💧 Холодна вода</span>
                             <div class="relative inline-flex items-center"><input type="checkbox" id="prefWater" class="sr-only toggle-checkbox peer"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
+                        </label>
+                        <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer pt-4 border-t border-slate-100 dark:border-white/5">
+                            <span class="flex items-center gap-2">🌡️ Гаряча вода</span>
+                            <div class="relative inline-flex items-center"><input type="checkbox" id="prefHotWater" class="sr-only toggle-checkbox peer"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
                         </label>
                         <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
                             <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
@@ -316,8 +324,8 @@
         let sessionPass = localStorage.getItem('k_passHash');
         let profile = JSON.parse(localStorage.getItem('k_profile') || '{"name":"","login":""}');
         
-        let defaultTariffs = { water: 30.38, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
-        let defaultPrefs = { showWater: true, showElectro: true, showGas: true, electroTwoZone: true, electroWinter: true };
+        let defaultTariffs = { water: 30.38, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
+        let defaultPrefs = { showWater: true, showHotWater: false, showElectro: true, showGas: true, electroTwoZone: true, electroWinter: true };
         let defaultCustomServices = [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}];
         
         let addresses = []; let currentAddressId = 'default'; let isGuest = false;
@@ -362,14 +370,31 @@
         window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const block = document.getElementById('pwaInstallBlock'); if(block) block.classList.remove('hidden'); });
         window.installPWA = async () => { vibe(); if(!deferredPrompt) return; deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if(outcome === 'accepted') document.getElementById('pwaInstallBlock').classList.add('hidden'); deferredPrompt = null; };
 
+        // ДИНАМІЧНИЙ ЕКСПОРТ (Вимикає колонки, які вимкнені в налаштуваннях)
         window.exportCSV = function() {
             vibe(); if(records.length === 0) return showToast('Немає даних для експорту', '⚠️');
-            let csv = '\uFEFFМісяць,Вода(м3),Світло(кВт),Газ(м3),Вода(₴),Світло(₴),Газ(₴),Інше(₴),Всього(₴),Статус\n';
+            
+            let headers = ['Місяць'];
+            if(prefs.showWater) headers.push('Хол.Вода(м3)', 'Хол.Вода(₴)');
+            if(prefs.showHotWater) headers.push('Гар.Вода(м3)', 'Гар.Вода(₴)');
+            if(prefs.showElectro) headers.push('Світло(кВт)', 'Світло(₴)');
+            if(prefs.showGas) headers.push('Газ(м3)', 'Газ(₴)');
+            headers.push('Інше(₴)', 'Всього(₴)', 'Статус');
+
+            let csv = '\uFEFF' + headers.join(',') + '\n';
             let sorted = [...records].sort((a,b) => new Date(b.month) - new Date(a.month));
+            
             sorted.forEach(r => {
-                let wV = Math.max(0, (r.wCur||0)-(r.wPrev||0)); let eV = Math.max(0, (r.dCur||0)-(r.dPrev||0)) + Math.max(0, (r.nCur||0)-(r.nPrev||0)); let gV = Math.max(0, (r.gCur||0)-(r.gPrev||0));
-                let stat = r.paid ? 'Оплачено' : 'Борг'; csv += `${r.month},${wV},${eV},${gV},${r.waterCost},${r.electroCost},${r.gasCost},${r.customCost},${r.total},${stat}\n`;
+                let row = [r.month];
+                if(prefs.showWater) { let v = Math.max(0, (r.wCur||0)-(r.wPrev||0)); row.push(v, r.waterCost||0); }
+                if(prefs.showHotWater) { let v = Math.max(0, (r.hwCur||0)-(r.hwPrev||0)); row.push(v, r.hotWaterCost||0); }
+                if(prefs.showElectro) { let v = Math.max(0, (r.dCur||0)-(r.dPrev||0)) + Math.max(0, (r.nCur||0)-(r.nPrev||0)); row.push(v, r.electroCost||0); }
+                if(prefs.showGas) { let v = Math.max(0, (r.gCur||0)-(r.gPrev||0)); row.push(v, r.gasCost||0); }
+                
+                row.push(r.customCost||0, r.total||0, r.paid ? 'Оплачено' : 'Борг');
+                csv += row.join(',') + '\n';
             });
+
             let blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'}); let link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `komunalka_${currentAddressId}.csv`; link.click(); showToast('Файл завантажено', '📊');
         };
 
@@ -477,43 +502,65 @@
         function updateSmartBadges() {
             const getV = id => Math.max(0, parseFloat(document.getElementById(id)?.value) || 0);
             if(prefs.showWater) { let d = getV('wCur') - getV('wPrev'); document.getElementById('wDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; document.getElementById('wDiffBadge').className = d > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
+            if(prefs.showHotWater) { let d = getV('hwCur') - getV('hwPrev'); document.getElementById('hwDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; document.getElementById('hwDiffBadge').className = d > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
             if(prefs.showElectro) { let dd = getV('dCur') - getV('dPrev'); document.getElementById('dDiffBadge').innerText = dd > 0 ? `+${dd} кВт` : '0 кВт'; document.getElementById('dDiffBadge').className = dd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; if(prefs.electroTwoZone) { let nd = getV('nCur') - getV('nPrev'); document.getElementById('nDiffBadge').innerText = nd > 0 ? `+${nd} кВт` : '0 кВт'; document.getElementById('nDiffBadge').className = nd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; } }
             if(prefs.showGas) { let gd = getV('gCur') - getV('gPrev'); document.getElementById('gDiffBadge').innerText = gd > 0 ? `+${gd} м³` : '0 м³'; document.getElementById('gDiffBadge').className = gd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-orange-100 dark:bg-orange-500/20 text-orange-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
         }
 
-        const inputs = ['wPrev', 'wCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'gPrev', 'gCur', 'isWinterInput', 'monthInput']; inputs.forEach(id => document.getElementById(id)?.addEventListener('input', () => { calculatePreview(); updateSmartBadges(); }));
-        let currentCalc = { waterCost: 0, electroCost: 0, gasCost: 0, customCost: 0, total: 0 };
+        const inputs = ['wPrev', 'wCur', 'hwPrev', 'hwCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'gPrev', 'gCur', 'isWinterInput', 'monthInput']; 
+        inputs.forEach(id => document.getElementById(id)?.addEventListener('input', () => { calculatePreview(); updateSmartBadges(); }));
+        let currentCalc = { waterCost: 0, hotWaterCost: 0, electroCost: 0, gasCost: 0, customCost: 0, total: 0 };
 
         function calculatePreview() {
             let getV = id => Math.max(0, parseFloat(document.getElementById(id)?.value) || 0);
             if(prefs.showWater) currentCalc.waterCost = Math.max(0, getV('wCur') - getV('wPrev')) * tariffs.water; else currentCalc.waterCost = 0;
+            if(prefs.showHotWater) currentCalc.hotWaterCost = Math.max(0, getV('hwCur') - getV('hwPrev')) * tariffs.hotWater; else currentCalc.hotWaterCost = 0;
+            
             if(prefs.showElectro) { let dV = Math.max(0, getV('dCur') - getV('dPrev')), nV = prefs.electroTwoZone ? Math.max(0, getV('nCur') - getV('nPrev')) : 0, tEl = dV + nV; if (tEl === 0) currentCalc.electroCost = 0; else if (prefs.electroWinter && document.getElementById('isWinterInput').checked) { if (tEl <= tariffs.winterLimit) currentCalc.electroCost = (dV * tariffs.electroWinter) + (nV * tariffs.electroWinter * tariffs.nightCoef); else { let dp = dV/tEl, np = nV/tEl; currentCalc.electroCost = (tariffs.winterLimit * dp * tariffs.electroWinter) + (tariffs.winterLimit * np * tariffs.electroWinter * tariffs.nightCoef) + ((tEl - tariffs.winterLimit) * dp * tariffs.electroBase) + ((tEl - tariffs.winterLimit) * np * tariffs.electroBase * tariffs.nightCoef); } } else currentCalc.electroCost = (dV * tariffs.electroBase) + (nV * tariffs.electroBase * tariffs.nightCoef); } else currentCalc.electroCost = 0;
+            
             if(prefs.showGas) currentCalc.gasCost = Math.max(0, getV('gCur') - getV('gPrev')) * tariffs.gas; else currentCalc.gasCost = 0;
-            currentCalc.customCost = 0; customServices.forEach(srv => { let val = parseFloat(document.getElementById(`custom_${srv.id}`)?.value); if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum); if (!isNaN(val)) currentCalc.customCost += val; }); currentCalc.total = currentCalc.waterCost + currentCalc.electroCost + currentCalc.gasCost + currentCalc.customCost;
-            document.getElementById('heroTotal').innerHTML = `${fmt.format(currentCalc.total)} <span class="text-2xl font-bold text-white/50">₴</span>`; document.getElementById('waterCostDisplay').innerText = fmt.format(currentCalc.waterCost) + ' ₴'; document.getElementById('electroCostDisplay').innerText = fmt.format(currentCalc.electroCost) + ' ₴'; document.getElementById('gasCostDisplay').innerText = fmt.format(currentCalc.gasCost) + ' ₴'; document.getElementById('customCostDisplay').innerText = fmt.format(currentCalc.customCost) + ' ₴'; 
+            
+            currentCalc.customCost = 0; customServices.forEach(srv => { let val = parseFloat(document.getElementById(`custom_${srv.id}`)?.value); if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum); if (!isNaN(val)) currentCalc.customCost += val; }); 
+            currentCalc.total = currentCalc.waterCost + currentCalc.hotWaterCost + currentCalc.electroCost + currentCalc.gasCost + currentCalc.customCost;
+            
+            document.getElementById('heroTotal').innerHTML = `${fmt.format(currentCalc.total)} <span class="text-2xl font-bold text-white/50">₴</span>`; 
+            document.getElementById('waterCostDisplay').innerText = fmt.format(currentCalc.waterCost) + ' ₴'; 
+            document.getElementById('hotWaterCostDisplay').innerText = fmt.format(currentCalc.hotWaterCost) + ' ₴'; 
+            document.getElementById('electroCostDisplay').innerText = fmt.format(currentCalc.electroCost) + ' ₴'; 
+            document.getElementById('gasCostDisplay').innerText = fmt.format(currentCalc.gasCost) + ' ₴'; 
+            document.getElementById('customCostDisplay').innerText = fmt.format(currentCalc.customCost) + ' ₴'; 
         }
 
         function applyPreferences() {
             if(document.getElementById('prefWater')) document.getElementById('prefWater').checked = prefs.showWater === true;
+            if(document.getElementById('prefHotWater')) document.getElementById('prefHotWater').checked = prefs.showHotWater === true;
             if(document.getElementById('prefElectro')) document.getElementById('prefElectro').checked = prefs.showElectro === true;
             if(document.getElementById('prefGas')) document.getElementById('prefGas').checked = prefs.showGas === true;
             if(document.getElementById('prefElectroTwoZone')) document.getElementById('prefElectroTwoZone').checked = prefs.electroTwoZone === true;
             if(document.getElementById('prefElectroWinter')) document.getElementById('prefElectroWinter').checked = prefs.electroWinter === true;
-            document.getElementById('blockWater').style.display = prefs.showWater ? 'block' : 'none'; document.getElementById('blockElectro').style.display = prefs.showElectro ? 'block' : 'none'; document.getElementById('blockGas').style.display = prefs.showGas ? 'block' : 'none'; document.getElementById('blockCustomServices').style.display = customServices.length > 0 ? 'block' : 'none';
+            
+            document.getElementById('blockWater').style.display = prefs.showWater ? 'block' : 'none'; 
+            document.getElementById('blockHotWater').style.display = prefs.showHotWater ? 'block' : 'none'; 
+            document.getElementById('settingHotWaterWrap').style.display = prefs.showHotWater ? 'flex' : 'none'; 
+            
+            document.getElementById('blockElectro').style.display = prefs.showElectro ? 'block' : 'none'; 
+            document.getElementById('blockGas').style.display = prefs.showGas ? 'block' : 'none'; 
+            document.getElementById('blockCustomServices').style.display = customServices.length > 0 ? 'block' : 'none';
+            
             if (prefs.electroTwoZone) { document.getElementById('electroNightRow').style.display = 'flex'; document.getElementById('lblDay1').innerText = "(День)"; document.getElementById('lblDay2').innerText = "(День)"; } else { document.getElementById('electroNightRow').style.display = 'none'; document.getElementById('lblDay1').innerText = ""; document.getElementById('lblDay2').innerText = ""; }
             document.getElementById('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none'; document.getElementById('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'flex' : 'none';
         }
 
         function initAppUI() {
             document.getElementById('authScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); document.getElementById('appScreen').classList.add('flex');
-            document.getElementById('tWater').value = tariffs.water; document.getElementById('tElectroBase').value = tariffs.electroBase; document.getElementById('tElectroWinter').value = tariffs.electroWinter; document.getElementById('tGas').value = tariffs.gas;
+            document.getElementById('tWater').value = tariffs.water; document.getElementById('tHotWater').value = tariffs.hotWater || defaultTariffs.hotWater; document.getElementById('tElectroBase').value = tariffs.electroBase; document.getElementById('tElectroWinter').value = tariffs.electroWinter; document.getElementById('tGas').value = tariffs.gas;
             document.getElementById('prefHaptic').checked = hapticEnabled; 
             applyPreferences(); renderCalcCustomServices(); fillPreviousReadings(); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges();
         }
 
         window.saveSettings = () => {
-            vibe(); tariffs = { water: parseFloat(document.getElementById('tWater').value)||defaultTariffs.water, electroBase: parseFloat(document.getElementById('tElectroBase').value)||defaultTariffs.electroBase, electroWinter: parseFloat(document.getElementById('tElectroWinter').value)||defaultTariffs.electroWinter, winterLimit: 2000, gas: parseFloat(document.getElementById('tGas').value)||defaultTariffs.gas, nightCoef: 0.5 };
-            prefs = { showWater: document.getElementById('prefWater').checked, showElectro: document.getElementById('prefElectro').checked, showGas: document.getElementById('prefGas').checked, electroTwoZone: document.getElementById('prefElectroTwoZone').checked, electroWinter: document.getElementById('prefElectroWinter').checked };
+            vibe(); tariffs = { water: parseFloat(document.getElementById('tWater').value)||defaultTariffs.water, hotWater: parseFloat(document.getElementById('tHotWater').value)||defaultTariffs.hotWater, electroBase: parseFloat(document.getElementById('tElectroBase').value)||defaultTariffs.electroBase, electroWinter: parseFloat(document.getElementById('tElectroWinter').value)||defaultTariffs.electroWinter, winterLimit: 2000, gas: parseFloat(document.getElementById('tGas').value)||defaultTariffs.gas, nightCoef: 0.5 };
+            prefs = { showWater: document.getElementById('prefWater').checked, showHotWater: document.getElementById('prefHotWater').checked, showElectro: document.getElementById('prefElectro').checked, showGas: document.getElementById('prefGas').checked, electroTwoZone: document.getElementById('prefElectroTwoZone').checked, electroWinter: document.getElementById('prefElectroWinter').checked };
             customServices = customServices.filter(s => s.name.trim() !== ""); syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); updateSmartBadges(); showToast("Налаштування збережено");
         };
 
@@ -536,10 +583,11 @@
 
         document.getElementById('monthInput').value = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
         function fillPreviousReadings() {
-            document.getElementById('wPrev').value = ''; document.getElementById('wCur').value = ''; document.getElementById('dPrev').value = ''; document.getElementById('dCur').value = ''; document.getElementById('nPrev').value = ''; document.getElementById('nCur').value = ''; document.getElementById('gPrev').value = ''; document.getElementById('gCur').value = ''; document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
+            document.getElementById('wPrev').value = ''; document.getElementById('wCur').value = ''; document.getElementById('hwPrev').value = ''; document.getElementById('hwCur').value = ''; document.getElementById('dPrev').value = ''; document.getElementById('dCur').value = ''; document.getElementById('nPrev').value = ''; document.getElementById('nCur').value = ''; document.getElementById('gPrev').value = ''; document.getElementById('gCur').value = ''; document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
             if(records.length > 0) {
                 let lr = [...records].sort((a, b) => new Date(b.month) - new Date(a.month))[0];
                 if(prefs.showWater) { document.getElementById('wPrev').value = lr.wCur || ''; document.getElementById('wCur').value = lr.wCur || ''; }
+                if(prefs.showHotWater) { document.getElementById('hwPrev').value = lr.hwCur || ''; document.getElementById('hwCur').value = lr.hwCur || ''; }
                 if(prefs.showElectro) { document.getElementById('dPrev').value = lr.dCur || ''; document.getElementById('dCur').value = lr.dCur || ''; document.getElementById('nPrev').value = lr.nCur || ''; document.getElementById('nCur').value = lr.nCur || ''; }
                 if(prefs.showGas) { document.getElementById('gPrev').value = lr.gCur || ''; document.getElementById('gCur').value = lr.gCur || ''; }
                 customServices.forEach(srv => { let el = document.getElementById(`custom_${srv.id}`); if(el) el.value = (lr.customData && lr.customData[srv.id]) !== undefined ? lr.customData[srv.id].val : srv.defaultSum; });
@@ -549,7 +597,7 @@
 
         document.getElementById('utilityForm').addEventListener('submit', (e) => {
             e.preventDefault(); vibe(); let cData = {}; customServices.forEach(srv => { let v = parseFloat(document.getElementById(`custom_${srv.id}`)?.value); if (isNaN(v) && srv.defaultSum) v = parseFloat(srv.defaultSum); if (!isNaN(v)) cData[srv.id] = { name: srv.name, val: v }; });
-            const nRec = { id: Date.now(), month: document.getElementById('monthInput').value, wPrev: prefs.showWater ? (parseFloat(document.getElementById('wPrev').value)||0) : 0, wCur: prefs.showWater ? (parseFloat(document.getElementById('wCur').value)||0) : 0, dPrev: prefs.showElectro ? (parseFloat(document.getElementById('dPrev').value)||0) : 0, dCur: prefs.showElectro ? (parseFloat(document.getElementById('dCur').value)||0) : 0, nPrev: (prefs.showElectro && prefs.electroTwoZone) ? (parseFloat(document.getElementById('nPrev').value)||0) : 0, nCur: (prefs.showElectro && prefs.electroTwoZone) ? (parseFloat(document.getElementById('nCur').value)||0) : 0, gPrev: prefs.showGas ? (parseFloat(document.getElementById('gPrev').value)||0) : 0, gCur: prefs.showGas ? (parseFloat(document.getElementById('gCur').value)||0) : 0, customData: cData, waterCost: currentCalc.waterCost, electroCost: currentCalc.electroCost, gasCost: currentCalc.gasCost, customCost: currentCalc.customCost, total: currentCalc.total, paid: false };
+            const nRec = { id: Date.now(), month: document.getElementById('monthInput').value, wPrev: prefs.showWater ? (parseFloat(document.getElementById('wPrev').value)||0) : 0, wCur: prefs.showWater ? (parseFloat(document.getElementById('wCur').value)||0) : 0, hwPrev: prefs.showHotWater ? (parseFloat(document.getElementById('hwPrev').value)||0) : 0, hwCur: prefs.showHotWater ? (parseFloat(document.getElementById('hwCur').value)||0) : 0, dPrev: prefs.showElectro ? (parseFloat(document.getElementById('dPrev').value)||0) : 0, dCur: prefs.showElectro ? (parseFloat(document.getElementById('dCur').value)||0) : 0, nPrev: (prefs.showElectro && prefs.electroTwoZone) ? (parseFloat(document.getElementById('nPrev').value)||0) : 0, nCur: (prefs.showElectro && prefs.electroTwoZone) ? (parseFloat(document.getElementById('nCur').value)||0) : 0, gPrev: prefs.showGas ? (parseFloat(document.getElementById('gPrev').value)||0) : 0, gCur: prefs.showGas ? (parseFloat(document.getElementById('gCur').value)||0) : 0, customData: cData, waterCost: currentCalc.waterCost, hotWaterCost: currentCalc.hotWaterCost, electroCost: currentCalc.electroCost, gasCost: currentCalc.gasCost, customCost: currentCalc.customCost, total: currentCalc.total, paid: false };
             const eI = records.findIndex(r => r.month === nRec.month); if(eI >= 0) { if(!confirm('Оновити запис за цей місяць?')) return; records[eI] = nRec; } else records.push(nRec);
             syncToCloud(); let [y, m] = document.getElementById('monthInput').value.split('-'); let nD = new Date(y, m); document.getElementById('monthInput').value = `${nD.getFullYear()}-${String(nD.getMonth() + 1).padStart(2, '0')}`; fillPreviousReadings(); calculatePreview(); updateSmartBadges(); switchTab('tabHistory', 1); showToast("Збережено!");
         });
@@ -572,7 +620,8 @@
         window.shareRecordReceipt = async function(index, event) {
             event.stopPropagation(); vibe(); let r = records[index]; let dStr = new Date(r.month + '-01').toLocaleString('uk-UA', {month:'long', year:'numeric'}).replace(' р.',''); let addrName = document.getElementById('currentAddressDisplay').innerText;
             let txt = `🧾 *Комуналка за ${dStr}*\n📍 Об'єкт: ${addrName}\n➖➖➖➖➖➖➖➖➖➖\n`;
-            if(r.waterCost > 0 || r.wCur > 0) txt += `💧 Вода: ${r.waterCost} ₴  (${r.wPrev} ➡️ ${r.wCur})\n`;
+            if(r.waterCost > 0 || r.wCur > 0) txt += `💧 Хол. Вода: ${r.waterCost} ₴  (${r.wPrev} ➡️ ${r.wCur})\n`;
+            if(r.hotWaterCost > 0 || r.hwCur > 0) txt += `🌡️ Гар. Вода: ${r.hotWaterCost} ₴  (${r.hwPrev} ➡️ ${r.hwCur})\n`;
             if(r.electroCost > 0 || r.dCur > 0) { txt += `⚡️ Світло: ${r.electroCost} ₴\n   ├ День: ${r.dPrev} ➡️ ${r.dCur}\n`; if(r.nCur > 0 || r.nPrev > 0) txt += `   └ Ніч: ${r.nPrev} ➡️ ${r.nCur}\n`; }
             if(r.gasCost > 0 || r.gCur > 0) txt += `🔥 Газ: ${r.gasCost} ₴  (${r.gPrev} ➡️ ${r.gCur})\n`;
             if(r.customCost > 0) { txt += `📦 Інше: ${r.customCost} ₴\n`; if(r.customData) Object.values(r.customData).forEach(srv => { if(srv.val>0) txt += `   └ ${srv.name}: ${srv.val} ₴\n`; }); }
@@ -599,15 +648,19 @@
                     let [rY, rM] = rec.month.split('-'); let prevRec = records.find(r => r.month === (parseInt(rY) - 1) + '-' + rM); let yoyHtml = '';
                     if (prevRec && prevRec.total > 0 && rec.total > 0) { let percent = Math.round(((rec.total - prevRec.total) / prevRec.total) * 100); if (percent < 0) yoyHtml = `<span class="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-lg ml-2">📉 ${percent}% рік до року</span>`; else if (percent > 0) yoyHtml = `<span class="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-lg ml-2">📈 +${percent}% рік до року</span>`; }
 
-                    let pW = (rec.waterCost / rec.total) * 100 || 0; let pE = (rec.electroCost / rec.total) * 100 || 0; let pG = (rec.gasCost / rec.total) * 100 || 0;
-                    let conic = `conic-gradient( #3b82f6 0% ${pW}%, #eab308 ${pW}% ${pW+pE}%, #f97316 ${pW+pE}% ${pW+pE+pG}%, #a855f7 ${pW+pE+pG}% 100% )`;
+                    let pW = ((rec.waterCost||0) / rec.total) * 100 || 0; 
+                    let pHW = ((rec.hotWaterCost||0) / rec.total) * 100 || 0; 
+                    let pE = ((rec.electroCost||0) / rec.total) * 100 || 0; 
+                    let pG = ((rec.gasCost||0) / rec.total) * 100 || 0;
+                    let conic = `conic-gradient( #3b82f6 0% ${pW}%, #ef4444 ${pW}% ${pW+pHW}%, #eab308 ${pW+pHW}% ${pW+pHW+pE}%, #f97316 ${pW+pHW+pE}% ${pW+pHW+pE+pG}%, #a855f7 ${pW+pHW+pE+pG}% 100% )`;
 
                     let html = `<div class="flex justify-between items-center relative z-10"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4><div class="flex items-center"><span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-brand-light text-brand' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Очікує оплати'}</span>${yoyHtml}</div></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-full text-slate-400 shadow-sm"><svg id="chevron-${index}" class="w-5 h-5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div></div></div>
                     <div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()"><div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5 relative z-10">
-                            ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background: ${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-orange-500"></div>Газ</span><span>${Math.round(pG)}%</span></div>`:''}${(100-pW-pE-pG)>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-purple-500"></div>Інше</span><span>${Math.round(100-pW-pE-pG)}%</span></div>`:''}</div></div>` : ''}
+                            ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background: ${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>Хол. Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-red-500"></div>Гар. Вода</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-orange-500"></div>Газ</span><span>${Math.round(pG)}%</span></div>`:''}${(100-pW-pHW-pE-pG)>0?`<div class="flex justify-between"><span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-purple-500"></div>Інше</span><span>${Math.round(100-pW-pHW-pE-pG)}%</span></div>`:''}</div></div>` : ''}
                             <div class="space-y-4">`;
                     
-                    if (rec.waterCost > 0 || rec.wCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-blue-500 text-lg">💧</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Вода</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between items-center ml-7 text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-white/5"><span>${rec.wPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.wCur}</span><span class="text-blue-500">+${rec.wCur - rec.wPrev} м³</span></div></div>`;
+                    if (rec.waterCost > 0 || rec.wCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-blue-500 text-lg">💧</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Хол. Вода</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between items-center ml-7 text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-white/5"><span>${rec.wPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.wCur}</span><span class="text-blue-500">+${rec.wCur - rec.wPrev} м³</span></div></div>`;
+                    if (rec.hotWaterCost > 0 || rec.hwCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-red-500 text-lg">🌡️</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Гар. Вода</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.hotWaterCost)} ₴</span></div><div class="flex justify-between items-center ml-7 text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-white/5"><span>${rec.hwPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.hwCur}</span><span class="text-red-500">+${rec.hwCur - rec.hwPrev} м³</span></div></div>`;
                     if (rec.electroCost > 0 || rec.dCur > 0) { html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-yellow-500 text-lg">⚡️</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Світло</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex flex-col gap-1.5 ml-7"><div class="flex justify-between items-center text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-white/5"><span><span class="text-slate-400 mr-1 hidden sm:inline">День:</span>${rec.dPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.dCur}</span><span class="text-yellow-600 dark:text-yellow-500">+${rec.dCur - rec.dPrev} кВт</span></div>`; if(rec.nCur > 0 || rec.nPrev > 0) html += `<div class="flex justify-between items-center text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-white/5"><span><span class="text-slate-400 mr-1 hidden sm:inline">Ніч:</span>${rec.nPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur - rec.nPrev} кВт</span></div>`; html += `</div></div>`; }
                     if (rec.gasCost > 0 || rec.gCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="flex items-center gap-2"><span class="text-orange-500 text-lg">🔥</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Газ</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between items-center ml-7 text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-white/5"><span>${rec.gPrev} <span class="text-slate-300 dark:text-slate-600 px-1">→</span> ${rec.gCur}</span><span class="text-orange-500">+${rec.gCur - rec.gPrev} м³</span></div></div>`;
                     if (rec.customCost > 0) { html += `<div class="flex flex-col pb-1"><div class="flex justify-between items-center"><span class="flex items-center gap-2"><span class="text-purple-500 text-lg">📦</span> <span class="text-slate-700 dark:text-slate-200 font-bold">Інше</span></span><span class="font-black text-slate-900 dark:text-white">${fmt.format(rec.customCost)} ₴</span></div>`; if(rec.customData) { html += `<div class="flex flex-col gap-1 ml-7 mt-2 text-[11px]">`; Object.values(rec.customData).forEach(srv => { if(srv.val > 0) html += `<div class="flex justify-between text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl border border-slate-100 dark:border-white/5"><span class="font-bold">${srv.name}</span><span class="font-black text-purple-500">${fmt.format(srv.val)} ₴</span></div>`; }); html += `</div>`; } html += `</div>`; }
@@ -626,7 +679,7 @@
             });
         }
 
-        window.editRecord = function(index) { vibe(); let rec = records[index]; document.getElementById('monthInput').value = rec.month; if(prefs.showWater){ document.getElementById('wPrev').value = rec.wPrev || ''; document.getElementById('wCur').value = rec.wCur || ''; } if(prefs.showElectro){ document.getElementById('dPrev').value = rec.dPrev || ''; document.getElementById('dCur').value = rec.dCur || ''; document.getElementById('nPrev').value = rec.nPrev || ''; document.getElementById('nCur').value = rec.nCur || ''; } if(prefs.showGas){ document.getElementById('gPrev').value = rec.gPrev || ''; document.getElementById('gCur').value = rec.gCur || ''; } if(rec.customData) { Object.keys(rec.customData).forEach(srvId => { let el = document.getElementById(`custom_${srvId}`); if(el) el.value = rec.customData[srvId].val; }); } document.getElementById('isWinterInput').checked = (new Date(rec.month).getMonth() + 1 >= 10 || new Date(rec.month).getMonth() + 1 <= 4); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges(); };
+        window.editRecord = function(index) { vibe(); let rec = records[index]; document.getElementById('monthInput').value = rec.month; if(prefs.showWater){ document.getElementById('wPrev').value = rec.wPrev || ''; document.getElementById('wCur').value = rec.wCur || ''; } if(prefs.showHotWater){ document.getElementById('hwPrev').value = rec.hwPrev || ''; document.getElementById('hwCur').value = rec.hwCur || ''; } if(prefs.showElectro){ document.getElementById('dPrev').value = rec.dPrev || ''; document.getElementById('dCur').value = rec.dCur || ''; document.getElementById('nPrev').value = rec.nPrev || ''; document.getElementById('nCur').value = rec.nCur || ''; } if(prefs.showGas){ document.getElementById('gPrev').value = rec.gPrev || ''; document.getElementById('gCur').value = rec.gCur || ''; } if(rec.customData) { Object.keys(rec.customData).forEach(srvId => { let el = document.getElementById(`custom_${srvId}`); if(el) el.value = rec.customData[srvId].val; }); } document.getElementById('isWinterInput').checked = (new Date(rec.month).getMonth() + 1 >= 10 || new Date(rec.month).getMonth() + 1 <= 4); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges(); };
         window.togglePaid = function(index) { vibe(); records[index].paid = !records[index].paid; renderRecords(); syncToCloud(); };
         window.deleteRecord = function(index) { vibe(); if(confirm('Видалити розрахунок?')) { records.splice(index, 1); renderRecords(); syncToCloud(); } };
 
