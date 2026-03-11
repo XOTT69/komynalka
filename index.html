@@ -14,29 +14,14 @@
         .theme-zinc { --brand-main: #52525b; --brand-hover: #3f3f46; --brand-light: rgba(82, 82, 91, 0.1); --brand-border: rgba(82, 82, 91, 0.25); }
     </style>
     <script>
-        tailwind.config = { 
-            darkMode: 'class', 
-            theme: { 
-                extend: { 
-                    colors: { 
-                        brand: { DEFAULT: 'var(--brand-main)', hover: 'var(--brand-hover)', light: 'var(--brand-light)', border: 'var(--brand-border)' },
-                        apple: { dark: '#1c1c1e', darker: '#000000', light: '#f2f2f7' }
-                    },
-                    boxShadow: { 'soft': '0 10px 40px -10px rgba(0, 0, 0, 0.08)' }
-                } 
-            } 
-        }
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { DEFAULT: 'var(--brand-main)', hover: 'var(--brand-hover)', light: 'var(--brand-light)', border: 'var(--brand-border)' }, apple: { dark: '#1c1c1e', darker: '#000000', light: '#f2f2f7' } }, boxShadow: { 'soft': '0 10px 40px -10px rgba(0, 0, 0, 0.08)' } } } }
     </script>
     <meta name="theme-color" content="#f2f2f7" id="metaThemeColor">
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
-        body, html { 
-            overflow: hidden; width: 100vw; height: 100dvh; position: fixed; 
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; overscroll-behavior: none;
-        }
+        body, html { overflow: hidden; width: 100vw; height: 100dvh; position: fixed; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"], input[type="text"], input[type="password"] { -moz-appearance: textfield; font-family: inherit; }
         .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -81,7 +66,7 @@
                     
                     <div class="flex gap-2 mt-6 pt-2">
                         <button type="submit" id="authSubmitBtn" class="flex-1 bg-brand hover:bg-brand-hover text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 transition-transform active:scale-[0.97] text-lg tracking-wide">Увійти</button>
-                        <button type="button" id="bioLoginBtn" onclick="tryBiometricAuth()" title="Вхід по FaceID" class="hidden w-16 items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-black dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl transition-transform active:scale-[0.97]">
+                        <button type="button" id="bioLoginBtn" onclick="tryBiometricAuth()" title="Вхід по FaceID" class="hidden w-16 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-black dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl transition-transform active:scale-[0.97]">
                             <svg class="w-7 h-7 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg>
                         </button>
                     </div>
@@ -93,7 +78,7 @@
     <!-- ОСНОВНИЙ ДОДАТОК -->
     <div id="appScreen" class="hidden flex-col h-full w-full max-w-md mx-auto relative overflow-hidden">
         
-        <div class="px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center bg-apple-light dark:bg-apple-darker z-20 shrink-0 border-b border-transparent transition-colors" id="mainHeader">
+        <div class="px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center bg-apple-light dark:bg-apple-darker z-20 shrink-0 border-b border-transparent transition-colors">
             <div class="flex items-center gap-3 cursor-pointer group" onclick="openAddressModal()" id="addressHeaderTrigger">
                 <div class="w-12 h-12 bg-gradient-to-tr from-brand to-brand-hover rounded-full flex items-center justify-center text-white shadow-lg shadow-brand/20 text-xl group-active:scale-95 transition-transform">🏡</div>
                 <div>
@@ -207,7 +192,7 @@
                 </div>
                 <div id="recordsList" class="space-y-4 pb-2"></div>
                 <button onclick="exportCSV()" class="w-full py-4 mb-6 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-[#2c2c2e] text-slate-700 dark:text-slate-300 font-bold rounded-[1.5rem] flex items-center justify-center gap-2 transition-colors border border-slate-200 dark:border-white/10 active:scale-[0.98]">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Експорт в Excel
+                    Експорт в Excel
                 </button>
             </div>
 
@@ -233,11 +218,11 @@
                 <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5">
                     <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-brand text-xl">💰</span> Тарифи</h3>
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Хол. Вода (₴/м³)</span><input type="number" id="tWater" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3" id="settingHotWaterWrap" style="display:none;"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Гар. Вода (₴/м³)</span><input type="number" id="tHotWater" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Баз. (₴/кВт)</span><input type="number" id="tElectroBase" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3" id="settingElectroWinterWrap"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Зим. (₴/кВт)</span><input type="number" id="tElectroWinter" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
-                        <div class="flex justify-between items-center"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Газ (₴/м³)</span><input type="number" id="tGas" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Хол. Вода</span><input type="number" id="tWater" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3" id="settingHotWaterWrap" style="display:none;"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Гар. Вода</span><input type="number" id="tHotWater" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Баз.</span><input type="number" id="tElectroBase" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3" id="settingElectroWinterWrap"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Зим.</span><input type="number" id="tElectroWinter" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                        <div class="flex justify-between items-center"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Газ</span><input type="number" id="tGas" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
                     </div>
                 </div>
 
@@ -285,46 +270,43 @@
                     <h3 class="font-black text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-brand text-xl">📱</span> Система</h3>
                     
                     <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
-                        <span class="flex items-center gap-2">📳 Вібрація (Haptic)</span>
+                        <span class="flex items-center gap-2">📳 Вібрація</span>
                         <div class="relative inline-flex items-center"><input type="checkbox" id="prefHaptic" class="sr-only toggle-checkbox peer" onchange="toggleHaptic(this.checked)"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
                     </label>
 
                     <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer border-t border-slate-100 dark:border-white/5 pt-4">
-                        <span class="flex items-center gap-2">🛡️ Вхід по Face ID / Відбитку</span>
+                        <span class="flex items-center gap-2">🛡️ Вхід по Face ID</span>
                         <div class="relative inline-flex items-center"><input type="checkbox" id="prefBio" class="sr-only toggle-checkbox peer" onchange="toggleBiometrics(this.checked)"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
                     </label>
                     
                     <div class="border-t border-slate-100 dark:border-white/5 pt-4">
                         <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer mb-4">
-                            <span class="flex items-center gap-2">🔔 Нагадування про показники</span>
+                            <span class="flex items-center gap-2">🔔 Нагадування (числа)</span>
                             <div class="relative inline-flex items-center"><input type="checkbox" id="prefReminders" class="sr-only toggle-checkbox peer" onchange="toggleRemindersUI(this.checked)"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
                         </label>
                         <div id="remindersSettings" class="space-y-3 hidden">
                             <div class="flex justify-between items-center text-xs font-bold text-slate-500">
                                 <span class="flex gap-1.5"><span class="text-blue-500">💧</span> Вода (з - по)</span>
                                 <div class="flex gap-2 items-center">
-                                    <input type="number" id="remWaterStart" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center border border-slate-200 dark:border-white/5 outline-none focus:border-brand">
-                                    <span class="text-slate-300">-</span>
-                                    <input type="number" id="remWaterEnd" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center border border-slate-200 dark:border-white/5 outline-none focus:border-brand">
+                                    <input type="number" id="remWaterStart" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none">
+                                    <span>-</span>
+                                    <input type="number" id="remWaterEnd" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none">
                                 </div>
                             </div>
                             <div class="flex justify-between items-center text-xs font-bold text-slate-500">
                                 <span class="flex gap-1.5"><span class="text-yellow-500">⚡️</span> Світло (з - по)</span>
                                 <div class="flex gap-2 items-center">
-                                    <input type="number" id="remElectroStart" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center border border-slate-200 dark:border-white/5 outline-none focus:border-brand">
-                                    <span class="text-slate-300">-</span>
-                                    <input type="number" id="remElectroEnd" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center border border-slate-200 dark:border-white/5 outline-none focus:border-brand">
+                                    <input type="number" id="remElectroStart" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none">
+                                    <span>-</span>
+                                    <input type="number" id="remElectroEnd" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none">
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- PWA Install -->
                 <div id="pwaInstallBlock" class="hidden mb-2">
-                    <button onclick="installPWA()" class="w-full bg-gradient-to-r from-brand to-brand-hover text-white rounded-[1.5rem] py-4 font-bold shadow-xl flex justify-center items-center gap-2 text-lg transition-transform active:scale-[0.98]">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Додати на Екран
-                    </button>
+                    <button onclick="installPWA()" class="w-full bg-gradient-to-r from-brand to-brand-hover text-white rounded-[1.5rem] py-4 font-bold shadow-xl">Додати на Екран</button>
                 </div>
 
                 <button type="button" onclick="saveSettings()" class="w-full bg-apple-darker dark:bg-white text-white dark:text-apple-darker rounded-[1.5rem] py-5 font-bold shadow-xl text-lg mt-2 active:scale-[0.98] transition-transform">Зберегти налаштування</button>
@@ -332,7 +314,6 @@
             </div>
         </div>
 
-        <!-- Glassmorphism Bottom Nav -->
         <div class="fixed bottom-0 left-0 right-0 glass-panel pb-[max(env(safe-area-inset-bottom),20px)] z-[60] border-t border-white/20 dark:border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] shrink-0">
             <div class="flex justify-around items-center px-4 py-3 max-w-md mx-auto w-full relative">
                 <div id="navIndicator" class="absolute top-2 left-[12%] w-[10%] h-1 bg-brand rounded-full transition-all duration-300 shadow-sm"></div>
@@ -347,14 +328,15 @@
     <div id="addressModal" class="hidden fixed inset-0 z-[200] bg-apple-darker/60 dark:bg-black/60 backdrop-blur-md flex items-end justify-center transition-opacity" onclick="if(event.target === this) closeAddressModal()">
         <div class="bg-white dark:bg-apple-dark w-full max-w-md rounded-t-[2.5rem] p-6 pb-[max(env(safe-area-inset-bottom),2rem)] spring-modal translate-y-full shadow-[0_-20px_40px_rgba(0,0,0,0.15)]" id="addressModalContent">
             <div class="w-12 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-6"></div>
-            <h3 class="font-black text-2xl text-slate-900 dark:text-white mb-4 flex items-center gap-2">🏡 Мої об'єкти</h3>
+            <h3 class="font-black text-2xl text-slate-900 dark:text-white mb-4">🏡 Мої об'єкти</h3>
             <div id="addressListModal" class="space-y-3 mb-4 max-h-[50vh] overflow-y-auto no-scrollbar"></div>
-            <button onclick="addNewAddress()" class="w-full py-4 bg-brand-light hover:bg-brand-border text-brand font-bold rounded-2xl transition-colors mb-2 active:scale-[0.98]">+ Додати нову адресу</button>
-            <button onclick="closeAddressModal()" class="w-full py-4 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-bold rounded-2xl transition-colors active:scale-[0.98]">Закрити</button>
+            <button onclick="addNewAddress()" class="w-full py-4 bg-brand-light hover:bg-brand-border text-brand font-bold rounded-2xl transition-colors mb-2">+ Додати нову адресу</button>
+            <button onclick="closeAddressModal()" class="w-full py-4 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-bold rounded-2xl transition-colors">Закрити</button>
         </div>
     </div>
 
     <script>
+        const $ = id => document.getElementById(id);
         const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
         
@@ -377,27 +359,26 @@
 
         let toastTimeout;
         window.showToast = function(msg, icon = '✅') {
-            vibe(); const t = document.getElementById('toast');
-            document.getElementById('toastMsg').innerText = msg; document.getElementById('toastIcon').innerText = icon;
+            vibe(); const t = $('toast');
+            $('toastMsg').innerText = msg; $('toastIcon').innerText = icon;
             t.classList.remove('-translate-y-24', 'opacity-0');
             clearTimeout(toastTimeout); toastTimeout = setTimeout(() => t.classList.add('-translate-y-24', 'opacity-0'), 2500);
         };
 
-        // ТЕМИ ТА КОЛЬОРИ
         let currentMode = localStorage.getItem('themeMode') || 'auto';
         window.setThemeMode = function(mode) {
             vibe(); currentMode = mode; localStorage.setItem('themeMode', mode); applyThemeMode();
             ['light','auto','dark'].forEach(m => {
-                const b = document.getElementById('mode-'+m);
+                const b = $('mode-'+m);
                 if(b) { b.classList.remove('bg-white', 'dark:bg-[#2c2c2e]', 'text-slate-900', 'dark:text-white', 'shadow-sm'); if(m === mode) b.classList.add('bg-white', 'dark:bg-[#2c2c2e]', 'text-slate-900', 'dark:text-white', 'shadow-sm'); }
             });
-            if(document.getElementById('tabHistory').classList.contains('tab-active')) renderRecords();
+            if($('tabHistory').classList.contains('tab-active')) renderRecords();
         };
         function applyThemeMode() {
             if(currentMode === 'dark' || (currentMode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark'); document.getElementById('metaThemeColor').setAttribute("content", "#000000");
+                document.documentElement.classList.add('dark'); $('metaThemeColor').setAttribute("content", "#000000");
             } else {
-                document.documentElement.classList.remove('dark'); document.getElementById('metaThemeColor').setAttribute("content", "#f2f2f7");
+                document.documentElement.classList.remove('dark'); $('metaThemeColor').setAttribute("content", "#f2f2f7");
             }
         }
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if(currentMode === 'auto') applyThemeMode(); });
@@ -407,13 +388,12 @@
             vibe(); document.body.classList.remove('theme-indigo', 'theme-blue', 'theme-violet', 'theme-rose', 'theme-zinc'); document.body.classList.add('theme-' + color);
             activeThemeColor = color; localStorage.setItem('k_color', color);
             document.querySelectorAll('[id^="btn-theme-"]').forEach(btn => { btn.style.transform = 'scale(1)'; btn.classList.remove('border-slate-300', 'dark:border-slate-500'); });
-            let actBtn = document.getElementById('btn-theme-' + color); if(actBtn) { actBtn.style.transform = 'scale(1.15)'; actBtn.classList.add('border-slate-300', 'dark:border-slate-500'); }
-            if(document.getElementById('tabHistory').classList.contains('tab-active')) renderRecords();
+            let actBtn = $('btn-theme-' + color); if(actBtn) { actBtn.style.transform = 'scale(1.15)'; actBtn.classList.add('border-slate-300', 'dark:border-slate-500'); }
+            if($('tabHistory').classList.contains('tab-active')) renderRecords();
         }; 
         setThemeMode(currentMode); setThemeColor(activeThemeColor);
 
-        // БІОМЕТРІЯ (WebAuthn FaceID)
-        if(localStorage.getItem('k_bio_enabled') === 'true' && localStorage.getItem('k_bio_phone')) { document.getElementById('bioLoginBtn').classList.remove('hidden'); }
+        if(localStorage.getItem('k_bio_enabled') === 'true' && localStorage.getItem('k_bio_phone')) { $('bioLoginBtn').classList.remove('hidden'); }
         window.toggleBiometrics = async function(checked) {
             vibe();
             if(checked) {
@@ -421,21 +401,20 @@
                     const chall = new Uint8Array(32); crypto.getRandomValues(chall); const uid = new Uint8Array(16); crypto.getRandomValues(uid);
                     await navigator.credentials.create({ publicKey: { challenge: chall, rp: { name: "Комуналка" }, user: { id: uid, name: sessionPhone, displayName: sessionPhone }, pubKeyCredParams: [{alg: -7, type: "public-key"}, {alg: -257, type: "public-key"}], authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" }, timeout: 60000, attestation: "none" } });
                     localStorage.setItem('k_bio_enabled', 'true'); localStorage.setItem('k_bio_phone', sessionPhone); localStorage.setItem('k_bio_pass', sessionPass); showToast("Біометрію увімкнено", "🛡️");
-                } catch(e) { document.getElementById('prefBio').checked = false; showToast("Скасовано", "⚠️"); }
-            } else { localStorage.removeItem('k_bio_enabled'); localStorage.removeItem('k_bio_phone'); localStorage.removeItem('k_bio_pass'); showToast("Біометрію вимкнено", "ℹ️"); document.getElementById('bioLoginBtn').classList.add('hidden'); }
+                } catch(e) { $('prefBio').checked = false; showToast("Скасовано", "⚠️"); }
+            } else { localStorage.removeItem('k_bio_enabled'); localStorage.removeItem('k_bio_phone'); localStorage.removeItem('k_bio_pass'); showToast("Біометрію вимкнено", "ℹ️"); $('bioLoginBtn').classList.add('hidden'); }
         };
         window.tryBiometricAuth = async function() {
             vibe(); if (localStorage.getItem('k_bio_enabled') === 'true' && localStorage.getItem('k_bio_phone')) {
                 try {
                     const chall = new Uint8Array(32); crypto.getRandomValues(chall);
                     await navigator.credentials.get({ publicKey: { challenge: chall, userVerification: "required", timeout: 60000 } });
-                    const bPhone = localStorage.getItem('k_bio_phone'); const bPass = localStorage.getItem('k_bio_pass'); document.getElementById('authLogin').value = bPhone; performLogin(bPhone, bPass, true);
+                    const bPhone = localStorage.getItem('k_bio_phone'); const bPass = localStorage.getItem('k_bio_pass'); $('authLogin').value = bPhone; performLogin(bPhone, bPass, true);
                 } catch(e) { showToast("Відхилено", "❌"); }
             } else { showToast("Спочатку увійдіть з паролем", "⚠️"); }
         };
 
-        // НАГАДУВАННЯ
-        window.toggleRemindersUI = function(checked) { document.getElementById('remindersSettings').style.display = checked ? 'block' : 'none'; };
+        window.toggleRemindersUI = function(checked) { $('remindersSettings').style.display = checked ? 'block' : 'none'; };
         function checkReminders() {
             if(!prefs.remindersEnabled || sessionStorage.getItem('dismissedReminder')) return;
             let tDate = new Date().getDate(); let msgs = [];
@@ -447,14 +426,13 @@
             if(isW && (prefs.showWater || prefs.showHotWater)) msgs.push("💧 Воду");
             if(isE && prefs.showElectro) msgs.push("⚡️ Світло");
             
-            let b = document.getElementById('reminderBanner');
-            if(msgs.length > 0) { b.classList.remove('hidden'); document.getElementById('reminderText').innerText = "За: " + msgs.join(" та "); } else { b.classList.add('hidden'); }
+            let b = $('reminderBanner');
+            if(msgs.length > 0) { b.classList.remove('hidden'); $('reminderText').innerText = "За: " + msgs.join(" та "); } else { b.classList.add('hidden'); }
         }
-        window.dismissReminder = function() { vibe(); sessionStorage.setItem('dismissedReminder', 'true'); document.getElementById('reminderBanner').classList.add('hidden'); };
+        window.dismissReminder = function() { vibe(); sessionStorage.setItem('dismissedReminder', 'true'); $('reminderBanner').classList.add('hidden'); };
 
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const block = document.getElementById('pwaInstallBlock'); if(block) block.classList.remove('hidden'); });
-        window.installPWA = async () => { vibe(); if(!deferredPrompt) return; deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if(outcome === 'accepted') document.getElementById('pwaInstallBlock').classList.add('hidden'); deferredPrompt = null; };
+        let deferredPrompt; window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const block = $('pwaInstallBlock'); if(block) block.classList.remove('hidden'); });
+        window.installPWA = async () => { vibe(); if(!deferredPrompt) return; deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if(outcome === 'accepted') $('pwaInstallBlock').classList.add('hidden'); deferredPrompt = null; };
 
         window.exportCSV = function() {
             vibe(); if(records.length === 0) return showToast('Немає даних', '⚠️');
@@ -472,18 +450,17 @@
                 if(prefs.showHotWater) row.push(Math.max(0, (r.hwCur||0)-(r.hwPrev||0)), r.hotWaterCost||0);
                 if(prefs.showElectro) row.push(Math.max(0, (r.dCur||0)-(r.dPrev||0)) + Math.max(0, (r.nCur||0)-(r.nPrev||0)), r.electroCost||0);
                 if(prefs.showGas) row.push(Math.max(0, (r.gCur||0)-(r.gPrev||0)), r.gasCost||0);
-                row.push(r.customCost||0, r.total||0, r.paid ? 'Оплачено' : 'Борг');
-                csv += row.join(',') + '\n';
+                row.push(r.customCost||0, r.total||0, r.paid ? 'Оплачено' : 'Борг'); csv += row.join(',') + '\n';
             });
             let blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'}); let link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `komunalka_${currentAddressId}.csv`; link.click(); showToast('Експортовано', '📊');
         };
 
         async function getHash(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
 
-        document.getElementById('authForm').addEventListener('submit', async (e) => { e.preventDefault(); await performLogin(document.getElementById('authLogin').value.trim(), document.getElementById('authPass').value, false); });
+        $('authForm').addEventListener('submit', async (e) => { e.preventDefault(); await performLogin($('authLogin').value.trim(), $('authPass').value, false); });
         
         async function performLogin(rawPhone, rawPass, isAlreadyHashed) {
-            vibe(); const btn = document.getElementById('authSubmitBtn'); const errEl = document.getElementById('authError'); errEl.classList.add('hidden'); btn.innerText = "Завантаження...";
+            vibe(); const btn = $('authSubmitBtn'); const errEl = $('authError'); errEl.classList.add('hidden'); btn.innerText = "Завантаження...";
             try {
                 const passHash = isAlreadyHashed ? rawPass : await getHash(rawPass); 
                 const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(rawPhone)}&pass=${passHash}&t=${Date.now()}`, { cache: "no-store" }); const data = await res.json();
@@ -501,57 +478,52 @@
 
         function loadCurrentAddress() {
             const addr = addresses.find(a => a.id === currentAddressId) || addresses[0]; currentAddressId = addr.id; 
-            tariffs = { ...defaultTariffs, ...(addr.tariffs || {}) }; prefs = { ...defaultPrefs, ...(addr.prefs || {}) }; 
-            records = addr.records || []; customServices = addr.customServices || [...defaultCustomServices];
-            document.getElementById('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : ''); initAppUI();
+            tariffs = { ...defaultTariffs, ...(addr.tariffs || {}) }; prefs = { ...defaultPrefs, ...(addr.prefs || {}) }; records = addr.records || []; customServices = addr.customServices || [...defaultCustomServices];
+            $('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : ''); initAppUI();
         }
 
         function syncCurrentAddress() { const idx = addresses.findIndex(a => a.id === currentAddressId); if(idx >= 0) { addresses[idx].tariffs = tariffs; addresses[idx].prefs = prefs; addresses[idx].records = records; addresses[idx].customServices = customServices; } }
 
-        function openAddressModal() { vibe(); document.getElementById('addressModal').classList.remove('hidden'); setTimeout(() => document.getElementById('addressModalContent').classList.remove('translate-y-full'), 10); renderAddressModal(); }
-        function closeAddressModal() { document.getElementById('addressModalContent').classList.add('translate-y-full'); setTimeout(() => document.getElementById('addressModal').classList.add('hidden'), 500); }
+        function openAddressModal() { vibe(); $('addressModal').classList.remove('hidden'); setTimeout(() => $('addressModalContent').classList.remove('translate-y-full'), 10); renderAddressModal(); }
+        function closeAddressModal() { $('addressModalContent').classList.add('translate-y-full'); setTimeout(() => $('addressModal').classList.add('hidden'), 500); }
 
         async function shareAddressAccess(event) {
             event.stopPropagation(); vibe(); if(!sessionPhone) return; const btn = event.currentTarget; const oldHtml = btn.innerHTML; btn.innerHTML = '⏳';
             try {
                 const res = await fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify({ action: "generate_share", addressId: currentAddressId }) }); const data = await res.json();
-                if(data.success && data.shareToken) { const shareUrl = window.location.href.split('?')[0] + '?share=' + data.shareToken; try { await navigator.clipboard.writeText(shareUrl); showToast("Посилання скопійовано! 🔗"); } catch (err) { prompt("Скопіюйте посилання:", shareUrl); } } else showToast("Помилка генерації", "⚠️");
+                if(data.success && data.shareToken) { const shareUrl = window.location.href.split('?')[0] + '?share=' + data.shareToken; try { await navigator.clipboard.writeText(shareUrl); showToast("Скопійовано! 🔗"); } catch (err) { prompt("Копіюйте:", shareUrl); } } else showToast("Помилка", "⚠️");
             } catch(e) { showToast("Помилка", "⚠️"); } btn.innerHTML = oldHtml;
         }
 
         function renderAddressModal() {
-            const list = document.getElementById('addressListModal');
-            list.innerHTML = addresses.map(a => `
+            $('addressListModal').innerHTML = addresses.map(a => `
                 <div class="flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95 ${a.id === currentAddressId ? 'bg-brand border-brand text-white shadow-lg shadow-brand/20' : 'bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200'} cursor-pointer" onclick="selectAddress('${a.id}')">
                     <span class="font-bold text-lg truncate pr-2 flex-1">${a.name}</span>
                     <div class="flex gap-1.5 shrink-0 items-center">
-                        ${a.id === currentAddressId ? '<svg class="w-5 h-5 text-white mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>' : ''}
-                        <button onclick="shareAddressAccess(event);" class="p-2 transition-colors rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-white dark:bg-[#2c2c2e] text-slate-400 hover:text-brand'}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg></button>
-                        <button onclick="editAddressName(event, '${a.id}')" class="p-2 transition-colors rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-white dark:bg-[#2c2c2e] text-slate-400 hover:text-brand'}"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
-                        ${a.id !== currentAddressId && addresses.length > 1 ? `<button onclick="deleteAddress(event, '${a.id}')" class="p-2 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-[#2c2c2e] rounded-xl shadow-sm"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>` : ''}
-                    </div>
-                </div>
-            `).join('');
+                        <button onclick="shareAddressAccess(event);" class="p-2 rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white' : 'bg-white dark:bg-[#2c2c2e] text-slate-400'}">🔗</button>
+                        <button onclick="editAddressName(event, '${a.id}')" class="p-2 rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white' : 'bg-white dark:bg-[#2c2c2e] text-slate-400'}">✏️</button>
+                        ${a.id !== currentAddressId && addresses.length > 1 ? `<button onclick="deleteAddress(event, '${a.id}')" class="p-2 text-slate-400 bg-white dark:bg-[#2c2c2e] rounded-xl shadow-sm">🗑</button>` : ''}
+                    </div></div>`).join('');
         }
 
         function selectAddress(id) { vibe(); syncCurrentAddress(); currentAddressId = id; loadCurrentAddress(); syncToCloud(); closeAddressModal(); }
-        function addNewAddress() { vibe(); const name = prompt("Назва об'єкту:"); if(name && name.trim()) { syncCurrentAddress(); const newId = 'addr_' + Date.now(); addresses.push({ id: newId, name: name.trim(), tariffs: {...defaultTariffs}, prefs: {...defaultPrefs}, records: [], customServices: [{id: "s1", name: "Квартплата", defaultSum: ""}, {id: "s2", name: "Сміття", defaultSum: ""}] }); currentAddressId = newId; loadCurrentAddress(); syncToCloud(); closeAddressModal(); showToast("Додано"); } }
-        function editAddressName(e, id) { e.stopPropagation(); vibe(); const addr = addresses.find(a => a.id === id); const newName = prompt("Нова назва:", addr.name); if(newName && newName.trim()) { addr.name = newName.trim(); renderAddressModal(); if(id === currentAddressId) document.getElementById('currentAddressDisplay').innerText = addr.name; syncToCloud(); } }
-        function deleteAddress(e, id) { e.stopPropagation(); vibe(); if(addresses.length <= 1) return showToast("Остання адреса!", "⚠️"); if(confirm("Видалити?")) { addresses = addresses.filter(a => a.id !== id); if(currentAddressId === id) currentAddressId = addresses[0].id; loadCurrentAddress(); syncToCloud(); renderAddressModal(); showToast("Видалено"); } }
+        function addNewAddress() { vibe(); const name = prompt("Назва об'єкту:"); if(name && name.trim()) { syncCurrentAddress(); const newId = 'addr_' + Date.now(); addresses.push({ id: newId, name: name.trim(), tariffs: {...defaultTariffs}, prefs: {...defaultPrefs}, records: [], customServices: [{id: "s1", name: "Квартплата", defaultSum: ""}] }); currentAddressId = newId; loadCurrentAddress(); syncToCloud(); closeAddressModal(); showToast("Додано"); } }
+        function editAddressName(e, id) { e.stopPropagation(); vibe(); const addr = addresses.find(a => a.id === id); const newName = prompt("Нова назва:", addr.name); if(newName && newName.trim()) { addr.name = newName.trim(); renderAddressModal(); if(id === currentAddressId) $('currentAddressDisplay').innerText = addr.name; syncToCloud(); } }
+        function deleteAddress(e, id) { e.stopPropagation(); vibe(); if(addresses.length <= 1) return; if(confirm("Видалити?")) { addresses = addresses.filter(a => a.id !== id); if(currentAddressId === id) currentAddressId = addresses[0].id; loadCurrentAddress(); syncToCloud(); renderAddressModal(); } }
 
-        let touchstartX = 0; let touchendX = 0; const swipeZone = document.getElementById('swipeContainer');
+        let touchstartX = 0; let touchendX = 0; const swipeZone = $('swipeContainer');
         swipeZone.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, {passive: true}); swipeZone.addEventListener('touchend', e => { touchendX = e.changedTouches[0].screenX; handleSwipe(); }, {passive: true});
-        function handleSwipe() { if(isGuest) return; const dist = touchstartX - touchendX; const tabs = ['tabCalc', 'tabHistory', 'tabSettings']; const curIdx = tabs.findIndex(id => document.getElementById(id).classList.contains('tab-active')); if (dist > 70 && curIdx < 2) switchTab(tabs[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabs[curIdx - 1], curIdx - 1); }
+        function handleSwipe() { if(isGuest) return; const dist = touchstartX - touchendX; const tabs = ['tabCalc', 'tabHistory', 'tabSettings']; const curIdx = tabs.findIndex(id => $(id).classList.contains('tab-active')); if (dist > 70 && curIdx < 2) switchTab(tabs[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabs[curIdx - 1], curIdx - 1); }
 
         function switchTab(tabId, index = -1) {
             if(index >= 0) vibe(); document.querySelectorAll('.tab-transition').forEach(el => { el.classList.remove('tab-active'); el.classList.add('tab-hidden'); });
-            document.getElementById(tabId).classList.remove('tab-hidden'); document.getElementById(tabId).classList.add('tab-active');
+            $(tabId).classList.remove('tab-hidden'); $(tabId).classList.add('tab-active');
             if(index >= 0) {
                 document.querySelectorAll('.nav-btn').forEach(el => { el.classList.remove('text-brand', 'scale-105'); el.classList.add('text-slate-400'); });
                 let btnId = tabId === 'tabCalc' ? 'btnTabCalc' : (tabId === 'tabHistory' ? 'btnTabHistory' : 'btnTabSettings');
-                document.getElementById(btnId).classList.remove('text-slate-400'); document.getElementById(btnId).classList.add('text-brand', 'scale-105'); document.getElementById('navIndicator').style.left = ['12%', '45%', '78%'][index];
+                $(btnId).classList.remove('text-slate-400'); $(btnId).classList.add('text-brand', 'scale-105'); $('navIndicator').style.left = ['12%', '45%', '78%'][index];
             }
-            if(tabId === 'tabHistory') renderRecords(); if(tabId === 'tabSettings') renderSettingsCustomServices(); document.getElementById('swipeContainer').scrollTo({ top: 0, behavior: 'smooth' });
+            if(tabId === 'tabHistory') renderRecords(); if(tabId === 'tabSettings') renderSettingsCustomServices(); $('swipeContainer').scrollTo({ top: 0, behavior: 'smooth' });
         }
         
         async function syncToCloud() { 
@@ -562,122 +534,176 @@
 
         window.logout = function() { 
             vibe(); if(isGuest) { window.location.href = window.location.pathname; return; } 
-            if(confirm('Вийти з акаунту?')){ 
-                localStorage.removeItem('k_phoneHash'); localStorage.removeItem('k_passHash'); localStorage.removeItem('k_profile'); 
-                location.reload(); 
-            } 
+            if(confirm('Вийти з акаунту?')){ localStorage.removeItem('k_phoneHash'); localStorage.removeItem('k_passHash'); localStorage.removeItem('k_profile'); location.reload(); } 
         };
 
         function updateSmartBadges() {
-            const getV = id => Math.max(0, parseFloat(document.getElementById(id)?.value) || 0);
-            if(prefs.showWater) { let d = getV('wCur') - getV('wPrev'); document.getElementById('wDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; document.getElementById('wDiffBadge').className = d > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
-            if(prefs.showHotWater) { let d = getV('hwCur') - getV('hwPrev'); document.getElementById('hwDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; document.getElementById('hwDiffBadge').className = d > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
-            if(prefs.showElectro) { let dd = getV('dCur') - getV('dPrev'); document.getElementById('dDiffBadge').innerText = dd > 0 ? `+${dd} кВт` : '0 кВт'; document.getElementById('dDiffBadge').className = dd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; if(prefs.electroTwoZone) { let nd = getV('nCur') - getV('nPrev'); document.getElementById('nDiffBadge').innerText = nd > 0 ? `+${nd} кВт` : '0 кВт'; document.getElementById('nDiffBadge').className = nd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; } }
-            if(prefs.showGas) { let gd = getV('gCur') - getV('gPrev'); document.getElementById('gDiffBadge').innerText = gd > 0 ? `+${gd} м³` : '0 м³'; document.getElementById('gDiffBadge').className = gd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-orange-100 dark:bg-orange-500/20 text-orange-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400 whitespace-nowrap'; }
+            const getV = id => Math.max(0, parseFloat($(id)?.value) || 0);
+            if(prefs.showWater) { let d = getV('wCur') - getV('wPrev'); $('wDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; $('wDiffBadge').className = d > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-blue-100 text-blue-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400'; }
+            if(prefs.showHotWater) { let d = getV('hwCur') - getV('hwPrev'); $('hwDiffBadge').innerText = d > 0 ? `+${d} м³` : '0 м³'; $('hwDiffBadge').className = d > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-red-100 text-red-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400'; }
+            if(prefs.showElectro) { let dd = getV('dCur') - getV('dPrev'); $('dDiffBadge').innerText = dd > 0 ? `+${dd} кВт` : '0 кВт'; $('dDiffBadge').className = dd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-yellow-100 text-yellow-600 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400'; if(prefs.electroTwoZone) { let nd = getV('nCur') - getV('nPrev'); $('nDiffBadge').innerText = nd > 0 ? `+${nd} кВт` : '0 кВт'; $('nDiffBadge').className = nd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-indigo-100 text-indigo-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400'; } }
+            if(prefs.showGas) { let gd = getV('gCur') - getV('gPrev'); $('gDiffBadge').innerText = gd > 0 ? `+${gd} м³` : '0 м³'; $('gDiffBadge').className = gd > 0 ? 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-orange-100 text-orange-500 shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold' : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400'; }
         }
 
         const inputs = ['wPrev', 'wCur', 'hwPrev', 'hwCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'gPrev', 'gCur', 'isWinterInput', 'monthInput']; 
-        inputs.forEach(id => document.getElementById(id)?.addEventListener('input', () => { calculatePreview(); updateSmartBadges(); }));
+        inputs.forEach(id => $(id)?.addEventListener('input', () => { calculatePreview(); updateSmartBadges(); }));
         let currentCalc = { waterCost: 0, hotWaterCost: 0, electroCost: 0, gasCost: 0, customCost: 0, total: 0 };
 
         function calculatePreview() {
-            let getV = id => Math.max(0, parseFloat(document.getElementById(id)?.value) || 0);
+            let getV = id => Math.max(0, parseFloat($(id)?.value) || 0);
             if(prefs.showWater) currentCalc.waterCost = Math.max(0, getV('wCur') - getV('wPrev')) * tariffs.water; else currentCalc.waterCost = 0;
             if(prefs.showHotWater) currentCalc.hotWaterCost = Math.max(0, getV('hwCur') - getV('hwPrev')) * tariffs.hotWater; else currentCalc.hotWaterCost = 0;
-            if(prefs.showElectro) { let dV = Math.max(0, getV('dCur') - getV('dPrev')), nV = prefs.electroTwoZone ? Math.max(0, getV('nCur') - getV('nPrev')) : 0, tEl = dV + nV; if (tEl === 0) currentCalc.electroCost = 0; else if (prefs.electroWinter && document.getElementById('isWinterInput').checked) { if (tEl <= tariffs.winterLimit) currentCalc.electroCost = (dV * tariffs.electroWinter) + (nV * tariffs.electroWinter * tariffs.nightCoef); else { let dp = dV/tEl, np = nV/tEl; currentCalc.electroCost = (tariffs.winterLimit * dp * tariffs.electroWinter) + (tariffs.winterLimit * np * tariffs.electroWinter * tariffs.nightCoef) + ((tEl - tariffs.winterLimit) * dp * tariffs.electroBase) + ((tEl - tariffs.winterLimit) * np * tariffs.electroBase * tariffs.nightCoef); } } else currentCalc.electroCost = (dV * tariffs.electroBase) + (nV * tariffs.electroBase * tariffs.nightCoef); } else currentCalc.electroCost = 0;
+            if(prefs.showElectro) { let dV = Math.max(0, getV('dCur') - getV('dPrev')), nV = prefs.electroTwoZone ? Math.max(0, getV('nCur') - getV('nPrev')) : 0, tEl = dV + nV; if (tEl === 0) currentCalc.electroCost = 0; else if (prefs.electroWinter && $('isWinterInput').checked) { if (tEl <= tariffs.winterLimit) currentCalc.electroCost = (dV * tariffs.electroWinter) + (nV * tariffs.electroWinter * tariffs.nightCoef); else { let dp = dV/tEl, np = nV/tEl; currentCalc.electroCost = (tariffs.winterLimit * dp * tariffs.electroWinter) + (tariffs.winterLimit * np * tariffs.electroWinter * tariffs.nightCoef) + ((tEl - tariffs.winterLimit) * dp * tariffs.electroBase) + ((tEl - tariffs.winterLimit) * np * tariffs.electroBase * tariffs.nightCoef); } } else currentCalc.electroCost = (dV * tariffs.electroBase) + (nV * tariffs.electroBase * tariffs.nightCoef); } else currentCalc.electroCost = 0;
             if(prefs.showGas) currentCalc.gasCost = Math.max(0, getV('gCur') - getV('gPrev')) * tariffs.gas; else currentCalc.gasCost = 0;
-            
-            currentCalc.customCost = 0; customServices.forEach(srv => { let val = parseFloat(document.getElementById(`custom_${srv.id}`)?.value); if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum); if (!isNaN(val)) currentCalc.customCost += val; }); 
+            currentCalc.customCost = 0; customServices.forEach(srv => { let val = parseFloat($(`custom_${srv.id}`)?.value); if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum); if (!isNaN(val)) currentCalc.customCost += val; }); 
             currentCalc.total = currentCalc.waterCost + currentCalc.hotWaterCost + currentCalc.electroCost + currentCalc.gasCost + currentCalc.customCost;
-            
-            document.getElementById('heroTotal').innerHTML = `${fmt.format(currentCalc.total)} <span class="text-2xl font-bold text-white/50">₴</span>`; 
-            document.getElementById('waterCostDisplay').innerText = fmt.format(currentCalc.waterCost) + ' ₴'; document.getElementById('hotWaterCostDisplay').innerText = fmt.format(currentCalc.hotWaterCost) + ' ₴'; document.getElementById('electroCostDisplay').innerText = fmt.format(currentCalc.electroCost) + ' ₴'; document.getElementById('gasCostDisplay').innerText = fmt.format(currentCalc.gasCost) + ' ₴'; document.getElementById('customCostDisplay').innerText = fmt.format(currentCalc.customCost) + ' ₴'; 
+            $('heroTotal').innerHTML = `${fmt.format(currentCalc.total)} <span class="text-2xl font-bold text-white/50">₴</span>`; 
+            $('waterCostDisplay').innerText = fmt.format(currentCalc.waterCost) + ' ₴'; $('hotWaterCostDisplay').innerText = fmt.format(currentCalc.hotWaterCost) + ' ₴'; $('electroCostDisplay').innerText = fmt.format(currentCalc.electroCost) + ' ₴'; $('gasCostDisplay').innerText = fmt.format(currentCalc.gasCost) + ' ₴'; $('customCostDisplay').innerText = fmt.format(currentCalc.customCost) + ' ₴'; 
         }
 
         function applyPreferences() {
-            if(document.getElementById('prefWater')) document.getElementById('prefWater').checked = prefs.showWater === true;
-            if(document.getElementById('prefHotWater')) document.getElementById('prefHotWater').checked = prefs.showHotWater === true;
-            if(document.getElementById('prefElectro')) document.getElementById('prefElectro').checked = prefs.showElectro === true;
-            if(document.getElementById('prefGas')) document.getElementById('prefGas').checked = prefs.showGas === true;
-            if(document.getElementById('prefElectroTwoZone')) document.getElementById('prefElectroTwoZone').checked = prefs.electroTwoZone === true;
-            if(document.getElementById('prefElectroWinter')) document.getElementById('prefElectroWinter').checked = prefs.electroWinter === true;
-            
-            if(document.getElementById('prefReminders')) { 
-                document.getElementById('prefReminders').checked = prefs.remindersEnabled === true; 
-                document.getElementById('remWaterStart').value = prefs.remWaterStart || 1; document.getElementById('remWaterEnd').value = prefs.remWaterEnd || 5;
-                document.getElementById('remElectroStart').value = prefs.remElectroStart || 28; document.getElementById('remElectroEnd').value = prefs.remElectroEnd || 3;
-                toggleRemindersUI(prefs.remindersEnabled === true);
-            }
-            if(document.getElementById('prefBio')) document.getElementById('prefBio').checked = localStorage.getItem('k_bio_enabled') === 'true';
+            if($('prefWater')) $('prefWater').checked = prefs.showWater === true;
+            if($('prefHotWater')) $('prefHotWater').checked = prefs.showHotWater === true;
+            if($('prefElectro')) $('prefElectro').checked = prefs.showElectro === true;
+            if($('prefGas')) $('prefGas').checked = prefs.showGas === true;
+            if($('prefElectroTwoZone')) $('prefElectroTwoZone').checked = prefs.electroTwoZone === true;
+            if($('prefElectroWinter')) $('prefElectroWinter').checked = prefs.electroWinter === true;
+            if($('prefReminders')) { $('prefReminders').checked = prefs.remindersEnabled === true; $('remWaterStart').value = prefs.remWaterStart || 1; $('remWaterEnd').value = prefs.remWaterEnd || 5; $('remElectroStart').value = prefs.remElectroStart || 28; $('remElectroEnd').value = prefs.remElectroEnd || 3; toggleRemindersUI(prefs.remindersEnabled === true); }
+            if($('prefBio')) $('prefBio').checked = localStorage.getItem('k_bio_enabled') === 'true';
 
-            document.getElementById('blockWater').style.display = prefs.showWater ? 'block' : 'none'; 
-            document.getElementById('blockHotWater').style.display = prefs.showHotWater ? 'block' : 'none'; document.getElementById('settingHotWaterWrap').style.display = prefs.showHotWater ? 'flex' : 'none'; 
-            document.getElementById('blockElectro').style.display = prefs.showElectro ? 'block' : 'none'; document.getElementById('blockGas').style.display = prefs.showGas ? 'block' : 'none'; document.getElementById('blockCustomServices').style.display = customServices.length > 0 ? 'block' : 'none';
-            if (prefs.electroTwoZone) { document.getElementById('electroNightRow').style.display = 'flex'; document.getElementById('lblDay1').innerText = "(День)"; document.getElementById('lblDay2').innerText = "(День)"; } else { document.getElementById('electroNightRow').style.display = 'none'; document.getElementById('lblDay1').innerText = ""; document.getElementById('lblDay2').innerText = ""; }
-            document.getElementById('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none'; document.getElementById('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'flex' : 'none';
+            $('blockWater').style.display = prefs.showWater ? 'block' : 'none'; $('blockHotWater').style.display = prefs.showHotWater ? 'block' : 'none'; $('settingHotWaterWrap').style.display = prefs.showHotWater ? 'flex' : 'none'; $('blockElectro').style.display = prefs.showElectro ? 'block' : 'none'; $('blockGas').style.display = prefs.showGas ? 'block' : 'none'; $('blockCustomServices').style.display = customServices.length > 0 ? 'block' : 'none';
+            if (prefs.electroTwoZone) { $('electroNightRow').style.display = 'flex'; $('lblDay1').innerText = "(День)"; $('lblDay2').innerText = "(День)"; } else { $('electroNightRow').style.display = 'none'; $('lblDay1').innerText = ""; $('lblDay2').innerText = ""; }
+            $('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none'; $('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'flex' : 'none';
         }
 
         function initAppUI() {
-            document.getElementById('authScreen').classList.add('hidden'); document.getElementById('appScreen').classList.remove('hidden'); document.getElementById('appScreen').classList.add('flex');
-            document.getElementById('tWater').value = tariffs.water; document.getElementById('tHotWater').value = tariffs.hotWater || defaultTariffs.hotWater; document.getElementById('tElectroBase').value = tariffs.electroBase; document.getElementById('tElectroWinter').value = tariffs.electroWinter; document.getElementById('tGas').value = tariffs.gas;
-            document.getElementById('prefHaptic').checked = hapticEnabled; 
+            $('authScreen').classList.add('hidden'); $('appScreen').classList.remove('hidden'); $('appScreen').classList.add('flex');
+            $('tWater').value = tariffs.water; $('tHotWater').value = tariffs.hotWater || defaultTariffs.hotWater; $('tElectroBase').value = tariffs.electroBase; $('tElectroWinter').value = tariffs.electroWinter; $('tGas').value = tariffs.gas;
+            $('prefHaptic').checked = hapticEnabled; 
             applyPreferences(); renderCalcCustomServices(); fillPreviousReadings(); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges(); checkReminders();
         }
 
         window.saveSettings = () => {
-            vibe(); tariffs = { water: parseFloat(document.getElementById('tWater').value)||defaultTariffs.water, hotWater: parseFloat(document.getElementById('tHotWater').value)||defaultTariffs.hotWater, electroBase: parseFloat(document.getElementById('tElectroBase').value)||defaultTariffs.electroBase, electroWinter: parseFloat(document.getElementById('tElectroWinter').value)||defaultTariffs.electroWinter, winterLimit: 2000, gas: parseFloat(document.getElementById('tGas').value)||defaultTariffs.gas, nightCoef: 0.5 };
-            prefs = { showWater: document.getElementById('prefWater').checked, showHotWater: document.getElementById('prefHotWater').checked, showElectro: document.getElementById('prefElectro').checked, showGas: document.getElementById('prefGas').checked, electroTwoZone: document.getElementById('prefElectroTwoZone').checked, electroWinter: document.getElementById('prefElectroWinter').checked, remindersEnabled: document.getElementById('prefReminders').checked, remWaterStart: parseInt(document.getElementById('remWaterStart').value)||1, remWaterEnd: parseInt(document.getElementById('remWaterEnd').value)||5, remElectroStart: parseInt(document.getElementById('remElectroStart').value)||28, remElectroEnd: parseInt(document.getElementById('remElectroEnd').value)||3 };
-            customServices = customServices.filter(s => s.name.trim() !== ""); syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); updateSmartBadges(); checkReminders(); showToast("Налаштування збережено");
+            vibe(); tariffs = { water: parseFloat($('tWater').value)||defaultTariffs.water, hotWater: parseFloat($('tHotWater').value)||defaultTariffs.hotWater, electroBase: parseFloat($('tElectroBase').value)||defaultTariffs.electroBase, electroWinter: parseFloat($('tElectroWinter').value)||defaultTariffs.electroWinter, winterLimit: 2000, gas: parseFloat($('tGas').value)||defaultTariffs.gas, nightCoef: 0.5 };
+            prefs = { showWater: $('prefWater').checked, showHotWater: $('prefHotWater').checked, showElectro: $('prefElectro').checked, showGas: $('prefGas').checked, electroTwoZone: $('prefElectroTwoZone').checked, electroWinter: $('prefElectroWinter').checked, remindersEnabled: $('prefReminders').checked, remWaterStart: parseInt($('remWaterStart').value)||1, remWaterEnd: parseInt($('remWaterEnd').value)||5, remElectroStart: parseInt($('remElectroStart').value)||28, remElectroEnd: parseInt($('remElectroEnd').value)||3 };
+            customServices = customServices.filter(s => s.name.trim() !== ""); syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); updateSmartBadges(); checkReminders(); showToast("Збережено");
         };
 
         function renderSettingsCustomServices() {
-            document.getElementById('customServicesSettingsList').innerHTML = customServices.map((srv, index) => `
-                <div class="flex gap-2 items-center bg-slate-50 dark:bg-black/50 p-2 rounded-2xl border border-slate-100 dark:border-white/5">
-                    <input type="text" value="${srv.name}" onchange="customServices[${index}].name = this.value" placeholder="Назва" class="flex-1 bg-white dark:bg-[#2c2c2e] rounded-xl text-sm font-bold outline-none px-3 py-3 shadow-sm border border-transparent focus:border-brand">
-                    <input type="number" step="0.01" value="${srv.defaultSum}" onchange="customServices[${index}].defaultSum = this.value" placeholder="Сума" class="w-20 bg-white dark:bg-[#2c2c2e] rounded-xl text-sm font-bold outline-none px-2 py-3 text-center shadow-sm border border-transparent focus:border-brand">
-                    <button type="button" onclick="vibe(); removeCustomService(${index})" class="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-red-500 bg-white dark:bg-[#2c2c2e] rounded-xl shadow-sm"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-                </div>`).join('');
+            $('customServicesSettingsList').innerHTML = customServices.map((srv, index) => `<div class="flex gap-2 items-center bg-slate-50 dark:bg-black/50 p-2 rounded-2xl border border-slate-100 dark:border-white/5"><input type="text" value="${srv.name}" onchange="customServices[${index}].name = this.value" placeholder="Назва" class="flex-1 bg-white dark:bg-[#2c2c2e] rounded-xl text-sm font-bold outline-none px-3 py-3 shadow-sm border border-transparent focus:border-brand"><input type="number" step="0.01" value="${srv.defaultSum}" onchange="customServices[${index}].defaultSum = this.value" placeholder="Сума" class="w-20 bg-white dark:bg-[#2c2c2e] rounded-xl text-sm font-bold outline-none px-2 py-3 text-center shadow-sm border border-transparent focus:border-brand"><button type="button" onclick="vibe(); removeCustomService(${index})" class="p-3 text-slate-400 hover:text-red-500 bg-white dark:bg-[#2c2c2e] rounded-xl shadow-sm">🗑</button></div>`).join('');
         }
         window.addCustomServiceField = () => { vibe(); customServices.push({ id: 's'+Date.now(), name: "", defaultSum: "" }); renderSettingsCustomServices(); };
         window.removeCustomService = (idx) => { customServices.splice(idx, 1); renderSettingsCustomServices(); };
 
         function renderCalcCustomServices() {
-            const c = document.getElementById('customServicesContainer'); if(customServices.length === 0) { c.innerHTML = ''; return; }
-            c.innerHTML = customServices.map(srv => `<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[10px] font-bold text-slate-400 uppercase truncate mb-1.5 text-center">${srv.name || 'Послуга'}</span><input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-transparent focus:ring-2 focus:ring-purple-400/50 shadow-sm transition-all" placeholder="${srv.defaultSum ? srv.defaultSum : '0.00'}"></div>`).join('');
+            const c = $('customServicesContainer'); if(customServices.length === 0) { c.innerHTML = ''; return; }
+            c.innerHTML = customServices.map(srv => `<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[10px] font-bold text-slate-400 uppercase truncate mb-1.5 text-center">${srv.name || 'Послуга'}</span><input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none focus:ring-2 focus:ring-purple-400/50 shadow-sm" placeholder="${srv.defaultSum ? srv.defaultSum : '0.00'}"></div>`).join('');
             document.querySelectorAll('.custom-srv-input').forEach(input => input.addEventListener('input', calculatePreview));
         }
 
-        document.getElementById('monthInput').value = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+        $('monthInput').value = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
         function fillPreviousReadings() {
-            document.getElementById('wPrev').value = ''; document.getElementById('wCur').value = ''; document.getElementById('hwPrev').value = ''; document.getElementById('hwCur').value = ''; document.getElementById('dPrev').value = ''; document.getElementById('dCur').value = ''; document.getElementById('nPrev').value = ''; document.getElementById('nCur').value = ''; document.getElementById('gPrev').value = ''; document.getElementById('gCur').value = ''; document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
+            ['wPrev','wCur','hwPrev','hwCur','dPrev','dCur','nPrev','nCur','gPrev','gCur'].forEach(id => $(id).value = ''); document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
             if(records.length > 0) {
                 let lr = [...records].sort((a, b) => new Date(b.month) - new Date(a.month))[0];
-                if(prefs.showWater) { document.getElementById('wPrev').value = lr.wCur || ''; document.getElementById('wCur').value = lr.wCur || ''; }
-                if(prefs.showHotWater) { document.getElementById('hwPrev').value = lr.hwCur || ''; document.getElementById('hwCur').value = lr.hwCur || ''; }
-                if(prefs.showElectro) { document.getElementById('dPrev').value = lr.dCur || ''; document.getElementById('dCur').value = lr.dCur || ''; document.getElementById('nPrev').value = lr.nCur || ''; document.getElementById('nCur').value = lr.nCur || ''; }
-                if(prefs.showGas) { document.getElementById('gPrev').value = lr.gCur || ''; document.getElementById('gCur').value = lr.gCur || ''; }
-                customServices.forEach(srv => { let el = document.getElementById(`custom_${srv.id}`); if(el) el.value = (lr.customData && lr.customData[srv.id]) !== undefined ? lr.customData[srv.id].val : srv.defaultSum; });
-                document.getElementById('isWinterInput').checked = (new Date(document.getElementById('monthInput').value).getMonth() + 1 >= 10 || new Date(document.getElementById('monthInput').value).getMonth() + 1 <= 4);
-            } else { customServices.forEach(srv => { let el = document.getElementById(`custom_${srv.id}`); if(el && srv.defaultSum) el.value = srv.defaultSum; }); }
+                if(prefs.showWater) { $('wPrev').value = lr.wCur || ''; $('wCur').value = lr.wCur || ''; }
+                if(prefs.showHotWater) { $('hwPrev').value = lr.hwCur || ''; $('hwCur').value = lr.hwCur || ''; }
+                if(prefs.showElectro) { $('dPrev').value = lr.dCur || ''; $('dCur').value = lr.dCur || ''; $('nPrev').value = lr.nCur || ''; $('nCur').value = lr.nCur || ''; }
+                if(prefs.showGas) { $('gPrev').value = lr.gCur || ''; $('gCur').value = lr.gCur || ''; }
+                customServices.forEach(srv => { let el = $(`custom_${srv.id}`); if(el) el.value = (lr.customData && lr.customData[srv.id]) !== undefined ? lr.customData[srv.id].val : srv.defaultSum; });
+                $('isWinterInput').checked = (new Date($('monthInput').value).getMonth() + 1 >= 10 || new Date($('monthInput').value).getMonth() + 1 <= 4);
+            } else { customServices.forEach(srv => { let el = $(`custom_${srv.id}`); if(el && srv.defaultSum) el.value = srv.defaultSum; }); }
         }
 
-        document.getElementById('utilityForm').addEventListener('submit', (e) => {
-            e.preventDefault(); vibe(); let cData = {}; customServices.forEach(srv => { let v = parseFloat(document.getElementById(`custom_${srv.id}`)?.value); if (isNaN(v) && srv.defaultSum) v = parseFloat(srv.defaultSum); if (!isNaN(v)) cData[srv.id] = { name: srv.name, val: v }; });
-            const nRec = { id: Date.now(), month: document.getElementById('monthInput').value, wPrev: prefs.showWater ? (parseFloat(document.getElementById('wPrev').value)||0) : 0, wCur: prefs.showWater ? (parseFloat(document.getElementById('wCur').value)||0) : 0, hwPrev: prefs.showHotWater ? (parseFloat(document.getElementById('hwPrev').value)||0) : 0, hwCur: prefs.showHotWater ? (parseFloat(document.getElementById('hwCur').value)||0) : 0, dPrev: prefs.showElectro ? (parseFloat(document.getElementById('dPrev').value)||0) : 0, dCur: prefs.showElectro ? (parseFloat(document.getElementById('dCur').value)||0) : 0, nPrev: (prefs.showElectro && prefs.electroTwoZone) ? (parseFloat(document.getElementById('nPrev').value)||0) : 0, nCur: (prefs.showElectro && prefs.electroTwoZone) ? (parseFloat(document.getElementById('nCur').value)||0) : 0, gPrev: prefs.showGas ? (parseFloat(document.getElementById('gPrev').value)||0) : 0, gCur: prefs.showGas ? (parseFloat(document.getElementById('gCur').value)||0) : 0, customData: cData, waterCost: currentCalc.waterCost, hotWaterCost: currentCalc.hotWaterCost, electroCost: currentCalc.electroCost, gasCost: currentCalc.gasCost, customCost: currentCalc.customCost, total: currentCalc.total, paid: false };
+        $('utilityForm').addEventListener('submit', (e) => {
+            e.preventDefault(); vibe(); let cData = {}; customServices.forEach(srv => { let v = parseFloat($(`custom_${srv.id}`)?.value); if (isNaN(v) && srv.defaultSum) v = parseFloat(srv.defaultSum); if (!isNaN(v)) cData[srv.id] = { name: srv.name, val: v }; });
+            const nRec = { id: Date.now(), month: $('monthInput').value, wPrev: prefs.showWater ? (parseFloat($('wPrev').value)||0) : 0, wCur: prefs.showWater ? (parseFloat($('wCur').value)||0) : 0, hwPrev: prefs.showHotWater ? (parseFloat($('hwPrev').value)||0) : 0, hwCur: prefs.showHotWater ? (parseFloat($('hwCur').value)||0) : 0, dPrev: prefs.showElectro ? (parseFloat($('dPrev').value)||0) : 0, dCur: prefs.showElectro ? (parseFloat($('dCur').value)||0) : 0, nPrev: (prefs.showElectro && prefs.electroTwoZone) ? (parseFloat($('nPrev').value)||0) : 0, nCur: (prefs.showElectro && prefs.electroTwoZone) ? (parseFloat($('nCur').value)||0) : 0, gPrev: prefs.showGas ? (parseFloat($('gPrev').value)||0) : 0, gCur: prefs.showGas ? (parseFloat($('gCur').value)||0) : 0, customData: cData, waterCost: currentCalc.waterCost, hotWaterCost: currentCalc.hotWaterCost, electroCost: currentCalc.electroCost, gasCost: currentCalc.gasCost, customCost: currentCalc.customCost, total: currentCalc.total, paid: false };
             const eI = records.findIndex(r => r.month === nRec.month); if(eI >= 0) { if(!confirm('Оновити запис за цей місяць?')) return; records[eI] = nRec; } else records.push(nRec);
-            syncToCloud(); let [y, m] = document.getElementById('monthInput').value.split('-'); let nD = new Date(y, m); document.getElementById('monthInput').value = `${nD.getFullYear()}-${String(nD.getMonth() + 1).padStart(2, '0')}`; fillPreviousReadings(); calculatePreview(); updateSmartBadges(); switchTab('tabHistory', 1); showToast("Збережено!");
+            syncToCloud(); let [y, m] = $('monthInput').value.split('-'); let nD = new Date(y, m); $('monthInput').value = `${nD.getFullYear()}-${String(nD.getMonth() + 1).padStart(2, '0')}`; fillPreviousReadings(); calculatePreview(); updateSmartBadges(); switchTab('tabHistory', 1); showToast("Збережено!");
         });
 
         function renderChart(sortedRecords) {
-            const container = document.getElementById('chartContainer'); const recent = sortedRecords.slice(0, 6).reverse(); 
-            if (!recent.length) { container.innerHTML = '<span class="text-sm text-slate-400 m-auto absolute inset-0 flex items-center justify-center font-medium">Ще немає даних</span>'; return; }
+            const container = $('chartContainer'); const recent = sortedRecords.slice(0, 6).reverse(); 
+            if (!recent.length) { container.innerHTML = '<span class="text-sm text-slate-400 m-auto absolute inset-0 flex items-center justify-center">Ще немає даних</span>'; return; }
             const max = Math.max(...recent.map(r => r.total)); const isDark = document.documentElement.classList.contains('dark'); let chartHtml = ''; const emptySlots = 6 - recent.length; for(let i = 0; i < emptySlots; i++) chartHtml += `<div class="flex flex-col items-center gap-2 flex-1 opacity-0"><div class="w-full h-full"></div></div>`;
-            chartHtml += recent.map(r => {
-                const h = max > 0 ? (r.total / max) * 100 : 0; const mName = new Date(r.month + '-01').toLocaleString('uk-UA', {month: 'short'}).slice(0, 3); const shadow = isDark ? 'shadow-[0_-5px_15px_var(--brand-light)]' : 'shadow-sm';
-                return `<div class="flex flex-col items-center flex-1 group relative h-full justify-end px-1"><div class="w-full relative flex items-end justify-center rounded-t-lg bg-slate-100 dark:bg-white/5 overflow-hidden" style="height: 100%;"><div class="w-full rounded-t-lg transition-all duration-1000 ${shadow}" style="height: ${Math.max(4, h)}%; background: ${r.paid ? 'var(--brand-main)' : 'linear-gradient(to top, #fb923c, #fcd34d)'}"></div></div><span class="text-[10px] text-slate-500 uppercase font-bold mt-2">${mName}</span></div>`;
-            }).join(''); container.innerHTML = chartHtml;
+            chartHtml += recent.map(r => { const h = max > 0 ? (r.total / max) * 100 : 0; const mName = new Date(r.month + '-01').toLocaleString('uk-UA', {month: 'short'}).slice(0, 3); return `<div class="flex flex-col items-center flex-1 group relative h-full justify-end px-1"><div class="w-full relative flex items-end justify-center rounded-t-lg bg-slate-100 dark:bg-white/5 overflow-hidden" style="height: 100%;"><div class="w-full rounded-t-lg transition-all duration-1000 ${isDark ? 'shadow-[0_-5px_15px_var(--brand-light)]' : 'shadow-sm'}" style="height: ${Math.max(4, h)}%; background: ${r.paid ? 'var(--brand-main)' : 'linear-gradient(to top, #fb923c, #fcd34d)'}"></div></div><span class="text-[10px] text-slate-500 uppercase font-bold mt-2">${mName}</span></div>`; }).join(''); container.innerHTML = chartHtml;
         }
 
         window.toggleDetails = function(index) {
-            const el = document.getElementById(`details-${index}`); const ch = document.getElementById(`chevron-${index}`); vibe();
-            if(el.classList.contains('hidden')) { el.classList.remove('hidden'); ch.classList.add('rotate-180'); } else { el.classList.add('hidden');
+            const el = $(`details-${index}`); const ch = $(`chevron-${index}`); vibe();
+            if(el.classList.contains('hidden')) { el.classList.remove('hidden'); ch.style.transform='rotate(180deg)'; } else { el.classList.add('hidden'); ch.style.transform='rotate(0deg)'; }
+        };
+
+        window.shareRecordReceipt = async function(index, event) {
+            event.stopPropagation(); vibe(); let r = records[index]; let dStr = new Date(r.month + '-01').toLocaleString('uk-UA', {month:'long', year:'numeric'}).replace(' р.','');
+            let txt = `🧾 *Комуналка за ${dStr}*\n📍 ${$('currentAddressDisplay').innerText}\n➖➖➖➖➖➖\n`;
+            if(r.waterCost > 0) txt += `💧 Хол. Вода: ${r.waterCost} ₴\n`; if(r.hotWaterCost > 0) txt += `🌡️ Гар. Вода: ${r.hotWaterCost} ₴\n`;
+            if(r.electroCost > 0) txt += `⚡️ Світло: ${r.electroCost} ₴\n`; if(r.gasCost > 0) txt += `🔥 Газ: ${r.gasCost} ₴\n`;
+            if(r.customCost > 0) txt += `📦 Інше: ${r.customCost} ₴\n`; txt += `➖➖➖➖➖➖\n💰 *Всього: ${r.total} ₴*\n` + (r.paid ? `✅ Оплачено` : `⏳ Очікує оплати`);
+            if (navigator.share) { try { await navigator.share({ text: txt }); return; } catch(e) {} }
+            try { await navigator.clipboard.writeText(txt); showToast("Скопійовано! 🧾"); } catch(e) { prompt("Копіюйте:", txt); }
+        };
+
+        function renderRecords() {
+            const list = $('recordsList'); list.innerHTML = '';
+            let tSum = records.reduce((sum, r) => sum + r.total, 0); $('statsAvg').innerText = fmt.format(records.length ? (tSum / records.length) : 0) + ' ₴';
+            let sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)); renderChart(sorted);
+            let grouped = {}; sorted.forEach((rec, index) => { let yr = rec.month.split('-')[0]; if (!grouped[yr]) grouped[yr] = []; grouped[yr].push({rec, index: records.indexOf(rec)}); });
+            
+            Object.keys(grouped).sort((a, b) => b - a).forEach(year => {
+                let header = document.createElement('div'); header.className = "flex items-center gap-4 mt-8 mb-4"; header.innerHTML = `<h2 class="text-lg font-black text-slate-400">${year}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-white/5"></div>`; list.appendChild(header);
+                grouped[year].forEach(item => {
+                    let {rec, index} = item; const card = document.createElement('div'); 
+                    card.className = `p-5 sm:p-6 rounded-[2rem] shadow-soft border bg-white dark:bg-apple-dark mb-4 transition-all relative overflow-hidden cursor-pointer select-none active:scale-[0.98] ${rec.paid ? 'border-slate-100 dark:border-white/5' : 'border-orange-200 dark:border-orange-500/30 ring-1 ring-orange-400/20'}`;
+                    card.setAttribute('onclick', `toggleDetails(${index})`);
+                    if(!rec.paid) card.innerHTML += `<div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-orange-400/20 to-transparent rounded-bl-[4rem]"></div>`;
+                    
+                    let dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); 
+                    let [rY, rM] = rec.month.split('-'); let prevRec = records.find(r => r.month === (parseInt(rY) - 1) + '-' + rM); let yoyHtml = '';
+                    if (prevRec && prevRec.total > 0 && rec.total > 0) { let percent = Math.round(((rec.total - prevRec.total) / prevRec.total) * 100); if (percent < 0) yoyHtml = `<span class="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-lg ml-2">📉 ${percent}% рік до року</span>`; else if (percent > 0) yoyHtml = `<span class="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-lg ml-2">📈 +${percent}% рік до року</span>`; }
+
+                    let pW = ((rec.waterCost||0) / rec.total) * 100 || 0; let pHW = ((rec.hotWaterCost||0) / rec.total) * 100 || 0; let pE = ((rec.electroCost||0) / rec.total) * 100 || 0; let pG = ((rec.gasCost||0) / rec.total) * 100 || 0;
+                    let conic = `conic-gradient( #3b82f6 0% ${pW}%, #ef4444 ${pW}% ${pW+pHW}%, #eab308 ${pW+pHW}% ${pW+pHW+pE}%, #f97316 ${pW+pHW+pE}% ${pW+pHW+pE+pG}%, #a855f7 ${pW+pHW+pE+pG}% 100% )`;
+
+                    let html = `<div class="flex justify-between items-center relative z-10"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4><div class="flex items-center"><span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-brand-light text-brand' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Борг'}</span>${yoyHtml}</div></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-full text-slate-400 shadow-sm"><span id="chevron-${index}" class="transition-transform duration-300">▼</span></div></div></div>
+                    <div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()"><div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5 relative z-10">
+                            ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background: ${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span>💧 Хол. Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span>🌡️ Гар. Вода</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span>⚡ Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span>🔥 Газ</span><span>${Math.round(pG)}%</span></div>`:''}</div></div>` : ''}
+                            <div class="space-y-4">`;
+                    
+                    if (rec.waterCost > 0 || rec.wCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">💧 Хол. Вода</span><span class="font-black">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.wPrev} → ${rec.wCur}</span><span class="text-blue-500">+${rec.wCur - rec.wPrev} м³</span></div></div>`;
+                    if (rec.hotWaterCost > 0 || rec.hwCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">🌡️ Гар. Вода</span><span class="font-black">${fmt.format(rec.hotWaterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.hwPrev} → ${rec.hwCur}</span><span class="text-red-500">+${rec.hwCur - rec.hwPrev} м³</span></div></div>`;
+                    if (rec.electroCost > 0 || rec.dCur > 0) { html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">⚡️ Світло</span><span class="font-black">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex flex-col gap-1.5"><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>День: ${rec.dPrev} → ${rec.dCur}</span><span class="text-yellow-600">+${rec.dCur - rec.dPrev} кВт</span></div>`; if(rec.nCur > 0 || rec.nPrev > 0) html += `<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>Ніч: ${rec.nPrev} → ${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur - rec.nPrev} кВт</span></div>`; html += `</div></div>`; }
+                    if (rec.gasCost > 0 || rec.gCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">🔥 Газ</span><span class="font-black">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.gPrev} → ${rec.gCur}</span><span class="text-orange-500">+${rec.gCur - rec.gPrev} м³</span></div></div>`;
+                    if (rec.customCost > 0) { html += `<div class="flex flex-col"><div class="flex justify-between items-center"><span class="text-slate-700 dark:text-slate-200 font-bold">📦 Інше</span><span class="font-black">${fmt.format(rec.customCost)} ₴</span></div>`; if(rec.customData) { html += `<div class="flex flex-col gap-1 mt-2 text-[11px]">`; Object.values(rec.customData).forEach(srv => { if(srv.val > 0) html += `<div class="flex justify-between text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span class="font-bold">${srv.name}</span><span class="font-black text-purple-500">${fmt.format(srv.val)} ₴</span></div>`; }); html += `</div>`; } html += `</div>`; }
+                    
+                    html += `</div></div><div class="flex gap-2.5 mt-4 relative z-10 pt-2 border-t border-slate-100 dark:border-white/5">
+                            <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-2xl font-bold text-xs border ${rec.paid ? 'bg-slate-50 text-slate-500 dark:bg-[#2c2c2e] border-transparent' : 'bg-brand text-white shadow-lg'}">${rec.paid ? 'Скасувати' : 'Позначити оплаченим'}</button>
+                            <button type="button" onclick="shareRecordReceipt(${index}, event);" class="w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500">📤</button>
+                            <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400">✏️</button>
+                            <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400">🗑</button>
+                        </div></div>`;
+                    card.innerHTML = html; list.appendChild(card);
+                });
+            });
+        }
+
+        window.editRecord = function(index) { vibe(); let rec = records[index]; $('monthInput').value = rec.month; if(prefs.showWater){ $('wPrev').value = rec.wPrev || ''; $('wCur').value = rec.wCur || ''; } if(prefs.showHotWater){ $('hwPrev').value = rec.hwPrev || ''; $('hwCur').value = rec.hwCur || ''; } if(prefs.showElectro){ $('dPrev').value = rec.dPrev || ''; $('dCur').value = rec.dCur || ''; $('nPrev').value = rec.nPrev || ''; $('nCur').value = rec.nCur || ''; } if(prefs.showGas){ $('gPrev').value = rec.gPrev || ''; $('gCur').value = rec.gCur || ''; } if(rec.customData) { Object.keys(rec.customData).forEach(srvId => { let el = $(`custom_${srvId}`); if(el) el.value = rec.customData[srvId].val; }); } $('isWinterInput').checked = (new Date(rec.month).getMonth() + 1 >= 10 || new Date(rec.month).getMonth() + 1 <= 4); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges(); };
+        window.togglePaid = function(index) { vibe(); records[index].paid = !records[index].paid; renderRecords(); syncToCloud(); };
+        window.deleteRecord = function(index) { vibe(); if(confirm('Видалити розрахунок?')) { records.splice(index, 1); renderRecords(); syncToCloud(); } };
+
+        if (urlShareToken) {
+            isGuest = true; $('authScreen').classList.add('hidden'); $('appScreen').classList.remove('hidden'); $('appScreen').classList.add('flex'); $('btnTabSettings').style.display = 'none'; $('addressHeaderTrigger').onclick = null; $('addressArrowIcon').style.display = 'none';
+            fetch(`${WORKER_URL}?share=${urlShareToken}`, { cache: "no-store" }).then(r => r.json()).then(data => { if(data.success) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId; loadCurrentAddress(); } else { alert("Посилання недійсне."); $('appScreen').innerHTML = '<div class="m-auto text-center p-5 font-bold text-red-500">Доступ закрито</div>'; } });
+        } 
+        else if (sessionPhone && sessionPass) { 
+            fetch(`${WORKER_URL}?phone=${encodeURIComponent(sessionPhone)}&pass=${sessionPass}&t=${Date.now()}`, { cache: "no-store" }).then(r => r.json()).then(data => {
+                if(data.success) {
+                    if (data.data.addresses) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId || addresses[0].id; } 
+                    else { addresses = [{ id: 'default', name: 'Мій дім', tariffs: data.data.tariffs || {...defaultTariffs}, prefs: { ...defaultPrefs, ...(data.data.prefs || {}) }, records: data.data.records || [], customServices: data.data.customServices || [...defaultCustomServices] }]; currentAddressId = 'default'; }
+                    loadCurrentAddress();
+                } else throw new Error();
+            }).catch(() => { $('authScreen').classList.remove('hidden'); localStorage.clear(); });
+        }
+    </script>
+</body>
+</html>
