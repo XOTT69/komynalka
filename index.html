@@ -55,7 +55,7 @@
                 <div class="absolute -top-20 -right-20 w-40 h-40 bg-brand-light rounded-full blur-3xl pointer-events-none"></div>
                 <form id="authForm" class="space-y-4 relative z-10">
                     <div>
-                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 tracking-wider">Логін</label>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 tracking-wider">Логін (Номер)</label>
                         <input type="text" id="authLogin" placeholder="Логін" required autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-brand text-slate-900 dark:text-white transition-all shadow-inner">
                     </div>
                     <div>
@@ -64,33 +64,17 @@
                     </div>
                     <p id="authError" class="text-red-500 text-sm hidden text-center font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-xl"></p>
                     
-                    <div class="flex gap-2 mt-6 pt-2">
-                        <button type="submit" id="authSubmitBtn" class="flex-1 bg-brand hover:bg-brand-hover text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 transition-transform active:scale-[0.96] text-lg tracking-wide">Увійти</button>
-                        <button type="button" id="bioLoginBtn" onclick="tryBiometricAuth()" class="hidden w-16 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-black dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl transition-transform active:scale-[0.96]">
-                            <svg class="w-7 h-7 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg>
-                        </button>
+                    <button type="submit" id="authSubmitBtn" class="w-full bg-brand hover:bg-brand-hover text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 transition-transform active:scale-[0.96] text-lg tracking-wide mt-6">Увійти</button>
+                    
+                    <div class="flex items-center gap-2 text-slate-400 py-3 mt-2 opacity-50">
+                        <div class="h-[1px] bg-slate-300 flex-1"></div><span class="text-[10px] font-bold uppercase">Або</span><div class="h-[1px] bg-slate-300 flex-1"></div>
                     </div>
 
-                    <div class="flex items-center gap-2 mt-4 opacity-50">
-                        <div class="h-[1px] bg-slate-300 dark:bg-white/10 flex-1"></div><span class="text-[10px] font-bold uppercase">Або</span><div class="h-[1px] bg-slate-300 dark:bg-white/10 flex-1"></div>
-                    </div>
-                    <button type="button" onclick="loginWithGoogle()" class="w-full bg-white hover:bg-slate-50 dark:bg-[#2c2c2e] dark:hover:bg-[#3c3c3e] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 active:scale-[0.96] transition-all shadow-sm mt-4">
+                    <button type="button" onclick="loginWithGoogle()" class="w-full bg-slate-50 hover:bg-slate-100 dark:bg-[#2c2c2e] dark:hover:bg-[#3c3c3e] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm">
                         <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                         Вхід через Google
                     </button>
                 </form>
-            </div>
-        </div>
-    </div>
-
-    <div id="linkModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6" onclick="if(event.target===this) this.classList.add('hidden')">
-        <div class="bg-white dark:bg-apple-dark w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-white/5">
-            <div class="text-4xl mb-4">🔗</div>
-            <h3 class="text-xl font-black mb-2 text-slate-900 dark:text-white">Об'єднати акаунти?</h3>
-            <p class="text-sm text-slate-500 mb-6 font-medium leading-relaxed">Ми помітили, що ви увійшли через Google. Бажаєте підв'язати цей вхід до свого існуючого логіна, щоб перенести дані?</p>
-            <div class="space-y-3">
-                <button onclick="showLinkInput()" class="w-full py-4 bg-brand text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-transform">Так, підв'язати</button>
-                <button onclick="$('linkModal').classList.add('hidden'); performLogin(null, null, false, googleUser.uid);" class="w-full py-4 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-bold rounded-2xl active:scale-95 transition-transform">Ні, це новий акаунт</button>
             </div>
         </div>
     </div>
@@ -113,7 +97,6 @@
         <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 relative pb-[100px] w-full h-full">
             
             <div id="tabCalc" class="tab-transition tab-active space-y-5">
-                
                 <div id="reminderBanner" class="hidden relative overflow-hidden bg-gradient-to-r from-brand to-purple-500 p-4 rounded-[1.5rem] shadow-xl text-white mt-2 mb-2 transition-all">
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
                     <div class="flex items-center justify-between relative z-10">
@@ -213,6 +196,16 @@
             </div>
 
             <div id="tabSettings" class="tab-transition tab-hidden space-y-5 mt-2 pb-6">
+                
+                <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5 mb-5">
+                    <h3 class="font-black mb-2 text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-brand text-xl">🔗</span> Акаунт</h3>
+                    <p class="text-xs text-slate-500 font-bold mb-4">Об'єднайте цей профіль з Google, щоб швидко заходити без пароля.</p>
+                    <button type="button" onclick="linkGoogleFromSettings()" class="w-full bg-slate-50 hover:bg-slate-100 dark:bg-[#2c2c2e] dark:hover:bg-[#3c3c3e] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-3 active:scale-[0.96] transition-all shadow-sm">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        Підв'язати Google
+                    </button>
+                </div>
+
                 <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5 mb-5">
                     <h3 class="font-black mb-4 text-base text-slate-900 dark:text-white flex items-center gap-2"><span class="text-brand text-xl">🎨</span> Оформлення</h3>
                     <div class="flex bg-slate-100 dark:bg-black/50 p-1.5 rounded-xl mb-5 relative">
@@ -343,24 +336,12 @@
         </div>
     </div>
 
-    <div id="linkModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6" onclick="if(event.target===this) this.classList.add('hidden')">
-        <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-white/5">
-            <div class="text-4xl mb-4">🔗</div>
-            <h3 class="text-xl font-black mb-2 text-slate-900 dark:text-white">Об'єднати акаунти?</h3>
-            <p class="text-sm text-slate-500 mb-6 font-medium leading-relaxed">Ми помітили, що ви увійшли через Google. Бажаєте підв'язати цей вхід до свого існуючого логіна, щоб перенести дані?</p>
-            <div class="space-y-3">
-                <button onclick="showLinkInput()" class="w-full py-4 bg-brand text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-transform">Так, підв'язати</button>
-                <button onclick="$('linkModal').classList.add('hidden'); performLogin(null, null, false, googleUser.uid);" class="w-full py-4 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-bold rounded-2xl active:scale-95 transition-transform">Ні, це новий акаунт</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         const $ = id => document.getElementById(id);
         const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev"; // Твій воркер!
         
-        // --- FIREBASE CONFIG ---
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80",
             authDomain: "pwakomun.firebaseapp.com",
@@ -515,27 +496,28 @@
                     url += `&uid=${uid}`;
                 } else {
                     passHash = isAlreadyHashed ? rawPass : await getHash(rawPass); 
-                    url += `&login=${encodeURIComponent(rawLogin)}&pass=${passHash}`;
+                    // ТУТ ВИПРАВЛЕНО: Відправляємо phone, як очікує твій Воркер для сумісності старих даних!
+                    url += `&phone=${encodeURIComponent(rawLogin)}&pass=${passHash}`;
                 }
 
                 const res = await fetch(url, { cache: "no-store" }); 
                 const data = await res.json();
                 
                 if (res.status === 404 && uid) {
-                    $('linkModal').classList.remove('hidden');
                     btn.innerText = "Увійти";
+                    alert("Цей Google акаунт ще не зареєстровано. Спочатку увійдіть під своїм логіном, а потім підв'яжіть Google у Налаштуваннях!");
                     return;
                 }
 
                 if (res.status === 403 || data.error === "WRONG_PASSWORD") throw new Error("WRONG_PASSWORD");
                 
                 if (res.status === 404 || (!uid && !data.success)) { 
-                    // New user registration
+                    // Новий юзер
                     sessionLogin = rawLogin; sessionPass = passHash;
                     addresses = [{ id: 'default', name: 'Мій дім', tariffs: {...defaultTariffs}, prefs: {...defaultPrefs}, records: [], customServices: [...defaultCustomServices] }]; currentAddressId = 'default'; 
                     await syncToCloud(); 
                 } else {
-                    // Existing user
+                    // Існуючий юзер
                     if (data.data.addresses) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId || addresses[0].id; } 
                     else { addresses = [{ id: 'default', name: 'Мій дім', tariffs: data.data.tariffs || {...defaultTariffs}, prefs: { ...defaultPrefs, ...(data.data.prefs || {}) }, records: data.data.records || [], customServices: data.data.customServices || [...defaultCustomServices] }]; currentAddressId = 'default'; }
                     
@@ -555,27 +537,33 @@
             } catch (err) { btn.innerText = "Увійти"; errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль!" : "Помилка: " + err.message; errEl.classList.remove('hidden'); }
         }
 
-        window.showLinkInput = function() {
-            const lgn = prompt("Введіть ваш існуючий логін (який використовували до цього):");
-            const pss = prompt("Введіть ваш пароль:");
-            if (lgn && pss) linkAccount(lgn, pss);
-        };
-
-        async function linkAccount(lgn, pss) {
-            const passHash = await getHash(pss);
-            const res = await fetch(WORKER_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: "link_google", login: lgn, uid: googleUser.uid })
-            });
-            const data = await res.json();
-            if (data.success) {
-                $('linkModal').classList.add('hidden');
-                showToast("Акаунт підв'язано!");
-                performLogin(null, null, false, googleUser.uid);
-            } else {
-                alert("Не вдалося прив'язати акаунт. Перевірте логін та пароль.");
+        // НОВЕ: Прив'язка Google з вкладки Налаштування
+        window.linkGoogleFromSettings = async function() {
+            vibe();
+            if (!sessionLogin) {
+                alert("Спочатку увійдіть у свій акаунт за допомогою логіна та пароля.");
+                return;
             }
-        }
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try {
+                const result = await firebase.auth().signInWithPopup(provider);
+                const uid = result.user.uid;
+                
+                const res = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: "link_google", login: sessionLogin, uid: uid })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    showToast("Google успішно підв'язано!");
+                    localStorage.setItem('k_uid', uid);
+                } else {
+                    alert("Помилка прив'язки");
+                }
+            } catch(e) {
+                showToast("Скасовано", "⚠️");
+            }
+        };
 
         function loadCurrentAddress() {
             const addr = addresses.find(a => a.id === currentAddressId) || addresses[0]; currentAddressId = addr.id; 
@@ -594,7 +582,7 @@
                 const reqBody = { action: "generate_share", addressId: currentAddressId };
                 let url = WORKER_URL;
                 if (localStorage.getItem('k_uid')) { url += `?uid=${localStorage.getItem('k_uid')}`; }
-                else { url += `?login=${encodeURIComponent(sessionLogin)}&pass=${sessionPass}`; }
+                else { url += `?phone=${encodeURIComponent(sessionLogin)}&pass=${sessionPass}`; }
 
                 const res = await fetch(url, { method: 'POST', body: JSON.stringify(reqBody) }); const data = await res.json();
                 if(data.success && data.shareToken) { const shareUrl = window.location.href.split('?')[0] + '?share=' + data.shareToken; try { await navigator.clipboard.writeText(shareUrl); showToast("Скопійовано! 🔗"); } catch (err) { prompt("Копіюйте:", shareUrl); } } else showToast("Помилка", "⚠️");
@@ -639,7 +627,8 @@
             
             let url = WORKER_URL;
             let uid = localStorage.getItem('k_uid');
-            if(uid) { url += `?uid=${uid}`; } else { url += `?login=${encodeURIComponent(sessionLogin)}&pass=${sessionPass}`; }
+            if(uid) { url += `?uid=${uid}`; } 
+            else { url += `?phone=${encodeURIComponent(sessionLogin)}&pass=${sessionPass}`; }
             
             const res = await fetch(url, { method: 'POST', body: JSON.stringify({ addresses: addresses, currentAddressId: currentAddressId }) }); 
             const data = await res.json(); if (res.status === 403 || data.error === "WRONG_PASSWORD") logout(); 
