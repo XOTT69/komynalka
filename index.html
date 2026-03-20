@@ -270,10 +270,10 @@
                 </div>
                 
                 <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5 space-y-6">
-                    <h3 class="font-black text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-brand text-xl">📱</span> Система</h3>
-                    <div>
+                    <h3 class="font-black text-lg text-slate-900 dark:text-white flex items-center gap-2"><span class="text-brand text-xl">🔔</span> Нагадування</h3>
+                    <div class="border-slate-100 dark:border-white/5">
                         <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer mb-4">
-                            <span class="flex items-center gap-2">🔔 Нагадування (числа)</span>
+                            <span class="flex items-center gap-2">Сповіщати мене</span>
                             <div class="relative inline-flex items-center"><input type="checkbox" id="prefReminders" class="sr-only toggle-checkbox peer" onchange="toggleRemindersUI(this.checked)"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
                         </label>
                         <div id="remindersSettings" class="space-y-3 hidden">
@@ -311,7 +311,7 @@
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg>
                 <span class="text-[10px] font-bold tracking-wide">Налашт.</span>
             </button>
-        </div>
+        </nav>
     </div>
 
     <div id="addressModal" class="hidden fixed inset-0 z-[200] bg-apple-darker/60 dark:bg-black/60 backdrop-blur-md flex items-end justify-center transition-opacity" onclick="if(event.target === this) closeAddressModal()">
@@ -339,7 +339,7 @@
     <script>
         const $ = id => document.getElementById(id);
         const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev"; 
+        const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
         
         // Firebase Config
         const firebaseConfig = {
@@ -373,6 +373,8 @@
             t.classList.remove('-translate-y-24', 'opacity-0');
             clearTimeout(toastTimeout); toastTimeout = setTimeout(() => t.classList.add('-translate-y-24', 'opacity-0'), 2500);
         };
+
+        window.vibe = function() { if(navigator.vibrate) navigator.vibrate(40); };
 
         let currentMode = localStorage.getItem('themeMode') || 'auto';
         window.setThemeMode = function(mode) {
@@ -522,7 +524,7 @@
                 if(data.success) {
                     showToast("Google успішно підв'язано!");
                     localStorage.setItem('k_uid', uid);
-                    initAppUI(); // Оновити статус кнопки
+                    initAppUI(); 
                 } else {
                     alert("Помилка прив'язки");
                 }
@@ -676,7 +678,6 @@
             $('authScreen').classList.add('hidden'); $('appScreen').classList.remove('hidden'); $('appScreen').classList.add('flex');
             $('tWater').value = tariffs.water; $('tHotWater').value = tariffs.hotWater || defaultTariffs.hotWater; $('tElectroBase').value = tariffs.electroBase; $('tElectroWinter').value = tariffs.electroWinter; $('tGas').value = tariffs.gas;
             
-            // Якщо Google підв'язано - міняємо кнопку
             if (localStorage.getItem('k_uid')) {
                 const btnLink = $('btnLinkGoogle');
                 if (btnLink) {
@@ -783,7 +784,7 @@
                     
                     html += `</div></div><div class="flex gap-2.5 mt-4 relative z-10 pt-2 border-t border-slate-100 dark:border-white/5">
                             <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-2xl font-bold text-xs border transition-colors active:scale-[0.98] ${rec.paid ? 'bg-slate-50 text-slate-500 dark:bg-[#2c2c2e] border-transparent' : 'bg-brand text-white shadow-lg'}">${rec.paid ? 'Скасувати' : 'Позначити оплаченим'}</button>
-                            <button type="button" onclick="shareRecordReceipt(${index}, event);" class="w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 transition-transform active:scale-[0.90]">📤</button>
+                            <button type="button" onclick="shareRecordReceipt(${index}, event);" class="w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 transition-transform active:scale-[0.90]"><svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg></button>
                             <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 transition-transform active:scale-[0.90]">✏️</button>
                             <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 transition-transform active:scale-[0.90]">🗑</button>
                         </div></div>`;
