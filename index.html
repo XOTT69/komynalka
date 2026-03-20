@@ -6,8 +6,10 @@
     <title>Мої Комунальні</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
     <style>
         :root, .theme-indigo { --brand-main: #4f46e5; --brand-hover: #4338ca; --brand-light: rgba(79, 70, 229, 0.1); --brand-border: rgba(79, 70, 229, 0.25); }
         .theme-blue { --brand-main: #007aff; --brand-hover: #005bb5; --brand-light: rgba(0, 122, 255, 0.1); --brand-border: rgba(0, 122, 255, 0.25); }
@@ -62,17 +64,33 @@
                     </div>
                     <p id="authError" class="text-red-500 text-sm hidden text-center font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-xl"></p>
                     
-                    <button type="submit" id="authSubmitBtn" class="w-full bg-brand hover:bg-brand-hover text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 transition-transform active:scale-[0.96] text-lg tracking-wide mt-6">Увійти</button>
-                    
-                    <div class="flex items-center gap-2 text-slate-400 py-3 mt-2 opacity-50">
-                        <div class="h-[1px] bg-slate-300 flex-1"></div><span class="text-[10px] font-bold uppercase">Або</span><div class="h-[1px] bg-slate-300 flex-1"></div>
+                    <div class="flex gap-2 mt-6 pt-2">
+                        <button type="submit" id="authSubmitBtn" class="flex-1 bg-brand hover:bg-brand-hover text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 transition-transform active:scale-[0.96] text-lg tracking-wide">Увійти</button>
+                        <button type="button" id="bioLoginBtn" onclick="tryBiometricAuth()" class="hidden w-16 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-black dark:hover:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl transition-transform active:scale-[0.96]">
+                            <svg class="w-7 h-7 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg>
+                        </button>
                     </div>
 
-                    <button type="button" onclick="loginWithGoogle()" class="w-full bg-slate-50 hover:bg-slate-100 dark:bg-[#2c2c2e] dark:hover:bg-[#3c3c3e] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all shadow-sm">
+                    <div class="flex items-center gap-2 mt-4 opacity-50">
+                        <div class="h-[1px] bg-slate-300 dark:bg-white/10 flex-1"></div><span class="text-[10px] font-bold uppercase">Або</span><div class="h-[1px] bg-slate-300 dark:bg-white/10 flex-1"></div>
+                    </div>
+                    <button type="button" onclick="loginWithGoogle()" class="w-full bg-white hover:bg-slate-50 dark:bg-[#2c2c2e] dark:hover:bg-[#3c3c3e] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 active:scale-[0.96] transition-all shadow-sm mt-4">
                         <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                         Вхід через Google
                     </button>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="linkModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6" onclick="if(event.target===this) this.classList.add('hidden')">
+        <div class="bg-white dark:bg-apple-dark w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-white/5">
+            <div class="text-4xl mb-4">🔗</div>
+            <h3 class="text-xl font-black mb-2 text-slate-900 dark:text-white">Об'єднати акаунти?</h3>
+            <p class="text-sm text-slate-500 mb-6 font-medium leading-relaxed">Ми помітили, що ви увійшли через Google. Бажаєте підв'язати цей вхід до свого існуючого логіна, щоб перенести дані?</p>
+            <div class="space-y-3">
+                <button onclick="showLinkInput()" class="w-full py-4 bg-brand text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-transform">Так, підв'язати</button>
+                <button onclick="$('linkModal').classList.add('hidden'); performLogin(null, null, false, googleUser.uid);" class="w-full py-4 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-bold rounded-2xl active:scale-95 transition-transform">Ні, це новий акаунт</button>
             </div>
         </div>
     </div>
@@ -85,7 +103,7 @@
                 <div>
                     <p class="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest" id="userGreeting">Вітаю!</p>
                     <h2 class="text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-1.5 active:opacity-70 transition-opacity">
-                        <span id="currentAddressDisplay" class="truncate max-w-[150px]">Мій дім</span>
+                        <span id="currentAddressDisplay">Мій дім</span>
                         <svg id="addressArrowIcon" class="w-4 h-4 text-brand shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
                     </h2>
                 </div>
@@ -340,9 +358,9 @@
     <script>
         const $ = id => document.getElementById(id);
         const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
+        const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev"; // Твій воркер!
         
-        // Firebase Config
+        // --- FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80",
             authDomain: "pwakomun.firebaseapp.com",
@@ -355,7 +373,7 @@
         firebase.initializeApp(firebaseConfig);
 
         let googleUser = null;
-        let sessionLogin = localStorage.getItem('k_login'); 
+        let sessionLogin = localStorage.getItem('k_login') || localStorage.getItem('k_phoneHash'); 
         let sessionPass = localStorage.getItem('k_passHash');
         
         let defaultTariffs = { water: 30.38, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
@@ -407,6 +425,7 @@
         }; 
         setThemeMode(currentMode); setThemeColor(activeThemeColor);
 
+        // Біометрія
         if(localStorage.getItem('k_bio_enabled') === 'true' && localStorage.getItem('k_bio_login')) { $('bioLoginBtn').classList.remove('hidden'); }
         window.toggleBiometrics = async function(checked) {
             vibe();
@@ -472,6 +491,8 @@
         async function getHash(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
 
         // --- AUTH & LOGIN LOGIC ---
+        $('authForm').addEventListener('submit', async (e) => { e.preventDefault(); await performLogin($('authLogin').value.trim(), $('authPass').value, false); });
+        
         window.loginWithGoogle = async function() {
             vibe();
             const provider = new firebase.auth.GoogleAuthProvider();
@@ -484,8 +505,6 @@
             }
         };
 
-        $('authForm').addEventListener('submit', async (e) => { e.preventDefault(); await performLogin($('authLogin').value.trim(), $('authPass').value, false); });
-        
         async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) {
             vibe(); const btn = $('authSubmitBtn'); const errEl = $('authError'); errEl.classList.add('hidden'); btn.innerText = "Завантаження...";
             try {
@@ -533,11 +552,11 @@
                 }
                 
                 loadCurrentAddress();
-            } catch (err) { btn.innerText = "Увійти"; errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль!" : "Помилка сервера"; errEl.classList.remove('hidden'); }
+            } catch (err) { btn.innerText = "Увійти"; errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль!" : "Помилка: " + err.message; errEl.classList.remove('hidden'); }
         }
 
         window.showLinkInput = function() {
-            const lgn = prompt("Введіть ваш існуючий логін:");
+            const lgn = prompt("Введіть ваш існуючий логін (який використовували до цього):");
             const pss = prompt("Введіть ваш пароль:");
             if (lgn && pss) linkAccount(lgn, pss);
         };
@@ -551,6 +570,7 @@
             const data = await res.json();
             if (data.success) {
                 $('linkModal').classList.add('hidden');
+                showToast("Акаунт підв'язано!");
                 performLogin(null, null, false, googleUser.uid);
             } else {
                 alert("Не вдалося прив'язати акаунт. Перевірте логін та пароль.");
@@ -571,8 +591,12 @@
         async function shareAddressAccess(event) {
             event.stopPropagation(); vibe(); if(!sessionLogin && !localStorage.getItem('k_uid')) return; const btn = event.currentTarget; const oldHtml = btn.innerHTML; btn.innerHTML = '⏳';
             try {
-                const reqBody = { action: "generate_share", addressId: currentAddressId, login: sessionLogin };
-                const res = await fetch(`${WORKER_URL}?login=${encodeURIComponent(sessionLogin)}&pass=${sessionPass}`, { method: 'POST', body: JSON.stringify(reqBody) }); const data = await res.json();
+                const reqBody = { action: "generate_share", addressId: currentAddressId };
+                let url = WORKER_URL;
+                if (localStorage.getItem('k_uid')) { url += `?uid=${localStorage.getItem('k_uid')}`; }
+                else { url += `?login=${encodeURIComponent(sessionLogin)}&pass=${sessionPass}`; }
+
+                const res = await fetch(url, { method: 'POST', body: JSON.stringify(reqBody) }); const data = await res.json();
                 if(data.success && data.shareToken) { const shareUrl = window.location.href.split('?')[0] + '?share=' + data.shareToken; try { await navigator.clipboard.writeText(shareUrl); showToast("Скопійовано! 🔗"); } catch (err) { prompt("Копіюйте:", shareUrl); } } else showToast("Помилка", "⚠️");
             } catch(e) { showToast("Помилка", "⚠️"); } btn.innerHTML = oldHtml;
         }
@@ -615,11 +639,7 @@
             
             let url = WORKER_URL;
             let uid = localStorage.getItem('k_uid');
-            if(uid) {
-                url += `?uid=${uid}`;
-            } else {
-                url += `?login=${encodeURIComponent(sessionLogin)}&pass=${sessionPass}`;
-            }
+            if(uid) { url += `?uid=${uid}`; } else { url += `?login=${encodeURIComponent(sessionLogin)}&pass=${sessionPass}`; }
             
             const res = await fetch(url, { method: 'POST', body: JSON.stringify({ addresses: addresses, currentAddressId: currentAddressId }) }); 
             const data = await res.json(); if (res.status === 403 || data.error === "WRONG_PASSWORD") logout(); 
@@ -675,7 +695,6 @@
 
         function initAppUI() {
             $('authScreen').classList.add('hidden'); $('appScreen').classList.remove('hidden'); $('appScreen').classList.add('flex');
-            if($('userAvatar')) $('userAvatar').innerText = sessionLogin ? sessionLogin.charAt(0).toUpperCase() : 'U';
             $('tWater').value = tariffs.water; $('tHotWater').value = tariffs.hotWater || defaultTariffs.hotWater; $('tElectroBase').value = tariffs.electroBase; $('tElectroWinter').value = tariffs.electroWinter; $('tGas').value = tariffs.gas;
             $('prefHaptic').checked = hapticEnabled; 
             applyPreferences(); renderCalcCustomServices(); fillPreviousReadings(); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges(); checkReminders();
@@ -776,9 +795,9 @@
                     
                     html += `</div></div><div class="flex gap-2.5 mt-4 relative z-10 pt-2 border-t border-slate-100 dark:border-white/5">
                             <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-2xl font-bold text-xs border transition-colors active:scale-[0.98] ${rec.paid ? 'bg-slate-50 text-slate-500 dark:bg-[#2c2c2e] border-transparent' : 'bg-brand text-white shadow-lg'}">${rec.paid ? 'Скасувати' : 'Позначити оплаченим'}</button>
-                            <button type="button" onclick="shareRecordReceipt(${index}, event);" class="w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 transition-transform active:scale-[0.90]"><i class="fa-solid fa-share-nodes"></i></button>
-                            <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 transition-transform active:scale-[0.90]"><i class="fa-solid fa-pen"></i></button>
-                            <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 transition-transform active:scale-[0.90]"><i class="fa-solid fa-trash"></i></button>
+                            <button type="button" onclick="shareRecordReceipt(${index}, event);" class="w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 transition-transform active:scale-[0.90]">📤</button>
+                            <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 transition-transform active:scale-[0.90]">✏️</button>
+                            <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 transition-transform active:scale-[0.90]">🗑</button>
                         </div></div>`;
                     card.innerHTML = html; list.appendChild(card);
                 });
@@ -789,7 +808,6 @@
         window.togglePaid = function(index) { vibe(); records[index].paid = !records[index].paid; renderRecords(); syncToCloud(); };
         window.deleteRecord = function(index) { vibe(); if(confirm('Видалити розрахунок?')) { records.splice(index, 1); renderRecords(); syncToCloud(); } };
 
-        // INITIALIZATION
         if (urlShareToken) {
             isGuest = true; $('authScreen').classList.add('hidden'); $('appScreen').classList.remove('hidden'); $('appScreen').classList.add('flex'); $('btnTabSettings').style.display = 'none'; $('addressHeaderTrigger').onclick = null; $('addressArrowIcon').style.display = 'none';
             fetch(`${WORKER_URL}?share=${urlShareToken}`, { cache: "no-store" }).then(r => r.json()).then(data => { if(data.success) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId; loadCurrentAddress(); } else { alert("Посилання недійсне."); $('appScreen').innerHTML = '<div class="m-auto text-center p-5 font-bold text-red-500">Доступ закрито</div>'; } });
