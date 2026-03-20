@@ -97,6 +97,7 @@
         <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 relative pb-[100px] w-full h-full">
             
             <div id="tabCalc" class="tab-transition tab-active space-y-5">
+                
                 <div id="reminderBanner" class="hidden relative overflow-hidden bg-gradient-to-r from-brand to-purple-500 p-4 rounded-[1.5rem] shadow-xl text-white mt-2 mb-2 transition-all">
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
                     <div class="flex items-center justify-between relative z-10">
@@ -336,10 +337,22 @@
         </div>
     </div>
 
+    <div id="linkModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6" onclick="if(event.target===this) this.classList.add('hidden')">
+        <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-white/5">
+            <div class="text-4xl mb-4">🔗</div>
+            <h3 class="text-xl font-black mb-2 text-slate-900 dark:text-white">Об'єднати акаунти?</h3>
+            <p class="text-sm text-slate-500 mb-6 font-medium leading-relaxed">Ми помітили, що ви увійшли через Google. Бажаєте підв'язати цей вхід до свого існуючого логіна, щоб перенести дані?</p>
+            <div class="space-y-3">
+                <button onclick="showLinkInput()" class="w-full py-4 bg-brand text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-transform">Так, підв'язати</button>
+                <button onclick="$('linkModal').classList.add('hidden'); performLogin(null, null, false, googleUser.uid);" class="w-full py-4 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-bold rounded-2xl active:scale-95 transition-transform">Ні, це новий акаунт</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const $ = id => document.getElementById(id);
         const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev"; // Твій воркер!
+        const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
         
         // Firebase Config
         const firebaseConfig = {
@@ -496,28 +509,32 @@
                     url += `&uid=${uid}`;
                 } else {
                     passHash = isAlreadyHashed ? rawPass : await getHash(rawPass); 
-                    // ТУТ ВИПРАВЛЕНО: Відправляємо phone, як очікує твій Воркер для сумісності старих даних!
                     url += `&phone=${encodeURIComponent(rawLogin)}&pass=${passHash}`;
                 }
 
                 const res = await fetch(url, { cache: "no-store" }); 
                 const data = await res.json();
                 
+                // ЗАХИСТ ВІД СЕРВЕРНИХ ПОМИЛОК KV (500)
+                if (res.status === 500 || data.error?.includes("undefined")) {
+                    throw new Error("Воркер не бачить базу даних! Перевірте KOMUN_KV у налаштуваннях Cloudflare.");
+                }
+
                 if (res.status === 404 && uid) {
+                    $('linkModal').classList.remove('hidden');
                     btn.innerText = "Увійти";
-                    alert("Цей Google акаунт ще не зареєстровано. Спочатку увійдіть під своїм логіном, а потім підв'яжіть Google у Налаштуваннях!");
                     return;
                 }
 
                 if (res.status === 403 || data.error === "WRONG_PASSWORD") throw new Error("WRONG_PASSWORD");
                 
                 if (res.status === 404 || (!uid && !data.success)) { 
-                    // Новий юзер
+                    // New user registration
                     sessionLogin = rawLogin; sessionPass = passHash;
                     addresses = [{ id: 'default', name: 'Мій дім', tariffs: {...defaultTariffs}, prefs: {...defaultPrefs}, records: [], customServices: [...defaultCustomServices] }]; currentAddressId = 'default'; 
                     await syncToCloud(); 
-                } else {
-                    // Існуючий юзер
+                } else if (res.status === 200 && data.success) {
+                    // Existing user
                     if (data.data.addresses) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId || addresses[0].id; } 
                     else { addresses = [{ id: 'default', name: 'Мій дім', tariffs: data.data.tariffs || {...defaultTariffs}, prefs: { ...defaultPrefs, ...(data.data.prefs || {}) }, records: data.data.records || [], customServices: data.data.customServices || [...defaultCustomServices] }]; currentAddressId = 'default'; }
                     
@@ -527,6 +544,8 @@
                     } else {
                         sessionLogin = rawLogin; sessionPass = passHash;
                     }
+                } else {
+                    throw new Error("Невідома помилка");
                 }
 
                 if (!uid) {
@@ -537,7 +556,6 @@
             } catch (err) { btn.innerText = "Увійти"; errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль!" : "Помилка: " + err.message; errEl.classList.remove('hidden'); }
         }
 
-        // НОВЕ: Прив'язка Google з вкладки Налаштування
         window.linkGoogleFromSettings = async function() {
             vibe();
             if (!sessionLogin) {
@@ -564,6 +582,28 @@
                 showToast("Скасовано", "⚠️");
             }
         };
+
+        window.showLinkInput = function() {
+            const lgn = prompt("Введіть ваш існуючий логін (номер), який використовували до цього:");
+            const pss = prompt("Введіть ваш пароль:");
+            if (lgn && pss) linkAccount(lgn, pss);
+        };
+
+        async function linkAccount(lgn, pss) {
+            const passHash = await getHash(pss);
+            const res = await fetch(WORKER_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "link_google", login: lgn, uid: googleUser.uid })
+            });
+            const data = await res.json();
+            if (data.success) {
+                $('linkModal').classList.add('hidden');
+                showToast("Акаунт підв'язано!");
+                performLogin(null, null, false, googleUser.uid);
+            } else {
+                alert("Не вдалося прив'язати акаунт. Перевірте логін та пароль.");
+            }
+        }
 
         function loadCurrentAddress() {
             const addr = addresses.find(a => a.id === currentAddressId) || addresses[0]; currentAddressId = addr.id; 
@@ -630,8 +670,12 @@
             if(uid) { url += `?uid=${uid}`; } 
             else { url += `?phone=${encodeURIComponent(sessionLogin)}&pass=${sessionPass}`; }
             
-            const res = await fetch(url, { method: 'POST', body: JSON.stringify({ addresses: addresses, currentAddressId: currentAddressId }) }); 
-            const data = await res.json(); if (res.status === 403 || data.error === "WRONG_PASSWORD") logout(); 
+            try {
+                const res = await fetch(url, { method: 'POST', body: JSON.stringify({ addresses: addresses, currentAddressId: currentAddressId }) }); 
+                const data = await res.json(); 
+                if (res.status === 403 || data.error === "WRONG_PASSWORD") logout(); 
+                if (res.status === 500) showToast("Помилка збереження! Перевірте KV", "⚠️");
+            } catch(e) { console.error(e); }
         }
 
         window.logout = function() { 
