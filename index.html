@@ -57,7 +57,7 @@
                 <div class="absolute -top-20 -right-20 w-40 h-40 bg-brand-light rounded-full blur-3xl pointer-events-none"></div>
                 <form id="authForm" class="space-y-4 relative z-10">
                     <div>
-                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 tracking-wider">Логін</label>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 tracking-wider">Логін (Номер)</label>
                         <input type="text" id="authLogin" placeholder="Логін" required autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-base font-bold outline-none focus:ring-2 focus:ring-brand text-slate-900 dark:text-white transition-all shadow-inner">
                     </div>
                     <div>
@@ -298,16 +298,16 @@
             </div>
         </div>
 
-        <nav class="fixed bottom-0 w-full bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10 pb-[max(env(safe-area-inset-bottom),16px)] pt-2 px-6 flex justify-between items-center z-[60]">
-            <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-brand transition-colors duration-300 py-2 active:scale-[0.92]">
+        <nav class="fixed bottom-0 w-full left-0 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10 pb-[max(env(safe-area-inset-bottom),16px)] pt-3 px-6 flex justify-between items-center z-[60]">
+            <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1.5 text-brand transition-colors duration-300 active:scale-[0.92]">
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm4 4a1 1 0 100 2h8a1 1 0 100-2H8zm0 4a1 1 0 100 2h4a1 1 0 100-2H8zm0 4a1 1 0 100 2h4a1 1 0 100-2H8z"></path></svg>
                 <span class="text-[10px] font-bold tracking-wide">Рахунок</span>
             </button>
-            <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 transition-colors duration-300 py-2 active:scale-[0.92]">
+            <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1.5 text-slate-400 dark:text-slate-500 transition-colors duration-300 active:scale-[0.92]">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
                 <span class="text-[10px] font-bold tracking-wide">Історія</span>
             </button>
-            <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 transition-colors duration-300 py-2 active:scale-[0.92]">
+            <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1.5 text-slate-400 dark:text-slate-500 transition-colors duration-300 active:scale-[0.92]">
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path></svg>
                 <span class="text-[10px] font-bold tracking-wide">Налашт.</span>
             </button>
@@ -374,8 +374,6 @@
             clearTimeout(toastTimeout); toastTimeout = setTimeout(() => t.classList.add('-translate-y-24', 'opacity-0'), 2500);
         };
 
-        window.vibe = function() {}; // Порожня функція, щоб не ламались старі кнопки
-
         let currentMode = localStorage.getItem('themeMode') || 'auto';
         window.setThemeMode = function(mode) {
             currentMode = mode; localStorage.setItem('themeMode', mode); applyThemeMode();
@@ -383,7 +381,6 @@
                 const b = $('mode-'+m);
                 if(b) { b.classList.remove('bg-white', 'dark:bg-[#2c2c2e]', 'text-slate-900', 'dark:text-white', 'shadow-sm'); if(m === mode) b.classList.add('bg-white', 'dark:bg-[#2c2c2e]', 'text-slate-900', 'dark:text-white', 'shadow-sm'); }
             });
-            if($('tabHistory').classList.contains('tab-active')) renderRecords();
         };
         function applyThemeMode() {
             if(currentMode === 'dark' || (currentMode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -678,6 +675,7 @@
             $('authScreen').classList.add('hidden'); $('appScreen').classList.remove('hidden'); $('appScreen').classList.add('flex');
             $('tWater').value = tariffs.water; $('tHotWater').value = tariffs.hotWater || defaultTariffs.hotWater; $('tElectroBase').value = tariffs.electroBase; $('tElectroWinter').value = tariffs.electroWinter; $('tGas').value = tariffs.gas;
             
+            // Якщо Google підв'язано - міняємо кнопку
             if (localStorage.getItem('k_uid')) {
                 const btnLink = $('btnLinkGoogle');
                 if (btnLink) {
