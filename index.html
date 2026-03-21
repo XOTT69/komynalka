@@ -27,7 +27,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
-        body, html { overflow: hidden; width: 100vw; height: 100dvh; position: fixed; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
+        /* ПРИБРАНО position: fixed та 100dvh, які ламали висоту на iOS PWA */
+        body, html { overflow: hidden; width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"], input[type="text"], input[type="password"] { -moz-appearance: textfield; font-family: inherit; }
         .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -40,7 +41,7 @@
         .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
     </style>
 </head>
-<body class="bg-apple-light dark:bg-apple-darker text-slate-800 dark:text-slate-200 flex flex-col transition-colors duration-300 h-[100dvh] w-full overflow-hidden selection:bg-brand-light">
+<body class="bg-apple-light dark:bg-apple-darker text-slate-800 dark:text-slate-200 transition-colors duration-300 selection:bg-brand-light">
 
     <div id="toast" class="fixed top-[env(safe-area-inset-top,20px)] left-1/2 -translate-x-1/2 z-[1000] bg-apple-darker/90 dark:bg-white/90 backdrop-blur-2xl text-white dark:text-apple-darker px-6 py-3.5 rounded-full shadow-2xl font-bold text-sm transition-all duration-300 transform -translate-y-24 opacity-0 flex items-center gap-2 pointer-events-none">
         <span id="toastIcon">✅</span><span id="toastMsg">Повідомлення</span>
@@ -81,7 +82,7 @@
         </div>
     </div>
 
-    <div id="appScreen" class="hidden flex-col flex-1 w-full mx-auto relative overflow-hidden bg-apple-light dark:bg-apple-darker">
+    <div id="appScreen" class="hidden absolute inset-0 flex-col bg-apple-light dark:bg-apple-darker overflow-hidden">
         
         <div class="max-w-md mx-auto w-full px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center z-20 shrink-0">
             <div class="flex items-center gap-3 cursor-pointer group" onclick="openAddressModal()" id="addressHeaderTrigger">
@@ -96,7 +97,7 @@
             </div>
         </div>
 
-        <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 relative w-full pb-6">
+        <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 relative w-full pb-[100px]">
             <div class="max-w-md mx-auto">
                 <div id="tabCalc" class="tab-transition tab-active space-y-5">
                     
@@ -311,8 +312,8 @@
             </div>
         </div>
 
-        <nav class="shrink-0 relative w-full z-40 bg-white dark:bg-[#1c1c1e] border-t border-slate-200 dark:border-white/10 pt-3 shadow-[0_-5px_20px_rgba(0,0,0,0.03)]" style="padding-bottom: max(env(safe-area-inset-bottom), 16px);">
-            <div class="max-w-md mx-auto flex justify-between items-center px-2">
+        <nav class="absolute bottom-0 left-0 right-0 w-full z-[90] bg-white dark:bg-[#1c1c1e] border-t border-slate-200 dark:border-white/10 shadow-[0_-5px_20px_rgba(0,0,0,0.03)]" style="padding-bottom: env(safe-area-inset-bottom);">
+            <div class="max-w-md mx-auto flex justify-between items-center px-2 pt-3 pb-2">
                 <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-brand active:scale-[0.92] transition-transform">
                     <i class="fa-solid fa-calculator text-[22px]"></i>
                     <span class="text-[10px] font-bold tracking-wide whitespace-nowrap">Рахунок</span>
