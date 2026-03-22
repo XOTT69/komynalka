@@ -18,16 +18,7 @@
             --brand-light: rgba(0, 122, 255, 0.1); 
             --brand-border: rgba(0, 122, 255, 0.25); 
         }
-    </style>
-    <script>
-        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { DEFAULT: 'var(--brand-main)', hover: 'var(--brand-hover)', light: 'var(--brand-light)', border: 'var(--brand-border)' }, apple: { dark: '#1c1c1e', darker: '#000000', light: '#f2f2f7' } }, boxShadow: { 'soft': '0 10px 40px -10px rgba(0, 0, 0, 0.08)' } } } }
-    </script>
-    <meta name="theme-color" content="#f2f2f7" id="metaThemeColor">
-    <link rel="apple-touch-icon" href="icon.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <style>
-        /* Жорстка фіксація базового контейнера для iOS */
+        
         body, html { 
             margin: 0; padding: 0;
             overflow: hidden; 
@@ -39,6 +30,27 @@
             -webkit-font-smoothing: antialiased; 
             overscroll-behavior: none; 
         }
+
+        /* === ТВОЯ СТРУКТУРА ДЛЯ IPHONE PWA === */
+        #appScreen.is-active {
+            display: flex !important;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh; /* важливо для iPhone */
+            overflow: hidden;
+        }
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch; /* плавний скрол */
+        }
+        .bottom-nav {
+            position: sticky;
+            bottom: 0;
+            z-index: 50;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type="number"], input[type="text"], input[type="password"] { -moz-appearance: textfield; font-family: inherit; }
         .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -50,8 +62,15 @@
         .toggle-checkbox:checked + .toggle-label { background-color: var(--brand-main); }
         .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
     </style>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { DEFAULT: 'var(--brand-main)', hover: 'var(--brand-hover)', light: 'var(--brand-light)', border: 'var(--brand-border)' }, apple: { dark: '#1c1c1e', darker: '#000000', light: '#f2f2f7' } }, boxShadow: { 'soft': '0 10px 40px -10px rgba(0, 0, 0, 0.08)' } } } }
+    </script>
+    <meta name="theme-color" content="#f2f2f7" id="metaThemeColor">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
-<body class="bg-apple-light dark:bg-apple-darker text-slate-800 dark:text-slate-200 flex flex-col transition-colors duration-300 h-[100dvh] w-full overflow-hidden selection:bg-brand-light">
+<body class="bg-apple-light dark:bg-apple-darker text-slate-800 dark:text-slate-200 transition-colors duration-300 selection:bg-brand-light">
 
     <div id="toast" class="fixed top-[env(safe-area-inset-top,20px)] left-1/2 -translate-x-1/2 z-[1000] bg-apple-darker/90 dark:bg-white/90 backdrop-blur-2xl text-white dark:text-apple-darker px-6 py-3.5 rounded-full shadow-2xl font-bold text-sm transition-all duration-300 transform -translate-y-24 opacity-0 flex items-center gap-2 pointer-events-none">
         <span id="toastIcon">✅</span><span id="toastMsg">Повідомлення</span>
@@ -92,23 +111,25 @@
         </div>
     </div>
 
-    <div id="appScreen" class="hidden flex-1 flex-col w-full mx-auto relative overflow-hidden bg-apple-light dark:bg-apple-darker">
+    <div id="appScreen" class="hidden w-full mx-auto relative bg-apple-light dark:bg-apple-darker w-full">
         
-        <div class="max-w-md mx-auto w-full px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center z-20 shrink-0">
-            <div class="flex items-center gap-3 cursor-pointer group" onclick="openAddressModal()" id="addressHeaderTrigger">
-                <div class="w-12 h-12 bg-gradient-to-tr from-brand to-brand-hover rounded-full flex items-center justify-center text-white shadow-lg shadow-brand/20 text-xl group-active:scale-95 transition-transform"><i class="fa-solid fa-house"></i></div>
-                <div>
-                    <p class="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest" id="userGreeting">Вітаю!</p>
-                    <h2 class="text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-1.5 active:opacity-70 transition-opacity">
-                        <span id="currentAddressDisplay">Мій дім</span>
-                        <i class="fa-solid fa-chevron-down text-brand text-sm ml-1"></i>
-                    </h2>
+        <div class="shrink-0 w-full z-20">
+            <div class="max-w-md mx-auto px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center">
+                <div class="flex items-center gap-3 cursor-pointer group" onclick="openAddressModal()" id="addressHeaderTrigger">
+                    <div class="w-12 h-12 bg-gradient-to-tr from-brand to-brand-hover rounded-full flex items-center justify-center text-white shadow-lg shadow-brand/20 text-xl group-active:scale-95 transition-transform"><i class="fa-solid fa-house"></i></div>
+                    <div>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest" id="userGreeting">Вітаю!</p>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white leading-tight flex items-center gap-1.5 active:opacity-70 transition-opacity">
+                            <span id="currentAddressDisplay">Мій дім</span>
+                            <i class="fa-solid fa-chevron-down text-brand text-sm ml-1"></i>
+                        </h2>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 pb-8 relative w-full">
-            <div class="max-w-md mx-auto">
+        <div id="swipeContainer" class="main-content w-full relative">
+            <div class="max-w-md mx-auto px-5 pb-6">
                 <div id="tabCalc" class="tab-transition tab-active space-y-5">
                     
                     <div id="reminderBanner" class="hidden relative overflow-hidden bg-gradient-to-r from-brand to-indigo-600 p-5 rounded-[1.5rem] shadow-xl text-white mt-2 mb-2 transition-all">
@@ -151,7 +172,7 @@
                         </div>
                     </div>
 
-                    <form id="utilityForm" class="space-y-4 pb-6">
+                    <form id="utilityForm" class="space-y-4">
                         <div id="blockWater" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
                             <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 text-xl"><i class="fa-solid fa-droplet"></i></div><span class="font-bold text-lg text-slate-900 dark:text-white">Хол. Вода</span></div><span id="waterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white whitespace-nowrap">0 ₴</span></div>
                             <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
@@ -322,19 +343,19 @@
             </div>
         </div>
 
-        <nav class="shrink-0 w-full z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10" style="padding-bottom: max(env(safe-area-inset-bottom), 12px);">
-            <div class="max-w-md mx-auto flex justify-between items-center w-full px-2 pt-3 pb-1">
-                <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn w-[33%] flex flex-col items-center justify-center gap-1 text-brand active:scale-[0.92] transition-transform">
+        <nav class="bottom-nav bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl w-full">
+            <div class="max-w-md mx-auto flex justify-between items-center w-full h-[65px] px-2">
+                <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn w-[33%] flex flex-col items-center justify-center gap-1.5 text-brand active:scale-[0.92] transition-transform">
                     <i class="fa-solid fa-calculator text-[22px]"></i>
-                    <span class="text-[10px] font-bold tracking-tight whitespace-nowrap text-center">Рахунок</span>
+                    <span class="text-[10px] font-bold tracking-tight whitespace-nowrap">Рахунок</span>
                 </button>
-                <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn w-[33%] flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
+                <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn w-[33%] flex flex-col items-center justify-center gap-1.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
                     <i class="fa-solid fa-clock-rotate-left text-[22px]"></i>
-                    <span class="text-[10px] font-bold tracking-tight whitespace-nowrap text-center">Історія</span>
+                    <span class="text-[10px] font-bold tracking-tight whitespace-nowrap">Історія</span>
                 </button>
-                <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn w-[33%] flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
+                <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn w-[33%] flex flex-col items-center justify-center gap-1.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
                     <i class="fa-solid fa-gear text-[22px]"></i>
-                    <span class="text-[10px] font-bold tracking-tight whitespace-nowrap text-center">Налаштування</span>
+                    <span class="text-[10px] font-bold tracking-tight whitespace-nowrap">Налаштування</span>
                 </button>
             </div>
         </nav>
@@ -737,7 +758,10 @@
         }
 
         function initAppUI() {
-            $('authScreen').classList.add('hidden'); $('appScreen').classList.remove('hidden'); $('appScreen').classList.add('flex');
+            $('authScreen').classList.add('hidden'); 
+            $('appScreen').classList.remove('hidden'); 
+            $('appScreen').classList.add('is-active'); // Активує flex контейнер
+            
             $('tWater').value = tariffs.water; $('tHotWater').value = tariffs.hotWater || defaultTariffs.hotWater; $('tElectroBase').value = tariffs.electroBase; $('tElectroWinter').value = tariffs.electroWinter; $('tGas').value = tariffs.gas;
             
             if (localStorage.getItem('k_uid')) {
@@ -865,7 +889,7 @@
         window.deleteRecord = function(index) { if(confirm('Видалити розрахунок?')) { records.splice(index, 1); renderRecords(); syncToCloud(); } };
 
         if (urlShareToken) {
-            isGuest = true; $('authScreen').classList.add('hidden'); $('appScreen').classList.remove('hidden'); $('appScreen').classList.add('flex'); $('btnTabSettings').style.display = 'none'; $('addressHeaderTrigger').onclick = null; $('addressArrowIcon').style.display = 'none';
+            isGuest = true; $('authScreen').classList.add('hidden'); $('appScreen').classList.remove('hidden'); $('appScreen').classList.add('is-active'); $('btnTabSettings').style.display = 'none'; $('addressHeaderTrigger').onclick = null; $('addressArrowIcon').style.display = 'none';
             fetch(`${WORKER_URL}?share=${urlShareToken}`, { cache: "no-store" }).then(r => r.json()).then(data => { if(data.success) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId; loadCurrentAddress(); } else { alert("Посилання недійсне."); $('appScreen').innerHTML = '<div class="m-auto text-center p-5 font-bold text-red-500">Доступ закрито</div>'; } });
         } 
         else if (localStorage.getItem('k_uid')) performLogin(null, null, false, localStorage.getItem('k_uid'));
