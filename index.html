@@ -18,23 +18,6 @@
             --brand-light: rgba(0, 122, 255, 0.1); 
             --brand-border: rgba(0, 122, 255, 0.25); 
         }
-        
-        body { -webkit-tap-highlight-color: transparent; transition: background-color 0.3s, color 0.3s; }
-        ::-webkit-scrollbar { width: 0px; background: transparent; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type="number"], input[type="text"], input[type="password"] { -moz-appearance: textfield; font-family: inherit; }
-        
-        .spring-modal { transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
-        .tab-hidden { display: none !important; opacity: 0; }
-        .tab-active { display: block !important; opacity: 1; animation: fastFade 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes fastFade { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        
-        .toggle-checkbox:checked { right: 0; border-color: var(--brand-main); }
-        .toggle-checkbox:checked + .toggle-label { background-color: var(--brand-main); }
-        .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
     </style>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { DEFAULT: 'var(--brand-main)', hover: 'var(--brand-hover)', light: 'var(--brand-light)', border: 'var(--brand-border)' }, apple: { dark: '#1c1c1e', darker: '#000000', light: '#f2f2f7' } }, boxShadow: { 'soft': '0 10px 40px -10px rgba(0, 0, 0, 0.08)' } } } }
@@ -43,14 +26,27 @@
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        body, html { overflow: hidden; width: 100vw; height: 100dvh; position: fixed; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"], input[type="text"], input[type="password"] { -moz-appearance: textfield; font-family: inherit; }
+        .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .spring-modal { transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
+        .tab-hidden { display: none !important; opacity: 0; }
+        .tab-active { display: block !important; opacity: 1; animation: fastFade 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes fastFade { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .toggle-checkbox:checked { right: 0; border-color: var(--brand-main); }
+        .toggle-checkbox:checked + .toggle-label { background-color: var(--brand-main); }
+        .toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
+    </style>
 </head>
-<body class="bg-apple-light dark:bg-apple-darker text-slate-800 dark:text-slate-200 transition-colors duration-300 font-sans pb-32 antialiased selection:bg-brand-light">
+<body class="bg-apple-light dark:bg-apple-darker text-slate-800 dark:text-slate-200 flex flex-col transition-colors duration-300 h-[100dvh] selection:bg-brand-light">
 
     <div id="toast" class="fixed top-[env(safe-area-inset-top,20px)] left-1/2 -translate-x-1/2 z-[1000] bg-apple-darker/90 dark:bg-white/90 backdrop-blur-2xl text-white dark:text-apple-darker px-6 py-3.5 rounded-full shadow-2xl font-bold text-sm transition-all duration-300 transform -translate-y-24 opacity-0 flex items-center gap-2 pointer-events-none">
         <span id="toastIcon">✅</span><span id="toastMsg">Повідомлення</span>
     </div>
 
-    <div id="authScreen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-apple-light dark:bg-apple-darker overflow-y-auto">
+    <div id="authScreen" class="absolute inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-apple-light dark:bg-apple-darker overflow-y-auto">
         <div class="w-full max-w-sm py-10">
             <div class="text-center mb-10">
                 <div class="w-24 h-24 bg-gradient-to-br from-brand to-brand-hover rounded-[2.25rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-brand/40 text-white text-5xl transform transition-transform hover:scale-105 duration-300"><i class="fa-solid fa-bolt"></i></div>
@@ -85,9 +81,9 @@
         </div>
     </div>
 
-    <div id="appScreen" class="hidden w-full mx-auto relative max-w-md">
+    <div id="appScreen" class="hidden flex-col h-full w-full mx-auto relative overflow-hidden bg-apple-light dark:bg-apple-darker">
         
-        <div class="px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center z-20">
+        <div class="max-w-md mx-auto w-full px-5 pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 flex justify-between items-center z-20 shrink-0">
             <div class="flex items-center gap-3 cursor-pointer group" onclick="openAddressModal()" id="addressHeaderTrigger">
                 <div class="w-12 h-12 bg-gradient-to-tr from-brand to-brand-hover rounded-full flex items-center justify-center text-white shadow-lg shadow-brand/20 text-xl group-active:scale-95 transition-transform"><i class="fa-solid fa-house"></i></div>
                 <div>
@@ -100,238 +96,240 @@
             </div>
         </div>
 
-        <div id="swipeContainer" class="px-5 w-full">
-            <div id="tabCalc" class="tab-transition tab-active space-y-5">
-                
-                <div id="reminderBanner" class="hidden relative overflow-hidden bg-gradient-to-r from-brand to-indigo-600 p-5 rounded-[1.5rem] shadow-xl text-white mt-2 mb-2 transition-all">
-                    <div class="absolute -right-4 -top-4 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-                    <div class="relative z-10">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="flex gap-3 items-center">
-                                <span class="text-2xl bg-white/20 w-12 h-12 flex items-center justify-center rounded-full shadow-inner"><i class="fa-solid fa-bell text-white"></i></span>
-                                <div>
-                                    <h4 class="font-black text-base mb-0.5 leading-tight">Час подавати показники!</h4>
-                                    <p class="text-xs font-medium opacity-90" id="reminderText">За воду та світло</p>
+        <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 relative w-full pb-8">
+            <div class="max-w-md mx-auto">
+                <div id="tabCalc" class="tab-transition tab-active space-y-5">
+                    
+                    <div id="reminderBanner" class="hidden relative overflow-hidden bg-gradient-to-r from-brand to-indigo-600 p-5 rounded-[1.5rem] shadow-xl text-white mt-2 mb-2 transition-all">
+                        <div class="absolute -right-4 -top-4 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+                        <div class="relative z-10">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex gap-3 items-center">
+                                    <span class="text-2xl bg-white/20 w-12 h-12 flex items-center justify-center rounded-full shadow-inner"><i class="fa-solid fa-bell text-white"></i></span>
+                                    <div>
+                                        <h4 class="font-black text-base mb-0.5 leading-tight">Час подавати показники!</h4>
+                                        <p class="text-xs font-medium opacity-90" id="reminderText">За воду та світло</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="markRemindersSubmitted()" class="w-full bg-white text-brand hover:bg-slate-50 font-black text-sm py-3.5 rounded-xl shadow-lg active:scale-[0.98] transition-transform flex justify-center items-center gap-2">
+                                <i class="fa-solid fa-check-circle"></i> Я вже передав показники
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-apple-darker p-6 rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden border border-white/10 mt-2">
+                        <div class="absolute top-0 right-0 w-64 h-64 bg-brand-light rounded-full blur-3xl translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+                        <div class="relative z-10 flex flex-col justify-between h-full">
+                            <div class="flex justify-between items-start mb-5">
+                                <input type="month" id="monthInput" class="bg-white/10 hover:bg-white/20 transition-colors border-none outline-none font-bold text-white text-sm py-2.5 px-4 rounded-xl cursor-pointer backdrop-blur-md" required>
+                                <label id="winterCheckboxWrapper" class="flex items-center space-x-2 text-xs font-bold bg-white/10 text-white px-3 py-2.5 rounded-xl cursor-pointer backdrop-blur-md hover:bg-white/20 transition-colors active:scale-95"><input type="checkbox" id="isWinterInput" class="rounded accent-brand w-3.5 h-3.5 border-none"><span>❄️ Зима</span></label>
+                            </div>
+                            <div>
+                                <p class="text-white/60 text-xs font-bold uppercase tracking-widest mb-1">До сплати за місяць</p>
+                                <h2 class="text-[2.75rem] font-black tracking-tighter leading-none flex items-baseline gap-1.5" id="heroTotal">0 <span class="text-2xl font-bold text-white/50">₴</span></h2>
+                                
+                                <div class="mt-4 flex items-center justify-between bg-white/10 px-4 py-3 rounded-xl border border-white/5 backdrop-blur-sm">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fa-solid fa-robot text-[11px] text-white/70"></i>
+                                        <span class="text-[10px] text-white/70 font-bold uppercase tracking-widest">Прогноз на наст. місяць:</span>
+                                    </div>
+                                    <span class="text-sm font-black text-white whitespace-nowrap ml-2" id="smartForecast">~ 0 ₴</span>
                                 </div>
                             </div>
                         </div>
-                        <button onclick="markRemindersSubmitted()" class="w-full bg-white text-brand hover:bg-slate-50 font-black text-sm py-3.5 rounded-xl shadow-lg active:scale-[0.98] transition-transform flex justify-center items-center gap-2">
-                            <i class="fa-solid fa-check-circle"></i> Я вже передав показники
-                        </button>
                     </div>
-                </div>
 
-                <div class="bg-apple-darker p-6 rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden border border-white/10 mt-2">
-                    <div class="absolute top-0 right-0 w-64 h-64 bg-brand-light rounded-full blur-3xl translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
-                    <div class="relative z-10 flex flex-col justify-between h-full">
-                        <div class="flex justify-between items-start mb-5">
-                            <input type="month" id="monthInput" class="bg-white/10 hover:bg-white/20 transition-colors border-none outline-none font-bold text-white text-sm py-2.5 px-4 rounded-xl cursor-pointer backdrop-blur-md" required>
-                            <label id="winterCheckboxWrapper" class="flex items-center space-x-2 text-xs font-bold bg-white/10 text-white px-3 py-2.5 rounded-xl cursor-pointer backdrop-blur-md hover:bg-white/20 transition-colors active:scale-95"><input type="checkbox" id="isWinterInput" class="rounded accent-brand w-3.5 h-3.5 border-none"><span>❄️ Зима</span></label>
+                    <form id="utilityForm" class="space-y-4 pb-6">
+                        <div id="blockWater" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
+                            <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 text-xl"><i class="fa-solid fa-droplet"></i></div><span class="font-bold text-lg text-slate-900 dark:text-white">Хол. Вода</span></div><span id="waterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white whitespace-nowrap">0 ₴</span></div>
+                            <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
+                                <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="wPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"></div>
+                                <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-blue-500 whitespace-nowrap" id="wDiffBadge">0 м³</div>
+                                <div class="flex-1"><label class="block text-[10px] text-blue-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="wCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-blue-600 dark:text-blue-400 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"></div>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-white/60 text-xs font-bold uppercase tracking-widest mb-1">До сплати за місяць</p>
-                            <h2 class="text-[2.75rem] font-black tracking-tighter leading-none flex items-baseline gap-1.5" id="heroTotal">0 <span class="text-2xl font-bold text-white/50">₴</span></h2>
-                            
-                            <div class="mt-4 flex items-center justify-between bg-white/10 px-4 py-3 rounded-xl border border-white/5 backdrop-blur-sm">
-                                <div class="flex items-center gap-2">
-                                    <i class="fa-solid fa-robot text-[11px] text-white/70"></i>
-                                    <span class="text-[10px] text-white/70 font-bold uppercase tracking-widest">Прогноз на наст. місяць:</span>
+                        <div id="blockHotWater" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5 hidden">
+                            <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-red-50 dark:bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 text-xl"><i class="fa-solid fa-temperature-three-quarters"></i></div><span class="font-bold text-lg text-slate-900 dark:text-white">Гар. Вода</span></div><span id="hotWaterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white whitespace-nowrap">0 ₴</span></div>
+                            <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
+                                <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="hwPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-red-500/50 transition-all"></div>
+                                <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-red-500 whitespace-nowrap" id="hwDiffBadge">0 м³</div>
+                                <div class="flex-1"><label class="block text-[10px] text-red-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="hwCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-red-600 dark:text-red-400 rounded-xl outline-none focus:ring-2 focus:ring-red-500/50 transition-all"></div>
+                            </div>
+                        </div>
+                        <div id="blockElectro" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
+                            <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-yellow-50 dark:bg-yellow-500/10 rounded-2xl flex items-center justify-center text-yellow-500 text-xl"><i class="fa-solid fa-bolt"></i></div><span class="font-bold text-lg text-slate-900 dark:text-white">Світло</span></div><span id="electroCostDisplay" class="font-black text-xl text-slate-900 dark:text-white whitespace-nowrap">0 ₴</span></div>
+                            <div class="space-y-3">
+                                <div id="electroDayRow" class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
+                                    <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Мин <span id="lblDay1">(День)</span></label><input type="number" id="dPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all"></div>
+                                    <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-yellow-500 whitespace-nowrap" id="dDiffBadge">0 кВт</div>
+                                    <div class="flex-1"><label class="block text-[10px] text-yellow-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові <span id="lblDay2">(День)</span></label><input type="number" id="dCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-yellow-600 dark:text-yellow-400 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all"></div>
                                 </div>
-                                <span class="text-sm font-black text-white whitespace-nowrap ml-2" id="smartForecast">~ 0 ₴</span>
+                                <div id="electroNightRow" class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
+                                    <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Мин (Ніч)</label><input type="number" id="nPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"></div>
+                                    <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-indigo-500 whitespace-nowrap" id="nDiffBadge">0 кВт</div>
+                                    <div class="flex-1"><label class="block text-[10px] text-indigo-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові (Ніч)</label><input type="number" id="nCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-indigo-500 dark:text-indigo-400 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"></div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                        <div id="blockGas" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
+                            <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-orange-50 dark:bg-orange-500/10 rounded-2xl flex items-center justify-center text-orange-500 text-xl"><i class="fa-solid fa-fire"></i></div><span class="font-bold text-lg text-slate-900 dark:text-white">Газ</span></div><span id="gasCostDisplay" class="font-black text-xl text-slate-900 dark:text-white whitespace-nowrap">0 ₴</span></div>
+                            <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
+                                <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="gPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"></div>
+                                <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-orange-500 whitespace-nowrap" id="gDiffBadge">0 м³</div>
+                                <div class="flex-1"><label class="block text-[10px] text-orange-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="gCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-orange-500 dark:text-orange-400 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"></div>
+                            </div>
+                        </div>
+                        <div id="blockCustomServices" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
+                            <div class="flex justify-between items-center mb-4"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-purple-50 dark:bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-500 text-xl"><i class="fa-solid fa-box-open"></i></div><span class="font-bold text-lg text-slate-900 dark:text-white">Інші послуги</span></div><span id="customCostDisplay" class="font-black text-xl text-slate-900 dark:text-white whitespace-nowrap">0 ₴</span></div>
+                            <div id="customServicesContainer" class="grid grid-cols-2 gap-3 empty:hidden"></div>
+                        </div>
+                        <button type="submit" class="w-full bg-brand hover:bg-brand-hover text-white font-bold py-5 rounded-[1.5rem] shadow-xl shadow-brand/20 transition-transform active:scale-[0.98] text-lg mt-4 border border-brand"><i class="fa-solid fa-floppy-disk mr-2"></i> Зберегти розрахунок</button>
+                    </form>
                 </div>
 
-                <form id="utilityForm" class="space-y-4">
-                    <div id="blockWater" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
-                        <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 text-xl"><i class="fa-solid fa-droplet"></i></div><span class="font-bold text-lg text-slate-900 dark:text-white">Хол. Вода</span></div><span id="waterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white whitespace-nowrap">0 ₴</span></div>
-                        <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
-                            <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="wPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"></div>
-                            <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-blue-500 whitespace-nowrap" id="wDiffBadge">0 м³</div>
-                            <div class="flex-1"><label class="block text-[10px] text-blue-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="wCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-blue-600 dark:text-blue-400 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"></div>
-                        </div>
-                    </div>
-                    <div id="blockHotWater" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5 hidden">
-                        <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-red-50 dark:bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 text-xl"><i class="fa-solid fa-temperature-three-quarters"></i></div><span class="font-bold text-lg text-slate-900 dark:text-white">Гар. Вода</span></div><span id="hotWaterCostDisplay" class="font-black text-xl text-slate-900 dark:text-white whitespace-nowrap">0 ₴</span></div>
-                        <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
-                            <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="hwPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-red-500/50 transition-all"></div>
-                            <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-red-500 whitespace-nowrap" id="hwDiffBadge">0 м³</div>
-                            <div class="flex-1"><label class="block text-[10px] text-red-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="hwCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-red-600 dark:text-red-400 rounded-xl outline-none focus:ring-2 focus:ring-red-500/50 transition-all"></div>
-                        </div>
-                    </div>
-                    <div id="blockElectro" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
-                        <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-yellow-50 dark:bg-yellow-500/10 rounded-2xl flex items-center justify-center text-yellow-500 text-xl"><i class="fa-solid fa-bolt"></i></div><span class="font-bold text-lg text-slate-900 dark:text-white">Світло</span></div><span id="electroCostDisplay" class="font-black text-xl text-slate-900 dark:text-white whitespace-nowrap">0 ₴</span></div>
-                        <div class="space-y-3">
-                            <div id="electroDayRow" class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
-                                <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Мин <span id="lblDay1">(День)</span></label><input type="number" id="dPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all"></div>
-                                <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-yellow-500 whitespace-nowrap" id="dDiffBadge">0 кВт</div>
-                                <div class="flex-1"><label class="block text-[10px] text-yellow-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові <span id="lblDay2">(День)</span></label><input type="number" id="dCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-yellow-600 dark:text-yellow-400 rounded-xl outline-none focus:ring-2 focus:ring-yellow-500/50 transition-all"></div>
+                <div id="tabHistory" class="tab-transition tab-hidden space-y-6 mt-2">
+                    <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5">
+                        <div class="flex justify-between items-end mb-6">
+                            <div>
+                                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Середній чек</p>
+                                <h3 class="font-black text-2xl tracking-tight text-slate-900 dark:text-white" id="statsAvg">0 ₴</h3>
                             </div>
-                            <div id="electroNightRow" class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
-                                <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Мин (Ніч)</label><input type="number" id="nPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"></div>
-                                <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-indigo-500 whitespace-nowrap" id="nDiffBadge">0 кВт</div>
-                                <div class="flex-1"><label class="block text-[10px] text-indigo-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові (Ніч)</label><input type="number" id="nCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-indigo-500 dark:text-indigo-400 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"></div>
+                            <div class="text-[11px] font-bold text-brand bg-brand-light px-3 py-1.5 rounded-xl tracking-wide">За 6 місяців</div>
+                        </div>
+                        <div class="relative h-44 w-full mt-4">
+                            <div class="absolute inset-0 flex flex-col justify-between z-0">
+                                <div class="border-t border-slate-100 dark:border-white/5 w-full h-0"></div><div class="border-t border-slate-100 dark:border-white/5 w-full h-0"></div><div class="border-t border-slate-100 dark:border-white/5 w-full h-0"></div><div class="border-t border-slate-300 dark:border-white/20 w-full h-0"></div>
                             </div>
+                            <div id="chartContainer" class="absolute inset-0 flex justify-around items-end h-full pt-4 pb-1 z-10 px-2"></div>
                         </div>
                     </div>
-                    <div id="blockGas" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
-                        <div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-orange-50 dark:bg-orange-500/10 rounded-2xl flex items-center justify-center text-orange-500 text-xl"><i class="fa-solid fa-fire"></i></div><span class="font-bold text-lg text-slate-900 dark:text-white">Газ</span></div><span id="gasCostDisplay" class="font-black text-xl text-slate-900 dark:text-white whitespace-nowrap">0 ₴</span></div>
-                        <div class="relative flex gap-3 items-center bg-slate-50 dark:bg-black/40 p-3 rounded-2xl border border-slate-100 dark:border-white/5">
-                            <div class="flex-1"><label class="block text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1 mb-1.5">Минулі</label><input type="number" id="gPrev" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-slate-700 dark:text-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"></div>
-                            <div class="absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-orange-500 whitespace-nowrap" id="gDiffBadge">0 м³</div>
-                            <div class="flex-1"><label class="block text-[10px] text-orange-500 font-bold uppercase tracking-wider px-1 mb-1.5 text-right">Нові</label><input type="number" id="gCur" class="w-full bg-white dark:bg-[#2c2c2e] border border-slate-200 dark:border-transparent p-2.5 text-center text-xl font-black text-orange-500 dark:text-orange-400 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"></div>
-                        </div>
-                    </div>
-                    <div id="blockCustomServices" class="bg-white dark:bg-apple-dark p-5 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5">
-                        <div class="flex justify-between items-center mb-4"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-purple-50 dark:bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-500 text-xl"><i class="fa-solid fa-box-open"></i></div><span class="font-bold text-lg text-slate-900 dark:text-white">Інші послуги</span></div><span id="customCostDisplay" class="font-black text-xl text-slate-900 dark:text-white whitespace-nowrap">0 ₴</span></div>
-                        <div id="customServicesContainer" class="grid grid-cols-2 gap-3 empty:hidden"></div>
-                    </div>
-                    <button type="submit" class="w-full bg-brand hover:bg-brand-hover text-white font-bold py-5 rounded-[1.5rem] shadow-xl shadow-brand/20 transition-transform active:scale-[0.98] text-lg mt-4 border border-brand"><i class="fa-solid fa-floppy-disk mr-2"></i> Зберегти розрахунок</button>
-                </form>
-            </div>
-
-            <div id="tabHistory" class="tab-transition tab-hidden space-y-6 mt-2">
-                <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5">
-                    <div class="flex justify-between items-end mb-6">
-                        <div>
-                            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Середній чек</p>
-                            <h3 class="font-black text-2xl tracking-tight text-slate-900 dark:text-white" id="statsAvg">0 ₴</h3>
-                        </div>
-                        <div class="text-[11px] font-bold text-brand bg-brand-light px-3 py-1.5 rounded-xl tracking-wide">За 6 місяців</div>
-                    </div>
-                    <div class="relative h-44 w-full mt-4">
-                        <div class="absolute inset-0 flex flex-col justify-between z-0">
-                            <div class="border-t border-slate-100 dark:border-white/5 w-full h-0"></div><div class="border-t border-slate-100 dark:border-white/5 w-full h-0"></div><div class="border-t border-slate-100 dark:border-white/5 w-full h-0"></div><div class="border-t border-slate-300 dark:border-white/20 w-full h-0"></div>
-                        </div>
-                        <div id="chartContainer" class="absolute inset-0 flex justify-around items-end h-full pt-4 pb-1 z-10 px-2"></div>
-                    </div>
-                </div>
-                <div id="recordsList" class="space-y-4 pb-2"></div>
-                <button onclick="exportCSV()" class="w-full py-4 mb-6 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-[#2c2c2e] text-slate-700 dark:text-slate-300 font-bold rounded-[1.5rem] flex items-center justify-center gap-2 transition-colors border border-slate-200 dark:border-white/10 active:scale-[0.98]">
-                    <i class="fa-solid fa-file-excel text-green-600"></i> Експорт в Excel
-                </button>
-            </div>
-
-            <div id="tabSettings" class="tab-transition tab-hidden space-y-5 mt-2">
-                
-                <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5 mb-5">
-                    <h3 class="font-black mb-2 text-lg text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-link text-brand"></i> Акаунт</h3>
-                    <p class="text-xs text-slate-500 font-bold mb-4">Об'єднайте цей профіль з Google, щоб швидко заходити без пароля.</p>
-                    <button id="btnLinkGoogle" type="button" onclick="linkGoogleFromSettings()" class="w-full bg-slate-50 hover:bg-slate-100 dark:bg-[#2c2c2e] dark:hover:bg-[#3c3c3e] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-3 active:scale-[0.96] transition-all shadow-sm">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                        Підв'язати Google
+                    <div id="recordsList" class="space-y-4 pb-2"></div>
+                    <button onclick="exportCSV()" class="w-full py-4 mb-6 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-[#2c2c2e] text-slate-700 dark:text-slate-300 font-bold rounded-[1.5rem] flex items-center justify-center gap-2 transition-colors border border-slate-200 dark:border-white/10 active:scale-[0.98]">
+                        <i class="fa-solid fa-file-excel text-green-600"></i> Експорт в Excel
                     </button>
                 </div>
 
-                <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5 mb-5">
-                    <h3 class="font-black mb-4 text-base text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-palette text-brand"></i> Оформлення</h3>
-                    <div class="flex bg-slate-100 dark:bg-black/50 p-1.5 rounded-xl relative">
-                        <button id="mode-light" onclick="setThemeMode('light')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 z-10">Світла</button>
-                        <button id="mode-auto" onclick="setThemeMode('auto')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 z-10">Системна</button>
-                        <button id="mode-dark" onclick="setThemeMode('dark')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 z-10">Темна</button>
+                <div id="tabSettings" class="tab-transition tab-hidden space-y-5 mt-2 pb-6">
+                    
+                    <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5 mb-5">
+                        <h3 class="font-black mb-2 text-lg text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-link text-brand"></i> Акаунт</h3>
+                        <p class="text-xs text-slate-500 font-bold mb-4">Об'єднайте цей профіль з Google, щоб швидко заходити без пароля.</p>
+                        <button id="btnLinkGoogle" type="button" onclick="linkGoogleFromSettings()" class="w-full bg-slate-50 hover:bg-slate-100 dark:bg-[#2c2c2e] dark:hover:bg-[#3c3c3e] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-3 active:scale-[0.96] transition-all shadow-sm">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                            Підв'язати Google
+                        </button>
                     </div>
-                </div>
 
-                <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5">
-                    <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-coins text-brand"></i> Тарифи</h3>
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Хол. Вода</span><input type="number" id="tWater" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3" id="settingHotWaterWrap" style="display:none;"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Гар. Вода</span><input type="number" id="tHotWater" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Баз.</span><input type="number" id="tElectroBase" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
-                        <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3" id="settingElectroWinterWrap"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Зим.</span><input type="number" id="tElectroWinter" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
-                        <div class="flex justify-between items-center"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Газ</span><input type="number" id="tGas" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                    <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5 mb-5">
+                        <h3 class="font-black mb-4 text-base text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-palette text-brand"></i> Оформлення</h3>
+                        <div class="flex bg-slate-100 dark:bg-black/50 p-1.5 rounded-xl relative">
+                            <button id="mode-light" onclick="setThemeMode('light')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 z-10">Світла</button>
+                            <button id="mode-auto" onclick="setThemeMode('auto')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 z-10">Системна</button>
+                            <button id="mode-dark" onclick="setThemeMode('dark')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-slate-500 z-10">Темна</button>
+                        </div>
                     </div>
-                </div>
 
-                <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5">
-                    <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-list-check text-brand"></i> Блоки послуг</h3>
-                    <div class="space-y-5">
-                        <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
-                            <span class="flex items-center gap-2">💧 Холодна вода</span>
-                            <div class="relative inline-flex items-center"><input type="checkbox" id="prefWater" class="sr-only toggle-checkbox peer"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
-                        </label>
-                        <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer pt-4 border-t border-slate-100 dark:border-white/5">
-                            <span class="flex items-center gap-2">🌡️ Гаряча вода</span>
-                            <div class="relative inline-flex items-center"><input type="checkbox" id="prefHotWater" class="sr-only toggle-checkbox peer"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
-                        </label>
-                        <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                    <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5">
+                        <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-coins text-brand"></i> Тарифи</h3>
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Хол. Вода</span><input type="number" id="tWater" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                            <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3" id="settingHotWaterWrap" style="display:none;"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Гар. Вода</span><input type="number" id="tHotWater" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                            <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Баз.</span><input type="number" id="tElectroBase" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                            <div class="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-3" id="settingElectroWinterWrap"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Світло Зим.</span><input type="number" id="tElectroWinter" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                            <div class="flex justify-between items-center"><span class="text-sm font-bold text-slate-600 dark:text-slate-300">Газ</span><input type="number" id="tGas" step="0.01" class="w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-xl font-bold outline-none text-right focus:ring-2 focus:ring-brand transition-all"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5">
+                        <h3 class="font-black mb-5 text-lg text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-list-check text-brand"></i> Блоки послуг</h3>
+                        <div class="space-y-5">
                             <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
-                                <span class="flex items-center gap-2">⚡️ Електроенергія</span>
-                                <div class="relative inline-flex items-center"><input type="checkbox" id="prefElectro" class="sr-only toggle-checkbox peer"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
+                                <span class="flex items-center gap-2">💧 Холодна вода</span>
+                                <div class="relative inline-flex items-center"><input type="checkbox" id="prefWater" class="sr-only toggle-checkbox peer"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
                             </label>
-                            <div class="pl-7 space-y-3 relative before:absolute before:left-3 before:top-0 before:bottom-2 before:w-0.5 before:bg-slate-100 dark:before:bg-white/5">
-                                <label class="flex justify-between items-center text-xs font-bold text-slate-500 cursor-pointer">
-                                    <span>Двозонний тариф</span>
-                                    <div class="relative inline-flex items-center"><input type="checkbox" id="prefElectroTwoZone" class="sr-only toggle-checkbox peer"><div class="w-10 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-4"></div></div>
+                            <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer pt-4 border-t border-slate-100 dark:border-white/5">
+                                <span class="flex items-center gap-2">🌡️ Гаряча вода</span>
+                                <div class="relative inline-flex items-center"><input type="checkbox" id="prefHotWater" class="sr-only toggle-checkbox peer"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
+                            </label>
+                            <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                                <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
+                                    <span class="flex items-center gap-2">⚡️ Електроенергія</span>
+                                    <div class="relative inline-flex items-center"><input type="checkbox" id="prefElectro" class="sr-only toggle-checkbox peer"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
                                 </label>
-                                <label class="flex justify-between items-center text-xs font-bold text-slate-500 cursor-pointer">
-                                    <span>Зимовий тариф</span>
-                                    <div class="relative inline-flex items-center"><input type="checkbox" id="prefElectroWinter" class="sr-only toggle-checkbox peer"><div class="w-10 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-4"></div></div>
-                                </label>
+                                <div class="pl-7 space-y-3 relative before:absolute before:left-3 before:top-0 before:bottom-2 before:w-0.5 before:bg-slate-100 dark:before:bg-white/5">
+                                    <label class="flex justify-between items-center text-xs font-bold text-slate-500 cursor-pointer">
+                                        <span>Двозонний тариф</span>
+                                        <div class="relative inline-flex items-center"><input type="checkbox" id="prefElectroTwoZone" class="sr-only toggle-checkbox peer"><div class="w-10 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-4"></div></div>
+                                    </label>
+                                    <label class="flex justify-between items-center text-xs font-bold text-slate-500 cursor-pointer">
+                                        <span>Зимовий тариф</span>
+                                        <div class="relative inline-flex items-center"><input type="checkbox" id="prefElectroWinter" class="sr-only toggle-checkbox peer"><div class="w-10 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-4"></div></div>
+                                    </label>
+                                </div>
                             </div>
-                        </div>
-                        <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 pt-4 border-t border-slate-100 dark:border-white/5 cursor-pointer">
-                            <span class="flex items-center gap-2">🔥 Газопостачання</span>
-                            <div class="relative inline-flex items-center"><input type="checkbox" id="prefGas" class="sr-only toggle-checkbox peer"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5">
-                    <h3 class="font-black mb-2 text-lg text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-box-open text-brand"></i> Додаткові послуги</h3>
-                    <div id="customServicesSettingsList" class="space-y-3 mb-4 mt-4"></div>
-                    <button onclick="addCustomServiceField()" class="w-full py-3.5 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-brand border border-slate-200 dark:border-transparent active:scale-[0.98] transition-transform"><i class="fa-solid fa-plus"></i> Додати нову</button>
-                </div>
-                
-                <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5 space-y-6">
-                    <h3 class="font-black text-lg text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-bell text-brand"></i> Нагадування</h3>
-                    <div>
-                        <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer mb-4">
-                            <span class="flex items-center gap-2">Сповіщати мене</span>
-                            <div class="relative inline-flex items-center"><input type="checkbox" id="prefReminders" class="sr-only toggle-checkbox peer" onchange="toggleRemindersUI(this.checked)"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
-                        </label>
-                        <div id="remindersSettings" class="space-y-3 hidden">
-                            <div class="flex justify-between items-center text-xs font-bold text-slate-500">
-                                <span class="flex gap-1.5"><span class="text-blue-500">💧</span> Вода (з - по)</span>
-                                <div class="flex gap-2 items-center"><input type="number" id="remWaterStart" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none"><span>-</span><input type="number" id="remWaterEnd" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none"></div>
-                            </div>
-                            <div class="flex justify-between items-center text-xs font-bold text-slate-500">
-                                <span class="flex gap-1.5"><span class="text-yellow-500">⚡️</span> Світло (з - по)</span>
-                                <div class="flex gap-2 items-center"><input type="number" id="remElectroStart" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none"><span>-</span><input type="number" id="remElectroEnd" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none"></div>
-                            </div>
+                            <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 pt-4 border-t border-slate-100 dark:border-white/5 cursor-pointer">
+                                <span class="flex items-center gap-2">🔥 Газопостачання</span>
+                                <div class="relative inline-flex items-center"><input type="checkbox" id="prefGas" class="sr-only toggle-checkbox peer"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
+                            </label>
                         </div>
                     </div>
-                </div>
 
-                <div id="pwaInstallBlock" class="hidden mb-2">
-                    <button onclick="installPWA()" class="w-full bg-gradient-to-r from-brand to-brand-hover text-white rounded-[1.5rem] py-4 font-bold shadow-xl"><i class="fa-solid fa-download"></i> Додати на Екран</button>
-                </div>
+                    <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5">
+                        <h3 class="font-black mb-2 text-lg text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-box-open text-brand"></i> Додаткові послуги</h3>
+                        <div id="customServicesSettingsList" class="space-y-3 mb-4 mt-4"></div>
+                        <button onclick="addCustomServiceField()" class="w-full py-3.5 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-brand border border-slate-200 dark:border-transparent active:scale-[0.98] transition-transform"><i class="fa-solid fa-plus"></i> Додати нову</button>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5 space-y-6">
+                        <h3 class="font-black text-lg text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-bell text-brand"></i> Нагадування</h3>
+                        <div>
+                            <label class="flex justify-between items-center text-sm font-bold text-slate-800 dark:text-slate-200 cursor-pointer mb-4">
+                                <span class="flex items-center gap-2">Сповіщати мене</span>
+                                <div class="relative inline-flex items-center"><input type="checkbox" id="prefReminders" class="sr-only toggle-checkbox peer" onchange="toggleRemindersUI(this.checked)"><div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors duration-300"></div><div class="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm peer-checked:translate-x-5"></div></div>
+                            </label>
+                            <div id="remindersSettings" class="space-y-3 hidden">
+                                <div class="flex justify-between items-center text-xs font-bold text-slate-500">
+                                    <span class="flex gap-1.5"><span class="text-blue-500">💧</span> Вода (з - по)</span>
+                                    <div class="flex gap-2 items-center"><input type="number" id="remWaterStart" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none"><span>-</span><input type="number" id="remWaterEnd" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none"></div>
+                                </div>
+                                <div class="flex justify-between items-center text-xs font-bold text-slate-500">
+                                    <span class="flex gap-1.5"><span class="text-yellow-500">⚡️</span> Світло (з - по)</span>
+                                    <div class="flex gap-2 items-center"><input type="number" id="remElectroStart" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none"><span>-</span><input type="number" id="remElectroEnd" min="1" max="31" class="w-12 bg-slate-50 dark:bg-black/50 py-2 rounded-xl text-center outline-none"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <button type="button" onclick="saveSettings()" class="w-full bg-apple-darker dark:bg-white text-white dark:text-apple-darker rounded-[1.5rem] py-5 font-bold shadow-xl text-lg mt-2 active:scale-[0.98] transition-transform"><i class="fa-solid fa-floppy-disk"></i> Зберегти налаштування</button>
-                <button type="button" onclick="logout()" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-[1.5rem] py-4 mt-2 mb-4 border border-red-100 dark:border-transparent active:scale-[0.98] transition-transform"><i class="fa-solid fa-arrow-right-from-bracket"></i> Вийти з акаунту</button>
+                    <div id="pwaInstallBlock" class="hidden mb-2">
+                        <button onclick="installPWA()" class="w-full bg-gradient-to-r from-brand to-brand-hover text-white rounded-[1.5rem] py-4 font-bold shadow-xl"><i class="fa-solid fa-download"></i> Додати на Екран</button>
+                    </div>
+
+                    <button type="button" onclick="saveSettings()" class="w-full bg-apple-darker dark:bg-white text-white dark:text-apple-darker rounded-[1.5rem] py-5 font-bold shadow-xl text-lg mt-2 active:scale-[0.98] transition-transform"><i class="fa-solid fa-floppy-disk"></i> Зберегти налаштування</button>
+                    <button type="button" onclick="logout()" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-[1.5rem] py-4 mt-2 mb-4 border border-red-100 dark:border-transparent active:scale-[0.98] transition-transform"><i class="fa-solid fa-arrow-right-from-bracket"></i> Вийти з акаунту</button>
+                </div>
             </div>
         </div>
+
+        <nav class="shrink-0 w-full z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10" style="padding-bottom: max(env(safe-area-inset-bottom), 12px);">
+            <div class="max-w-md mx-auto flex justify-between items-center w-full px-1 pt-3 pb-1">
+                <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn w-[33%] flex flex-col items-center justify-center gap-1 text-brand active:scale-[0.92] transition-transform">
+                    <i class="fa-solid fa-calculator text-[22px]"></i>
+                    <span class="text-[10px] font-bold tracking-tight whitespace-nowrap text-center">Рахунок</span>
+                </button>
+                <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn w-[33%] flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
+                    <i class="fa-solid fa-clock-rotate-left text-[22px]"></i>
+                    <span class="text-[10px] font-bold tracking-tight whitespace-nowrap text-center">Історія</span>
+                </button>
+                <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn w-[33%] flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
+                    <i class="fa-solid fa-gear text-[22px]"></i>
+                    <span class="text-[10px] font-bold tracking-tight whitespace-nowrap text-center">Налаштування</span>
+                </button>
+            </div>
+        </nav>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 w-full z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10" style="padding-bottom: env(safe-area-inset-bottom);">
-        <div class="max-w-md mx-auto flex justify-between items-center px-3 pt-3 pb-3">
-            <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-brand active:scale-[0.92] transition-transform">
-                <i class="fa-solid fa-calculator text-[22px]"></i>
-                <span class="text-[10px] font-bold tracking-tight whitespace-nowrap">Рахунок</span>
-            </button>
-            <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
-                <i class="fa-solid fa-clock-rotate-left text-[22px]"></i>
-                <span class="text-[10px] font-bold tracking-tight whitespace-nowrap">Історія</span>
-            </button>
-            <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
-                <i class="fa-solid fa-gear text-[22px]"></i>
-                <span class="text-[10px] font-bold tracking-tight whitespace-nowrap">Налаштування</span>
-            </button>
-        </div>
-    </nav>
-
-    <div id="addressModal" class="hidden fixed inset-0 z-[500] bg-apple-darker/60 dark:bg-black/60 backdrop-blur-md flex items-end justify-center transition-opacity" onclick="if(event.target === this) closeAddressModal()">
+    <div id="addressModal" class="hidden fixed inset-0 z-[200] bg-apple-darker/60 dark:bg-black/60 backdrop-blur-md flex items-end justify-center transition-opacity" onclick="if(event.target === this) closeAddressModal()">
         <div class="bg-white dark:bg-apple-dark w-full max-w-md rounded-t-[2.5rem] p-6 pb-[max(env(safe-area-inset-bottom),2rem)] spring-modal translate-y-full shadow-[0_-20px_40px_rgba(0,0,0,0.15)]" id="addressModalContent">
             <div class="w-12 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-6"></div>
             <h3 class="font-black text-2xl text-slate-900 dark:text-white mb-4">🏡 Мої об'єкти</h3>
@@ -341,7 +339,7 @@
         </div>
     </div>
 
-    <div id="linkModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6" onclick="if(event.target===this) this.classList.add('hidden')">
+    <div id="linkModal" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex items-center justify-center p-6" onclick="if(event.target===this) this.classList.add('hidden')">
         <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-white/5">
             <div class="text-4xl mb-4">🔗</div>
             <h3 class="text-xl font-black mb-2 text-slate-900 dark:text-white">Об'єднати акаунти?</h3>
@@ -624,7 +622,7 @@
         function editAddressName(e, id) { e.stopPropagation(); const addr = addresses.find(a => a.id === id); const newName = prompt("Нова назва:", addr.name); if(newName && newName.trim()) { addr.name = newName.trim(); renderAddressModal(); if(id === currentAddressId) $('currentAddressDisplay').innerText = addr.name; syncToCloud(); } }
         function deleteAddress(e, id) { e.stopPropagation(); if(addresses.length <= 1) return; if(confirm("Видалити?")) { addresses = addresses.filter(a => a.id !== id); if(currentAddressId === id) currentAddressId = addresses[0].id; loadCurrentAddress(); syncToCloud(); renderAddressModal(); } }
 
-        let touchstartX = 0; let touchendX = 0; const swipeZone = $('appScreen');
+        let touchstartX = 0; let touchendX = 0; const swipeZone = $('swipeContainer');
         swipeZone.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, {passive: true}); swipeZone.addEventListener('touchend', e => { touchendX = e.changedTouches[0].screenX; handleSwipe(); }, {passive: true});
         function handleSwipe() { if(isGuest) return; const dist = touchstartX - touchendX; const tabs = ['tabCalc', 'tabHistory', 'tabSettings']; const curIdx = tabs.findIndex(id => $(id).classList.contains('tab-active')); if (dist > 70 && curIdx < 2) switchTab(tabs[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabs[curIdx - 1], curIdx - 1); }
 
@@ -636,7 +634,7 @@
                 let btnId = tabId === 'tabCalc' ? 'btnTabCalc' : (tabId === 'tabHistory' ? 'btnTabHistory' : 'btnTabSettings');
                 $(btnId).classList.remove('text-slate-400', 'dark:text-slate-500'); $(btnId).classList.add('text-brand');
             }
-            if(tabId === 'tabHistory') renderRecords(); if(tabId === 'tabSettings') renderSettingsCustomServices(); window.scrollTo({ top: 0, behavior: 'smooth' });
+            if(tabId === 'tabHistory') renderRecords(); if(tabId === 'tabSettings') renderSettingsCustomServices(); $('swipeContainer').scrollTo({ top: 0, behavior: 'smooth' });
         }
         
         async function syncToCloud() { 
