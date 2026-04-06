@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -109,7 +110,7 @@
             </div>
         </div>
 
-        <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 relative w-full h-full pb-[110px]">
+        <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 relative w-full h-full pb-[88px]">
             <div class="max-w-md mx-auto">
                 <div id="tabCalc" class="tab-transition tab-active space-y-5">
                     
@@ -324,19 +325,19 @@
             </div>
         </div>
 
-        <nav class="fixed bottom-0 left-0 right-0 w-full z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10 pt-3 pb-[max(env(safe-area-inset-bottom),16px)] px-2 shadow-[0_-5px_20px_rgba(0,0,0,0.03)]">
-            <div class="max-w-md mx-auto flex justify-between items-center">
+        <nav class="fixed bottom-0 left-0 right-0 w-full z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10 pt-2 pb-[env(safe-area-inset-bottom,12px)] px-2 shadow-[0_-5px_20px_rgba(0,0,0,0.03)]">
+            <div class="max-w-md mx-auto flex justify-between items-center h-[52px]">
                 <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-brand active:scale-[0.92] transition-transform">
-                    <i class="fa-solid fa-calculator text-[22px]"></i>
-                    <span class="text-[10px] font-bold tracking-wide whitespace-nowrap">Рахунок</span>
+                    <i class="fa-solid fa-calculator text-[20px]"></i>
+                    <span class="text-[10px] font-semibold whitespace-nowrap">Рахунок</span>
                 </button>
                 <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
-                    <i class="fa-solid fa-clock-rotate-left text-[22px]"></i>
-                    <span class="text-[10px] font-bold tracking-wide whitespace-nowrap">Історія</span>
+                    <i class="fa-solid fa-clock-rotate-left text-[20px]"></i>
+                    <span class="text-[10px] font-semibold whitespace-nowrap">Історія</span>
                 </button>
                 <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
-                    <i class="fa-solid fa-gear text-[22px]"></i>
-                    <span class="text-[10px] font-bold tracking-tight whitespace-nowrap">Налаштування</span>
+                    <i class="fa-solid fa-gear text-[20px]"></i>
+                    <span class="text-[10px] font-semibold whitespace-nowrap">Налаштування</span>
                 </button>
             </div>
         </nav>
