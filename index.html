@@ -109,7 +109,7 @@
             </div>
         </div>
 
-        <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 relative w-full h-full pb-[88px]">
+        <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 relative w-full pb-4">
             <div class="max-w-md mx-auto">
                 <div id="tabCalc" class="tab-transition tab-active space-y-5">
                     
@@ -324,19 +324,19 @@
             </div>
         </div>
 
-        <nav style="position:fixed;bottom:0;left:0;right:0;width:100%;z-index:40;background:rgba(255,255,255,0.95);border-top:1px solid rgba(0,0,0,0.08);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding-top:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom));padding-left:8px;padding-right:8px;box-shadow:0 -4px 16px rgba(0,0,0,0.04);" class="dark:bg-[#1c1c1e]/95 dark:border-white/10">
-            <div class="max-w-md mx-auto flex justify-between items-center" style="height:48px;">
-                <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center text-brand active:scale-[0.92] transition-transform" style="gap:3px;">
+        <nav class="shrink-0 w-full bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10 px-2 shadow-[0_-5px_20px_rgba(0,0,0,0.03)]" style="padding-top:8px;padding-bottom:max(12px,env(safe-area-inset-bottom));">
+            <div class="max-w-md mx-auto flex justify-between items-center" style="height:46px;">
+                <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center text-brand active:scale-[0.92] transition-transform" style="gap:3px;border:none;background:none;cursor:pointer;">
                     <i class="fa-solid fa-calculator" style="font-size:19px;"></i>
-                    <span style="font-size:10px;font-weight:600;white-space:nowrap;letter-spacing:0;">Рахунок</span>
+                    <span style="font-size:10px;font-weight:600;white-space:nowrap;">Рахунок</span>
                 </button>
-                <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform" style="gap:3px;">
+                <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform" style="gap:3px;border:none;background:none;cursor:pointer;">
                     <i class="fa-solid fa-clock-rotate-left" style="font-size:19px;"></i>
-                    <span style="font-size:10px;font-weight:600;white-space:nowrap;letter-spacing:0;">Історія</span>
+                    <span style="font-size:10px;font-weight:600;white-space:nowrap;">Історія</span>
                 </button>
-                <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform" style="gap:3px;">
+                <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform" style="gap:3px;border:none;background:none;cursor:pointer;">
                     <i class="fa-solid fa-gear" style="font-size:19px;"></i>
-                    <span style="font-size:10px;font-weight:600;white-space:nowrap;letter-spacing:0;">Налаштування</span>
+                    <span style="font-size:10px;font-weight:600;white-space:nowrap;">Налаштування</span>
                 </button>
             </div>
         </nav>
