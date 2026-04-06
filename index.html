@@ -324,19 +324,19 @@
             </div>
         </div>
 
-        <nav class="fixed bottom-0 left-0 right-0 w-full z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10 pt-2 pb-[env(safe-area-inset-bottom,12px)] px-2 shadow-[0_-5px_20px_rgba(0,0,0,0.03)]">
-            <div class="max-w-md mx-auto flex justify-between items-center h-[52px]">
-                <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-brand active:scale-[0.92] transition-transform">
-                    <i class="fa-solid fa-calculator text-[20px]"></i>
-                    <span class="text-[10px] font-semibold whitespace-nowrap">Рахунок</span>
+        <nav style="position:fixed;bottom:0;left:0;right:0;width:100%;z-index:40;background:rgba(255,255,255,0.95);border-top:1px solid rgba(0,0,0,0.08);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding-top:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom));padding-left:8px;padding-right:8px;box-shadow:0 -4px 16px rgba(0,0,0,0.04);" class="dark:bg-[#1c1c1e]/95 dark:border-white/10">
+            <div class="max-w-md mx-auto flex justify-between items-center" style="height:48px;">
+                <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center text-brand active:scale-[0.92] transition-transform" style="gap:3px;">
+                    <i class="fa-solid fa-calculator" style="font-size:19px;"></i>
+                    <span style="font-size:10px;font-weight:600;white-space:nowrap;letter-spacing:0;">Рахунок</span>
                 </button>
-                <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
-                    <i class="fa-solid fa-clock-rotate-left text-[20px]"></i>
-                    <span class="text-[10px] font-semibold whitespace-nowrap">Історія</span>
+                <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform" style="gap:3px;">
+                    <i class="fa-solid fa-clock-rotate-left" style="font-size:19px;"></i>
+                    <span style="font-size:10px;font-weight:600;white-space:nowrap;letter-spacing:0;">Історія</span>
                 </button>
-                <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
-                    <i class="fa-solid fa-gear text-[20px]"></i>
-                    <span class="text-[10px] font-semibold whitespace-nowrap">Налаштування</span>
+                <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform" style="gap:3px;">
+                    <i class="fa-solid fa-gear" style="font-size:19px;"></i>
+                    <span style="font-size:10px;font-weight:600;white-space:nowrap;letter-spacing:0;">Налаштування</span>
                 </button>
             </div>
         </nav>
