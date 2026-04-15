@@ -1,0 +1,32 @@
+:root { 
+    --brand-main: #007aff; 
+    --brand-hover: #005bb5; 
+    --brand-light: rgba(0, 122, 255, 0.1); 
+    --brand-border: rgba(0, 122, 255, 0.25); 
+}
+
+/* Жорстка фіксація фону WebView для iOS PWA (прибирає сірі смуги) */
+html { background-color: #f2f2f7; }
+html.dark { background-color: #000000; }
+
+/* Фіксуємо body, щоб воно не стрибало і займало рівно 100% екрана */
+body, html { 
+    margin: 0; padding: 0;
+    width: 100%; height: 100%; 
+    position: fixed; inset: 0;
+    overflow: hidden; 
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+    -webkit-font-smoothing: antialiased; 
+    overscroll-behavior: none; 
+}
+
+input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"], input[type="text"], input[type="password"] { -moz-appearance: textfield; font-family: inherit; }
+.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.spring-modal { transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
+.tab-hidden { display: none !important; opacity: 0; }
+.tab-active { display: block !important; opacity: 1; animation: fastFade 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+@keyframes fastFade { from { opacity: 0; transform: translateY(8px) scale(0.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.toggle-checkbox:checked { right: 0; border-color: var(--brand-main); }
+.toggle-checkbox:checked + .toggle-label { background-color: var(--brand-main); }
+.toggle-checkbox:checked + .toggle-label:after { transform: translateX(100%); border-color: white; }
