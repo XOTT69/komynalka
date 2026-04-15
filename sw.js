@@ -1,50 +1,58 @@
-const CACHE_NAME = 'komunalka-cache-v2';
+// Назву кешу більше не треба міняти вручну!
+const CACHE_NAME = 'utility-dynamic-cache';
 
-const ASSETS = [
+const urlsToCache = [
   './',
   './index.html',
-  './style.css',
-  './app.js',
   './manifest.json',
-  './icon.png',
-  'https://cdn.tailwindcss.com',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
+  './icon.png'
 ];
 
-self.addEventListener('install', (e) => {
-  self.skipWaiting();
-  e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
-});
-
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
-    }).then(() => self.clients.claim())
+// Встановлення
+self.addEventListener('install', event => {
+  self.skipWaiting(); // Одразу активуємо новий SW
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
 });
 
-self.addEventListener('fetch', (e) => {
-  const url = e.request.url;
-  // Ігноруємо динамічні дані та API
-  if (url.includes('firestore.googleapis.com') || 
-      url.includes('identitytoolkit') || 
-      url.includes('workers.dev') ||
-      url.includes('google.com')) {
-    return; 
+// Активація (очищення старих версій кешу, якщо вони ще лишились)
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cache => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
+          }
+        })
+      );
+    }).then(() => self.clients.claim()) // Перехоплюємо контроль над сторінкою
+  );
+});
+
+// Стратегія: Завжди тягнемо з мережі. Якщо успішно - оновлюємо кеш. Якщо мережі нема - беремо з кешу.
+self.addEventListener('fetch', event => {
+  // Ігноруємо запити до Firebase, бо вони мають свою логіку (onSnapshot)
+  if (event.request.url.includes('firestore.googleapis.com') || event.request.url.includes('identitytoolkit')) {
+    return;
   }
 
-  e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      const networkFetch = fetch(e.request).then((networkResponse) => {
+  event.respondWith(
+    fetch(event.request)
+      .then(networkResponse => {
+        // Якщо завантажили успішно, кладемо копію в кеш
         if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, responseClone));
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
         }
         return networkResponse;
-      }).catch(() => console.log('Офлайн режим для: ', url));
-      
-      return cachedResponse || networkFetch;
-    })
+      })
+      .catch(() => {
+        // Якщо інтернету немає, шукаємо в кеші
+        return caches.match(event.request);
+      })
   );
 });
