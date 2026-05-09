@@ -1185,17 +1185,56 @@
         const RECORDS_PER_BATCH = 10;
         
         function renderRecords() {
-            // Якщо є активні фільтри, використовувати їх
-            if (currentFilter !== 'all' || searchQuery) {
-                applyFilters();
-                return;
-            }
-            
             const list = $('recordsList'); list.innerHTML = '';
             recordsRendered = 0;
             
-            let tSum = records.reduce((sum, r) => sum + r.total, 0); $('statsAvg').innerText = fmt.format(records.length ? (tSum / records.length) : 0) + ' ₴';
-            let sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)); renderChart(sorted);
+            // Завжди показувати всі записи спочатку
+            let displayRecords = [...records];
+            
+            // Застосувати фільтри тільки якщо вони активні
+            if (currentFilter !== 'all') {
+                if (currentFilter === 'paid') {
+                    displayRecords = displayRecords.filter(r => r.paid);
+                } else if (currentFilter === 'unpaid') {
+                    displayRecords = displayRecords.filter(r => !r.paid);
+                }
+            }
+            
+            // Застосувати пошук якщо є текст
+            const searchTerm = searchQuery || '';
+            if (searchTerm) {
+                displayRecords = displayRecords.filter(r => {
+                    const monthName = new Date(r.month + '-01').toLocaleString('uk-UA', { month: 'long', year: 'numeric' }).toLowerCase();
+                    return monthName.includes(searchTerm) || r.month.toLowerCase().includes(searchTerm);
+                });
+            }
+            
+            if (displayRecords.length === 0 && records.length > 0) {
+                list.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fa-solid fa-search text-4xl text-slate-300 dark:text-slate-600 mb-4"></i>
+                        <p class="text-slate-500 dark:text-slate-400 font-medium">Записи не знайдено</p>
+                        <p class="text-slate-400 dark:text-slate-500 text-sm mt-2">Спробуйте змінити фільтри або пошуковий запит</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            if (displayRecords.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fa-solid fa-clock-rotate-left text-4xl text-slate-300 dark:text-slate-600 mb-4"></i>
+                        <p class="text-slate-500 dark:text-slate-400 font-medium">Ще немає записів</p>
+                        <p class="text-slate-400 dark:text-slate-500 text-sm mt-2">Додайте ваш перший розрахунок</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let tSum = displayRecords.reduce((sum, r) => sum + r.total, 0); 
+            $('statsAvg').innerText = fmt.format(displayRecords.length ? (tSum / displayRecords.length) : 0) + ' ₴';
+            let sorted = [...displayRecords].sort((a, b) => new Date(b.month) - new Date(a.month)); 
+            renderChart(sorted);
             
             renderRecordsBatch(sorted, 0);
         }
