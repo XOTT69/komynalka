@@ -1215,6 +1215,21 @@
             const list = $('recordsList'); list.innerHTML = '';
             recordsRendered = 0;
             
+            // Відлагодження - перевіряємо чи є дані
+            console.log('renderRecords called, records.length:', records.length);
+            console.log('records:', records);
+            
+            if (records.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fa-solid fa-clock-rotate-left text-4xl text-slate-300 dark:text-slate-600 mb-4"></i>
+                        <p class="text-slate-500 dark:text-slate-400 font-medium">Ще немає записів</p>
+                        <p class="text-slate-400 dark:text-slate-500 text-sm mt-2">Додайте ваш перший розрахунок</p>
+                    </div>
+                `;
+                return;
+            }
+            
             let tSum = records.reduce((sum, r) => sum + r.total, 0); $('statsAvg').innerText = fmt.format(records.length ? (tSum / records.length) : 0) + ' ₴';
             let sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)); renderChart(sorted);
             
