@@ -1233,8 +1233,16 @@
                 return;
             }
             
-            let tSum = records.reduce((sum, r) => sum + r.total, 0); $('statsAvg').innerText = fmt.format(records.length ? (tSum / records.length) : 0) + ' ₴';
-            let sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)); renderChart(sorted);
+            let tSum = records.reduce((sum, r) => sum + r.total, 0); 
+            const statsAvgEl = $('statsAvg');
+            if (statsAvgEl) {
+                statsAvgEl.innerText = fmt.format(records.length ? (tSum / records.length) : 0) + ' ₴';
+            }
+            let sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)); 
+            const chartContainer = $('chartContainer');
+            if (chartContainer) {
+                renderChart(sorted);
+            }
             
             renderRecordsBatch(sorted, 0);
         }
