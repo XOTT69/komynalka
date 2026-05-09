@@ -558,75 +558,160 @@
                     orientation: 'portrait'
                 });
                 
-                // Встановлюємо шрифт з підтримкою кирилиці
-                doc.setFont('helvetica');
-                
                 // Заголовок
-                doc.setFontSize(20);
-                doc.text('Komunalni platezhi', 105, 20, { align: 'center' });
+                doc.setFontSize(18);
+                doc.text('Комунальні платежі', 105, 20, { align: 'center' });
                 
-                doc.setFontSize(12);
-                doc.text(`Adresa: ${$('currentAddressDisplay').innerText}`, 105, 30, { align: 'center' });
-                doc.text(`Zvit za ${records.length} misyatsiv`, 105, 37, { align: 'center' });
+                doc.setFontSize(11);
+                doc.text(`Адреса: ${$('currentAddressDisplay').innerText}`, 105, 30, { align: 'center' });
+                doc.text(`Звіт за ${records.length} місяців`, 105, 37, { align: 'center' });
                 
-                // Таблиця даних
                 let yPosition = 50;
-                doc.setFontSize(10);
                 
-                // Заголовки таблиці
-                const headers = ['Misyats', 'Voda', 'Svitlo', 'Gaz', 'Inshe', 'Vsego', 'Status'];
-                const headerWidths = [30, 20, 20, 20, 20, 25, 25];
-                let xPos = 15;
-                
-                headers.forEach((header, i) => {
-                    doc.text(header, xPos, yPosition);
-                    xPos += headerWidths[i];
-                });
-                
-                yPosition += 10;
-                
-                // Дані
+                // Детальна таблиця по кожному місяцю
                 const sorted = [...records].sort((a,b) => new Date(b.month) - new Date(a.month));
-                sorted.forEach((record, index) => {
-                    if (yPosition > 270) {
+                
+                sorted.forEach((record, recordIndex) => {
+                    if (yPosition > 250) {
                         doc.addPage();
                         yPosition = 20;
                     }
                     
-                    xPos = 15;
-                    const monthName = new Date(record.month + '-01').toLocaleString('uk-UA', {month: 'short'});
-                    const water = prefs.showWater ? `${fmt.format(record.waterCost)} UAH` : '-';
-                    const electro = prefs.showElectro ? `${fmt.format(record.electroCost)} UAH` : '-';
-                    const gas = prefs.showGas ? `${fmt.format(record.gasCost)} UAH` : '-';
-                    const custom = `${fmt.format(record.customCost)} UAH`;
-                    const total = `${fmt.format(record.total)} UAH`;
-                    const status = record.paid ? 'Oplacheno' : 'Borg';
+                    // Заголовок місяця
+                    const monthName = new Date(record.month + '-01').toLocaleString('uk-UA', {month: 'long', year: 'numeric'});
+                    doc.setFontSize(14);
+                    doc.text(monthName, 15, yPosition);
+                    doc.setFontSize(10);
                     
-                    const rowData = [monthName, water, electro, gas, custom, total, status];
-                    rowData.forEach((data, i) => {
-                        doc.text(data, xPos, yPosition);
-                        xPos += headerWidths[i];
-                    });
+                    yPosition += 10;
                     
-                    yPosition += 8;
+                    // Таблиця послуг
+                    const services = [];
+                    
+                    if (prefs.showWater && (record.waterCost > 0 || record.wCur > 0)) {
+                        services.push({
+                            name: 'Холодна вода',
+                            prev: record.wPrev || 0,
+                            cur: record.wCur || 0,
+                            diff: (record.wCur || 0) - (record.wPrev || 0),
+                            cost: record.waterCost || 0
+                        });
+                    }
+                    
+                    if (prefs.showHotWater && (record.hotWaterCost > 0 || record.hwCur > 0)) {
+                        services.push({
+                            name: 'Гаряча вода',
+                            prev: record.hwPrev || 0,
+                            cur: record.hwCur || 0,
+                            diff: (record.hwCur || 0) - (record.hwPrev || 0),
+                            cost: record.hotWaterCost || 0
+                        });
+                    }
+                    
+                    if (prefs.showElectro && (record.electroCost > 0 || record.dCur > 0)) {
+                        services.push({
+                            name: 'Електрика',
+                            prev: (record.dPrev || 0) + (record.nPrev || 0),
+                            cur: (record.dCur || 0) + (record.nCur || 0),
+                            diff: ((record.dCur || 0) + (record.nCur || 0)) - ((record.dPrev || 0) + (record.nPrev || 0)),
+                            cost: record.electroCost || 0
+                        });
+                    }
+                    
+                    if (prefs.showGas && (record.gasCost > 0 || record.gCur > 0)) {
+                        services.push({
+                            name: 'Газ',
+                            prev: record.gPrev || 0,
+                            cur: record.gCur || 0,
+                            diff: (record.gCur || 0) - (record.gPrev || 0),
+                            cost: record.gasCost || 0
+                        });
+                    }
+                    
+                    if (record.customCost > 0 && record.customData) {
+                        Object.values(record.customData).forEach(service => {
+                            if (service.val > 0) {
+                                services.push({
+                                    name: service.name,
+                                    prev: 0,
+                                    cur: service.val,
+                                    diff: service.val,
+                                    cost: service.val
+                                });
+                            }
+                        });
+                    }
+                    
+                    // Малюємо таблицю послуг
+                    if (services.length > 0) {
+                        // Заголовки таблиці
+                        const tableHeaders = ['Послуга', 'Попереднє', 'Поточне', 'Різниця', 'Сума (грн)'];
+                        const colWidths = [50, 25, 25, 25, 35];
+                        let xPos = 15;
+                        
+                        tableHeaders.forEach((header, i) => {
+                            doc.setFontSize(9);
+                            doc.text(header, xPos, yPosition);
+                            xPos += colWidths[i];
+                        });
+                        
+                        yPosition += 8;
+                        
+                        // Дані послуг
+                        services.forEach(service => {
+                            xPos = 15;
+                            const serviceData = [
+                                service.name,
+                                service.prev.toString(),
+                                service.cur.toString(),
+                                service.diff > 0 ? `+${service.diff}` : service.diff.toString(),
+                                fmt.format(service.cost)
+                            ];
+                            
+                            serviceData.forEach((data, i) => {
+                                doc.text(data, xPos, yPosition);
+                                xPos += colWidths[i];
+                            });
+                            
+                            yPosition += 7;
+                        });
+                        
+                        yPosition += 5;
+                    }
+                    
+                    // Підсумок місяця
+                    doc.setFontSize(11);
+                    doc.text(`Всього за місяць: ${fmt.format(record.total)} грн`, 15, yPosition);
+                    doc.text(`Статус: ${record.paid ? 'Сплачено' : 'Не сплачено'}`, 15, yPosition + 7);
+                    
+                    yPosition += 20;
                 });
                 
-                // Підсумки
+                // Загальні підсумки
                 const totalSum = records.reduce((sum, r) => sum + r.total, 0);
                 const avgSum = totalSum / records.length;
                 const paidCount = records.filter(r => r.paid).length;
                 
-                yPosition += 10;
-                doc.setFontSize(12);
-                doc.text(`Zagalna suma: ${fmt.format(totalSum)} UAH`, 15, yPosition);
+                doc.addPage();
+                yPosition = 20;
+                
+                doc.setFontSize(14);
+                doc.text('Загальні підсумки', 105, yPosition, { align: 'center' });
+                
+                yPosition += 15;
+                doc.setFontSize(11);
+                doc.text(`Загальна сума: ${fmt.format(totalSum)} грн`, 15, yPosition);
                 yPosition += 8;
-                doc.text(`Seredniy platezh: ${fmt.format(avgSum)} UAH`, 15, yPosition);
+                doc.text(`Середній платіж: ${fmt.format(avgSum)} грн`, 15, yPosition);
                 yPosition += 8;
-                doc.text(`Splacheno: ${paidCount}/${records.length}`, 15, yPosition);
+                doc.text(`Сплачено періодів: ${paidCount} з ${records.length}`, 15, yPosition);
+                yPosition += 8;
+                doc.text(`Заборгованість: ${fmt.format(totalSum - records.filter(r => r.paid).reduce((sum, r) => sum + r.total, 0))} грн`, 15, yPosition);
                 
                 // Дата генерації
-                doc.setFontSize(8);
-                doc.text(`Zenerovano: ${new Date().toLocaleString('uk-UA')}`, 105, 285, { align: 'center' });
+                yPosition += 15;
+                doc.setFontSize(9);
+                doc.text(`Згенеровано: ${new Date().toLocaleString('uk-UA')}`, 105, yPosition, { align: 'center' });
                 
                 // Збереження
                 doc.save(`komunalka_${currentAddressId}.pdf`);
