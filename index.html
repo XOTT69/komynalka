@@ -9,7 +9,6 @@
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <style>
@@ -238,13 +237,19 @@
                     </form>
                 </div>
 
-                <div id="tabHistory" class="tab-transition tab-hidden space-y-6 mt-2">
-                    <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5">
-                        <div class="flex justify-between items-end mb-6">
-                            <div>
-                                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Середній чек</p>
-                                <h3 class="font-black text-2xl tracking-tight text-slate-900 dark:text-white" id="statsAvg">0 ₴</h3>
-                            </div>
+                        </div>
+                    </div>
+                    <div id="recordsList" class="space-y-4 pb-2"></div>
+                    <button onclick="exportCSV()" class="w-full py-4 mb-6 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-[#2c2c2e] text-slate-700 dark:text-slate-300 font-bold rounded-[1.5rem] flex items-center justify-center gap-2 transition-colors border border-slate-200 dark:border-white/10 active:scale-[0.98]">
+                        <i class="fa-solid fa-file-excel text-green-600"></i> Експорт в Excel
+                    </button>
+                </div>
+
+                <div id="tabHistory" class="tab-transition tab-hidden space-y-5 mt-2">
+                    
+                    <div class="bg-white dark:bg-apple-dark p-6 rounded-[2.5rem] shadow-soft border border-slate-100 dark:border-white/5 mb-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-black text-lg text-slate-900 dark:text-white">Історія</h2>
                             <div class="text-[11px] font-bold text-brand bg-brand-light px-3 py-1.5 rounded-xl tracking-wide">За 6 місяців</div>
                         </div>
                         <div class="relative h-44 w-full mt-4">
@@ -254,15 +259,33 @@
                             <div id="chartContainer" class="absolute inset-0 flex justify-around items-end h-full pt-4 pb-1 z-10 px-2"></div>
                         </div>
                     </div>
+                    
+                    <!-- Пошук та фільтри -->
+                    <div class="bg-white dark:bg-apple-dark p-4 rounded-[2rem] shadow-soft border border-slate-100 dark:border-white/5 mb-5">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="relative flex-1">
+                                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                                <input type="text" id="searchRecords" placeholder="Пошук по місяцю..." 
+                                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-[#2c2c2e] border border-slate-200 dark:border-white/10 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all">
+                            </div>
+                            <button onclick="toggleFilterPanel()" class="px-4 py-2.5 bg-slate-50 dark:bg-[#2c2c2e] border border-slate-200 dark:border-white/10 rounded-xl text-sm font-medium hover:bg-slate-100 dark:hover:bg-[#3c3c3e] transition-all">
+                                <i class="fa-solid fa-filter"></i>
+                            </button>
+                        </div>
+                        
+                        <div id="filterPanel" class="hidden space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-slate-800 dark:text-slate-200">Показати тільки:</span>
+                                <div class="flex gap-2">
+                                    <button onclick="filterRecords('all')" class="filter-btn px-3 py-1.5 bg-brand text-white text-xs font-medium rounded-lg transition-all">Всі</button>
+                                    <button onclick="filterRecords('unpaid')" class="filter-btn px-3 py-1.5 bg-slate-100 dark:bg-[#2c2c2e] text-slate-600 dark:text-slate-400 text-xs font-medium rounded-lg transition-all">Борг</button>
+                                    <button onclick="filterRecords('paid')" class="filter-btn px-3 py-1.5 bg-slate-100 dark:bg-[#2c2c2e] text-slate-600 dark:text-slate-400 text-xs font-medium rounded-lg transition-all">Сплачено</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div id="recordsList" class="space-y-4 pb-2"></div>
-                    <div class="flex gap-3 mb-6">
-                    <button onclick="exportCSV()" class="flex-1 py-4 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-[#2c2c2e] text-slate-700 dark:text-slate-300 font-bold rounded-[1.5rem] flex items-center justify-center gap-2 transition-colors border border-slate-200 dark:border-white/10 active:scale-[0.98]">
-                        <i class="fa-solid fa-file-excel text-green-600"></i> Excel
-                    </button>
-                    <button onclick="exportPDF()" class="flex-1 py-4 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-[#2c2c2e] text-slate-700 dark:text-slate-300 font-bold rounded-[1.5rem] flex items-center justify-center gap-2 transition-colors border border-slate-200 dark:border-white/10 active:scale-[0.98]">
-                        <i class="fa-solid fa-file-pdf text-red-600"></i> PDF
-                    </button>
-                </div>
                 </div>
 
                 <div id="tabSettings" class="tab-transition tab-hidden space-y-5 mt-2 pb-6">
@@ -548,183 +571,7 @@
             let blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'}); let link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `komunalka_${currentAddressId}.csv`; link.click(); showToast('Експортовано', '📊');
         };
 
-        window.exportPDF = function() {
-            if(records.length === 0) return showToast('Немає даних', '⚠️');
-            
-            try {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF({
-                    compress: true,
-                    orientation: 'portrait'
-                });
-                
-                // Заголовок
-                doc.setFontSize(18);
-                doc.text('Комунальні платежі', 105, 20, { align: 'center' });
-                
-                doc.setFontSize(11);
-                doc.text(`Адреса: ${$('currentAddressDisplay').innerText}`, 105, 30, { align: 'center' });
-                doc.text(`Звіт за ${records.length} місяців`, 105, 37, { align: 'center' });
-                
-                let yPosition = 50;
-                
-                // Детальна таблиця по кожному місяцю
-                const sorted = [...records].sort((a,b) => new Date(b.month) - new Date(a.month));
-                
-                sorted.forEach((record, recordIndex) => {
-                    if (yPosition > 250) {
-                        doc.addPage();
-                        yPosition = 20;
-                    }
-                    
-                    // Заголовок місяця
-                    const monthName = new Date(record.month + '-01').toLocaleString('uk-UA', {month: 'long', year: 'numeric'});
-                    doc.setFontSize(14);
-                    doc.text(monthName, 15, yPosition);
-                    doc.setFontSize(10);
-                    
-                    yPosition += 10;
-                    
-                    // Таблиця послуг
-                    const services = [];
-                    
-                    if (prefs.showWater && (record.waterCost > 0 || record.wCur > 0)) {
-                        services.push({
-                            name: 'Холодна вода',
-                            prev: record.wPrev || 0,
-                            cur: record.wCur || 0,
-                            diff: (record.wCur || 0) - (record.wPrev || 0),
-                            cost: record.waterCost || 0
-                        });
-                    }
-                    
-                    if (prefs.showHotWater && (record.hotWaterCost > 0 || record.hwCur > 0)) {
-                        services.push({
-                            name: 'Гаряча вода',
-                            prev: record.hwPrev || 0,
-                            cur: record.hwCur || 0,
-                            diff: (record.hwCur || 0) - (record.hwPrev || 0),
-                            cost: record.hotWaterCost || 0
-                        });
-                    }
-                    
-                    if (prefs.showElectro && (record.electroCost > 0 || record.dCur > 0)) {
-                        services.push({
-                            name: 'Електрика',
-                            prev: (record.dPrev || 0) + (record.nPrev || 0),
-                            cur: (record.dCur || 0) + (record.nCur || 0),
-                            diff: ((record.dCur || 0) + (record.nCur || 0)) - ((record.dPrev || 0) + (record.nPrev || 0)),
-                            cost: record.electroCost || 0
-                        });
-                    }
-                    
-                    if (prefs.showGas && (record.gasCost > 0 || record.gCur > 0)) {
-                        services.push({
-                            name: 'Газ',
-                            prev: record.gPrev || 0,
-                            cur: record.gCur || 0,
-                            diff: (record.gCur || 0) - (record.gPrev || 0),
-                            cost: record.gasCost || 0
-                        });
-                    }
-                    
-                    if (record.customCost > 0 && record.customData) {
-                        Object.values(record.customData).forEach(service => {
-                            if (service.val > 0) {
-                                services.push({
-                                    name: service.name,
-                                    prev: 0,
-                                    cur: service.val,
-                                    diff: service.val,
-                                    cost: service.val
-                                });
-                            }
-                        });
-                    }
-                    
-                    // Малюємо таблицю послуг
-                    if (services.length > 0) {
-                        // Заголовки таблиці
-                        const tableHeaders = ['Послуга', 'Попереднє', 'Поточне', 'Різниця', 'Сума (грн)'];
-                        const colWidths = [50, 25, 25, 25, 35];
-                        let xPos = 15;
-                        
-                        tableHeaders.forEach((header, i) => {
-                            doc.setFontSize(9);
-                            doc.text(header, xPos, yPosition);
-                            xPos += colWidths[i];
-                        });
-                        
-                        yPosition += 8;
-                        
-                        // Дані послуг
-                        services.forEach(service => {
-                            xPos = 15;
-                            const serviceData = [
-                                service.name,
-                                service.prev.toString(),
-                                service.cur.toString(),
-                                service.diff > 0 ? `+${service.diff}` : service.diff.toString(),
-                                fmt.format(service.cost)
-                            ];
-                            
-                            serviceData.forEach((data, i) => {
-                                doc.text(data, xPos, yPosition);
-                                xPos += colWidths[i];
-                            });
-                            
-                            yPosition += 7;
-                        });
-                        
-                        yPosition += 5;
-                    }
-                    
-                    // Підсумок місяця
-                    doc.setFontSize(11);
-                    doc.text(`Всього за місяць: ${fmt.format(record.total)} грн`, 15, yPosition);
-                    doc.text(`Статус: ${record.paid ? 'Сплачено' : 'Не сплачено'}`, 15, yPosition + 7);
-                    
-                    yPosition += 20;
-                });
-                
-                // Загальні підсумки
-                const totalSum = records.reduce((sum, r) => sum + r.total, 0);
-                const avgSum = totalSum / records.length;
-                const paidCount = records.filter(r => r.paid).length;
-                
-                doc.addPage();
-                yPosition = 20;
-                
-                doc.setFontSize(14);
-                doc.text('Загальні підсумки', 105, yPosition, { align: 'center' });
-                
-                yPosition += 15;
-                doc.setFontSize(11);
-                doc.text(`Загальна сума: ${fmt.format(totalSum)} грн`, 15, yPosition);
-                yPosition += 8;
-                doc.text(`Середній платіж: ${fmt.format(avgSum)} грн`, 15, yPosition);
-                yPosition += 8;
-                doc.text(`Сплачено періодів: ${paidCount} з ${records.length}`, 15, yPosition);
-                yPosition += 8;
-                doc.text(`Заборгованість: ${fmt.format(totalSum - records.filter(r => r.paid).reduce((sum, r) => sum + r.total, 0))} грн`, 15, yPosition);
-                
-                // Дата генерації
-                yPosition += 15;
-                doc.setFontSize(9);
-                doc.text(`Згенеровано: ${new Date().toLocaleString('uk-UA')}`, 105, yPosition, { align: 'center' });
-                
-                // Збереження
-                doc.save(`komunalka_${currentAddressId}.pdf`);
-                showToast('PDF експортовано', '📄');
-                haptic('success');
-                
-            } catch(e) {
-                console.error('PDF export error:', e);
-                showToast('Помилка експорту PDF', '❌');
-                haptic('error');
-            }
-        };
-
+        
         async function getHash(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
 
         // --- AUTH & LOGIN LOGIC ---
@@ -1422,6 +1269,95 @@
             card.innerHTML = html;
             return card;
         }
+
+        // Пошук та фільтрація функцій
+        let currentFilter = 'all';
+        let searchQuery = '';
+        
+        window.toggleFilterPanel = function() {
+            const panel = $('filterPanel');
+            panel.classList.toggle('hidden');
+            haptic('buttonPress');
+        };
+        
+        window.filterRecords = function(filter) {
+            currentFilter = filter;
+            
+            // Оновлення стилів кнопок
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-brand', 'text-white');
+                btn.classList.add('bg-slate-100', 'dark:bg-[#2c2c2e]', 'text-slate-600', 'dark:text-slate-400');
+            });
+            
+            event.target.classList.remove('bg-slate-100', 'dark:bg-[#2c2c2e]', 'text-slate-600', 'dark:text-slate-400');
+            event.target.classList.add('bg-brand', 'text-white');
+            
+            applyFilters();
+            haptic('buttonPress');
+        };
+        
+        function applyFilters() {
+            const searchTerm = $('searchRecords').value.toLowerCase();
+            searchQuery = searchTerm;
+            
+            let filteredRecords = [...records];
+            
+            // Застосувати фільтр по статусу
+            if (currentFilter === 'paid') {
+                filteredRecords = filteredRecords.filter(r => r.paid);
+            } else if (currentFilter === 'unpaid') {
+                filteredRecords = filteredRecords.filter(r => !r.paid);
+            }
+            
+            // Застосувати пошук по місяцю
+            if (searchTerm) {
+                filteredRecords = filteredRecords.filter(r => {
+                    const monthName = new Date(r.month + '-01').toLocaleString('uk-UA', { month: 'long', year: 'numeric' }).toLowerCase();
+                    return monthName.includes(searchTerm) || r.month.toLowerCase().includes(searchTerm);
+                });
+            }
+            
+            renderFilteredRecords(filteredRecords);
+        }
+        
+        function renderFilteredRecords(filteredRecords) {
+            const list = $('recordsList');
+            list.innerHTML = '';
+            
+            if (filteredRecords.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fa-solid fa-search text-4xl text-slate-300 dark:text-slate-600 mb-4"></i>
+                        <p class="text-slate-500 dark:text-slate-400 font-medium">Записи не знайдено</p>
+                        <p class="text-slate-400 dark:text-slate-500 text-sm mt-2">Спробуйте змінити фільтри або пошуковий запит</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Використовуємо існуючу логіку рендерингу
+            let tSum = filteredRecords.reduce((sum, r) => sum + r.total, 0); 
+            $('statsAvg').innerText = fmt.format(filteredRecords.length ? (tSum / filteredRecords.length) : 0) + ' ₴';
+            
+            let sorted = [...filteredRecords].sort((a, b) => new Date(b.month) - new Date(a.month)); 
+            renderChart(sorted);
+            
+            renderRecordsBatch(sorted, 0);
+        }
+        
+        // Обробник пошуку
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = $('searchRecords');
+            if (searchInput) {
+                let searchTimeout;
+                searchInput.addEventListener('input', function(e) {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        applyFilters();
+                    }, 300);
+                });
+            }
+        });
 
         window.editRecord = function(index) { let rec = records[index]; $('monthInput').value = rec.month; if(prefs.showWater){ $('wPrev').value = rec.wPrev || ''; $('wCur').value = rec.wCur || ''; } if(prefs.showHotWater){ $('hwPrev').value = rec.hwPrev || ''; $('hwCur').value = rec.hwCur || ''; } if(prefs.showElectro){ $('dPrev').value = rec.dPrev || ''; $('dCur').value = rec.dCur || ''; $('nPrev').value = rec.nPrev || ''; $('nCur').value = rec.nCur || ''; } if(prefs.showGas){ $('gPrev').value = rec.gPrev || ''; $('gCur').value = rec.gCur || ''; } if(rec.customData) { Object.keys(rec.customData).forEach(srvId => { let el = $(`custom_${srvId}`); if(el) el.value = rec.customData[srvId].val; }); } $('isWinterInput').checked = (new Date(rec.month).getMonth() + 1 >= 10 || new Date(rec.month).getMonth() + 1 <= 4); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges(); };
         window.togglePaid = function(index) { records[index].paid = !records[index].paid; renderRecords(); syncToCloud(); };
