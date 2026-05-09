@@ -384,24 +384,24 @@
                 </div>
             </div>
         </div>
-        
-        <nav class="w-full shrink-0 z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10 pt-2 pb-4 px-2 shadow-[0_-5px_20px_rgba(0,0,0,0.03)]" style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));">
-            <div class="max-w-md mx-auto flex justify-between items-center">
-                <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-brand active:scale-[0.92] transition-transform">
-                    <i class="fa-solid fa-calculator text-[22px]"></i>
-                    <span class="text-[10px] font-bold tracking-wide whitespace-nowrap">Рахунок</span>
-                </button>
-                <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
-                    <i class="fa-solid fa-clock-rotate-left text-[22px]"></i>
-                    <span class="text-[10px] font-bold tracking-wide whitespace-nowrap">Історія</span>
-                </button>
-                <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
-                    <i class="fa-solid fa-gear text-[22px]"></i>
-                    <span class="text-[10px] font-bold tracking-tight whitespace-nowrap">Налаштування</span>
-                </button>
-            </div>
-        </nav>
     </div>
+
+    <nav class="fixed bottom-0 left-0 right-0 w-full shrink-0 z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10 pt-2 pb-4 px-2 shadow-[0_-5px_20px_rgba(0,0,0,0.03)]" style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-brand active:scale-[0.92] transition-transform">
+                <i class="fa-solid fa-calculator text-[22px]"></i>
+                <span class="text-[10px] font-bold tracking-wide whitespace-nowrap">Рахунок</span>
+            </button>
+            <button onclick="switchTab('tabHistory', 1)" id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
+                <i class="fa-solid fa-clock-rotate-left text-[22px]"></i>
+                <span class="text-[10px] font-bold tracking-wide whitespace-nowrap">Історія</span>
+            </button>
+            <button id="btnTabSettings" onclick="switchTab('tabSettings', 2)" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform">
+                <i class="fa-solid fa-gear text-[22px]"></i>
+                <span class="text-[10px] font-bold tracking-tight whitespace-nowrap">Налаштування</span>
+            </button>
+        </div>
+    </nav>
 
     <div id="addressModal" class="hidden fixed inset-0 z-[500] bg-apple-darker/60 dark:bg-black/60 backdrop-blur-md flex items-end justify-center transition-opacity" onclick="if(event.target === this) closeAddressModal()">
         <div class="bg-white dark:bg-apple-dark w-full max-w-md rounded-t-[2.5rem] p-6 pb-[max(env(safe-area-inset-bottom),2rem)] spring-modal translate-y-full shadow-[0_-20px_40px_rgba(0,0,0,0.15)]" id="addressModalContent">
@@ -1185,6 +1185,12 @@
         const RECORDS_PER_BATCH = 10;
         
         function renderRecords() {
+            // Якщо є активні фільтри, використовувати їх
+            if (currentFilter !== 'all' || searchQuery) {
+                applyFilters();
+                return;
+            }
+            
             const list = $('recordsList'); list.innerHTML = '';
             recordsRendered = 0;
             
