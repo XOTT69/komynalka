@@ -1134,6 +1134,47 @@
         });
 
         $('monthInput').value = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+        function initAppUI() {
+            // Показати appScreen, приховати authScreen
+            $('authScreen').classList.add('hidden');
+            $('appScreen').classList.remove('hidden');
+            $('appScreen').classList.add('flex');
+            
+            // Заповнити поля тарифів
+            $('tWater').value = tariffs.water || defaultTariffs.water;
+            $('tHotWater').value = tariffs.hotWater || defaultTariffs.hotWater;
+            $('tElectroBase').value = tariffs.electroBase || defaultTariffs.electroBase;
+            $('tElectroWinter').value = tariffs.electroWinter || defaultTariffs.electroWinter;
+            $('tGas').value = tariffs.gas || defaultTariffs.gas;
+            
+            // Застосувати налаштування
+            applyPreferences();
+            
+            // Показати/приховати блоки послуг
+            $('blockWater').style.display = prefs.showWater ? 'block' : 'none';
+            $('blockHotWater').style.display = prefs.showHotWater ? 'block' : 'none';
+            $('blockElectro').style.display = prefs.showElectro ? 'block' : 'none';
+            $('blockGas').style.display = prefs.showGas ? 'block' : 'none';
+            
+            // Оновити кастомні сервіси
+            renderCalcCustomServices();
+            renderSettingsCustomServices();
+            
+            // Заповнити попередні показники
+            fillPreviousReadings();
+            
+            // Розрахувати превью
+            calculatePreview();
+            updateSmartBadges();
+            checkReminders();
+            updateSmartForecast();
+            
+            // Якщо активна вкладка історії, показати записи
+            if ($('tabHistory').classList.contains('tab-active')) {
+                renderRecords();
+            }
+        }
+
         function fillPreviousReadings() {
             ['wPrev','wCur','hwPrev','hwCur','dPrev','dCur','nPrev','nCur','gPrev','gCur'].forEach(id => $(id).value = ''); document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
             if(records.length > 0) {
