@@ -553,22 +553,28 @@
             
             try {
                 const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
+                const doc = new jsPDF({
+                    compress: true,
+                    orientation: 'portrait'
+                });
+                
+                // Встановлюємо шрифт з підтримкою кирилиці
+                doc.setFont('helvetica');
                 
                 // Заголовок
                 doc.setFontSize(20);
-                doc.text('Комунальні платежі', 105, 20, { align: 'center' });
+                doc.text('Komunalni platezhi', 105, 20, { align: 'center' });
                 
                 doc.setFontSize(12);
-                doc.text(`Адреса: ${$('currentAddressDisplay').innerText}`, 105, 30, { align: 'center' });
-                doc.text(`Звіт за ${records.length} місяців`, 105, 37, { align: 'center' });
+                doc.text(`Adresa: ${$('currentAddressDisplay').innerText}`, 105, 30, { align: 'center' });
+                doc.text(`Zvit za ${records.length} misyatsiv`, 105, 37, { align: 'center' });
                 
                 // Таблиця даних
                 let yPosition = 50;
                 doc.setFontSize(10);
                 
                 // Заголовки таблиці
-                const headers = ['Місяць', 'Вода', 'Світло', 'Газ', 'Інше', 'Всього', 'Статус'];
+                const headers = ['Misyats', 'Voda', 'Svitlo', 'Gaz', 'Inshe', 'Vsego', 'Status'];
                 const headerWidths = [30, 20, 20, 20, 20, 25, 25];
                 let xPos = 15;
                 
@@ -589,12 +595,12 @@
                     
                     xPos = 15;
                     const monthName = new Date(record.month + '-01').toLocaleString('uk-UA', {month: 'short'});
-                    const water = prefs.showWater ? `${fmt.format(record.waterCost)} ₴` : '-';
-                    const electro = prefs.showElectro ? `${fmt.format(record.electroCost)} ₴` : '-';
-                    const gas = prefs.showGas ? `${fmt.format(record.gasCost)} ₴` : '-';
-                    const custom = `${fmt.format(record.customCost)} ₴`;
-                    const total = `${fmt.format(record.total)} ₴`;
-                    const status = record.paid ? 'Оплачено' : 'Борг';
+                    const water = prefs.showWater ? `${fmt.format(record.waterCost)} UAH` : '-';
+                    const electro = prefs.showElectro ? `${fmt.format(record.electroCost)} UAH` : '-';
+                    const gas = prefs.showGas ? `${fmt.format(record.gasCost)} UAH` : '-';
+                    const custom = `${fmt.format(record.customCost)} UAH`;
+                    const total = `${fmt.format(record.total)} UAH`;
+                    const status = record.paid ? 'Oplacheno' : 'Borg';
                     
                     const rowData = [monthName, water, electro, gas, custom, total, status];
                     rowData.forEach((data, i) => {
@@ -612,15 +618,15 @@
                 
                 yPosition += 10;
                 doc.setFontSize(12);
-                doc.text(`Загальна сума: ${fmt.format(totalSum)} ₴`, 15, yPosition);
+                doc.text(`Zagalna suma: ${fmt.format(totalSum)} UAH`, 15, yPosition);
                 yPosition += 8;
-                doc.text(`Середній платіж: ${fmt.format(avgSum)} ₴`, 15, yPosition);
+                doc.text(`Seredniy platezh: ${fmt.format(avgSum)} UAH`, 15, yPosition);
                 yPosition += 8;
-                doc.text(`Сплачено: ${paidCount}/${records.length}`, 15, yPosition);
+                doc.text(`Splacheno: ${paidCount}/${records.length}`, 15, yPosition);
                 
                 // Дата генерації
                 doc.setFontSize(8);
-                doc.text(`Згенеровано: ${new Date().toLocaleString('uk-UA')}`, 105, 285, { align: 'center' });
+                doc.text(`Zenerovano: ${new Date().toLocaleString('uk-UA')}`, 105, 285, { align: 'center' });
                 
                 // Збереження
                 doc.save(`komunalka_${currentAddressId}.pdf`);
