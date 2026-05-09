@@ -9,6 +9,7 @@
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <style>
@@ -254,9 +255,14 @@
                         </div>
                     </div>
                     <div id="recordsList" class="space-y-4 pb-2"></div>
-                    <button onclick="exportCSV()" class="w-full py-4 mb-6 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-[#2c2c2e] text-slate-700 dark:text-slate-300 font-bold rounded-[1.5rem] flex items-center justify-center gap-2 transition-colors border border-slate-200 dark:border-white/10 active:scale-[0.98]">
-                        <i class="fa-solid fa-file-excel text-green-600"></i> Експорт в Excel
+                    <div class="flex gap-3 mb-6">
+                    <button onclick="exportCSV()" class="flex-1 py-4 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-[#2c2c2e] text-slate-700 dark:text-slate-300 font-bold rounded-[1.5rem] flex items-center justify-center gap-2 transition-colors border border-slate-200 dark:border-white/10 active:scale-[0.98]">
+                        <i class="fa-solid fa-file-excel text-green-600"></i> Excel
                     </button>
+                    <button onclick="exportPDF()" class="flex-1 py-4 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-[#2c2c2e] text-slate-700 dark:text-slate-300 font-bold rounded-[1.5rem] flex items-center justify-center gap-2 transition-colors border border-slate-200 dark:border-white/10 active:scale-[0.98]">
+                        <i class="fa-solid fa-file-pdf text-red-600"></i> PDF
+                    </button>
+                </div>
                 </div>
 
                 <div id="tabSettings" class="tab-transition tab-hidden space-y-5 mt-2 pb-6">
@@ -542,6 +548,92 @@
             let blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'}); let link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `komunalka_${currentAddressId}.csv`; link.click(); showToast('Експортовано', '📊');
         };
 
+        window.exportPDF = function() {
+            if(records.length === 0) return showToast('Немає даних', '⚠️');
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Заголовок
+                doc.setFontSize(20);
+                doc.text('Комунальні платежі', 105, 20, { align: 'center' });
+                
+                doc.setFontSize(12);
+                doc.text(`Адреса: ${$('currentAddressDisplay').innerText}`, 105, 30, { align: 'center' });
+                doc.text(`Звіт за ${records.length} місяців`, 105, 37, { align: 'center' });
+                
+                // Таблиця даних
+                let yPosition = 50;
+                doc.setFontSize(10);
+                
+                // Заголовки таблиці
+                const headers = ['Місяць', 'Вода', 'Світло', 'Газ', 'Інше', 'Всього', 'Статус'];
+                const headerWidths = [30, 20, 20, 20, 20, 25, 25];
+                let xPos = 15;
+                
+                headers.forEach((header, i) => {
+                    doc.text(header, xPos, yPosition);
+                    xPos += headerWidths[i];
+                });
+                
+                yPosition += 10;
+                
+                // Дані
+                const sorted = [...records].sort((a,b) => new Date(b.month) - new Date(a.month));
+                sorted.forEach((record, index) => {
+                    if (yPosition > 270) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    
+                    xPos = 15;
+                    const monthName = new Date(record.month + '-01').toLocaleString('uk-UA', {month: 'short'});
+                    const water = prefs.showWater ? `${fmt.format(record.waterCost)} ₴` : '-';
+                    const electro = prefs.showElectro ? `${fmt.format(record.electroCost)} ₴` : '-';
+                    const gas = prefs.showGas ? `${fmt.format(record.gasCost)} ₴` : '-';
+                    const custom = `${fmt.format(record.customCost)} ₴`;
+                    const total = `${fmt.format(record.total)} ₴`;
+                    const status = record.paid ? 'Оплачено' : 'Борг';
+                    
+                    const rowData = [monthName, water, electro, gas, custom, total, status];
+                    rowData.forEach((data, i) => {
+                        doc.text(data, xPos, yPosition);
+                        xPos += headerWidths[i];
+                    });
+                    
+                    yPosition += 8;
+                });
+                
+                // Підсумки
+                const totalSum = records.reduce((sum, r) => sum + r.total, 0);
+                const avgSum = totalSum / records.length;
+                const paidCount = records.filter(r => r.paid).length;
+                
+                yPosition += 10;
+                doc.setFontSize(12);
+                doc.text(`Загальна сума: ${fmt.format(totalSum)} ₴`, 15, yPosition);
+                yPosition += 8;
+                doc.text(`Середній платіж: ${fmt.format(avgSum)} ₴`, 15, yPosition);
+                yPosition += 8;
+                doc.text(`Сплачено: ${paidCount}/${records.length}`, 15, yPosition);
+                
+                // Дата генерації
+                doc.setFontSize(8);
+                doc.text(`Згенеровано: ${new Date().toLocaleString('uk-UA')}`, 105, 285, { align: 'center' });
+                
+                // Збереження
+                doc.save(`komunalka_${currentAddressId}.pdf`);
+                showToast('PDF експортовано', '📄');
+                haptic('success');
+                
+            } catch(e) {
+                console.error('PDF export error:', e);
+                showToast('Помилка експорту PDF', '❌');
+                haptic('error');
+            }
+        };
+
         async function getHash(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
 
         // --- AUTH & LOGIN LOGIC ---
@@ -662,6 +754,16 @@
         }
 
         function loadCurrentAddress() {
+            // Try to load from localStorage backup if no data
+            if (!addresses || addresses.length === 0) {
+                const backup = loadFromLocalStorage();
+                if (backup) {
+                    addresses = backup.addresses || [];
+                    currentAddressId = backup.currentAddressId || 'default';
+                    showToast('Відновлено з локального сховища', '💾');
+                }
+            }
+            
             const addr = addresses.find(a => a.id === currentAddressId) || addresses[0]; currentAddressId = addr.id; 
             tariffs = { ...defaultTariffs, ...(addr.tariffs || {}) }; prefs = { ...defaultPrefs, ...(addr.prefs || {}) }; records = addr.records || []; customServices = addr.customServices || [...defaultCustomServices];
             $('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : ''); initAppUI();
@@ -813,8 +915,53 @@
             haptic('tabSwitch');
         }
         
+        // Local Storage Backup Functions
+        function saveToLocalStorage() {
+            try {
+                const backupData = {
+                    addresses: addresses,
+                    currentAddressId: currentAddressId,
+                    tariffs: tariffs,
+                    prefs: prefs,
+                    records: records,
+                    customServices: customServices,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('komynalka_backup', JSON.stringify(backupData));
+                localStorage.setItem('komynalka_last_sync', Date.now().toString());
+            } catch(e) {
+                console.error('Failed to save to localStorage:', e);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const backup = localStorage.getItem('komynalka_backup');
+                if (backup) {
+                    const data = JSON.parse(backup);
+                    return data;
+                }
+            } catch(e) {
+                console.error('Failed to load from localStorage:', e);
+            }
+            return null;
+        }
+
+        function isOffline() {
+            return !navigator.onLine;
+        }
+
         async function syncToCloud() { 
-            syncCurrentAddress(); if(isGuest && urlShareToken) { await fetch(`${WORKER_URL}?share=${urlShareToken}`, { method: 'POST', body: JSON.stringify({ addresses: addresses }) }); return; }
+            syncCurrentAddress(); 
+            
+            // Save to localStorage first
+            saveToLocalStorage();
+            
+            if(isGuest && urlShareToken) { 
+                await fetch(`${WORKER_URL}?share=${urlShareToken}`, { method: 'POST', body: JSON.stringify({ addresses: addresses }) }); 
+                return; 
+            }
+            
             if (!sessionLogin && !localStorage.getItem('k_uid')) return; 
             
             let url = WORKER_URL;
@@ -827,8 +974,24 @@
                 const data = await res.json(); 
                 if (res.status === 403 || data.error === "WRONG_PASSWORD") logout(); 
                 if (res.status === 500) showToast("Помилка збереження! Перевірте KV", "⚠️");
-            } catch(e) { console.error(e); }
+                
+                // Update last sync time on successful sync
+                localStorage.setItem('komynalka_last_sync', Date.now().toString());
+            } catch(e) { 
+                console.error(e); 
+                showToast('Збережено локально (офлайн режим)', '💾');
+            }
         }
+
+        // Auto-sync when coming back online
+        window.addEventListener('online', () => {
+            showToast('З\'єднання відновлено', '🌐');
+            syncToCloud();
+        });
+
+        window.addEventListener('offline', () => {
+            showToast('Офлайн режим', '📴');
+        });
 
         window.logout = function() { 
             if(isGuest) { window.location.href = window.location.pathname; return; } 
@@ -1084,47 +1247,89 @@
             try { await navigator.clipboard.writeText(txt); showToast("Скопійовано! 🧾"); } catch(e) { prompt("Копіюйте:", txt); }
         };
 
+        let recordsRendered = 0;
+        const RECORDS_PER_BATCH = 10;
+        
         function renderRecords() {
             const list = $('recordsList'); list.innerHTML = '';
+            recordsRendered = 0;
+            
             let tSum = records.reduce((sum, r) => sum + r.total, 0); $('statsAvg').innerText = fmt.format(records.length ? (tSum / records.length) : 0) + ' ₴';
             let sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)); renderChart(sorted);
-            let grouped = {}; sorted.forEach((rec, index) => { let yr = rec.month.split('-')[0]; if (!grouped[yr]) grouped[yr] = []; grouped[yr].push({rec, index: records.indexOf(rec)}); });
+            
+            renderRecordsBatch(sorted, 0);
+        }
+        
+        function renderRecordsBatch(sortedRecords, startIndex) {
+            const list = $('recordsList');
+            const endIndex = Math.min(startIndex + RECORDS_PER_BATCH, sortedRecords.length);
+            
+            let grouped = {};
+            for (let i = startIndex; i < endIndex; i++) {
+                const rec = sortedRecords[i];
+                const yr = rec.month.split('-')[0];
+                if (!grouped[yr]) grouped[yr] = [];
+                grouped[yr].push({rec, index: records.indexOf(rec)});
+            }
             
             Object.keys(grouped).sort((a, b) => b - a).forEach(year => {
-                let header = document.createElement('div'); header.className = "flex items-center gap-4 mt-8 mb-4"; header.innerHTML = `<h2 class="text-lg font-black text-slate-400">${year}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-white/5"></div>`; list.appendChild(header);
+                // Check if year header already exists
+                if (!list.querySelector(`[data-year="${year}"]`)) {
+                    let header = document.createElement('div'); 
+                    header.className = "flex items-center gap-4 mt-8 mb-4"; 
+                    header.setAttribute('data-year', year);
+                    header.innerHTML = `<h2 class="text-lg font-black text-slate-400">${year}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-white/5"></div>`; 
+                    list.appendChild(header);
+                }
+                
                 grouped[year].forEach(item => {
-                    let {rec, index} = item; const card = document.createElement('div'); 
-                    card.className = `p-5 sm:p-6 rounded-[2rem] shadow-soft border bg-white dark:bg-apple-dark mb-4 transition-all relative overflow-hidden cursor-pointer select-none active:scale-[0.98] ${rec.paid ? 'border-slate-100 dark:border-white/5' : 'border-orange-200 dark:border-orange-500/30 ring-1 ring-orange-400/20'}`;
-                    card.setAttribute('onclick', `toggleDetails(${index})`);
-                    if(!rec.paid) card.innerHTML += `<div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-orange-400/20 to-transparent rounded-bl-[4rem]"></div>`;
-                    
-                    let dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); 
-                    let [rY, rM] = rec.month.split('-'); let prevRec = records.find(r => r.month === (parseInt(rY) - 1) + '-' + rM); let yoyHtml = '';
-                    if (prevRec && prevRec.total > 0 && rec.total > 0) { let percent = Math.round(((rec.total - prevRec.total) / prevRec.total) * 100); if (percent < 0) yoyHtml = `<span class="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-lg ml-2"><i class="fa-solid fa-arrow-trend-down"></i> ${percent}% рік до року</span>`; else if (percent > 0) yoyHtml = `<span class="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-lg ml-2"><i class="fa-solid fa-arrow-trend-up"></i> +${percent}% рік до року</span>`; }
-
-                    let pW = ((rec.waterCost||0) / rec.total) * 100 || 0; let pHW = ((rec.hotWaterCost||0) / rec.total) * 100 || 0; let pE = ((rec.electroCost||0) / rec.total) * 100 || 0; let pG = ((rec.gasCost||0) / rec.total) * 100 || 0; let pC = ((rec.customCost||0) / rec.total) * 100 || 0;
-                    let conic = `conic-gradient( #3b82f6 0% ${pW}%, #ef4444 ${pW}% ${pW+pHW}%, #eab308 ${pW+pHW}% ${pW+pHW+pE}%, #f97316 ${pW+pHW+pE}% ${pW+pHW+pE+pG}%, #a855f7 ${pW+pHW+pE+pG}% 100% )`;
-
-                    let html = `<div class="flex justify-between items-center relative z-10"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4><div class="flex items-center"><span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-brand-light text-brand' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Борг'}</span>${yoyHtml}</div></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-full text-slate-400 shadow-sm"><i id="chevron-${index}" class="fa-solid fa-chevron-down transition-transform duration-300"></i></div></div></div>
-                    <div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()"><div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5 relative z-10">
-                            ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background: ${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span>💧 Хол. Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span>🌡️ Гар. Вода</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span>⚡ Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span>🔥 Газ</span><span>${Math.round(pG)}%</span></div>`:''}${pC>0?`<div class="flex justify-between"><span>📦 Інше</span><span>${Math.round(pC)}%</span></div>`:''}</div></div>` : ''}
-                            <div class="space-y-4">`;
-                    
-                    if (rec.waterCost > 0 || rec.wCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">💧 Хол. Вода</span><span class="font-black">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.wPrev} → ${rec.wCur}</span><span class="text-blue-500">+${rec.wCur - rec.wPrev} м³</span></div></div>`;
-                    if (rec.hotWaterCost > 0 || rec.hwCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">🌡️ Гар. Вода</span><span class="font-black">${fmt.format(rec.hotWaterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.hwPrev} → ${rec.hwCur}</span><span class="text-red-500">+${rec.hwCur - rec.hwPrev} м³</span></div></div>`;
-                    if (rec.electroCost > 0 || rec.dCur > 0) { html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">⚡️ Світло</span><span class="font-black">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex flex-col gap-1.5"><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>День: ${rec.dPrev} → ${rec.dCur}</span><span class="text-yellow-600">+${rec.dCur - rec.dPrev} кВт</span></div>`; if(rec.nCur > 0 || rec.nPrev > 0) html += `<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>Ніч: ${rec.nPrev} → ${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur - rec.nPrev} кВт</span></div>`; html += `</div></div>`; }
-                    if (rec.gasCost > 0 || rec.gCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">🔥 Газ</span><span class="font-black">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.gPrev} → ${rec.gCur}</span><span class="text-orange-500">+${rec.gCur - rec.gPrev} м³</span></div></div>`;
-                    if (rec.customCost > 0) { html += `<div class="flex flex-col"><div class="flex justify-between items-center"><span class="text-slate-700 dark:text-slate-200 font-bold">📦 Інше</span><span class="font-black">${fmt.format(rec.customCost)} ₴</span></div>`; if(rec.customData) { html += `<div class="flex flex-col gap-1 mt-2 text-[11px]">`; Object.values(rec.customData).forEach(srv => { if(srv.val > 0) html += `<div class="flex justify-between text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span class="font-bold">${srv.name}</span><span class="font-black text-purple-500">${fmt.format(srv.val)} ₴</span></div>`; }); html += `</div>`; } html += `</div>`; }
-                    
-                    html += `</div></div><div class="flex gap-2.5 mt-4 relative z-10 pt-2 border-t border-slate-100 dark:border-white/5">
-                            <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-2xl font-bold text-xs border transition-colors active:scale-[0.98] ${rec.paid ? 'bg-slate-50 text-slate-500 dark:bg-[#2c2c2e] border-transparent' : 'bg-brand text-white shadow-lg'}">${rec.paid ? 'Скасувати' : 'Позначити оплаченим'}</button>
-                            <button type="button" onclick="shareRecordReceipt(${index}, event);" class="w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 transition-transform active:scale-[0.90]"><i class="fa-solid fa-share-nodes"></i></button>
-                            <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 transition-transform active:scale-[0.90]"><i class="fa-solid fa-pen"></i></button>
-                            <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 transition-transform active:scale-[0.90]"><i class="fa-solid fa-trash"></i></button>
-                        </div></div>`;
-                    card.innerHTML = html; list.appendChild(card);
+                    let {rec, index} = item; 
+                    const card = createRecordCard(rec, index);
+                    list.appendChild(card);
+                    recordsRendered++;
                 });
             });
+            
+            // Continue rendering if there are more records
+            if (endIndex < sortedRecords.length) {
+                requestAnimationFrame(() => {
+                    setTimeout(() => renderRecordsBatch(sortedRecords, endIndex), 50);
+                });
+            }
+        }
+        
+        function createRecordCard(rec, index) {
+            const card = document.createElement('div'); 
+            card.className = `p-5 sm:p-6 rounded-[2rem] shadow-soft border bg-white dark:bg-apple-dark mb-4 transition-all relative overflow-hidden cursor-pointer select-none active:scale-[0.98] ${rec.paid ? 'border-slate-100 dark:border-white/5' : 'border-orange-200 dark:border-orange-500/30 ring-1 ring-orange-400/20'}`;
+            card.setAttribute('onclick', `toggleDetails(${index})`);
+            if(!rec.paid) card.innerHTML += `<div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-orange-400/20 to-transparent rounded-bl-[4rem]"></div>`;
+            
+            let dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', {month:'long'}).replace(' р.',''); 
+            let [rY, rM] = rec.month.split('-'); let prevRec = records.find(r => r.month === (parseInt(rY) - 1) + '-' + rM); let yoyHtml = '';
+            if (prevRec && prevRec.total > 0 && rec.total > 0) { let percent = Math.round(((rec.total - prevRec.total) / prevRec.total) * 100); if (percent < 0) yoyHtml = `<span class="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-lg ml-2"><i class="fa-solid fa-arrow-trend-down"></i> ${percent}% рік до року</span>`; else if (percent > 0) yoyHtml = `<span class="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-lg ml-2"><i class="fa-solid fa-arrow-trend-up"></i> +${percent}% рік до року</span>`; }
+
+            let pW = ((rec.waterCost||0) / rec.total) * 100 || 0; let pHW = ((rec.hotWaterCost||0) / rec.total) * 100 || 0; let pE = ((rec.electroCost||0) / rec.total) * 100 || 0; let pG = ((rec.gasCost||0) / rec.total) * 100 || 0; let pC = ((rec.customCost||0) / rec.total) * 100 || 0;
+            let conic = `conic-gradient( #3b82f6 0% ${pW}%, #ef4444 ${pW}% ${pW+pHW}%, #eab308 ${pW+pHW}% ${pW+pHW+pE}%, #f97316 ${pW+pHW+pE}% ${pW+pHW+pE+pG}%, #a855f7 ${pW+pHW+pE+pG}% 100% )`;
+
+            let html = `<div class="flex justify-between items-center relative z-10"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4><div class="flex items-center"><span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-brand-light text-brand' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Борг'}</span>${yoyHtml}</div></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-full text-slate-400 shadow-sm"><i id="chevron-${index}" class="fa-solid fa-chevron-down transition-transform duration-300"></i></div></div></div>
+            <div id="details-${index}" class="hidden cursor-default" onclick="event.stopPropagation()"><div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5 relative z-10">
+                    ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background: ${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span>💧 Хол. Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span>🌡️ Гар. Вода</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span>⚡ Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span>🔥 Газ</span><span>${Math.round(pG)}%</span></div>`:''}${pC>0?`<div class="flex justify-between"><span>📦 Інше</span><span>${Math.round(pC)}%</span></div>`:''}</div></div>` : ''}
+                    <div class="space-y-4">`;
+            
+            if (rec.waterCost > 0 || rec.wCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">💧 Хол. Вода</span><span class="font-black">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.wPrev} → ${rec.wCur}</span><span class="text-blue-500">+${rec.wCur - rec.wPrev} м³</span></div></div>`;
+            if (rec.hotWaterCost > 0 || rec.hwCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">🌡️ Гар. Вода</span><span class="font-black">${fmt.format(rec.hotWaterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.hwPrev} → ${rec.hwCur}</span><span class="text-red-500">+${rec.hwCur - rec.hwPrev} м³</span></div></div>`;
+            if (rec.electroCost > 0 || rec.dCur > 0) { html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">⚡️ Світло</span><span class="font-black">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex flex-col gap-1.5"><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>День: ${rec.dPrev} → ${rec.dCur}</span><span class="text-yellow-600">+${rec.dCur - rec.dPrev} кВт</span></div>`; if(rec.nCur > 0 || rec.nPrev > 0) html += `<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>Ніч: ${rec.nPrev} → ${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur - rec.nPrev} кВт</span></div>`; html += `</div></div>`; }
+            if (rec.gasCost > 0 || rec.gCur > 0) html += `<div class="flex flex-col"><div class="flex justify-between items-center mb-2"><span class="text-slate-700 dark:text-slate-200 font-bold">🔥 Газ</span><span class="font-black">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.gPrev} → ${rec.gCur}</span><span class="text-orange-500">+${rec.gCur - rec.gPrev} м³</span></div></div>`;
+            if (rec.customCost > 0) { html += `<div class="flex flex-col"><div class="flex justify-between items-center"><span class="text-slate-700 dark:text-slate-200 font-bold">📦 Інше</span><span class="font-black">${fmt.format(rec.customCost)} ₴</span></div>`; if(rec.customData) { html += `<div class="flex flex-col gap-1 mt-2 text-[11px]">`; Object.values(rec.customData).forEach(srv => { if(srv.val > 0) html += `<div class="flex justify-between text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span class="font-bold">${srv.name}</span><span class="font-black text-purple-500">${fmt.format(srv.val)} ₴</span></div>`; }); html += `</div>`; } html += `</div>`; }
+            
+            html += `</div></div><div class="flex gap-2.5 mt-4 relative z-10 pt-2 border-t border-slate-100 dark:border-white/5">
+                    <button type="button" onclick="togglePaid(${index}); event.stopPropagation();" class="flex-1 py-3.5 rounded-2xl font-bold text-xs border transition-colors active:scale-[0.98] ${rec.paid ? 'bg-slate-50 text-slate-500 dark:bg-[#2c2c2e] border-transparent' : 'bg-brand text-white shadow-lg'}">${rec.paid ? 'Скасувати' : 'Позначити оплаченим'}</button>
+                    <button type="button" onclick="shareRecordReceipt(${index}, event);" class="w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 transition-transform active:scale-[0.90]"><i class="fa-solid fa-share-nodes"></i></button>
+                    <button type="button" onclick="editRecord(${index}); event.stopPropagation();" class="w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 transition-transform active:scale-[0.90]"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" onclick="deleteRecord(${index}); event.stopPropagation();" class="w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 transition-transform active:scale-[0.90]"><i class="fa-solid fa-trash"></i></button>
+                </div></div>`;
+            card.innerHTML = html;
+            return card;
         }
 
         window.editRecord = function(index) { let rec = records[index]; $('monthInput').value = rec.month; if(prefs.showWater){ $('wPrev').value = rec.wPrev || ''; $('wCur').value = rec.wCur || ''; } if(prefs.showHotWater){ $('hwPrev').value = rec.hwPrev || ''; $('hwCur').value = rec.hwCur || ''; } if(prefs.showElectro){ $('dPrev').value = rec.dPrev || ''; $('dCur').value = rec.dCur || ''; $('nPrev').value = rec.nPrev || ''; $('nCur').value = rec.nCur || ''; } if(prefs.showGas){ $('gPrev').value = rec.gPrev || ''; $('gCur').value = rec.gCur || ''; } if(rec.customData) { Object.keys(rec.customData).forEach(srvId => { let el = $(`custom_${srvId}`); if(el) el.value = rec.customData[srvId].val; }); } $('isWinterInput').checked = (new Date(rec.month).getMonth() + 1 >= 10 || new Date(rec.month).getMonth() + 1 <= 4); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges(); };
