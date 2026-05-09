@@ -385,7 +385,7 @@
             </div>
         </div>
 
-        <nav class="w-full shrink-0 z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10 pt-2 pb-2 px-2 shadow-[0_-5px_20px_rgba(0,0,0,0.03)]">
+        <nav class="w-full shrink-0 z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl border-t border-slate-200 dark:border-white/10 pt-2 pb-4 px-2 shadow-[0_-5px_20px_rgba(0,0,0,0.03)]" style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));">
             <div class="max-w-md mx-auto flex justify-between items-center">
                 <button onclick="switchTab('tabCalc', 0)" id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-brand active:scale-[0.92] transition-transform">
                     <i class="fa-solid fa-calculator text-[22px]"></i>
@@ -1341,8 +1341,8 @@
             renderRecordsBatch(sorted, 0);
         }
         
-        // Обробник пошуку
-        document.addEventListener('DOMContentLoaded', function() {
+        // Обробник пошуку - ініціалізується після завантаження сторінки
+        setTimeout(() => {
             const searchInput = $('searchRecords');
             if (searchInput) {
                 let searchTimeout;
@@ -1353,7 +1353,7 @@
                     }, 300);
                 });
             }
-        });
+        }, 100);
 
         window.editRecord = function(index) { let rec = records[index]; $('monthInput').value = rec.month; if(prefs.showWater){ $('wPrev').value = rec.wPrev || ''; $('wCur').value = rec.wCur || ''; } if(prefs.showHotWater){ $('hwPrev').value = rec.hwPrev || ''; $('hwCur').value = rec.hwCur || ''; } if(prefs.showElectro){ $('dPrev').value = rec.dPrev || ''; $('dCur').value = rec.dCur || ''; $('nPrev').value = rec.nPrev || ''; $('nCur').value = rec.nCur || ''; } if(prefs.showGas){ $('gPrev').value = rec.gPrev || ''; $('gCur').value = rec.gCur || ''; } if(rec.customData) { Object.keys(rec.customData).forEach(srvId => { let el = $(`custom_${srvId}`); if(el) el.value = rec.customData[srvId].val; }); } $('isWinterInput').checked = (new Date(rec.month).getMonth() + 1 >= 10 || new Date(rec.month).getMonth() + 1 <= 4); switchTab('tabCalc', 0); calculatePreview(); updateSmartBadges(); };
         window.togglePaid = function(index) { records[index].paid = !records[index].paid; renderRecords(); syncToCloud(); };
