@@ -586,42 +586,50 @@ $('btnClearFields')?.addEventListener('click', () => {
 });
 
 function fillPreviousReadings() {
-    readingInputIds.forEach(id => { if($(id)) $(id).value = ''; });
-    document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
-    if ($('recordNote')) $('recordNote').value = '';
+    try {
+        readingInputIds.forEach(id => { if($(id)) $(id).value = ''; });
+        document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
+        if ($('recordNote')) $('recordNote').value = '';
 
-    const selectedMonth = $('monthInput')?.value;
-    if (!selectedMonth) return;
+        const selectedMonth = $('monthInput')?.value;
+        if (!selectedMonth || records.length === 0) return;
 
-    // Знаходимо попередній місяць
-    const [sy, sm] = selectedMonth.split('-').map(Number);
-    const prevDate = new Date(sy, sm - 2); // -2 бо місяці 0-based
-    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+        // Знаходимо попередній місяць
+        const [sy, sm] = selectedMonth.split('-').map(Number);
+        const prevDate = new Date(sy, sm - 2);
+        const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
 
         // Шукаємо запис за попередній місяць → "Минулі"
-    const prevRecord = records.find(r => r.month === prevMonth);
-    if (prevRecord) {
-        if (prefs.showWater && prevRecord.wCur != null) $('wPrev').value = prevRecord.wCur;
-        if (prefs.showHotWater && prevRecord.hwCur != null) $('hwPrev').value = prevRecord.hwCur;
-        if (prefs.showElectro) { 
-            if (prevRecord.dCur != null) $('dPrev').value = prevRecord.dCur; 
-            if (prefs.electroTwoZone && prevRecord.nCur != null) $('nPrev').value = prevRecord.nCur; 
+        const prevRecord = records.find(r => r.month === prevMonth);
+        if (prevRecord) {
+            if (prefs.showWater && prevRecord.wCur != null) $('wPrev').value = prevRecord.wCur;
+            if (prefs.showHotWater && prevRecord.hwCur != null) $('hwPrev').value = prevRecord.hwCur;
+            if (prefs.showElectro) { 
+                if (prevRecord.dCur != null) $('dPrev').value = prevRecord.dCur; 
+                if (prefs.electroTwoZone && prevRecord.nCur != null) $('nPrev').value = prevRecord.nCur; 
+            }
+            if (prefs.showGas && prevRecord.gCur != null) $('gPrev').value = prevRecord.gCur;
         }
-        if (prefs.showGas && prevRecord.gCur != null) $('gPrev').value = prevRecord.gCur;
-    }
 
-    // Шукаємо запис за обраний місяць → "Нові"
-    const currentRecord = records.find(r => r.month === selectedMonth);
-    if (currentRecord) {
-        if (prefs.showWater) { if (currentRecord.wPrev != null) $('wPrev').value = currentRecord.wPrev; if (currentRecord.wCur != null) $('wCur').value = currentRecord.wCur; }
-        if (prefs.showHotWater) { if (currentRecord.hwPrev != null) $('hwPrev').value = currentRecord.hwPrev; if (currentRecord.hwCur != null) $('hwCur').value = currentRecord.hwCur; }
-        if (prefs.showElectro) { if (currentRecord.dPrev != null) $('dPrev').value = currentRecord.dPrev; if (currentRecord.dCur != null) $('dCur').value = currentRecord.dCur; if (prefs.electroTwoZone) { if (currentRecord.nPrev != null) $('nPrev').value = currentRecord.nPrev; if (currentRecord.nCur != null) $('nCur').value = currentRecord.nCur; } }
-        if (prefs.showGas) { if (currentRecord.gPrev != null) $('gPrev').value = currentRecord.gPrev; if (currentRecord.gCur != null) $('gCur').value = currentRecord.gCur; }
-        if (currentRecord.customData) { Object.keys(currentRecord.customData).forEach(srvId => { const el = $(`custom_${srvId}`); if (el) el.value = currentRecord.customData[srvId].val; }); }
-        if ($('recordNote')) $('recordNote').value = currentRecord.note || '';
-    } else {
-        customServices.forEach(srv => { const el = $(`custom_${srv.id}`); if (el && srv.defaultSum) el.value = srv.defaultSum; });
+        // Шукаємо запис за обраний місяць → "Нові"
+        const currentRecord = records.find(r => r.month === selectedMonth);
+        if (currentRecord) {
+            if (prefs.showWater) { if (currentRecord.wPrev != null) $('wPrev').value = currentRecord.wPrev; if (currentRecord.wCur != null) $('wCur').value = currentRecord.wCur; }
+            if (prefs.showHotWater) { if (currentRecord.hwPrev != null) $('hwPrev').value = currentRecord.hwPrev; if (currentRecord.hwCur != null) $('hwCur').value = currentRecord.hwCur; }
+            if (prefs.showElectro) { if (currentRecord.dPrev != null) $('dPrev').value = currentRecord.dPrev; if (currentRecord.dCur != null) $('dCur').value = currentRecord.dCur; if (prefs.electroTwoZone) { if (currentRecord.nPrev != null) $('nPrev').value = currentRecord.nPrev; if (currentRecord.nCur != null) $('nCur').value = currentRecord.nCur; } }
+            if (prefs.showGas) { if (currentRecord.gPrev != null) $('gPrev').value = currentRecord.gPrev; if (currentRecord.gCur != null) $('gCur').value = currentRecord.gCur; }
+            if (currentRecord.customData) { Object.keys(currentRecord.customData).forEach(srvId => { const el = $(`custom_${srvId}`); if (el) el.value = currentRecord.customData[srvId].val; }); }
+            if ($('recordNote')) $('recordNote').value = currentRecord.note || '';
+        } else {
+            customServices.forEach(srv => { const el = $(`custom_${srv.id}`); if (el && srv.defaultSum) el.value = srv.defaultSum; });
+        }
+
+        const m = new Date(selectedMonth).getMonth() + 1;
+        if ($('isWinterInput')) $('isWinterInput').checked = m >= 10 || m <= 4;
+    } catch(e) {
+        console.error('fillPreviousReadings error:', e);
     }
+}
 
 // =================== SETTINGS ===================
 function updateServiceChartOptions() {
