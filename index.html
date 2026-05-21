@@ -149,7 +149,7 @@
     <!-- App Screen -->
     <div id="appScreen" class="hidden fixed inset-0 flex-col w-full h-[100dvh] mx-auto overflow-hidden bg-apple-light dark:bg-apple-darker">
         <!-- Header -->
-       <div class="max-w-md mx-auto w-full px-5 pt-14 pb-3 flex justify-between items-center z-20 shrink-0">
+       <div class="max-w-md mx-auto w-full px-5 pt-8 pb-3 flex justify-between items-center z-20 shrink-0">
             <div class="flex items-center gap-3 cursor-pointer group" id="addressHeaderTrigger">
                 <div class="w-12 h-12 bg-gradient-to-tr from-brand to-brand-hover rounded-full flex items-center justify-center text-white shadow-lg shadow-brand/20 text-xl group-active:scale-95 transition-transform"><i class="fa-solid fa-house"></i></div>
                 <div>
@@ -277,7 +277,7 @@
 
     <!-- Bottom Nav — 4 tabs -->
     <nav class="fixed bottom-0 left-0 right-0 w-full shrink-0 z-40 glass border-t border-slate-200 dark:border-white/10 pb-5" id="bottomNav">
-        <div class="max-w-md mx-auto flex justify-between items-center px-2 pt-2 pb-1">
+        <div class="max-w-md mx-auto flex justify-around items-center px-4 pt-2.5 pb-1.5">
             <button id="btnTabDashboard" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-brand active:scale-[0.92] transition-transform"><i class="fa-solid fa-house text-[20px]"></i><span class="text-[9px] font-bold">Головна</span></button>
             <button id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-calculator text-[20px]"></i><span class="text-[9px] font-bold">Рахунок</span></button>
             <button id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform relative"><i class="fa-solid fa-clock-rotate-left text-[20px]"></i><span class="text-[9px] font-bold">Історія</span><span id="debtBadge" class="hidden absolute -top-1 right-1/4 w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-lg">0</span></button>
