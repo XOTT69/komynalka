@@ -75,16 +75,20 @@
         /* Onboarding */
         .onboarding-slide{transition:transform .4s cubic-bezier(.32,.72,0,1),opacity .3s;}
         
-        /* Cascade appear */
-        .cascade > *{opacity:0;transform:translateY(12px);animation:cascadeIn .4s ease forwards;}
-        .cascade > *:nth-child(1){animation-delay:.05s}
-        .cascade > *:nth-child(2){animation-delay:.1s}
-        .cascade > *:nth-child(3){animation-delay:.15s}
-        .cascade > *:nth-child(4){animation-delay:.2s}
-        .cascade > *:nth-child(5){animation-delay:.25s}
-        .cascade > *:nth-child(6){animation-delay:.3s}
-        .cascade > *:nth-child(7){animation-delay:.35s}
-        @keyframes cascadeIn{to{opacity:1;transform:translateY(0);}}
+        /* Cascade appear — SAFE VERSION */
+.cascade-animate > * {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: cascadeIn .4s ease forwards;
+}
+.cascade-animate > *:nth-child(1){animation-delay:.05s}
+.cascade-animate > *:nth-child(2){animation-delay:.1s}
+.cascade-animate > *:nth-child(3){animation-delay:.15s}
+.cascade-animate > *:nth-child(4){animation-delay:.2s}
+.cascade-animate > *:nth-child(5){animation-delay:.25s}
+.cascade-animate > *:nth-child(6){animation-delay:.3s}
+.cascade-animate > *:nth-child(7){animation-delay:.35s}
+@keyframes cascadeIn{to{opacity:1;transform:translateY(0);}}
         
         /* iOS Navbar */
         #bottomNav{-webkit-backdrop-filter:blur(20px);}
@@ -176,7 +180,7 @@
             <div class="max-w-md mx-auto">
 
                 <!-- TAB: Dashboard (NEW!) -->
-                <div id="tabDashboard" class="tab-active space-y-4 cascade">
+               <div id="tabDashboard" class="tab-active space-y-4">
                     <!-- Streak -->
                     <div class="bg-white dark:bg-apple-dark p-4 rounded-[1.5rem] shadow-soft border border-slate-100 dark:border-white/5 flex items-center justify-between">
                         <div class="flex items-center gap-3">
