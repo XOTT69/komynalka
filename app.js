@@ -590,31 +590,38 @@ function fillPreviousReadings() {
     document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
     if ($('recordNote')) $('recordNote').value = '';
 
-    // Перевіряємо чи є запис за поточний обраний місяць
     const selectedMonth = $('monthInput')?.value;
-    const existingRecord = selectedMonth ? records.find(r => r.month === selectedMonth) : null;
+    if (!selectedMonth) return;
 
-    if (existingRecord) {
-        // Завантажуємо дані існуючого запису
-        if (prefs.showWater) { $('wPrev').value = existingRecord.wPrev || ''; $('wCur').value = existingRecord.wCur || ''; }
-        if (prefs.showHotWater) { $('hwPrev').value = existingRecord.hwPrev || ''; $('hwCur').value = existingRecord.hwCur || ''; }
-        if (prefs.showElectro) { $('dPrev').value = existingRecord.dPrev || ''; $('dCur').value = existingRecord.dCur || ''; $('nPrev').value = existingRecord.nPrev || ''; $('nCur').value = existingRecord.nCur || ''; }
-        if (prefs.showGas) { $('gPrev').value = existingRecord.gPrev || ''; $('gCur').value = existingRecord.gCur || ''; }
-        if (existingRecord.customData) { Object.keys(existingRecord.customData).forEach(srvId => { const el = $(`custom_${srvId}`); if (el) el.value = existingRecord.customData[srvId].val; }); }
-        if ($('recordNote')) $('recordNote').value = existingRecord.note || '';
-    } else if (records.length > 0) {
-        // Беремо попередні з останнього запису
-        const lr = [...records].sort((a, b) => new Date(b.month) - new Date(a.month))[0];
-        if (prefs.showWater) $('wPrev').value = lr.wCur || '';
-        if (prefs.showHotWater) $('hwPrev').value = lr.hwCur || '';
-        if (prefs.showElectro) { $('dPrev').value = lr.dCur || ''; $('nPrev').value = lr.nCur || ''; }
-        if (prefs.showGas) $('gPrev').value = lr.gCur || '';
-        customServices.forEach(srv => { const el = $(`custom_${srv.id}`); if (el) el.value = (lr.customData && lr.customData[srv.id]) ? lr.customData[srv.id].val : srv.defaultSum; });
+    // Знаходимо попередній місяць
+    const [sy, sm] = selectedMonth.split('-').map(Number);
+    const prevDate = new Date(sy, sm - 2); // -2 бо місяці 0-based
+    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+    // Шукаємо запис за попередній місяць → "Минулі"
+    const prevRecord = records.find(r => r.month === prevMonth);
+    if (prevRecord) {
+        if (prefs.showWater) $('wPrev').value = prevRecord.wCur || '';
+        if (prefs.showHotWater) $('hwPrev').value = prevRecord.hwCur || '';
+        if (prefs.showElectro) { $('dPrev').value = prevRecord.dCur || ''; if (prefs.electroTwoZone) $('nPrev').value = prevRecord.nCur || ''; }
+        if (prefs.showGas) $('gPrev').value = prevRecord.gCur || '';
+    }
+
+    // Шукаємо запис за обраний місяць → "Нові" (якщо вже вносили)
+    const currentRecord = records.find(r => r.month === selectedMonth);
+    if (currentRecord) {
+        if (prefs.showWater) { $('wPrev').value = currentRecord.wPrev || $('wPrev').value; $('wCur').value = currentRecord.wCur || ''; }
+        if (prefs.showHotWater) { $('hwPrev').value = currentRecord.hwPrev || $('hwPrev').value; $('hwCur').value = currentRecord.hwCur || ''; }
+        if (prefs.showElectro) { $('dPrev').value = currentRecord.dPrev || $('dPrev').value; $('dCur').value = currentRecord.dCur || ''; if (prefs.electroTwoZone) { $('nPrev').value = currentRecord.nPrev || $('nPrev').value; $('nCur').value = currentRecord.nCur || ''; } }
+        if (prefs.showGas) { $('gPrev').value = currentRecord.gPrev || $('gPrev').value; $('gCur').value = currentRecord.gCur || ''; }
+        if (currentRecord.customData) { Object.keys(currentRecord.customData).forEach(srvId => { const el = $(`custom_${srvId}`); if (el) el.value = currentRecord.customData[srvId].val; }); }
+        if ($('recordNote')) $('recordNote').value = currentRecord.note || '';
     } else {
+        // Нових нема — заповнюємо кастомні сервіси дефолтами
         customServices.forEach(srv => { const el = $(`custom_${srv.id}`); if (el && srv.defaultSum) el.value = srv.defaultSum; });
     }
 
-    const m = $('monthInput') ? new Date($('monthInput').value).getMonth() + 1 : new Date().getMonth() + 1;
+    const m = new Date(selectedMonth).getMonth() + 1;
     if ($('isWinterInput')) $('isWinterInput').checked = m >= 10 || m <= 4;
 }
 
