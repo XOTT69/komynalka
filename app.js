@@ -444,6 +444,14 @@ function renderDashboard() {
 
     // Reminders
     checkReminders();
+
+    // Cascade animation (safe)
+    const dash = $('tabDashboard');
+    if (dash) {
+        dash.classList.remove('cascade-animate');
+        void dash.offsetWidth;
+        dash.classList.add('cascade-animate');
+    }
 }
 
 function renderStreakDots(streak) {
@@ -473,10 +481,8 @@ function renderDashChart() {
 
 function animateNumber(el, target) {
     if (!el) return;
-    const suffix = ' ₴';
-    el.textContent = fmt.format(target) + suffix;
+    el.textContent = fmt.format(target) + ' ₴';
 }
-
 // =================== CALCULATION ===================
 const readingInputIds = ['wPrev', 'wCur', 'hwPrev', 'hwCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'gPrev', 'gCur'];
 function getV(id) { return Math.max(0, parseFloat($(id)?.value) || 0); }
