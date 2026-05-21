@@ -1045,3 +1045,4 @@ else if (sessionLogin && sessionPass) performLogin(sessionLogin, sessionPass, tr
 $('mode-light')?.addEventListener('click', () => setThemeMode('light'));
 $('mode-auto')?.addEventListener('click', () => setThemeMode('auto'));
 $('mode-dark')?.addEventListener('click', () => setThemeMode('dark'));
+// EOF
