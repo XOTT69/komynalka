@@ -251,7 +251,6 @@ $('linkYesBtn').addEventListener('click', () => {
 
 $('linkNoBtn').addEventListener('click', async () => {
     $('linkModal').classList.add('hidden');
-    // Створюємо нового юзера з Google UID
     sessionLogin = `uid_${googleUser.uid}`;
     localStorage.setItem('k_uid', googleUser.uid);
     localStorage.setItem('k_login', sessionLogin);
@@ -261,7 +260,6 @@ $('linkNoBtn').addEventListener('click', async () => {
     loadCurrentAddress();
     showToast("Акаунт створено!");
 });
-
 async function linkAccount(lgn, pss) {
     const passHash = await getHash(pss);
     const res = await fetch(WORKER_URL, {
