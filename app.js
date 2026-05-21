@@ -249,9 +249,17 @@ $('linkYesBtn').addEventListener('click', () => {
     if (lgn && pss) linkAccount(lgn, pss);
 });
 
-$('linkNoBtn').addEventListener('click', () => {
+$('linkNoBtn').addEventListener('click', async () => {
     $('linkModal').classList.add('hidden');
-    performLogin(null, null, false, googleUser.uid);
+    // Створюємо нового юзера з Google UID
+    sessionLogin = `uid_${googleUser.uid}`;
+    localStorage.setItem('k_uid', googleUser.uid);
+    localStorage.setItem('k_login', sessionLogin);
+    addresses = [{ id: 'default', name: 'Мій дім', tariffs: { ...defaultTariffs }, prefs: { ...defaultPrefs }, records: [], customServices: [...defaultCustomServices] }];
+    currentAddressId = 'default';
+    await syncToCloud();
+    loadCurrentAddress();
+    showToast("Акаунт створено!");
 });
 
 async function linkAccount(lgn, pss) {
