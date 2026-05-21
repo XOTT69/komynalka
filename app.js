@@ -402,6 +402,12 @@ $('qaShare').addEventListener('click', () => { shareAllRecords(); $('quickAction
 $('qaSync').addEventListener('click', () => { syncToCloud(); showToast('Синхронізовано'); $('quickActionsModal').classList.add('hidden'); });
 
 // =================== DASHBOARD ===================
+function renderDashboard() {
+    // Streak
+    const streak = getStreak(records);
+    if($('streakValue')) $('streakValue').textContent = `${streak} міс.`;
+    renderStreakDots(streak);
+
     // Current month total
     const now = new Date();
     const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -412,16 +418,16 @@ $('qaSync').addEventListener('click', () => { syncToCloud(); showToast('Синх
     const unpaid = records.filter(r => !r.paid);
     const debtTotal = unpaid.reduce((s, r) => s + r.total, 0);
     if (unpaid.length > 0) {
-        $('dashDebtCard').classList.remove('hidden');
-        $('dashNoDebtCard').classList.add('hidden');
+        $('dashDebtCard')?.classList.remove('hidden');
+        $('dashNoDebtCard')?.classList.add('hidden');
         animateNumber($('dashDebt'), debtTotal);
-        $('dashDebtMonths').textContent = `${unpaid.length} міс.`;
-        $('debtBadge').classList.remove('hidden');
-        $('debtBadge').textContent = unpaid.length;
+        if($('dashDebtMonths')) $('dashDebtMonths').textContent = `${unpaid.length} міс.`;
+        $('debtBadge')?.classList.remove('hidden');
+        if($('debtBadge')) $('debtBadge').textContent = unpaid.length;
     } else {
-        $('dashDebtCard').classList.add('hidden');
-        $('dashNoDebtCard').classList.remove('hidden');
-        $('debtBadge').classList.add('hidden');
+        $('dashDebtCard')?.classList.add('hidden');
+        $('dashNoDebtCard')?.classList.remove('hidden');
+        $('debtBadge')?.classList.add('hidden');
     }
 
     // Mini chart
@@ -430,7 +436,7 @@ $('qaSync').addEventListener('click', () => { syncToCloud(); showToast('Синх
     // Avg
     if (records.length > 0) {
         const avg = records.reduce((s, r) => s + r.total, 0) / records.length;
-        $('dashAvg').textContent = `~${fmt.format(avg)} ₴/міс`;
+        if($('dashAvg')) $('dashAvg').textContent = `~${fmt.format(avg)} ₴/міс`;
     }
 
     // Achievements
@@ -438,14 +444,6 @@ $('qaSync').addEventListener('click', () => { syncToCloud(); showToast('Синх
 
     // Reminders
     checkReminders();
-
-    // Cascade animation (safe)
-    const dash = $('tabDashboard');
-    if (dash) {
-        dash.classList.remove('cascade-animate');
-        void dash.offsetWidth;
-        dash.classList.add('cascade-animate');
-    }
 }
 
 function renderStreakDots(streak) {
