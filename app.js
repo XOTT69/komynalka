@@ -677,7 +677,9 @@ function applyPreferences() {
     else { $('electroNightRow').style.display = 'none'; $('lblDay1').innerText = ""; $('lblDay2').innerText = ""; }
     $('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none';
     $('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'flex' : 'none';
+    updateServiceChartOptions();
 }
+
 
 $('prefReminders').addEventListener('change', function () { $('remindersSettings').style.display = this.checked ? 'block' : 'none'; });
 
@@ -929,6 +931,19 @@ function renderChart(sortedRecords) {
     }).join('');
     container.innerHTML = html;
 }
+// =================== SERVICE CHART OPTIONS ===================
+function updateServiceChartOptions() {
+    const select = $('serviceChartSelect');
+    if (!select) return;
+    const currentVal = select.value;
+    select.innerHTML = '';
+    if (prefs.showWater) select.innerHTML += '<option value="water">💧 Вода</option>';
+    if (prefs.showHotWater) select.innerHTML += '<option value="hotWater">🌡️ Гар. Вода</option>';
+    if (prefs.showElectro) select.innerHTML += '<option value="electro">⚡ Світло</option>';
+    if (prefs.showGas) select.innerHTML += '<option value="gas">🔥 Газ</option>';
+    // Повернути вибраний якщо ще існує
+    if (select.querySelector(`option[value="${currentVal}"]`)) select.value = currentVal;
+}
 
 // =================== SERVICE CHART ===================
 function renderServiceChart() {
@@ -1176,6 +1191,21 @@ if (urlShareToken) {
 }
 else if (localStorage.getItem('k_uid')) performLogin(null, null, false, localStorage.getItem('k_uid'));
 else if (sessionLogin && sessionPass) performLogin(sessionLogin, sessionPass, true);
+// =================== AUTO-APPLY TOGGLES ===================
+['prefWater', 'prefHotWater', 'prefElectro', 'prefGas', 'prefElectroTwoZone', 'prefElectroWinter'].forEach(id => {
+    $(id)?.addEventListener('change', () => {
+        prefs.showWater = $('prefWater').checked;
+        prefs.showHotWater = $('prefHotWater').checked;
+        prefs.showElectro = $('prefElectro').checked;
+        prefs.showGas = $('prefGas').checked;
+        prefs.electroTwoZone = $('prefElectroTwoZone').checked;
+        prefs.electroWinter = $('prefElectroWinter').checked;
+        applyPreferences();
+        renderCalcCustomServices();
+        calculatePreview();
+        updateSmartBadges();
+    });
+});
 
 // Theme buttons
 $('mode-light').addEventListener('click', () => setThemeMode('light'));
