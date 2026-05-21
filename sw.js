@@ -1,58 +1,52 @@
-// Назву кешу більше не треба міняти вручну!
-const CACHE_NAME = 'utility-dynamic-cache';
+const CACHE_NAME = 'komunalka-v2';
 
-const urlsToCache = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon.png'
+const PRECACHE_URLS = [
+    './',
+    './index.html',
+    './app.js',
+    './manifest.json',
+    './icon.png'
 ];
 
-// Встановлення
+// Install — precache
 self.addEventListener('install', event => {
-  self.skipWaiting(); // Одразу активуємо новий SW
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
+    self.skipWaiting();
+    event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS))
+    );
 });
 
-// Активація (очищення старих версій кешу, якщо вони ще лишились)
+// Activate — clean old caches
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cache => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
-        })
-      );
-    }).then(() => self.clients.claim()) // Перехоплюємо контроль над сторінкою
-  );
+    event.waitUntil(
+        caches.keys().then(names =>
+            Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n)))
+        ).then(() => self.clients.claim())
+    );
 });
 
-// Стратегія: Завжди тягнемо з мережі. Якщо успішно - оновлюємо кеш. Якщо мережі нема - беремо з кешу.
+// Fetch — Network First, fallback to Cache
 self.addEventListener('fetch', event => {
-  // Ігноруємо запити до Firebase, бо вони мають свою логіку (onSnapshot)
-  if (event.request.url.includes('firestore.googleapis.com') || event.request.url.includes('identitytoolkit')) {
-    return;
-  }
+    const url = new URL(event.request.url);
 
-  event.respondWith(
-    fetch(event.request)
-      .then(networkResponse => {
-        // Якщо завантажили успішно, кладемо копію в кеш
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return networkResponse;
-      })
-      .catch(() => {
-        // Якщо інтернету немає, шукаємо в кеші
-        return caches.match(event.request);
-      })
-  );
+    // Skip API/Firebase requests
+    if (url.hostname.includes('workers.dev') ||
+        url.hostname.includes('googleapis.com') ||
+        url.hostname.includes('gstatic.com') ||
+        url.hostname.includes('firebaseapp.com') ||
+        url.hostname.includes('cdnjs.cloudflare.com')) {
+        return;
+    }
+
+    event.respondWith(
+        fetch(event.request)
+            .then(response => {
+                if (response && response.status === 200 && response.type === 'basic') {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                }
+                return response;
+            })
+            .catch(() => caches.match(event.request))
+    );
 });
