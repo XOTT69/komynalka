@@ -402,12 +402,6 @@ $('qaShare').addEventListener('click', () => { shareAllRecords(); $('quickAction
 $('qaSync').addEventListener('click', () => { syncToCloud(); showToast('Синхронізовано'); $('quickActionsModal').classList.add('hidden'); });
 
 // =================== DASHBOARD ===================
-function renderDashboard() {
-    // Streak
-    const streak = getStreak(records);
-    $('streakValue').textContent = `${streak} міс.`;
-    renderStreakDots(streak);
-
     // Current month total
     const now = new Date();
     const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
