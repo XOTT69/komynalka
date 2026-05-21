@@ -164,66 +164,59 @@
         <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 relative w-full pb-32">
             <div class="max-w-md mx-auto">
 
-                <!-- TAB: Dashboard (NEW!) -->
-                    <!-- Streak -->
-                    <div class="bg-white dark:bg-apple-dark p-4 rounded-[1.5rem] shadow-soft border border-slate-100 dark:border-white/5 flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="text-2xl">🔥</div>
-                            <div><p class="text-xs font-bold text-slate-400 uppercase">Streak</p><p class="text-lg font-black text-slate-900 dark:text-white" id="streakValue">0 міс.</p></div>
-                        </div>
-                        <div class="flex gap-1.5" id="streakDots"></div>
-                    </div>
+                <!-- TAB: Dashboard -->
+<div id="tabDashboard" class="tab-active space-y-4">
+    <div class="bg-white dark:bg-apple-dark p-4 rounded-[1.5rem] shadow-soft border border-slate-100 dark:border-white/5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="text-2xl">🔥</div>
+            <div><p class="text-xs font-bold text-slate-400 uppercase">Streak</p><p class="text-lg font-black text-slate-900 dark:text-white" id="streakValue">0 міс.</p></div>
+        </div>
+        <div class="flex gap-1.5" id="streakDots"></div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+        <div class="bg-white dark:bg-apple-dark p-4 rounded-[1.5rem] shadow-soft border border-slate-100 dark:border-white/5">
+            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Цей місяць</p>
+            <p class="text-2xl font-black text-slate-900 dark:text-white count-up" id="dashCurrentMonth">0 ₴</p>
+        </div>
+        <div id="dashDebtCard" class="bg-gradient-to-br from-orange-500 to-red-500 p-4 rounded-[1.5rem] shadow-soft text-white hidden">
+            <p class="text-[10px] font-bold opacity-80 uppercase mb-1">Борг</p>
+            <p class="text-2xl font-black count-up" id="dashDebt">0 ₴</p>
+            <p class="text-[10px] opacity-70 mt-0.5" id="dashDebtMonths"></p>
+        </div>
+        <div id="dashNoDebtCard" class="bg-gradient-to-br from-green-400 to-emerald-500 p-4 rounded-[1.5rem] shadow-soft text-white">
+            <p class="text-[10px] font-bold opacity-80 uppercase mb-1">Статус</p>
+            <p class="text-lg font-black">Все сплачено ✓</p>
+        </div>
+    </div>
+    <div class="bg-white dark:bg-apple-dark p-5 rounded-[1.5rem] shadow-soft border border-slate-100 dark:border-white/5">
+        <div class="flex justify-between items-center mb-3">
+            <p class="text-xs font-bold text-slate-400 uppercase">Витрати за 6 міс</p>
+            <p class="text-xs font-black text-brand" id="dashAvg">~0 ₴/міс</p>
+        </div>
+        <div id="dashChart" class="h-24 flex items-end justify-around gap-1.5 px-1"></div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+        <button id="dashAddBtn" class="bg-brand text-white p-5 rounded-[1.5rem] shadow-lg shadow-brand/20 active:scale-[0.96] transition-transform text-left">
+            <i class="fa-solid fa-plus text-xl mb-2 opacity-80"></i>
+            <p class="font-black text-sm">Внести показники</p>
+        </button>
+        <button id="dashHistoryBtn" class="bg-white dark:bg-apple-dark p-5 rounded-[1.5rem] shadow-soft border border-slate-100 dark:border-white/5 active:scale-[0.96] transition-transform text-left">
+            <i class="fa-solid fa-clock-rotate-left text-xl mb-2 text-slate-400"></i>
+            <p class="font-black text-sm text-slate-900 dark:text-white">Історія</p>
+        </button>
+    </div>
+    <div id="reminderBanner" class="hidden bg-gradient-to-r from-brand to-indigo-600 p-5 rounded-[1.5rem] shadow-xl text-white">
+        <div class="flex gap-3 items-center mb-3"><span class="text-xl">🔔</span><div><h4 class="font-black text-sm">Час подавати показники!</h4><p class="text-xs opacity-80" id="reminderText"></p></div></div>
+        <button id="reminderDismissBtn" class="w-full bg-white text-brand font-black text-sm py-3 rounded-xl active:scale-[0.98] transition-transform"><i class="fa-solid fa-check-circle mr-1"></i> Передав</button>
+    </div>
+    <div class="bg-white dark:bg-apple-dark p-5 rounded-[1.5rem] shadow-soft border border-slate-100 dark:border-white/5">
+        <p class="text-xs font-bold text-slate-400 uppercase mb-3">🏆 Досягнення</p>
+        <div class="flex gap-3 flex-wrap" id="achievementsList"></div>
+    </div>
+</div>
 
-                    <!-- Quick Stats -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-white dark:bg-apple-dark p-4 rounded-[1.5rem] shadow-soft border border-slate-100 dark:border-white/5">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Цей місяць</p>
-                            <p class="text-2xl font-black text-slate-900 dark:text-white count-up" id="dashCurrentMonth">0 ₴</p>
-                        </div>
-                        <div id="dashDebtCard" class="bg-gradient-to-br from-orange-500 to-red-500 p-4 rounded-[1.5rem] shadow-soft text-white hidden">
-                            <p class="text-[10px] font-bold opacity-80 uppercase mb-1">Борг</p>
-                            <p class="text-2xl font-black count-up" id="dashDebt">0 ₴</p>
-                            <p class="text-[10px] opacity-70 mt-0.5" id="dashDebtMonths"></p>
-                        </div>
-                        <div id="dashNoDebtCard" class="bg-gradient-to-br from-green-400 to-emerald-500 p-4 rounded-[1.5rem] shadow-soft text-white">
-                            <p class="text-[10px] font-bold opacity-80 uppercase mb-1">Статус</p>
-                            <p class="text-lg font-black">Все сплачено ✓</p>
-                        </div>
-                    </div>
-
-                    <!-- Mini Chart -->
-                    <div class="bg-white dark:bg-apple-dark p-5 rounded-[1.5rem] shadow-soft border border-slate-100 dark:border-white/5">
-                        <div class="flex justify-between items-center mb-3">
-                            <p class="text-xs font-bold text-slate-400 uppercase">Витрати за 6 міс</p>
-                            <p class="text-xs font-black text-brand" id="dashAvg">~0 ₴/міс</p>
-                        </div>
-                        <div id="dashChart" class="h-24 flex items-end justify-around gap-1.5 px-1"></div>
-                    </div>
-
-                    <!-- Quick Actions -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <button id="dashAddBtn" class="bg-brand text-white p-5 rounded-[1.5rem] shadow-lg shadow-brand/20 active:scale-[0.96] transition-transform text-left">
-                            <i class="fa-solid fa-plus text-xl mb-2 opacity-80"></i>
-                            <p class="font-black text-sm">Внести показники</p>
-                        </button>
-                        <button id="dashHistoryBtn" class="bg-white dark:bg-apple-dark p-5 rounded-[1.5rem] shadow-soft border border-slate-100 dark:border-white/5 active:scale-[0.96] transition-transform text-left">
-                            <i class="fa-solid fa-clock-rotate-left text-xl mb-2 text-slate-400"></i>
-                            <p class="font-black text-sm text-slate-900 dark:text-white">Історія</p>
-                        </button>
-                    </div>
-
-                    <!-- Reminder -->
-                    <div id="reminderBanner" class="hidden bg-gradient-to-r from-brand to-indigo-600 p-5 rounded-[1.5rem] shadow-xl text-white">
-                        <div class="flex gap-3 items-center mb-3"><span class="text-xl">🔔</span><div><h4 class="font-black text-sm">Час подавати показники!</h4><p class="text-xs opacity-80" id="reminderText"></p></div></div>
-                        <button id="reminderDismissBtn" class="w-full bg-white text-brand font-black text-sm py-3 rounded-xl active:scale-[0.98] transition-transform"><i class="fa-solid fa-check-circle mr-1"></i> Передав</button>
-                    </div>
-
-                    <!-- Achievements -->
-                    <div class="bg-white dark:bg-apple-dark p-5 rounded-[1.5rem] shadow-soft border border-slate-100 dark:border-white/5">
-                        <p class="text-xs font-bold text-slate-400 uppercase mb-3">🏆 Досягнення</p>
-                        <div class="flex gap-3 flex-wrap" id="achievementsList"></div>
-                    </div>
-                </div>
+<!-- TAB: Calculator -->
+<div id="tabCalc" class="tab-hidden space-y-4">
 
                 <!-- TAB: Calculator -->
                 <div id="tabCalc" class="tab-hidden space-y-4">
