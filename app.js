@@ -547,7 +547,7 @@ function updateSmartForecast() {
 
 readingInputIds.forEach(id => { const el = $(id); if (el) el.addEventListener('input', () => { calculatePreview(); updateSmartBadges(); }); });
 $('isWinterInput')?.addEventListener('change', calculatePreview);
-$('monthInput')?.addEventListener('change', () => { const m = new Date($('monthInput').value).getMonth() + 1; $('isWinterInput').checked = m >= 10 || m <= 4; calculatePreview(); });
+$('monthInput')?.addEventListener('change', () => { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); });
 if ($('monthInput')) $('monthInput').value = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
 // =================== FORM SUBMIT ===================
