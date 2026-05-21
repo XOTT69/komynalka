@@ -62,11 +62,19 @@
         @media(hover:hover){.card-hover:hover{transform:translateY(-2px);box-shadow:0 20px 40px -15px rgba(0,0,0,.1);}}
         .animated-number{transition:all .4s cubic-bezier(.4,0,.2,1);}
         
-        /* iOS Navbar Fix */
-        #bottomNav { padding-bottom: 0 !important; }
-        #navSpacer { height: env(safe-area-inset-bottom, 0px); min-height: 8px; }
-        @media all and (display-mode: standalone) { #navSpacer { min-height: 20px; } }
-        @supports (padding: max(0px)) { #navSpacer { height: max(env(safe-area-inset-bottom, 0px), 12px); } }
+/* iOS Navbar Fix — ЖОРСТКИЙ */
+#bottomNav { padding-bottom: 0 !important; }
+#navSpacer { 
+    height: 34px; /* Хардкод для iPhone з Dynamic Island / Home Indicator */
+}
+@media (max-height: 700px) {
+    #navSpacer { height: 12px; } /* Старіші iPhone SE */
+}
+/* Якщо НЕ standalone — менше відступ */
+@media not all and (display-mode: standalone) {
+    #navSpacer { height: 8px; }
+}
+
     </style>
     <script>
         tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{DEFAULT:'var(--brand)',hover:'var(--brand-hover)',light:'var(--brand-light)',border:'var(--brand-border)'},apple:{dark:'#1c1c1e',darker:'#000000',light:'#f2f2f7'}},boxShadow:{'soft':'0 10px 40px -10px rgba(0,0,0,.08)','premium':'0 20px 60px -15px rgba(0,0,0,.12)'}}}}
