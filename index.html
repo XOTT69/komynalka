@@ -61,11 +61,8 @@
         @media(hover:hover){.card-hover:hover{transform:translateY(-2px);box-shadow:0 20px 40px -15px rgba(0,0,0,.1);}}
         .animated-number{transition:all .4s cubic-bezier(.4,0,.2,1);}
         
-        /* iOS Navbar Fix — ЖОРСТКИЙ */
-        #bottomNav { padding-bottom: 0 !important; }
-        #navSpacer { height: 34px; }
-        @media (max-height: 700px) { #navSpacer { height: 12px; } }
-        @media not all and (display-mode: standalone) { #navSpacer { height: 8px; } }
+        /* iOS Navbar Fix */
+#bottomNav { -webkit-backdrop-filter: blur(20px); }
     </style>
     <script>
         tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{DEFAULT:'var(--brand)',hover:'var(--brand-hover)',light:'var(--brand-light)',border:'var(--brand-border)'},apple:{dark:'#1c1c1e',darker:'#000000',light:'#f2f2f7'}},boxShadow:{'soft':'0 10px 40px -10px rgba(0,0,0,.08)','premium':'0 20px 60px -15px rgba(0,0,0,.12)'}}}}
@@ -161,15 +158,13 @@
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 w-full shrink-0 z-40 glass border-t border-slate-200 dark:border-white/10" id="bottomNav">
-        <div class="max-w-md mx-auto flex justify-between items-center px-2 pt-2 pb-2">
-            <button id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-brand active:scale-[0.92] transition-transform"><i class="fa-solid fa-calculator text-[22px]"></i><span class="text-[10px] font-bold tracking-wide">Рахунок</span></button>
-            <button id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform relative"><i class="fa-solid fa-clock-rotate-left text-[22px]"></i><span class="text-[10px] font-bold tracking-wide">Історія</span><span id="debtBadge" class="hidden absolute -top-1 right-1/4 w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-lg">0</span></button>
-            <button id="btnTabSettings" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-gear text-[22px]"></i><span class="text-[10px] font-bold tracking-tight">Налаштування</span></button>
-        </div>
-        <div class="w-full bg-transparent" id="navSpacer"></div>
-    </nav>
-
+    <nav class="fixed bottom-0 left-0 right-0 w-full shrink-0 z-40 glass border-t border-slate-200 dark:border-white/10" id="bottomNav" style="padding-bottom: env(safe-area-inset-bottom, 20px);">
+    <div class="max-w-md mx-auto flex justify-between items-center px-2 pt-2 pb-2">
+        <button id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-brand active:scale-[0.92] transition-transform"><i class="fa-solid fa-calculator text-[22px]"></i><span class="text-[10px] font-bold tracking-wide">Рахунок</span></button>
+        <button id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform relative"><i class="fa-solid fa-clock-rotate-left text-[22px]"></i><span class="text-[10px] font-bold tracking-wide">Історія</span><span id="debtBadge" class="hidden absolute -top-1 right-1/4 w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-lg">0</span></button>
+        <button id="btnTabSettings" class="nav-btn flex-1 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-gear text-[22px]"></i><span class="text-[10px] font-bold tracking-tight">Налаштування</span></button>
+    </div>
+</nav>
     <div id="addressModal" class="hidden fixed inset-0 z-[500] bg-apple-darker/60 dark:bg-black/60 backdrop-blur-md flex items-end justify-center transition-opacity">
         <div class="bg-white dark:bg-apple-dark w-full max-w-md rounded-t-[2.5rem] p-6 pb-[max(env(safe-area-inset-bottom),2rem)] spring-modal translate-y-full shadow-[0_-20px_40px_rgba(0,0,0,.15)]" id="addressModalContent">
             <div class="w-12 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-6"></div>
