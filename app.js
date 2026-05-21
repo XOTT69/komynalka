@@ -402,6 +402,7 @@ $('qaShare').addEventListener('click', () => { shareAllRecords(); $('quickAction
 $('qaSync').addEventListener('click', () => { syncToCloud(); showToast('Синхронізовано'); $('quickActionsModal').classList.add('hidden'); });
 
 // =================== DASHBOARD ===================
+// =================== DASHBOARD ===================
 function renderDashboard() {
     // Streak
     const streak = getStreak(records);
