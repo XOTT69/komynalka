@@ -1,11 +1,11 @@
 // ============================================================
-// КОМУНАЛКА PWA v2.1 — Dashboard + Gamification + Onboarding
+// КОМУНАЛКА PWA v2.2 — Premium + Partial Save
 // ============================================================
 
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.2.0';
 
 // Firebase
 const firebaseConfig = {
@@ -41,7 +41,7 @@ let currentCalc = { waterCost: 0, hotWaterCost: 0, electroCost: 0, gasCost: 0, c
 const urlParams = new URLSearchParams(window.location.search);
 const urlShareToken = urlParams.get('share');
 
-// =================== ACHIEVEMENTS DEFINITION ===================
+// =================== ACHIEVEMENTS ===================
 const ACHIEVEMENTS = [
     { id: 'first_record', emoji: '🎉', title: 'Перший запис', desc: 'Зберегли перший розрахунок', check: (r) => r.length >= 1 },
     { id: 'streak_3', emoji: '🔥', title: '3 місяці поспіль', desc: 'Вносите показники 3 місяці без перерви', check: (r) => getStreak(r) >= 3 },
@@ -60,8 +60,7 @@ function getStreak(recs) {
     for (let i = 0; i < sorted.length - 1; i++) {
         const [y1, m1] = sorted[i].month.split('-').map(Number);
         const [y2, m2] = sorted[i + 1].month.split('-').map(Number);
-        const diff = (y1 * 12 + m1) - (y2 * 12 + m2);
-        if (diff === 1) streak++;
+        if ((y1 * 12 + m1) - (y2 * 12 + m2) === 1) streak++;
         else break;
     }
     return streak;
@@ -73,9 +72,7 @@ function checkSaverAchievement(recs) {
     return sorted[0].total < sorted[1].total && sorted[1].total < sorted[2].total;
 }
 
-function getUnlockedAchievements() {
-    return ACHIEVEMENTS.filter(a => a.check(records));
-}
+function getUnlockedAchievements() { return ACHIEVEMENTS.filter(a => a.check(records)); }
 
 function checkNewAchievements() {
     const unlocked = JSON.parse(localStorage.getItem('achievements_unlocked') || '[]');
@@ -83,7 +80,6 @@ function checkNewAchievements() {
     const newOnes = current.filter(a => !unlocked.includes(a.id));
     if (newOnes.length > 0) {
         localStorage.setItem('achievements_unlocked', JSON.stringify(current.map(a => a.id)));
-        // Show first new achievement
         showAchievementUnlock(newOnes[0]);
     }
 }
@@ -97,8 +93,7 @@ function showAchievementUnlock(achievement) {
     setTimeout(() => { toast.style.transform = 'translate(-50%,-50%) scale(1)'; toast.style.opacity = '1'; }, 10);
     haptic('success');
     setTimeout(() => {
-        toast.style.transform = 'translate(-50%,-50%) scale(0)';
-        toast.style.opacity = '0';
+        toast.style.transform = 'translate(-50%,-50%) scale(0)'; toast.style.opacity = '0';
         setTimeout(() => toast.classList.add('hidden'), 400);
     }, 3000);
 }
@@ -267,9 +262,7 @@ $('linkNoBtn').addEventListener('click', async () => {
     localStorage.setItem('k_login', sessionLogin);
     addresses = [{ id: 'default', name: 'Мій дім', tariffs: { ...defaultTariffs }, prefs: { ...defaultPrefs }, records: [], customServices: [...defaultCustomServices] }];
     currentAddressId = 'default';
-    await syncToCloud();
-    loadCurrentAddress();
-    showToast("Акаунт створено!");
+    await syncToCloud(); loadCurrentAddress(); showToast("Акаунт створено!");
 });
 
 async function linkAccount(lgn, pss) {
@@ -295,6 +288,7 @@ function updateGoogleButton() {
         $('btnLinkGoogle').className = 'w-full bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-600 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 pointer-events-none';
     }
 }
+
 // =================== ADDRESS MANAGEMENT ===================
 function loadCurrentAddress() {
     if (!addresses || addresses.length === 0) {
@@ -366,7 +360,7 @@ function switchTab(tabId, index) {
     }
     setTimeout(() => { targetTab.classList.remove('tab-hidden'); targetTab.classList.add('tab-active'); }, activeTab ? 80 : 0);
     btnIds.forEach((id, i) => { const btn = $(id); if(!btn) return; btn.classList.toggle('text-brand', i === index); btn.classList.toggle('text-slate-400', i !== index); btn.classList.toggle('dark:text-slate-500', i !== index); });
-    if (tabId === 'tabDashboard') renderDashboard(); 
+    if (tabId === 'tabDashboard') renderDashboard();
     if (tabId === 'tabCalc') { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); }
     if (tabId === 'tabHistory') renderRecords();
     if (tabId === 'tabSettings') renderSettingsCustomServices();
@@ -379,7 +373,6 @@ $('btnTabCalc')?.addEventListener('click', () => switchTab('tabCalc', 1));
 $('btnTabHistory')?.addEventListener('click', () => switchTab('tabHistory', 2));
 $('btnTabSettings')?.addEventListener('click', () => switchTab('tabSettings', 3));
 
-// Dashboard quick action buttons
 $('dashAddBtn')?.addEventListener('click', () => switchTab('tabCalc', 1));
 $('dashHistoryBtn')?.addEventListener('click', () => switchTab('tabHistory', 2));
 
@@ -396,27 +389,22 @@ $('swipeContainer').addEventListener('touchend', e => {
 
 // =================== QUICK ACTIONS ===================
 $('quickActionsBtn').addEventListener('click', () => $('quickActionsModal').classList.remove('hidden'));
-$('quickActionsModal').addEventListener('click', (e) => { if (e.target === $('quickActionsModal')) $('quickActionsModal').classList.add('hidden'); });
 $('qaExport').addEventListener('click', () => { exportCSV(); $('quickActionsModal').classList.add('hidden'); });
 $('qaPdf').addEventListener('click', () => { generatePDF(); $('quickActionsModal').classList.add('hidden'); });
 $('qaShare').addEventListener('click', () => { shareAllRecords(); $('quickActionsModal').classList.add('hidden'); });
 $('qaSync').addEventListener('click', () => { syncToCloud(); showToast('Синхронізовано'); $('quickActionsModal').classList.add('hidden'); });
 
 // =================== DASHBOARD ===================
-// =================== DASHBOARD ===================
 function renderDashboard() {
-    // Streak
     const streak = getStreak(records);
     if($('streakValue')) $('streakValue').textContent = `${streak} міс.`;
     renderStreakDots(streak);
 
-    // Current month total
     const now = new Date();
     const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const curRec = records.find(r => r.month === curMonth);
     animateNumber($('dashCurrentMonth'), curRec ? curRec.total : 0);
 
-    // Debt
     const unpaid = records.filter(r => !r.paid);
     const debtTotal = unpaid.reduce((s, r) => s + r.total, 0);
     if (unpaid.length > 0) {
@@ -432,19 +420,14 @@ function renderDashboard() {
         $('debtBadge')?.classList.add('hidden');
     }
 
-    // Mini chart
     renderDashChart();
 
-    // Avg
     if (records.length > 0) {
         const avg = records.reduce((s, r) => s + r.total, 0) / records.length;
         if($('dashAvg')) $('dashAvg').textContent = `~${fmt.format(avg)} ₴/міс`;
     }
 
-    // Achievements
     renderAchievements();
-
-    // Reminders
     checkReminders();
 }
 
@@ -453,8 +436,7 @@ function renderStreakDots(streak) {
     if (!container) return;
     let html = '';
     for (let i = 0; i < 6; i++) {
-        const isActive = i < streak;
-        html += `<div class="streak-dot ${isActive ? 'active' : 'inactive'} ${i === 0 ? 'today' : ''}"></div>`;
+        html += `<div class="streak-dot ${i < streak ? 'active' : 'inactive'} ${i === 0 ? 'today' : ''}"></div>`;
     }
     container.innerHTML = html;
 }
@@ -469,7 +451,7 @@ function renderDashChart() {
         const h = (r.total / max) * 100;
         const mName = new Date(r.month + '-01').toLocaleString('uk-UA', { month: 'short' }).slice(0, 3);
         const bg = r.paid ? 'var(--brand)' : 'linear-gradient(to top, #fb923c, #fcd34d)';
-        return `<div class="flex flex-col items-center flex-1 h-full justify-end"><div class="w-full rounded-t-md bg-slate-100 dark:bg-white/5 overflow-hidden flex items-end" style="height:100%"><div class="w-full rounded-t-md transition-all duration-700" style="height:${Math.max(6, h)}%;background:${bg};opacity:${0.5 + (i / 6) * 0.5}"></div></div><span class="text-[8px] text-slate-400 font-bold mt-1">${mName}</span></div>`;
+        return `<div class="flex flex-col items-center flex-1 h-full justify-end"><div class="w-full rounded-t-lg bg-slate-100 dark:bg-white/5 overflow-hidden flex items-end" style="height:100%"><div class="w-full rounded-t-lg transition-all duration-700" style="height:${Math.max(6, h)}%;background:${bg};opacity:${0.5 + (i / 6) * 0.5}"></div></div><span class="text-[8px] text-slate-400 font-bold mt-1.5">${mName}</span></div>`;
     }).join('');
 }
 
@@ -477,6 +459,7 @@ function animateNumber(el, target) {
     if (!el) return;
     el.textContent = fmt.format(target) + ' ₴';
 }
+
 // =================== CALCULATION ===================
 const readingInputIds = ['wPrev', 'wCur', 'hwPrev', 'hwCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'gPrev', 'gCur'];
 function getV(id) { return Math.max(0, parseFloat($(id)?.value) || 0); }
@@ -499,7 +482,7 @@ function calculatePreview() {
     customServices.forEach(srv => { let val = parseFloat($(`custom_${srv.id}`)?.value); if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum); if (!isNaN(val)) currentCalc.customCost += val; });
     currentCalc.total = currentCalc.waterCost + currentCalc.hotWaterCost + currentCalc.electroCost + currentCalc.gasCost + currentCalc.customCost;
     if (!validateReadingsUI()) return;
-    $('heroTotal').innerHTML = `${fmt.format(currentCalc.total)} <span class="text-2xl font-bold text-white/50">₴</span>`;
+    $('heroTotal').innerHTML = `${fmt.format(currentCalc.total)} <span class="text-2xl font-bold text-white/40">₴</span>`;
     $('waterCostDisplay').innerText = fmt.format(currentCalc.waterCost) + ' ₴';
     $('hotWaterCostDisplay').innerText = fmt.format(currentCalc.hotWaterCost) + ' ₴';
     $('electroCostDisplay').innerText = fmt.format(currentCalc.electroCost) + ' ₴';
@@ -507,23 +490,41 @@ function calculatePreview() {
     $('customCostDisplay').innerText = fmt.format(currentCalc.customCost) + ' ₴';
     updateMonthComparison();
     updateSmartForecast();
+    updatePartialIndicator();
 }
 
 function validateReadingsUI() {
     const pairs = [['wPrev', 'wCur'], ['hwPrev', 'hwCur'], ['dPrev', 'dCur'], ['nPrev', 'nCur'], ['gPrev', 'gCur']];
     let hasInvalid = false;
-    pairs.forEach(([prevId, curId]) => { const prevEl = $(prevId), curEl = $(curId); if (!prevEl || !curEl || prevEl.offsetParent === null) return; const invalid = (parseFloat(curEl.value || '0') < parseFloat(prevEl.value || '0')) && curEl.value !== ''; if (prevEl) prevEl.classList.toggle('input-invalid', invalid); if (curEl) curEl.classList.toggle('input-invalid', invalid); if (invalid) hasInvalid = true; });
-    const btn = $('submitFormBtn'); if (btn) { btn.disabled = hasInvalid; btn.classList.toggle('opacity-60', hasInvalid); }
+    pairs.forEach(([prevId, curId]) => {
+        const prevEl = $(prevId), curEl = $(curId);
+        if (!prevEl || !curEl || prevEl.offsetParent === null) return;
+        const prevVal = parseFloat(prevEl.value || '0');
+        const curVal = parseFloat(curEl.value || '0');
+        const invalid = curEl.value !== '' && prevEl.value !== '' && curVal < prevVal;
+        prevEl.classList.toggle('input-invalid', invalid);
+        curEl.classList.toggle('input-invalid', invalid);
+        if (invalid) hasInvalid = true;
+    });
+    const btn = $('submitFormBtn');
+    if (btn) { btn.disabled = hasInvalid; btn.classList.toggle('opacity-60', hasInvalid); }
     if (hasInvalid) $('heroTotal').innerHTML = `<span class="text-lg text-red-300">Перевірте показники</span>`;
     return !hasInvalid;
 }
 
+function updatePartialIndicator() {
+    const w = $('partialWater'), e = $('partialElectro'), g = $('partialGas');
+    if (w) w.className = `partial-dot ${(getV('wCur') > 0 || getV('hwCur') > 0) ? 'filled' : 'empty'}`;
+    if (e) e.className = `partial-dot ${getV('dCur') > 0 ? 'filled' : 'empty'}`;
+    if (g) g.className = `partial-dot ${getV('gCur') > 0 ? 'filled' : 'empty'}`;
+}
+
 function updateSmartBadges() {
-    const update = (prevId, curId, badgeId, unit, color, activeBg) => { const badge = $(badgeId); if (!badge) return; const d = getV(curId) - getV(prevId); badge.innerText = d > 0 ? `+${d} ${unit}` : `0 ${unit}`; badge.className = d > 0 ? `absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 ${activeBg} ${color} shadow-sm px-2 py-1 rounded-lg text-[11px] font-bold` : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-sm border border-slate-100 dark:border-white/10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-400'; };
-    if (prefs.showWater) update('wPrev', 'wCur', 'wDiffBadge', 'м³', 'text-blue-600', 'bg-blue-100');
-    if (prefs.showHotWater) update('hwPrev', 'hwCur', 'hwDiffBadge', 'м³', 'text-red-600', 'bg-red-100');
-    if (prefs.showElectro) { update('dPrev', 'dCur', 'dDiffBadge', 'кВт', 'text-yellow-600', 'bg-yellow-100'); if (prefs.electroTwoZone) update('nPrev', 'nCur', 'nDiffBadge', 'кВт', 'text-indigo-500', 'bg-indigo-100'); }
-    if (prefs.showGas) update('gPrev', 'gCur', 'gDiffBadge', 'м³', 'text-orange-500', 'bg-orange-100');
+    const update = (prevId, curId, badgeId, unit, color, activeBg) => { const badge = $(badgeId); if (!badge) return; const d = getV(curId) - getV(prevId); badge.innerText = d > 0 ? `+${d} ${unit}` : `0 ${unit}`; badge.className = d > 0 ? `absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 ${activeBg} ${color} shadow-md px-2.5 py-1.5 rounded-xl text-[11px] font-bold` : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-md border border-slate-100 dark:border-white/10 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-slate-400'; };
+    if (prefs.showWater) update('wPrev', 'wCur', 'wDiffBadge', 'м³', 'text-blue-600', 'bg-blue-100 dark:bg-blue-500/20');
+    if (prefs.showHotWater) update('hwPrev', 'hwCur', 'hwDiffBadge', 'м³', 'text-red-600', 'bg-red-100 dark:bg-red-500/20');
+    if (prefs.showElectro) { update('dPrev', 'dCur', 'dDiffBadge', 'кВт', 'text-yellow-600', 'bg-yellow-100 dark:bg-yellow-500/20'); if (prefs.electroTwoZone) update('nPrev', 'nCur', 'nDiffBadge', 'кВт', 'text-indigo-500', 'bg-indigo-100 dark:bg-indigo-500/20'); }
+    if (prefs.showGas) update('gPrev', 'gCur', 'gDiffBadge', 'м³', 'text-orange-500', 'bg-orange-100 dark:bg-orange-500/20');
 }
 
 function updateMonthComparison() {
@@ -550,22 +551,110 @@ $('isWinterInput')?.addEventListener('change', calculatePreview);
 $('monthInput')?.addEventListener('change', () => { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); });
 if ($('monthInput')) $('monthInput').value = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-// =================== FORM SUBMIT ===================
+// =================== FORM SUBMIT (PARTIAL SAVE + MERGE) ===================
 $('utilityForm').addEventListener('submit', (e) => {
     e.preventDefault();
     if (!validateReadingsUI()) { showToast('Перевірте показники', '⚠️'); return; }
+
+    const hasWater = prefs.showWater && (getV('wCur') > 0 || getV('wPrev') > 0);
+    const hasHotWater = prefs.showHotWater && (getV('hwCur') > 0 || getV('hwPrev') > 0);
+    const hasElectro = prefs.showElectro && (getV('dCur') > 0 || getV('dPrev') > 0 || getV('nCur') > 0);
+    const hasGas = prefs.showGas && (getV('gCur') > 0 || getV('gPrev') > 0);
+    const hasCustom = customServices.some(srv => {
+        const v = parseFloat($(`custom_${srv.id}`)?.value);
+        return !isNaN(v) && v > 0;
+    });
+
+    if (!hasWater && !hasHotWater && !hasElectro && !hasGas && !hasCustom) {
+        showToast('Заповніть хоча б одну послугу', '⚠️');
+        return;
+    }
+
     let cData = {};
-    customServices.forEach(srv => { let v = parseFloat($(`custom_${srv.id}`)?.value); if (isNaN(v) && srv.defaultSum) v = parseFloat(srv.defaultSum); if (!isNaN(v)) cData[srv.id] = { name: srv.name, val: v }; });
-    const nRec = { id: Date.now(), month: $('monthInput').value, wPrev: prefs.showWater ? getV('wPrev') : 0, wCur: prefs.showWater ? getV('wCur') : 0, hwPrev: prefs.showHotWater ? getV('hwPrev') : 0, hwCur: prefs.showHotWater ? getV('hwCur') : 0, dPrev: prefs.showElectro ? getV('dPrev') : 0, dCur: prefs.showElectro ? getV('dCur') : 0, nPrev: (prefs.showElectro && prefs.electroTwoZone) ? getV('nPrev') : 0, nCur: (prefs.showElectro && prefs.electroTwoZone) ? getV('nCur') : 0, gPrev: prefs.showGas ? getV('gPrev') : 0, gCur: prefs.showGas ? getV('gCur') : 0, customData: cData, note: $('recordNote').value.trim(), waterCost: currentCalc.waterCost, hotWaterCost: currentCalc.hotWaterCost, electroCost: currentCalc.electroCost, gasCost: currentCalc.gasCost, customCost: currentCalc.customCost, total: currentCalc.total, paid: false };
-    const eI = records.findIndex(r => r.month === nRec.month);
-    if (eI >= 0) { if (!confirm('Оновити?')) return; records[eI] = nRec; } else records.push(nRec);
+    customServices.forEach(srv => {
+        let v = parseFloat($(`custom_${srv.id}`)?.value);
+        if (isNaN(v) && srv.defaultSum) v = parseFloat(srv.defaultSum);
+        if (!isNaN(v) && v > 0) cData[srv.id] = { name: srv.name, val: v };
+    });
+
+    const month = $('monthInput').value;
+    const existingIdx = records.findIndex(r => r.month === month);
+
+    const newData = {
+        id: Date.now(),
+        month,
+        wPrev: hasWater ? getV('wPrev') : 0,
+        wCur: hasWater ? getV('wCur') : 0,
+        hwPrev: hasHotWater ? getV('hwPrev') : 0,
+        hwCur: hasHotWater ? getV('hwCur') : 0,
+        dPrev: hasElectro ? getV('dPrev') : 0,
+        dCur: hasElectro ? getV('dCur') : 0,
+        nPrev: (hasElectro && prefs.electroTwoZone) ? getV('nPrev') : 0,
+        nCur: (hasElectro && prefs.electroTwoZone) ? getV('nCur') : 0,
+        gPrev: hasGas ? getV('gPrev') : 0,
+        gCur: hasGas ? getV('gCur') : 0,
+        customData: cData,
+        note: $('recordNote').value.trim(),
+        waterCost: hasWater ? currentCalc.waterCost : 0,
+        hotWaterCost: hasHotWater ? currentCalc.hotWaterCost : 0,
+        electroCost: hasElectro ? currentCalc.electroCost : 0,
+        gasCost: hasGas ? currentCalc.gasCost : 0,
+        customCost: currentCalc.customCost,
+        total: currentCalc.total,
+        paid: false,
+        _filled: { water: hasWater, hotWater: hasHotWater, electro: hasElectro, gas: hasGas, custom: hasCustom }
+    };
+
+    if (existingIdx >= 0) {
+        const existing = records[existingIdx];
+        const merged = { ...existing, ...newData, id: existing.id, paid: existing.paid };
+
+        if (!hasWater && existing._filled?.water) {
+            merged.wPrev = existing.wPrev; merged.wCur = existing.wCur; merged.waterCost = existing.waterCost;
+            merged._filled.water = true;
+        }
+        if (!hasHotWater && existing._filled?.hotWater) {
+            merged.hwPrev = existing.hwPrev; merged.hwCur = existing.hwCur; merged.hotWaterCost = existing.hotWaterCost;
+            merged._filled.hotWater = true;
+        }
+        if (!hasElectro && existing._filled?.electro) {
+            merged.dPrev = existing.dPrev; merged.dCur = existing.dCur;
+            merged.nPrev = existing.nPrev; merged.nCur = existing.nCur;
+            merged.electroCost = existing.electroCost;
+            merged._filled.electro = true;
+        }
+        if (!hasGas && existing._filled?.gas) {
+            merged.gPrev = existing.gPrev; merged.gCur = existing.gCur; merged.gasCost = existing.gasCost;
+            merged._filled.gas = true;
+        }
+        if (!hasCustom && existing._filled?.custom) {
+            merged.customData = { ...existing.customData, ...cData };
+            merged.customCost = existing.customCost;
+            merged._filled.custom = true;
+        } else if (hasCustom) {
+            merged.customData = { ...(existing.customData || {}), ...cData };
+        }
+
+        merged.total = (merged.waterCost || 0) + (merged.hotWaterCost || 0) + (merged.electroCost || 0) + (merged.gasCost || 0) + (merged.customCost || 0);
+        merged.note = newData.note || existing.note;
+        records[existingIdx] = merged;
+        showToast("Оновлено! 🔄");
+    } else {
+        records.push(newData);
+        showToast("Збережено! ✨");
+    }
+
+    // Animate button
+    $('submitFormBtn').classList.add('save-btn-success');
+    setTimeout(() => $('submitFormBtn').classList.remove('save-btn-success'), 600);
+
     syncToCloud();
-    const [y, m] = $('monthInput').value.split('-'); const nD = new Date(y, m);
+    const [y, m] = $('monthInput').value.split('-');
+    const nD = new Date(y, m);
     $('monthInput').value = `${nD.getFullYear()}-${String(nD.getMonth() + 1).padStart(2, '0')}`;
     fillPreviousReadings(); calculatePreview(); updateSmartBadges();
     checkNewAchievements();
     switchTab('tabDashboard', 0);
-    showToast("Збережено!");
 });
 
 // =================== COPY / CLEAR ===================
@@ -594,24 +683,21 @@ function fillPreviousReadings() {
         const selectedMonth = $('monthInput')?.value;
         if (!selectedMonth || records.length === 0) return;
 
-        // Знаходимо попередній місяць
         const [sy, sm] = selectedMonth.split('-').map(Number);
         const prevDate = new Date(sy, sm - 2);
         const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
 
-        // Шукаємо запис за попередній місяць → "Минулі"
         const prevRecord = records.find(r => r.month === prevMonth);
         if (prevRecord) {
             if (prefs.showWater && prevRecord.wCur != null) $('wPrev').value = prevRecord.wCur;
             if (prefs.showHotWater && prevRecord.hwCur != null) $('hwPrev').value = prevRecord.hwCur;
-            if (prefs.showElectro) { 
-                if (prevRecord.dCur != null) $('dPrev').value = prevRecord.dCur; 
-                if (prefs.electroTwoZone && prevRecord.nCur != null) $('nPrev').value = prevRecord.nCur; 
+            if (prefs.showElectro) {
+                if (prevRecord.dCur != null) $('dPrev').value = prevRecord.dCur;
+                if (prefs.electroTwoZone && prevRecord.nCur != null) $('nPrev').value = prevRecord.nCur;
             }
             if (prefs.showGas && prevRecord.gCur != null) $('gPrev').value = prevRecord.gCur;
         }
 
-        // Шукаємо запис за обраний місяць → "Нові"
         const currentRecord = records.find(r => r.month === selectedMonth);
         if (currentRecord) {
             if (prefs.showWater) { if (currentRecord.wPrev != null) $('wPrev').value = currentRecord.wPrev; if (currentRecord.wCur != null) $('wCur').value = currentRecord.wCur; }
@@ -624,11 +710,9 @@ function fillPreviousReadings() {
             customServices.forEach(srv => { const el = $(`custom_${srv.id}`); if (el && srv.defaultSum) el.value = srv.defaultSum; });
         }
 
-        const m = new Date(selectedMonth).getMonth() + 1;
+        const m = new Date(selectedMonth + '-01').getMonth() + 1;
         if ($('isWinterInput')) $('isWinterInput').checked = m >= 10 || m <= 4;
-    } catch(e) {
-        console.error('fillPreviousReadings error:', e);
-    }
+    } catch(e) { console.error('fillPreviousReadings:', e); }
 }
 
 // =================== SETTINGS ===================
@@ -667,7 +751,6 @@ function applyPreferences() {
     updateServiceChartOptions();
 }
 
-// Auto-apply toggles
 ['prefWater', 'prefHotWater', 'prefElectro', 'prefGas', 'prefElectroTwoZone', 'prefElectroWinter'].forEach(id => {
     $(id)?.addEventListener('change', () => {
         prefs.showWater = $('prefWater')?.checked ?? prefs.showWater;
@@ -687,13 +770,13 @@ $('saveSettingsBtn')?.addEventListener('click', () => {
     prefs = { showWater: $('prefWater')?.checked, showHotWater: $('prefHotWater')?.checked, showElectro: $('prefElectro')?.checked, showGas: $('prefGas')?.checked, electroTwoZone: $('prefElectroTwoZone')?.checked, electroWinter: $('prefElectroWinter')?.checked, remindersEnabled: $('prefReminders')?.checked, remWaterStart: parseInt($('remWaterStart')?.value) || 1, remWaterEnd: parseInt($('remWaterEnd')?.value) || 5, remElectroStart: parseInt($('remElectroStart')?.value) || 28, remElectroEnd: parseInt($('remElectroEnd')?.value) || 3 };
     customServices = customServices.filter(s => s.name.trim() !== "");
     syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); updateSmartBadges(); checkReminders();
-    showToast("Збережено");
+    showToast("Збережено ✓");
 });
 
 // =================== CUSTOM SERVICES ===================
 function renderSettingsCustomServices() {
     const list = $('customServicesSettingsList'); if(!list) return;
-    list.innerHTML = customServices.map((srv, i) => `<div class="flex gap-2 items-center bg-slate-50 dark:bg-black/50 p-2 rounded-2xl border border-slate-100 dark:border-white/5"><input type="text" value="${srv.name}" data-idx="${i}" data-field="name" placeholder="Назва" class="cs-setting-input flex-1 bg-white dark:bg-[#2c2c2e] rounded-xl text-sm font-bold outline-none px-3 py-3 border border-transparent focus:border-brand"><input type="number" step="0.01" value="${srv.defaultSum}" data-idx="${i}" data-field="sum" placeholder="₴" class="cs-setting-input w-20 bg-white dark:bg-[#2c2c2e] rounded-xl text-sm font-bold outline-none px-2 py-3 text-center border border-transparent focus:border-brand"><button type="button" class="cs-del p-3 text-slate-400 hover:text-red-500 bg-white dark:bg-[#2c2c2e] rounded-xl" data-idx="${i}"><i class="fa-solid fa-trash"></i></button></div>`).join('');
+    list.innerHTML = customServices.map((srv, i) => `<div class="flex gap-2 items-center bg-slate-50 dark:bg-black/50 p-2.5 rounded-2xl border border-slate-100 dark:border-white/5"><input type="text" value="${srv.name}" data-idx="${i}" data-field="name" placeholder="Назва" class="cs-setting-input flex-1 bg-white dark:bg-[#2c2c2e] rounded-xl text-sm font-bold outline-none px-3 py-3 border border-transparent focus:border-brand transition-colors"><input type="number" step="0.01" value="${srv.defaultSum}" data-idx="${i}" data-field="sum" placeholder="₴" class="cs-setting-input w-20 bg-white dark:bg-[#2c2c2e] rounded-xl text-sm font-bold outline-none px-2 py-3 text-center border border-transparent focus:border-brand transition-colors"><button type="button" class="cs-del p-3 text-slate-400 hover:text-red-500 bg-white dark:bg-[#2c2c2e] rounded-xl transition-colors" data-idx="${i}"><i class="fa-solid fa-trash"></i></button></div>`).join('');
     list.querySelectorAll('.cs-setting-input').forEach(input => { input.addEventListener('change', () => { const idx = parseInt(input.dataset.idx); if (input.dataset.field === 'name') customServices[idx].name = input.value; else customServices[idx].defaultSum = input.value; }); });
     list.querySelectorAll('.cs-del').forEach(btn => { btn.addEventListener('click', () => { customServices.splice(parseInt(btn.dataset.idx), 1); renderSettingsCustomServices(); }); });
 }
@@ -702,7 +785,7 @@ $('addCustomServiceBtn')?.addEventListener('click', () => { customServices.push(
 function renderCalcCustomServices() {
     const c = $('customServicesContainer'); if(!c) return;
     if (customServices.length === 0) { c.innerHTML = ''; return; }
-    c.innerHTML = customServices.map(srv => `<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[10px] font-bold text-slate-400 uppercase truncate mb-1.5 text-center">${srv.name || 'Послуга'}</span><input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none focus:ring-2 focus:ring-purple-400/50" placeholder="${srv.defaultSum || '0.00'}"></div>`).join('');
+    c.innerHTML = customServices.map(srv => `<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-1.5 text-center">${srv.name || 'Послуга'}</span><input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input premium-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-white/10" placeholder="${srv.defaultSum || '0.00'}"></div>`).join('');
     document.querySelectorAll('.custom-srv-input').forEach(input => input.addEventListener('input', calculatePreview));
 }
 
@@ -716,10 +799,10 @@ function checkReminders() {
     const isE = eS <= eE ? (d >= eS && d <= eE) : (d >= eS || d <= eE);
     if (isW && (prefs.showWater || prefs.showHotWater)) msgs.push("💧 Воду");
     if (isE && prefs.showElectro) msgs.push("⚡️ Світло");
-    if (msgs.length > 0) { $('reminderBanner')?.classList.remove('hidden'); if($('reminderText')) $('reminderText').innerText = "За: " + msgs.join(" та "); }
+    if (msgs.length > 0) { $('reminderBanner')?.classList.remove('hidden'); if($('reminderText')) $('reminderText').innerText = "Передайте: " + msgs.join(" та "); }
     else $('reminderBanner')?.classList.add('hidden');
 }
-$('reminderDismissBtn')?.addEventListener('click', () => { localStorage.setItem('lastSubmittedMonth', new Date().getFullYear() + '-' + new Date().getMonth()); $('reminderBanner')?.classList.add('hidden'); showToast("Нагадаємо наступного місяця", "🎉"); });
+$('reminderDismissBtn')?.addEventListener('click', () => { localStorage.setItem('lastSubmittedMonth', new Date().getFullYear() + '-' + new Date().getMonth()); $('reminderBanner')?.classList.add('hidden'); showToast("Нагадаємо наступного місяця", "🔔"); });
 
 // =================== CHANGE PASSWORD ===================
 $('changePassBtn')?.addEventListener('click', async () => {
@@ -732,6 +815,7 @@ $('changePassBtn')?.addEventListener('click', async () => {
         else showToast("Неправильний пароль", "❌");
     } catch (e) { showToast("Помилка", "❌"); }
 });
+
 // =================== HISTORY & RECORDS ===================
 function renderRecords() {
     const list = $('recordsList');
@@ -776,32 +860,47 @@ function renderRecords() {
     sorted.forEach((rec) => {
         const idx = records.indexOf(rec);
         const yr = rec.month.split('-')[0];
-        if (yr !== lastYear) { lastYear = yr; const h = document.createElement('div'); h.className = "flex items-center gap-4 mt-6 mb-3"; h.innerHTML = `<h2 class="text-lg font-black text-slate-400">${yr}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-white/5"></div>`; list.appendChild(h); }
+        if (yr !== lastYear) { lastYear = yr; const h = document.createElement('div'); h.className = "flex items-center gap-4 mt-6 mb-3"; h.innerHTML = `<h2 class="text-lg font-black text-slate-300 dark:text-slate-600">${yr}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-white/5"></div>`; list.appendChild(h); }
         list.appendChild(createRecordCard(rec, idx));
     });
 }
 
 function createRecordCard(rec, index) {
     const card = document.createElement('div');
-    card.className = `p-5 rounded-[2rem] shadow-soft border bg-white dark:bg-apple-dark mb-3 relative overflow-hidden cursor-pointer select-none active:scale-[0.98] card-hover ${rec.paid ? 'border-slate-100 dark:border-white/5' : 'border-orange-200 dark:border-orange-500/30 ring-1 ring-orange-400/20'}`;
+    card.className = `premium-card p-5 relative overflow-hidden cursor-pointer select-none ${rec.paid ? '' : 'ring-1 ring-orange-400/20'}`;
     const dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', { month: 'long' });
     const [rY, rM] = rec.month.split('-');
+
+    // Partial badge
+    const filledServices = [];
+    if (rec._filled?.water || rec.waterCost > 0) filledServices.push('💧');
+    if (rec._filled?.hotWater || rec.hotWaterCost > 0) filledServices.push('🌡️');
+    if (rec._filled?.electro || rec.electroCost > 0) filledServices.push('⚡');
+    if (rec._filled?.gas || rec.gasCost > 0) filledServices.push('🔥');
+    if (rec._filled?.custom || rec.customCost > 0) filledServices.push('📦');
+    const totalExpected = (prefs.showWater ? 1 : 0) + (prefs.showHotWater ? 1 : 0) + (prefs.showElectro ? 1 : 0) + (prefs.showGas ? 1 : 0) + (customServices.length > 0 ? 1 : 0);
+    const isPartial = filledServices.length < totalExpected && filledServices.length > 0;
+    const partialBadge = isPartial ? `<span class="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-md ml-2">Частково</span>` : '';
+
+    // YoY comparison
     const prevYR = records.find(r => r.month === (parseInt(rY) - 1) + '-' + rM);
     let yoy = '';
-    if (prevYR && prevYR.total > 0 && rec.total > 0) { const p = Math.round(((rec.total - prevYR.total) / prevYR.total) * 100); if (p < 0) yoy = `<span class="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-lg ml-2">↓${p}%</span>`; else if (p > 0) yoy = `<span class="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-lg ml-2">↑+${p}%</span>`; }
+    if (prevYR && prevYR.total > 0 && rec.total > 0) { const p = Math.round(((rec.total - prevYR.total) / prevYR.total) * 100); if (p < 0) yoy = `<span class="text-[9px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-0.5 rounded-md ml-2">↓${p}%</span>`; else if (p > 0) yoy = `<span class="text-[9px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-md ml-2">↑+${p}%</span>`; }
+
+    // Pie chart
     const pW = rec.total > 0 ? ((rec.waterCost || 0) / rec.total) * 100 : 0;
     const pHW = rec.total > 0 ? ((rec.hotWaterCost || 0) / rec.total) * 100 : 0;
     const pE = rec.total > 0 ? ((rec.electroCost || 0) / rec.total) * 100 : 0;
     const pG = rec.total > 0 ? ((rec.gasCost || 0) / rec.total) * 100 : 0;
     const conic = `conic-gradient(#3b82f6 0% ${pW}%,#ef4444 ${pW}% ${pW+pHW}%,#eab308 ${pW+pHW}% ${pW+pHW+pE}%,#f97316 ${pW+pHW+pE}% ${pW+pHW+pE+pG}%,#a855f7 ${pW+pHW+pE+pG}% 100%)`;
 
-    card.innerHTML = `${!rec.paid ? '<div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-orange-400/20 to-transparent rounded-bl-[4rem]"></div>' : ''}
+    card.innerHTML = `${!rec.paid ? '<div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-400/15 to-transparent rounded-bl-[4rem]"></div>' : ''}
         <div class="flex justify-between items-center relative z-10" onclick="toggleDetails(${index})">
-            <div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4><div class="flex items-center"><span class="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-brand-light text-brand' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Борг'}</span>${yoy}</div></div>
+            <div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4><div class="flex items-center flex-wrap gap-1"><span class="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid ? 'bg-brand-light text-brand' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid ? 'Оплачено' : 'Борг'}</span>${partialBadge}${yoy}</div></div>
             <div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-full text-slate-400"><i id="chevron-${index}" class="fa-solid fa-chevron-down transition-transform duration-300"></i></div></div>
         </div>
         <div id="details-${index}" class="hidden" onclick="event.stopPropagation()">
-            <div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5">
+                        <div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5">
                 ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background:${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span>💧 Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span>🌡️ Гар.</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span>⚡ Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span>🔥 Газ</span><span>${Math.round(pG)}%</span></div>`:''}${(100-pW-pHW-pE-pG)>1?`<div class="flex justify-between"><span>📦 Інше</span><span>${Math.round(100-pW-pHW-pE-pG)}%</span></div>`:''}</div></div>` : ''}
                 <div class="space-y-3">
                     ${rec.waterCost > 0 ? `<div class="flex justify-between"><span class="font-bold">💧 Вода</span><span class="font-black">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.wPrev}→${rec.wCur}</span><span class="text-blue-500">+${rec.wCur-rec.wPrev} м³</span></div>` : ''}
@@ -813,10 +912,10 @@ function createRecordCard(rec, index) {
                 </div>
             </div>
             <div class="flex gap-2.5 mt-4 pt-3 border-t border-slate-100 dark:border-white/5">
-                <button type="button" class="rec-pay flex-1 py-3.5 rounded-2xl font-bold text-xs border active:scale-[0.98] ${rec.paid ? 'bg-slate-50 text-slate-500 dark:bg-[#2c2c2e] border-transparent' : 'bg-brand text-white shadow-lg border-brand'}" data-idx="${index}">${rec.paid ? 'Скасувати' : 'Оплачено'}</button>
-                <button type="button" class="rec-share w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 active:scale-[0.90]" data-idx="${index}"><i class="fa-solid fa-share-nodes"></i></button>
-                <button type="button" class="rec-edit w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 active:scale-[0.90]" data-idx="${index}"><i class="fa-solid fa-pen"></i></button>
-                <button type="button" class="rec-del w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 active:scale-[0.90]" data-idx="${index}"><i class="fa-solid fa-trash"></i></button>
+                <button type="button" class="rec-pay flex-1 py-3.5 rounded-2xl font-bold text-xs border active:scale-[0.96] transition-all ${rec.paid ? 'bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 border-slate-200 dark:border-white/10' : 'bg-gradient-to-r from-brand to-blue-600 text-white shadow-lg border-brand'}" data-idx="${index}">${rec.paid ? '↩ Скасувати' : '✓ Оплачено'}</button>
+                <button type="button" class="rec-share w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 active:scale-[0.90] transition-transform" data-idx="${index}"><i class="fa-solid fa-share-nodes"></i></button>
+                <button type="button" class="rec-edit w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 active:scale-[0.90] transition-transform" data-idx="${index}"><i class="fa-solid fa-pen"></i></button>
+                <button type="button" class="rec-del w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 active:scale-[0.90] transition-transform" data-idx="${index}"><i class="fa-solid fa-trash"></i></button>
             </div>
         </div>`;
 
@@ -858,11 +957,12 @@ function editRecord(index) {
     if (prefs.showGas) { $('gPrev').value = rec.gPrev||''; $('gCur').value = rec.gCur||''; }
     if (rec.customData) Object.keys(rec.customData).forEach(id => { const el = $(`custom_${id}`); if(el) el.value = rec.customData[id].val; });
     if($('recordNote')) $('recordNote').value = rec.note || '';
-    $('isWinterInput').checked = new Date(rec.month).getMonth() + 1 >= 10 || new Date(rec.month).getMonth() + 1 <= 4;
+    const m = new Date(rec.month + '-01').getMonth() + 1;
+    $('isWinterInput').checked = m >= 10 || m <= 4;
     switchTab('tabCalc', 1); calculatePreview(); updateSmartBadges();
 }
 
-function deleteRecord(index) { if (confirm('Видалити?')) { records.splice(index, 1); renderRecords(); renderDashboard(); syncToCloud(); } }
+function deleteRecord(index) { if (confirm('Видалити запис?')) { records.splice(index, 1); renderRecords(); renderDashboard(); syncToCloud(); showToast('Видалено', '🗑'); } }
 
 // =================== CHARTS ===================
 function renderChart(sortedRecords) {
@@ -877,7 +977,7 @@ function renderChart(sortedRecords) {
         const h = max > 0 ? (r.total / max) * 100 : 0;
         const mName = new Date(r.month + '-01').toLocaleString('uk-UA', { month: 'short' }).slice(0, 3);
         const bg = r.paid ? 'var(--brand)' : 'linear-gradient(to top, #fb923c, #fcd34d)';
-        return `<div class="flex flex-col items-center flex-1 h-full justify-end px-1"><div class="w-full flex items-end justify-center rounded-t-lg bg-slate-100 dark:bg-white/5 overflow-hidden" style="height:100%"><div class="w-full rounded-t-lg transition-all duration-1000" style="height:${Math.max(4, h)}%;background:${bg}"></div></div><span class="text-[10px] text-slate-500 font-bold mt-2">${mName}</span></div>`;
+        return `<div class="flex flex-col items-center flex-1 h-full justify-end px-1"><div class="w-full flex items-end justify-center rounded-t-lg bg-slate-100 dark:bg-white/5 overflow-hidden" style="height:100%"><div class="w-full rounded-t-lg transition-all duration-1000" style="height:${Math.max(4, h)}%;background:${bg}"></div></div><span class="text-[9px] text-slate-500 font-bold mt-2">${mName}</span></div>`;
     }).join('');
     container.innerHTML = html;
 }
@@ -958,16 +1058,16 @@ function generatePDF() {
     if(prefs.showWater)tableHeaders.push('Вода','₴');if(prefs.showHotWater)tableHeaders.push('Гар','₴');if(prefs.showElectro)tableHeaders.push('Свiтло','₴');if(prefs.showGas)tableHeaders.push('Газ','₴');tableHeaders.push('Iнше','ВСЬОГО','');
     const tableRows=sorted.map(r=>{const mN=new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'2-digit'});const row=[mN];if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(0));if(prefs.showHotWater)row.push(Math.max(0,(r.hwCur||0)-(r.hwPrev||0)),(r.hotWaterCost||0).toFixed(0));if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(0));if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(0));row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),r.paid?'OK':'БОРГ');return row;});
     doc.autoTable({startY:y,head:[tableHeaders],body:tableRows,theme:'striped',headStyles:{fillColor:[0,122,255],textColor:[255,255,255],fontSize:7,fontStyle:'bold',halign:'center'},bodyStyles:{fontSize:7,halign:'center'},columnStyles:{0:{halign:'left',fontStyle:'bold'}},alternateRowStyles:{fillColor:[245,247,250]},didParseCell:function(data){if(data.column.index===tableHeaders.length-1&&data.cell.raw==='БОРГ'){data.cell.styles.textColor=[255,59,48];data.cell.styles.fontStyle='bold';}if(data.column.index===tableHeaders.length-1&&data.cell.raw==='OK'){data.cell.styles.textColor=[52,199,89];data.cell.styles.fontStyle='bold';}},margin:{left:10,right:10}});
-    doc.setFontSize(7);doc.setTextColor(150,150,150);doc.text('Комуналка PWA v2.1',105,doc.internal.pageSize.height-10,{align:'center'});
+    doc.setFontSize(7);doc.setTextColor(150,150,150);doc.text('Комуналка PWA v2.2',105,doc.internal.pageSize.height-10,{align:'center'});
     doc.save(`komunalka_${addressName.replace(/[^a-zA-Zа-яА-ЯіїєґІЇЄҐ0-9]/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`);
-    showToast('PDF!','📄');
+    showToast('PDF створено!','📄');
 }
 
 // =================== SHARE ALL ===================
 async function shareAllRecords() {
     if(records.length===0)return showToast('Немає','⚠️');
     const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,6);
-    let txt=`📊 Комунальні\n📍 ${$('currentAddressDisplay').innerText}\n───────\n`;
+    let txt=`📊 Комунальні платежі\n📍 ${$('currentAddressDisplay').innerText}\n───────\n`;
     sorted.forEach(r=>{txt+=`${new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'numeric'})}: ${fmt.format(r.total)} ₴ ${r.paid?'✅':'⏳'}\n`;});
     txt+=`───────\nСередній: ${fmt.format(sorted.reduce((s,r)=>s+r.total,0)/sorted.length)} ₴/міс`;
     if(navigator.share){try{await navigator.share({text:txt});return;}catch(e){}}
@@ -984,7 +1084,7 @@ $('exportJsonBtn')?.addEventListener('click', () => {
     const data = { version: APP_VERSION, exportDate: new Date().toISOString(), addresses, currentAddressId };
     const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
     const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `komunalka_backup_${new Date().toISOString().slice(0,10)}.json`; link.click();
-    showToast('Бекап','💾');
+    showToast('Бекап створено','💾');
 });
 $('importJsonBtn')?.addEventListener('click', () => $('importFileInput')?.click());
 $('importFileInput')?.addEventListener('change', (e) => {
@@ -1000,7 +1100,7 @@ window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); defe
 $('installPwaBtn')?.addEventListener('click', async () => { if(!deferredPrompt)return; deferredPrompt.prompt(); const{outcome}=await deferredPrompt.userChoice; if(outcome==='accepted')$('pwaInstallBlock')?.classList.add('hidden'); deferredPrompt=null; });
 
 // =================== LOGOUT ===================
-function logout() { if(isGuest){window.location.href=window.location.pathname;return;} if(confirm('Вийти?')){localStorage.clear();if(googleUser)firebase.auth().signOut();location.reload();} }
+function logout() { if(isGuest){window.location.href=window.location.pathname;return;} if(confirm('Вийти з акаунту?')){localStorage.clear();if(googleUser)firebase.auth().signOut();location.reload();} }
 $('logoutBtn')?.addEventListener('click', logout);
 
 // =================== INIT APP UI ===================
@@ -1045,4 +1145,5 @@ else if (sessionLogin && sessionPass) performLogin(sessionLogin, sessionPass, tr
 $('mode-light')?.addEventListener('click', () => setThemeMode('light'));
 $('mode-auto')?.addEventListener('click', () => setThemeMode('auto'));
 $('mode-dark')?.addEventListener('click', () => setThemeMode('dark'));
+
 // EOF
