@@ -78,14 +78,18 @@ async function linkAccount(lgn, pss) { const passHash = await getHash(pss); cons
 $('btnLinkGoogle')?.addEventListener('click', async () => { if (!sessionLogin) return alert("Спочатку увійдіть."); const provider = new firebase.auth.GoogleAuthProvider(); try { const result = await firebase.auth().signInWithPopup(provider); const uid = result.user.uid; const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: "link_google", login: sessionLogin, uid }) }); if ((await res.json()).success) { showToast("Google підв'язано!"); localStorage.setItem('k_uid', uid); updateGoogleButton(); } } catch (e) { showToast("Скасовано", "⚠️"); } });
 function updateGoogleButton() { if (localStorage.getItem('k_uid') && $('btnLinkGoogle')) { $('btnLinkGoogle').innerHTML = '<i class="fa-solid fa-check mr-2"></i>Google підв\'язано'; $('btnLinkGoogle').className = 'w-full bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-600 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 pointer-events-none'; } }
 // =================== ADDRESS ===================
-function loadCurrentAddress() { if (!addresses || addresses.length === 0) { const backup = loadFromLocal(); if (backup) { addresses = backup.addresses || []; currentAddressId = backup.currentAddressId || 'default'; } } const addr = addresses.find(a => a.id === currentAddressId) || addresses[0]; currentAddressId = addr.id; tariffs = { ...defaultTariffs, ...(addr.tariffs || {}) }; prefs = { ...defaultPrefs, ...(addr.prefs || {}) }; records = addr.records || []; customServices = addr.customServices || [...defaultCustomServices]; $('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : ''); initAppUI(); }
+function loadCurrentAddress() { if (!addresses || addresses.length === 0) { const backup = loadFromLocal(); if (backup) { addresses = backup.addresses || []; currentAddressId = backup.currentAddressId || 'default'; } } const addr = addresses.find(a => a.id === currentAddressId) || addresses[0]; currentAddressId = addr.id; tariffs = { ...defaultTariffs, ...(addr.tariffs || {}) }; prefs = { ...defaultPrefs, ...(addr.prefs || {}) }; records = addr.records || []; customServices = addr.customServices || [...defaultCustomServices]; $('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : ''); initAppUI();     checkProStatus();
+ }
 function syncCurrentAddress() { const idx = addresses.findIndex(a => a.id === currentAddressId); if (idx >= 0) { addresses[idx].tariffs = tariffs; addresses[idx].prefs = prefs; addresses[idx].records = records; addresses[idx].customServices = customServices; } }
 function openAddressModal() { $('addressModal').classList.remove('hidden'); setTimeout(() => $('addressModalContent').classList.remove('translate-y-full'), 10); renderAddressModal(); }
 function closeAddressModal() { $('addressModalContent').classList.add('translate-y-full'); setTimeout(() => $('addressModal').classList.add('hidden'), 400); }
 $('addressHeaderTrigger').addEventListener('click', openAddressModal);
 $('closeAddressModalBtn').addEventListener('click', closeAddressModal);
 $('addressModal').addEventListener('click', (e) => { if (e.target === $('addressModal')) closeAddressModal(); });
-$('addAddressBtn').addEventListener('click', () => { const name = prompt("Назва об'єкту:"); if (name && name.trim()) { syncCurrentAddress(); const newId = 'addr_' + Date.now(); addresses.push({ id: newId, name: name.trim(), tariffs: { ...defaultTariffs }, prefs: { ...defaultPrefs }, records: [], customServices: [{ id: "s1", name: "Квартплата", defaultSum: "" }] }); currentAddressId = newId; loadCurrentAddress(); syncToCloud(); closeAddressModal(); showToast("Додано"); checkNewAchievements(); } });
+$('addAddressBtn').addEventListener('click', () => {
+    if (addresses.length >= 3 && !isPro()) { closeAddressModal(); showProModal(); return; }
+    const name = prompt("Назва об'єкту:"); if (name && name.trim()) { syncCurrentAddress(); const newId = 'addr_' + Date.now(); addresses.push({ id: newId, name: name.trim(), tariffs: { ...defaultTariffs }, prefs: { ...defaultPrefs }, records: [], customServices: [{ id: "s1", name: "Квартплата", defaultSum: "" }] }); currentAddressId = newId; loadCurrentAddress(); syncToCloud(); closeAddressModal(); showToast("Додано"); checkNewAchievements(); }
+});
 function renderAddressModal() { $('addressListModal').innerHTML = addresses.map(a => `<div class="flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95 cursor-pointer ${a.id === currentAddressId ? 'bg-brand border-brand text-white shadow-lg shadow-brand/20' : 'bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200'}" data-addr-id="${a.id}"><span class="font-bold text-lg truncate pr-2 flex-1">${a.name}</span><div class="flex gap-1.5 shrink-0"><button class="addr-edit p-2 rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white' : 'bg-white dark:bg-[#2c2c2e] text-slate-400'}" data-id="${a.id}"><i class="fa-solid fa-pen"></i></button>${a.id !== currentAddressId && addresses.length > 1 ? `<button class="addr-del p-2 text-slate-400 bg-white dark:bg-[#2c2c2e] rounded-xl shadow-sm" data-id="${a.id}"><i class="fa-solid fa-trash"></i></button>` : ''}</div></div>`).join(''); $('addressListModal').querySelectorAll('[data-addr-id]').forEach(el => { el.addEventListener('click', (e) => { if (e.target.closest('.addr-edit') || e.target.closest('.addr-del')) return; syncCurrentAddress(); currentAddressId = el.dataset.addrId; loadCurrentAddress(); syncToCloud(); closeAddressModal(); }); }); $('addressListModal').querySelectorAll('.addr-edit').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); const addr = addresses.find(a => a.id === btn.dataset.id); const name = prompt("Нова назва:", addr.name); if (name && name.trim()) { addr.name = name.trim(); renderAddressModal(); if (btn.dataset.id === currentAddressId) $('currentAddressDisplay').innerText = addr.name; syncToCloud(); } }); }); $('addressListModal').querySelectorAll('.addr-del').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); if (confirm("Видалити?")) { addresses = addresses.filter(a => a.id !== btn.dataset.id); if (currentAddressId === btn.dataset.id) { currentAddressId = addresses[0].id; loadCurrentAddress(); } syncToCloud(); renderAddressModal(); } }); }); }
 
 // =================== TABS ===================
@@ -256,4 +260,32 @@ else if(sessionLogin&&sessionPass)performLogin(sessionLogin,sessionPass,true);
 $('mode-light')?.addEventListener('click',()=>setThemeMode('light'));
 $('mode-auto')?.addEventListener('click',()=>setThemeMode('auto'));
 $('mode-dark')?.addEventListener('click',()=>setThemeMode('dark'));
+// =================== FREEMIUM & PRO ===================
+function isPro() { return localStorage.getItem('k_pro') === '1'; }
+
+function showProModal() {
+    $('proModal').classList.remove('hidden');
+    haptic('notification');
+}
+
+function activatePro() {
+    localStorage.setItem('k_pro', '1');
+    $('proModal').classList.add('hidden');
+    if ($('proStatusBlock')) $('proStatusBlock').classList.remove('hidden');
+    showToast('Pro активовано! Дякуємо! 💛', '⭐');
+}
+
+$('proActivateBtn')?.addEventListener('click', () => {
+    const code = prompt('Введіть код активації або напишіть "підтримав":');
+    if (code && (code.toLowerCase().includes('підтримав') || code.toLowerCase().includes('pro') || code === '2024' || code === '49')) {
+        activatePro();
+    } else if (code) {
+        showToast('Невірний код', '❌');
+    }
+});
+
+// Check pro status on init
+function checkProStatus() {
+    if (isPro() && $('proStatusBlock')) $('proStatusBlock').classList.remove('hidden');
+}
 // EOF
