@@ -145,7 +145,7 @@ async function getHash(t) { const b = await crypto.subtle.digest('SHA-256', new 
 
 // =================== SYNC ===================
 function setSyncState(state) { syncState = state; const dot = $('syncDotHeader'); if (dot) dot.className = `sync-dot ${state}`; }
-function saveToLocal() { try { localStorage.setItem('komynalka_backup', JSON.stringify({ addresses, currentAddressId, timestamp: Date.now() })); } catch (e) { } }
+function saveToLocal() { try { localStorage.setItem('komynalka_backup', JSON.stringify({ addresses, currentAddressId, timestamp: Date.now() })); } catch (e) {} }
 function loadFromLocal() { try { const b = localStorage.getItem('komynalka_backup'); return b ? JSON.parse(b) : null; } catch (e) { return null; } }
 
 async function syncToCloud() {
@@ -263,20 +263,86 @@ $('qaSync').addEventListener('click', () => { syncToCloud(); showToast('Синх
 
 // =================== DASHBOARD ===================
 function renderDashboard() {
-    const streak = getStreak(records);
-    if($('streakValue')) $('streakValue').textContent = `${streak} міс.`;
-    renderStreakDots(streak);
+    // Greeting
+    const hour = new Date().getHours();
+    let greeting = 'Доброго дня!';
+    if (hour < 6) greeting = 'Доброї ночі!';
+    else if (hour < 12) greeting = 'Доброго ранку!';
+    else if (hour < 18) greeting = 'Доброго дня!';
+    else greeting = 'Доброго вечора!';
+    if ($('dashGreeting')) $('dashGreeting').textContent = greeting;
+
+    // Month label
     const now = new Date();
     const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if ($('dashMonthLabel')) $('dashMonthLabel').textContent = new Date(curMonth + '-01').toLocaleString('uk-UA', { month: 'long', year: 'numeric' });
+
+    // Streak
+    const streak = getStreak(records);
+    if ($('streakValue')) $('streakValue').textContent = streak;
+    renderStreakDots(streak);
+
+    // Current month
     const curRec = records.find(r => r.month === curMonth);
     animateNumber($('dashCurrentMonth'), curRec ? curRec.total : 0);
+
+    // Records count
+    if ($('dashRecordsCount')) $('dashRecordsCount').textContent = records.length;
+
+    // Avg
+    if (records.length > 0) {
+        const avg = records.reduce((s, r) => s + r.total, 0) / records.length;
+        if ($('dashAvg')) $('dashAvg').textContent = fmt.format(avg) + ' ₴';
+    }
+
+    // Debt
     const unpaid = records.filter(r => !r.paid);
     const debtTotal = unpaid.reduce((s, r) => s + r.total, 0);
-    if (unpaid.length > 0) { $('dashDebtCard')?.classList.remove('hidden'); $('dashNoDebtCard')?.classList.add('hidden'); animateNumber($('dashDebt'), debtTotal); if($('dashDebtMonths')) $('dashDebtMonths').textContent = `${unpaid.length} міс.`; $('debtBadge')?.classList.remove('hidden'); if($('debtBadge')) $('debtBadge').textContent = unpaid.length; }
-    else { $('dashDebtCard')?.classList.add('hidden'); $('dashNoDebtCard')?.classList.remove('hidden'); $('debtBadge')?.classList.add('hidden'); }
+    if (unpaid.length > 0) {
+        $('dashDebtCard')?.classList.remove('hidden');
+        animateNumber($('dashDebt'), debtTotal);
+        if ($('dashDebtMonths')) $('dashDebtMonths').textContent = `${unpaid.length} міс. не оплачено`;
+        $('debtBadge')?.classList.remove('hidden');
+        if ($('debtBadge')) $('debtBadge').textContent = unpaid.length;
+    } else {
+        $('dashDebtCard')?.classList.add('hidden');
+        $('debtBadge')?.classList.add('hidden');
+    }
+
+    // Chart
     renderDashChart();
-    if (records.length > 0) { const avg = records.reduce((s, r) => s + r.total, 0) / records.length; if($('dashAvg')) $('dashAvg').textContent = `~${fmt.format(avg)} ₴/міс`; }
-    renderAchievements(); checkReminders(); renderMonthProgress();
+
+    // Smart Insight
+    renderSmartInsight(curRec, curMonth);
+
+    // Achievements
+    renderAchievements();
+    const unlocked = getUnlockedAchievements().length;
+    if ($('achCounter')) $('achCounter').textContent = `${unlocked}/${ACHIEVEMENTS.length}`;
+
+    // Reminders
+    checkReminders();
+}
+
+function renderSmartInsight(curRec, curMonth) {
+    const insightEl = $('dashInsight'); const textEl = $('dashInsightText');
+    if (!insightEl || !textEl) return;
+    if (records.length < 2) { insightEl.classList.add('hidden'); return; }
+    const sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month));
+    const [sy, sm] = curMonth.split('-').map(Number);
+    const prevDate = new Date(sy, sm - 2);
+    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+    const prevRec = sorted.find(r => r.month === prevMonth);
+    let insight = '';
+    if (curRec && prevRec && prevRec.total > 0) {
+        const diff = Math.round(((curRec.total - prevRec.total) / prevRec.total) * 100);
+        if (diff < -10) insight = `Ви зекономили ${Math.abs(diff)}% порівняно з ${new Date(prevMonth + '-01').toLocaleString('uk-UA', { month: 'long' })} 🎉`;
+        else if (diff > 15) insight = `Витрати зросли на ${diff}% порівняно з минулим місяцем`;
+        else if (diff >= -10 && diff <= 5) insight = `Витрати стабільні — чудово! 👍`;
+    }
+    if (!insight && records.length >= 3) { const avg = sorted.slice(0, 3).reduce((s, r) => s + r.total, 0) / 3; insight = `Середні витрати за 3 міс: ${fmt.format(avg)} ₴`; }
+    if (!insight) { const streak = getStreak(records); if (streak >= 3) insight = `Серія ${streak} міс. поспіль — так тримати! 🔥`; }
+    if (insight) { insightEl.classList.remove('hidden'); textEl.textContent = insight; } else { insightEl.classList.add('hidden'); }
 }
 
 function renderStreakDots(streak) { const container = $('streakDots'); if (!container) return; let html = ''; for (let i = 0; i < 6; i++) html += `<div class="streak-dot ${i < streak ? 'active' : 'inactive'} ${i === 0 ? 'today' : ''}"></div>`; container.innerHTML = html; }
@@ -296,25 +362,6 @@ function animateNumber(el, target) {
     const duration = 400; const start = performance.now(); const from = current;
     function tick(now) { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - Math.pow(1 - progress, 3); const value = from + (target - from) * eased; el.textContent = fmt.format(value) + ' ₴'; if (progress < 1) requestAnimationFrame(tick); }
     requestAnimationFrame(tick);
-}
-
-// =================== MONTH PROGRESS & BUDGET ===================
-function renderMonthProgress() {
-    const now = new Date(); const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const curRec = records.find(r => r.month === curMonth);
-    let totalServices = 0, filledServices = 0;
-    if (prefs.showWater) { totalServices++; if (curRec?._filled?.water || curRec?.waterCost > 0) filledServices++; }
-    if (prefs.showHotWater) { totalServices++; if (curRec?._filled?.hotWater || curRec?.hotWaterCost > 0) filledServices++; }
-    if (prefs.showElectro) { totalServices++; if (curRec?._filled?.electro || curRec?.electroCost > 0) filledServices++; }
-    if (prefs.showGas) { totalServices++; if (curRec?._filled?.gas || curRec?.gasCost > 0) filledServices++; }
-    if (customServices.length > 0) { totalServices++; if (curRec?._filled?.custom || curRec?.customCost > 0) filledServices++; }
-    const pct = totalServices > 0 ? Math.round((filledServices / totalServices) * 100) : 0;
-    if ($('progressBar')) $('progressBar').style.width = pct + '%';
-    if ($('progressPercent')) $('progressPercent').textContent = pct + '%';
-    if ($('progressDetails')) $('progressDetails').textContent = `${filledServices} / ${totalServices} послуг`;
-    const budget = parseFloat(localStorage.getItem('k_budget')) || 0;
-    const budgetEl = $('budgetInfo');
-    if (budgetEl) { if (budget > 0 && curRec) { const used = Math.round((curRec.total / budget) * 100); budgetEl.textContent = `${used}% бюджету`; budgetEl.className = `text-[9px] font-bold ${used > 100 ? 'text-red-500' : used > 80 ? 'text-orange-500' : 'text-green-500'}`; } else if (budget > 0) { budgetEl.textContent = `Бюджет: ${fmt.format(budget)} ₴`; budgetEl.className = 'text-[9px] text-slate-400 font-medium'; } else { budgetEl.textContent = ''; } }
 }
 
 // =================== CALCULATION ===================
@@ -502,7 +549,9 @@ function renderRecords() {
     const totals = records.map(r => r.total);
     if($('statsAvg')) $('statsAvg').innerText = fmt.format(totals.reduce((a, b) => a + b, 0) / totals.length) + ' ₴';
     if($('statsTotalPaid')) $('statsTotalPaid').innerText = fmt.format(records.filter(r => r.paid).reduce((s, r) => s + r.total, 0)) + ' ₴';
-    if($('statsMin')) $('statsMin').innerText = fmt.format(Math.min(...totals)) + ' ₴'; if($('statsMax')) $('statsMax').innerText = fmt.format(Math.max(...totals)) + ' ₴'; if($('statsCount')) $('statsCount').innerText = records.length;
+    if($('statsMin')) $('statsMin').innerText = fmt.format(Math.min(...totals)) + ' ₴';
+    if($('statsMax')) $('statsMax').innerText = fmt.format(Math.max(...totals)) + ' ₴';
+    if($('statsCount')) $('statsCount').innerText = records.length;
     let sorted = [...records]; const sortVal = $('sortSelect')?.value || 'date-desc';
     switch (sortVal) { case 'date-desc': sorted.sort((a, b) => new Date(b.month) - new Date(a.month)); break; case 'date-asc': sorted.sort((a, b) => new Date(a.month) - new Date(b.month)); break; case 'amount-desc': sorted.sort((a, b) => b.total - a.total); break; case 'amount-asc': sorted.sort((a, b) => a.total - b.total); break; }
     if (currentFilter === 'paid') sorted = sorted.filter(r => r.paid); else if (currentFilter === 'unpaid') sorted = sorted.filter(r => !r.paid);
