@@ -20,7 +20,7 @@
             <div class="text-center mb-6">
                 <div class="w-16 h-16 bg-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl">🔒</div>
                 <h1 class="text-xl font-black">Адмін-панель</h1>
-                <p class="text-sm text-slate-500">Комуналка PWA</p>
+                <p class="text-sm text-slate-500">Комуналка PWA v2.3</p>
             </div>
             <input type="password" id="adminPass" placeholder="Пароль адміністратора" class="w-full p-4 border rounded-xl mb-4 outline-none focus:ring-2 focus:ring-red-500 font-medium">
             <button onclick="adminLogin()" class="w-full bg-red-500 text-white font-bold py-4 rounded-xl hover:bg-red-600 active:scale-95 transition-transform">Увійти</button>
@@ -50,34 +50,26 @@
 
         <div class="max-w-6xl mx-auto px-6 py-8">
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
                 <div class="stat-card bg-white p-6 rounded-2xl border shadow-sm">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 text-xl">👥</div>
-                        <span class="text-sm font-bold text-slate-500">Всього юзерів</span>
-                    </div>
+                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 text-xl">👥</div><span class="text-sm font-bold text-slate-500">Юзерів</span></div>
                     <p class="text-3xl font-black text-slate-900" id="statUsers">0</p>
                 </div>
                 <div class="stat-card bg-white p-6 rounded-2xl border shadow-sm">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-500 text-xl">🔥</div>
-                        <span class="text-sm font-bold text-slate-500">Активні цей міс.</span>
-                    </div>
+                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-500 text-xl">🔥</div><span class="text-sm font-bold text-slate-500">Активні</span></div>
                     <p class="text-3xl font-black text-green-600" id="statActive">0</p>
                 </div>
                 <div class="stat-card bg-white p-6 rounded-2xl border shadow-sm">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-500 text-xl">📊</div>
-                        <span class="text-sm font-bold text-slate-500">Всього записів</span>
-                    </div>
+                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-500 text-xl">📊</div><span class="text-sm font-bold text-slate-500">Записів</span></div>
                     <p class="text-3xl font-black text-slate-900" id="statRecords">0</p>
                 </div>
                 <div class="stat-card bg-white p-6 rounded-2xl border shadow-sm">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 text-xl">📈</div>
-                        <span class="text-sm font-bold text-slate-500">Retention</span>
-                    </div>
+                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 text-xl">📈</div><span class="text-sm font-bold text-slate-500">Retention</span></div>
                     <p class="text-3xl font-black text-orange-600" id="statRetention">0%</p>
+                </div>
+                <div class="stat-card bg-white p-6 rounded-2xl border shadow-sm">
+                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 bg-yellow-50 rounded-xl flex items-center justify-center text-yellow-500 text-xl">🏘️</div><span class="text-sm font-bold text-slate-500">Адрес</span></div>
+                    <p class="text-3xl font-black text-slate-900" id="statAddresses">0</p>
                 </div>
             </div>
 
@@ -103,6 +95,7 @@
                                 <th class="text-center p-4 font-bold text-slate-500">Адреси</th>
                                 <th class="text-center p-4 font-bold text-slate-500">Записів</th>
                                 <th class="text-center p-4 font-bold text-slate-500">Останній</th>
+                                <th class="text-center p-4 font-bold text-slate-500">Pro</th>
                                 <th class="text-center p-4 font-bold text-slate-500">Активний</th>
                                 <th class="text-center p-4 font-bold text-slate-500">Дії</th>
                             </tr>
@@ -143,7 +136,6 @@
         let adminToken = sessionStorage.getItem('admin_token') || '';
         let allUsers = [];
 
-        // Auto-login if token exists
         if (adminToken) { $('loginScreen').classList.add('hidden'); $('adminPanel').classList.remove('hidden'); loadStats(); }
 
         async function adminLogin() {
@@ -151,16 +143,8 @@
             try {
                 const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_login', pass }) });
                 const data = await res.json();
-                if (data.success) {
-                    adminToken = data.token;
-                    sessionStorage.setItem('admin_token', adminToken);
-                    $('loginScreen').classList.add('hidden');
-                    $('adminPanel').classList.remove('hidden');
-                    loadStats();
-                } else {
-                    $('loginError').textContent = 'Неправильний пароль';
-                    $('loginError').classList.remove('hidden');
-                }
+                if (data.success) { adminToken = data.token; sessionStorage.setItem('admin_token', adminToken); $('loginScreen').classList.add('hidden'); $('adminPanel').classList.remove('hidden'); loadStats(); }
+                else { $('loginError').textContent = 'Неправильний пароль'; $('loginError').classList.remove('hidden'); }
             } catch(e) { $('loginError').textContent = 'Помилка з\'єднання'; $('loginError').classList.remove('hidden'); }
         }
 
@@ -172,17 +156,15 @@
                 const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_stats', adminToken }) });
                 const data = await res.json();
                 if (!data.success) { if(data.error === 'UNAUTHORIZED') adminLogout(); return; }
-
                 const { stats, users } = data;
                 allUsers = users;
-
                 $('statUsers').textContent = stats.totalUsers;
                 $('statActive').textContent = stats.activeThisMonth;
                 $('statRecords').textContent = stats.totalRecords;
+                $('statAddresses').textContent = stats.totalAddresses || '—';
                 $('statRetention').textContent = stats.totalUsers > 0 ? Math.round((stats.activeThisMonth / stats.totalUsers) * 100) + '%' : '0%';
                 $('usersCount').textContent = `${users.length} юзерів`;
                 $('lastUpdate').textContent = `Оновлено: ${new Date().toLocaleTimeString('uk-UA')}`;
-
                 renderUsers(users);
             } catch(e) { $('lastUpdate').textContent = 'Помилка завантаження'; }
         }
@@ -191,9 +173,10 @@
             $('usersTableBody').innerHTML = users.map(u => `
                 <tr class="border-b hover:bg-slate-50 transition-colors">
                     <td class="p-4"><span class="font-bold text-slate-900">${escHtml(u.login)}</span></td>
-                    <td class="p-4 text-center"><span class="bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-bold text-xs">${u.addresses}</span></td>
-                    <td class="p-4 text-center font-bold">${u.records}</td>
-                    <td class="p-4 text-center text-slate-500">${u.lastMonth}</td>
+                    <td class="p-4 text-center"><span class="bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-bold text-xs">${u.addresses || 1}</span></td>
+                    <td class="p-4 text-center font-bold">${u.records || 0}</td>
+                    <td class="p-4 text-center text-slate-500">${u.lastMonth || '—'}</td>
+                    <td class="p-4 text-center">${u.isPro ? '<span class="text-yellow-500 font-bold">⭐</span>' : '<span class="text-slate-300">—</span>'}</td>
                     <td class="p-4 text-center">${u.activeThisMonth ? '<span class="text-green-500 font-bold">●</span>' : '<span class="text-slate-300">○</span>'}</td>
                     <td class="p-4 text-center">
                         <div class="flex gap-1 justify-center">
@@ -216,20 +199,17 @@
             $('modalUserTitle').textContent = login;
             $('modalUserContent').innerHTML = '<p class="text-slate-400">Завантаження...</p>';
             $('userModal').classList.remove('hidden');
-
             try {
                 const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_user_data', adminToken, login }) });
                 const data = await res.json();
                 if (!data.success) { $('modalUserContent').innerHTML = '<p class="text-red-500">Помилка</p>'; return; }
-
                 const ud = data.data;
                 let html = `<div class="space-y-4">`;
                 html += `<div class="bg-slate-50 p-4 rounded-xl"><p class="text-xs font-bold text-slate-400 mb-1">Загальна інфо</p><p>Адрес: ${ud.addresses?.length || 0} | Створено: ${ud.createdAt || '?'} | Оновлено: ${ud.updatedAt || '?'}</p></div>`;
-
                 if (ud.addresses) {
                     ud.addresses.forEach(addr => {
                         html += `<div class="bg-slate-50 p-4 rounded-xl"><p class="font-bold mb-2">🏠 ${addr.name}</p>`;
-                        html += `<p class="text-xs text-slate-500 mb-2">Записів: ${addr.records?.length || 0}</p>`;
+                        html += `<p class="text-xs text-slate-500 mb-2">Записів: ${addr.records?.length || 0} | Послуг: ${addr.customServices?.length || 0}</p>`;
                         if (addr.records && addr.records.length > 0) {
                             const last3 = addr.records.sort((a,b) => b.month.localeCompare(a.month)).slice(0, 3);
                             html += `<div class="space-y-1">`;
@@ -249,10 +229,8 @@
         async function resetPassword(login) {
             const newPass = prompt(`Новий пароль для ${login}:`);
             if (!newPass || newPass.length < 4) return alert('Мін 4 символи');
-            // Hash it
             const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(newPass));
             const hash = Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join('');
-            
             const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_reset_password', adminToken, login, newPass: hash }) });
             const data = await res.json();
             alert(data.success ? `Пароль для ${login} змінено!` : 'Помилка');
@@ -263,8 +241,7 @@
             if (!confirm(`Точно видалити ${login}???`)) return;
             const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_delete_user', adminToken, login }) });
             const data = await res.json();
-            if (data.success) { alert('Видалено'); loadStats(); }
-            else alert('Помилка');
+            if (data.success) { alert('Видалено'); loadStats(); } else alert('Помилка');
         }
 
         function openBroadcast() { $('broadcastModal').classList.remove('hidden'); }
@@ -278,8 +255,6 @@
         }
 
         function escHtml(str) { return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-        // Enter to login
         $('adminPass').addEventListener('keydown', e => { if(e.key === 'Enter') adminLogin(); });
     </script>
 </body>
