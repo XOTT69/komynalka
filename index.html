@@ -131,8 +131,15 @@
     <div id="pwaInstallBlock" class="hidden"><button id="installPwaBtn" class="w-full bg-gradient-to-r from-brand to-blue-600 text-white rounded-[1.5rem] py-4 font-bold shadow-xl shadow-brand/20 active:scale-[0.98] transition-transform"><i class="fa-solid fa-download mr-2"></i>Встановити на екран</button></div>
 
     <button type="button" id="saveSettingsBtn" class="w-full bg-apple-darker dark:bg-white text-white dark:text-apple-darker rounded-[1.5rem] py-5 font-bold shadow-xl text-lg mt-2 active:scale-[0.98] transition-transform"><i class="fa-solid fa-floppy-disk mr-2"></i>Зберегти налаштування</button>
+    <!-- Donate -->
+    <div class="premium-card p-6">
+    <h3 class="font-black mb-2 text-lg text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-heart text-pink-500"></i> Підтримати</h3>
+    <p class="text-xs text-slate-400 mb-4">Якщо додаток корисний — підтримайте розробку ☕</p>
+    <a href="https://send.monobank.ua/jar/YOUR_JAR_CODE" target="_blank" class="w-full py-3.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 active:scale-[0.98] shadow-lg shadow-pink-500/20 mb-3"><i class="fa-solid fa-mug-hot"></i> Купити каву</a>
+    <div id="proStatusBlock" class="hidden bg-green-50 dark:bg-green-500/10 p-3 rounded-xl border border-green-200 dark:border-green-500/20 text-center"><span class="text-xs font-bold text-green-600">⭐ Pro активовано</span></div>
+</div>
 
-    <div class="text-center pt-4 pb-2"><p class="text-[10px] text-slate-400 font-medium">Розробник: <span class="font-bold text-slate-500">Антон Миколенко</span></p><p class="text-[10px] text-slate-400 mt-0.5">v2.3 • Комуналка PWA Premium</p></div>
+   <div class="text-center pt-4 pb-2"><p class="text-[10px] text-slate-400 font-medium">Розробник: <span class="font-bold text-slate-500">Антон Миколенко</span></p></div>
 
     <button type="button" id="logoutBtn" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-[1.5rem] py-4 mt-2 mb-4 border border-red-100 dark:border-red-500/20 active:scale-[0.98] transition-transform"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Вийти</button>
 </div>
@@ -163,6 +170,22 @@
 
 <!-- Photo Capture Modal -->
 <div id="photoCaptureModal" class="hidden fixed inset-0 z-[1050] bg-black/80 flex items-center justify-center p-4" onclick="if(event.target===this)closePhotoModal()"><div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl border border-slate-100 dark:border-white/10 text-center"><div class="text-4xl mb-3">📷</div><h3 class="text-lg font-black text-slate-900 dark:text-white mb-2">Фото лічильника</h3><p class="text-xs text-slate-500 mb-4">Сфотографуйте показник і введіть число</p><div id="photoPreview" class="hidden mb-4 rounded-2xl overflow-hidden border border-slate-200 dark:border-white/10"><img id="photoImg" class="w-full h-40 object-cover"></div><input type="file" id="photoFileInput" accept="image/*" capture="environment" class="hidden"><button onclick="$('photoFileInput').click()" class="w-full py-3.5 bg-brand-light text-brand font-bold rounded-xl text-sm mb-3 active:scale-[0.98]"><i class="fa-solid fa-camera mr-2"></i>Зробити фото</button><div class="flex gap-3 items-center"><input type="number" id="photoRecognizedValue" inputmode="decimal" placeholder="Введіть число" class="premium-input flex-1 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-center text-xl font-black outline-none"><button onclick="applyPhotoValue()" class="px-5 py-3 bg-brand text-white font-bold rounded-xl active:scale-[0.98]"><i class="fa-solid fa-check"></i></button></div></div></div>
+<!-- Pro Modal -->
+<div id="proModal" class="hidden fixed inset-0 z-[1050] bg-black/60 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-slate-100 dark:border-white/10">
+        <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-lg shadow-orange-500/30">⭐</div>
+        <h3 class="text-xl font-black text-slate-900 dark:text-white mb-2">Комуналка Pro</h3>
+        <p class="text-sm text-slate-500 mb-6">Безлімітні адреси, підтримка розробника та подяка від душі 💛</p>
+        <div class="space-y-3 mb-6">
+            <div class="flex items-center gap-3 text-left bg-slate-50 dark:bg-black/40 p-3 rounded-xl"><i class="fa-solid fa-check-circle text-green-500"></i><span class="text-sm font-bold text-slate-700 dark:text-slate-200">Необмежена к-сть адрес</span></div>
+            <div class="flex items-center gap-3 text-left bg-slate-50 dark:bg-black/40 p-3 rounded-xl"><i class="fa-solid fa-check-circle text-green-500"></i><span class="text-sm font-bold text-slate-700 dark:text-slate-200">Річний звіт + Share Image</span></div>
+            <div class="flex items-center gap-3 text-left bg-slate-50 dark:bg-black/40 p-3 rounded-xl"><i class="fa-solid fa-check-circle text-green-500"></i><span class="text-sm font-bold text-slate-700 dark:text-slate-200">Підтримка розробника ☕</span></div>
+        </div>
+        <a id="proPayBtn" href="https://send.monobank.ua/jar/YOUR_JAR_CODE" target="_blank" class="block w-full py-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-black rounded-2xl text-lg shadow-xl shadow-orange-500/30 active:scale-[0.96] transition-transform mb-3">Підтримати від 49₴</a>
+        <button id="proActivateBtn" class="w-full py-3 text-sm font-bold text-brand hover:underline">Вже підтримав? Активувати</button>
+        <button onclick="$('proModal').classList.add('hidden')" class="w-full py-3 text-sm font-bold text-slate-400 mt-1">Пізніше</button>
+    </div>
+</div>
 
 <script src="app.js"></script>
 </body>
