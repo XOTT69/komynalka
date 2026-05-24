@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Комуналка — розумний облік комунальних платежів</title>
+    <meta name="description" content="Безкоштовний додаток для обліку води, світла, газу. Графіки, прогнози, нагадування. Працює офлайн.">
+    <meta property="og:title" content="Комуналка — розумний облік комунальних">
+    <meta property="og:description" content="Вода, світло, газ — все в одному. Безкоштовно.">
+    <meta property="og:image" content="https://komunalka-pwa.pages.dev/og-image.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
+        .hero-bg { background: linear-gradient(135deg, #007aff 0%, #0051d4 50%, #003399 100%); }
+        .float-animation { animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        .feature-card:hover { transform: translateY(-4px); }
+    </style>
+</head>
+<body class="bg-white text-slate-800 overflow-x-hidden">
+
+    <!-- Hero -->
+    <section class="hero-bg min-h-screen flex items-center relative overflow-hidden">
+        <div class="absolute inset-0 opacity-20">
+            <div class="absolute top-20 right-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl"></div>
+        </div>
+        <div class="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center relative z-10">
+            <div class="text-white">
+                <div class="inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full text-sm font-bold mb-6 border border-white/20">
+                    <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Безкоштовно • PWA
+                </div>
+                <h1 class="text-5xl md:text-6xl font-black leading-tight mb-6">Комуналка<span class="text-white/60">.</span><br>Просто і розумно</h1>
+                <p class="text-xl text-white/70 mb-8 leading-relaxed">Облік води, світла, газу в одному додатку. Графіки, прогнози, нагадування. Працює офлайн.</p>
+                <div class="flex flex-wrap gap-4">
+                    <a href="./index.html" class="bg-white text-blue-600 font-black px-8 py-4 rounded-2xl text-lg shadow-2xl shadow-black/20 hover:shadow-3xl hover:scale-105 transition-all">Почати безкоштовно</a>
+                    <a href="#features" class="border-2 border-white/30 text-white font-bold px-8 py-4 rounded-2xl text-lg hover:bg-white/10 transition-all">Можливості</a>
+                </div>
+                <div class="flex items-center gap-6 mt-8 text-white/50 text-sm">
+                    <span><i class="fa-solid fa-users mr-1.5"></i>100+ юзерів</span>
+                    <span><i class="fa-solid fa-star mr-1.5 text-yellow-400"></i>4.9/5</span>
+                    <span><i class="fa-solid fa-shield-halved mr-1.5"></i>Безпечно</span>
+                </div>
+            </div>
+            <div class="hidden md:flex justify-center">
+                <div class="w-72 h-[580px] bg-black rounded-[3rem] p-3 shadow-2xl shadow-black/40 float-animation border-4 border-slate-700">
+                    <div class="w-full h-full bg-slate-100 rounded-[2.2rem] overflow-hidden relative">
+                        <div class="absolute inset-0 bg-gradient-to-b from-blue-500 to-blue-600 flex items-center justify-center">
+                            <div class="text-center text-white p-6">
+                                <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">⚡</div>
+                                <p class="text-3xl font-black">2 847,50 ₴</p>
+                                <p class="text-white/60 text-sm mt-2">за травень 2025</p>
+                                <div class="mt-6 space-y-2 text-left text-sm">
+                                    <div class="flex justify-between bg-white/10 px-3 py-2 rounded-lg"><span>💧 Вода</span><span class="font-bold">456 ₴</span></div>
+                                    <div class="flex justify-between bg-white/10 px-3 py-2 rounded-lg"><span>⚡ Світло</span><span class="font-bold">1 230 ₴</span></div>
+                                    <div class="flex justify-between bg-white/10 px-3 py-2 rounded-lg"><span>🔥 Газ</span><span class="font-bold">892 ₴</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="py-24 bg-slate-50">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-black text-slate-900 mb-4">Все що потрібно</h2>
+                <p class="text-lg text-slate-500 max-w-2xl mx-auto">Один додаток замість блокноту, Excel і калькулятора</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="feature-card bg-white p-8 rounded-3xl shadow-lg border border-slate-100 transition-all">
+                    <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl mb-5">📊</div>
+                    <h3 class="text-xl font-black text-slate-900 mb-3">Авто-розрахунок</h3>
+                    <p class="text-slate-500 leading-relaxed">Введіть показники — ми порахуємо суму з урахуванням тарифів, зони, зимових знижок</p>
+                </div>
+                <div class="feature-card bg-white p-8 rounded-3xl shadow-lg border border-slate-100 transition-all">
+                    <div class="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-2xl mb-5">📈</div>
+                    <h3 class="text-xl font-black text-slate-900 mb-3">Аналітика</h3>
+                    <p class="text-slate-500 leading-relaxed">Графіки за місяці, порівняння з минулим роком, прогноз на наступний місяць</p>
+                </div>
+                <div class="feature-card bg-white p-8 rounded-3xl shadow-lg border border-slate-100 transition-all">
+                    <div class="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-2xl mb-5">🔔</div>
+                    <h3 class="text-xl font-black text-slate-900 mb-3">Нагадування</h3>
+                    <p class="text-slate-500 leading-relaxed">Push-сповіщення коли час передавати показники. Ніколи не забудете</p>
+                </div>
+                <div class="feature-card bg-white p-8 rounded-3xl shadow-lg border border-slate-100 transition-all">
+                    <div class="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-2xl mb-5">📱</div>
+                    <h3 class="text-xl font-black text-slate-900 mb-3">Працює офлайн</h3>
+                    <p class="text-slate-500 leading-relaxed">PWA — встановіть на екран як звичайний додаток. Працює без інтернету</p>
+                </div>
+                <div class="feature-card bg-white p-8 rounded-3xl shadow-lg border border-slate-100 transition-all">
+                    <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center text-2xl mb-5">🏘️</div>
+                    <h3 class="text-xl font-black text-slate-900 mb-3">Багато адрес</h3>
+                    <p class="text-slate-500 leading-relaxed">Квартира, дача, батьки — ведіть облік для всіх об'єктів в одному місці</p>
+                </div>
+                <div class="feature-card bg-white p-8 rounded-3xl shadow-lg border border-slate-100 transition-all">
+                    <div class="w-14 h-14 bg-yellow-50 rounded-2xl flex items-center justify-center text-2xl mb-5">🏆</div>
+                    <h3 class="text-xl font-black text-slate-900 mb-3">Gamification</h3>
+                    <p class="text-slate-500 leading-relaxed">Досягнення, серія місяців, річний звіт — мотивація вести облік регулярно</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="py-24">
+        <div class="max-w-4xl mx-auto px-6">
+            <h2 class="text-4xl font-black text-center text-slate-900 mb-16">Як це працює</h2>
+            <div class="space-y-12">
+                <div class="flex items-center gap-8"><div class="w-16 h-16 bg-blue-500 text-white rounded-2xl flex items-center justify-center text-2xl font-black shrink-0 shadow-lg shadow-blue-500/30">1</div><div><h3 class="text-xl font-black text-slate-900 mb-1">Введіть показники</h3><p class="text-slate-500">Поточні та попередні. Можна частково — тільки воду або тільки світло</p></div></div>
+                <div class="flex items-center gap-8"><div class="w-16 h-16 bg-green-500 text-white rounded-2xl flex items-center justify-center text-2xl font-black shrink-0 shadow-lg shadow-green-500/30">2</div><div><h3 class="text-xl font-black text-slate-900 mb-1">Отримайте розрахунок</h3><p class="text-slate-500">Миттєво бачите суму з урахуванням тарифів, зони день/ніч, зимових знижок</p></div></div>
+                <div class="flex items-center gap-8"><div class="w-16 h-16 bg-purple-500 text-white rounded-2xl flex items-center justify-center text-2xl font-black shrink-0 shadow-lg shadow-purple-500/30">3</div><div><h3 class="text-xl font-black text-slate-900 mb-1">Слідкуйте за витратами</h3><p class="text-slate-500">Графіки, порівняння, прогнози. Знайте де економите і де витрачаєте більше</p></div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-24 hero-bg relative overflow-hidden">
+        <div class="absolute inset-0 opacity-10"><div class="absolute top-0 left-1/3 w-96 h-96 bg-white rounded-full blur-3xl"></div></div>
+        <div class="max-w-3xl mx-auto px-6 text-center relative z-10">
+            <h2 class="text-4xl md:text-5xl font-black text-white mb-6">Почніть прямо зараз</h2>
+            <p class="text-xl text-white/70 mb-10">Безкоштовно. Без реєстрації карти. Без реклами.</p>
+            <a href="./index.html" class="inline-block bg-white text-blue-600 font-black px-10 py-5 rounded-2xl text-xl shadow-2xl shadow-black/20 hover:scale-105 transition-all">Відкрити додаток →</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 bg-slate-900 text-slate-400">
+        <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-3"><div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center text-white text-lg">⚡</div><span class="font-black text-white text-lg">Комуналка<span class="text-blue-400">.</span></span></div>
+            <p class="text-sm">© 2025 Антон Миколенко. Усі права захищено.</p>
+            <div class="flex gap-4"><a href="https://send.monobank.ua/jar/YOUR_JAR_CODE" target="_blank" class="text-sm hover:text-white transition-colors"><i class="fa-solid fa-heart mr-1 text-pink-400"></i>Підтримати</a></div>
+        </div>
+    </footer>
+
+</body>
+</html>
