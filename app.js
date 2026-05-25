@@ -21,6 +21,17 @@ let addresses = [], currentAddressId = 'default', isGuest = false, tariffs = {},
 let currentCalc = { waterCost: 0, hotWaterCost: 0, electroCost: 0, gasCost: 0, customCost: 0, total: 0 };
 const urlParams = new URLSearchParams(window.location.search), urlShareToken = urlParams.get('share');
 
+// =================== ERROR MONITORING ===================
+window.addEventListener('error', (e) => {
+    const errorData = { msg: e.message, file: e.filename, line: e.lineno, col: e.colno, time: Date.now(), ua: navigator.userAgent.slice(0, 100) };
+    try { const errors = JSON.parse(localStorage.getItem('_errors') || '[]'); errors.push(errorData); if (errors.length > 20) errors.shift(); localStorage.setItem('_errors', JSON.stringify(errors)); } catch (ex) {}
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+    const errorData = { msg: e.reason?.message || String(e.reason), type: 'promise', time: Date.now() };
+    try { const errors = JSON.parse(localStorage.getItem('_errors') || '[]'); errors.push(errorData); if (errors.length > 20) errors.shift(); localStorage.setItem('_errors', JSON.stringify(errors)); } catch (ex) {}
+});
+
 // =================== UTILS ===================
 let toastTimeout;
 function showToast(msg, icon = '✅') { const t = $('toast'); if (!t) return; $('toastMsg').innerText = msg; $('toastIcon').innerText = icon; t.classList.remove('-translate-y-24', 'opacity-0'); haptic(icon === '✅' ? 'success' : icon === '❌' || icon === '⚠️' ? 'error' : 'notification'); clearTimeout(toastTimeout); toastTimeout = setTimeout(() => t.classList.add('-translate-y-24', 'opacity-0'), 2500); }
@@ -41,12 +52,35 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
+// =================== DEVICE FINGERPRINT ===================
+async function getDeviceFingerprint() {
+    const components = [
+        navigator.userAgent,
+        navigator.language,
+        screen.width + 'x' + screen.height,
+        screen.colorDepth,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        navigator.hardwareConcurrency || 'unknown',
+        navigator.platform || 'unknown'
+    ];
+    return await getHash(components.join('|'));
+}
+
+// Session token — refreshes each session, bound to device
+let sessionToken = null;
+async function getSessionToken() {
+    if (sessionToken) return sessionToken;
+    const fingerprint = await getDeviceFingerprint();
+    const timestamp = Math.floor(Date.now() / (1000 * 60 * 60)); // changes every hour
+    sessionToken = await getHash(`${sessionLogin}:${sessionPass}:${fingerprint}:${timestamp}`);
+    return sessionToken;
+}
+
 // =================== SECURE FETCH ===================
 async function secureFetch(method, params = {}, body = null) {
     let url = WORKER_URL;
     const headers = { 'Content-Type': 'application/json' };
 
-    // Auth via Authorization header (not URL params)
     const uid = localStorage.getItem('k_uid');
     if (uid) {
         headers['Authorization'] = `Bearer uid:${uid}`;
@@ -54,10 +88,13 @@ async function secureFetch(method, params = {}, body = null) {
         headers['Authorization'] = `Bearer login:${btoa(unescape(encodeURIComponent(sessionLogin)))}:${sessionPass}`;
     }
 
-    // Only non-sensitive params in URL
-    const urlParams = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => { if (v != null) urlParams.set(k, v); });
-    const qs = urlParams.toString();
+    // Device binding — додатковий заголовок
+    const fp = await getDeviceFingerprint();
+    headers['X-Device-FP'] = fp;
+
+    const urlP = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v != null) urlP.set(k, v); });
+    const qs = urlP.toString();
     if (qs) url += '?' + qs;
 
     const options = { method, headers, cache: 'no-store' };
