@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Комуналка — Адмін v3.1</title>
+    <title>Комуналка — Адмін v3.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -11,9 +11,18 @@
         .stat-card { transition: transform .15s; }
         .stat-card:hover { transform: translateY(-2px); }
         .tab-btn.active { background: #007aff; color: white; }
+        .user-row:hover { background: #f8fafc; }
+        .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+        .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 12px; font-weight: 700; font-size: 14px; z-index: 9999; transition: all .3s; transform: translateX(120%); }
+        .toast.show { transform: translateX(0); }
+        .toast.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .toast.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
     </style>
 </head>
 <body class="min-h-screen">
+
+    <!-- Toast -->
+    <div id="adminToast" class="toast">Message</div>
 
     <!-- Login -->
     <div id="loginScreen" class="fixed inset-0 flex items-center justify-center bg-slate-50 z-50">
@@ -21,10 +30,10 @@
             <div class="text-center mb-6">
                 <div class="w-16 h-16 bg-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl">🔒</div>
                 <h1 class="text-xl font-black">Адмін-панель</h1>
-                <p class="text-sm text-slate-500">Комуналка PWA v3.1</p>
+                <p class="text-sm text-slate-500">Комуналка PWA v3.2</p>
             </div>
             <input type="password" id="adminPass" placeholder="Пароль адміністратора" class="w-full p-4 border rounded-xl mb-4 outline-none focus:ring-2 focus:ring-red-500 font-medium">
-            <button onclick="adminLogin()" class="w-full bg-red-500 text-white font-bold py-4 rounded-xl hover:bg-red-600 active:scale-95 transition-transform">Увійти</button>
+            <button onclick="adminLogin()" id="loginBtn" class="w-full bg-red-500 text-white font-bold py-4 rounded-xl hover:bg-red-600 active:scale-95 transition-all">Увійти</button>
             <p id="loginError" class="text-red-500 text-sm text-center mt-3 hidden font-bold"></p>
         </div>
     </div>
@@ -32,8 +41,8 @@
     <!-- Admin Panel -->
     <div id="adminPanel" class="hidden">
         <!-- Header -->
-        <div class="bg-white border-b sticky top-0 z-40">
-            <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        <div class="bg-white border-b sticky top-0 z-40 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center text-white font-bold">⚡</div>
                     <div>
@@ -41,18 +50,18 @@
                         <p class="text-xs text-slate-400" id="lastUpdate">—</p>
                     </div>
                 </div>
-                <div class="flex gap-2">
-                    <button onclick="loadStats()" class="px-3 py-2 bg-slate-100 rounded-lg text-sm font-bold hover:bg-slate-200"><i class="fa-solid fa-sync mr-1"></i>Оновити</button>
-                    <button onclick="openBroadcast()" class="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold hover:bg-blue-600"><i class="fa-solid fa-bullhorn mr-1"></i>Оголошення</button>
-                    <button onclick="exportAllData()" class="px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-bold hover:bg-green-600"><i class="fa-solid fa-download mr-1"></i>Export</button>
-                    <button onclick="adminLogout()" class="px-3 py-2 bg-red-50 text-red-500 rounded-lg text-sm font-bold hover:bg-red-100">Вийти</button>
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="loadStats()" class="px-3 py-2 bg-slate-100 rounded-lg text-sm font-bold hover:bg-slate-200 active:scale-95 transition-all"><i class="fa-solid fa-sync mr-1"></i><span class="hidden md:inline">Оновити</span></button>
+                    <button onclick="openBroadcast()" class="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold hover:bg-blue-600 active:scale-95 transition-all"><i class="fa-solid fa-bullhorn mr-1"></i><span class="hidden md:inline">Оголошення</span></button>
+                    <button onclick="exportAllData()" class="px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-bold hover:bg-green-600 active:scale-95 transition-all"><i class="fa-solid fa-download mr-1"></i><span class="hidden md:inline">Export</span></button>
+                    <button onclick="adminLogout()" class="px-3 py-2 bg-red-50 text-red-500 rounded-lg text-sm font-bold hover:bg-red-100 active:scale-95 transition-all"><i class="fa-solid fa-sign-out-alt mr-1"></i><span class="hidden md:inline">Вийти</span></button>
                 </div>
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto px-6 py-6">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-6">
             <!-- Stats Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-7 gap-3 mb-6">
                 <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
                     <p class="text-2xl font-black text-slate-900" id="statUsers">0</p>
                     <p class="text-[10px] font-bold text-slate-400 uppercase">Юзерів</p>
@@ -77,13 +86,18 @@
                     <p class="text-2xl font-black text-blue-600" id="statGoogle">0</p>
                     <p class="text-[10px] font-bold text-slate-400 uppercase">Google</p>
                 </div>
+                <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
+                    <p class="text-2xl font-black text-red-500" id="statSuspicious">0</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">⚠️ Підозр.</p>
+                </div>
             </div>
 
             <!-- Tabs -->
-            <div class="flex gap-2 mb-4">
-                <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600" onclick="switchAdminTab('users')">👥 Юзери</button>
-                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600" onclick="switchAdminTab('analytics')">📊 Аналітика</button>
-                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600" onclick="switchAdminTab('logs')">📋 Логи</button>
+            <div class="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
+                <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('users', this)">👥 Юзери</button>
+                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('analytics', this)">📊 Аналітика</button>
+                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('security', this)">🔒 Безпека</button>
+                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('settings', this)">⚙️ Сервер</button>
             </div>
 
             <!-- Tab: Users -->
@@ -108,6 +122,7 @@
                             <option value="all">Всі</option>
                             <option value="active">Активні</option>
                             <option value="inactive">Неактивні</option>
+                            <option value="suspicious">⚠️ Підозрілі</option>
                         </select>
                     </div>
                 </div>
@@ -117,7 +132,8 @@
                         <h2 class="font-bold text-lg"><i class="fa-solid fa-users mr-2 text-slate-400"></i>Користувачі</h2>
                         <div class="flex gap-2 items-center">
                             <span class="text-sm text-slate-400" id="usersCount">0</span>
-                            <button onclick="massGivePro()" class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-lg text-xs font-bold hover:bg-yellow-100 border border-yellow-200"><i class="fa-solid fa-star mr-1"></i>Mass Pro</button>
+                            <button onclick="massAction('pro')" class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-lg text-xs font-bold hover:bg-yellow-100 border border-yellow-200"><i class="fa-solid fa-star mr-1"></i>Pro</button>
+                            <button onclick="massAction('delete')" class="px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100 border border-red-200"><i class="fa-solid fa-trash mr-1"></i>Del</button>
                         </div>
                     </div>
                     <div class="overflow-x-auto">
@@ -125,11 +141,12 @@
                             <thead class="bg-slate-50 border-b">
                                 <tr>
                                     <th class="text-left p-3 font-bold text-slate-500"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
-                                    <th class="text-left p-3 font-bold text-slate-500">Логін</th>
+                                    <th class="text-left p-3 font-bold text-slate-500 cursor-pointer" onclick="sortUsers('login')">Логін ↕</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Тип</th>
+                                    <th class="text-center p-3 font-bold text-slate-500 cursor-pointer" onclick="sortUsers('records')">Зап. ↕</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Адр.</th>
-                                    <th class="text-center p-3 font-bold text-slate-500">Зап.</th>
-                                    <th class="text-center p-3 font-bold text-slate-500">Останній</th>
+                                    <th class="text-center p-3 font-bold text-slate-500 cursor-pointer" onclick="sortUsers('lastMonth')">Останній ↕</th>
+                                    <th class="text-center p-3 font-bold text-slate-500">Пристр.</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Pro</th>
                                     <th class="text-center p-3 font-bold text-slate-500">●</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Дії</th>
@@ -138,6 +155,13 @@
                             <tbody id="usersTableBody"></tbody>
                         </table>
                     </div>
+                    <div class="p-3 border-t flex justify-between items-center">
+                        <span class="text-xs text-slate-400" id="pageInfo">—</span>
+                        <div class="flex gap-2">
+                            <button onclick="prevPage()" class="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-bold hover:bg-slate-200">← Назад</button>
+                            <button onclick="nextPage()" class="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-bold hover:bg-slate-200">Далі →</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -145,45 +169,119 @@
             <div id="tabAnalytics" class="hidden">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="bg-white p-6 rounded-xl border shadow-sm">
-                        <h3 class="font-bold mb-4">🏆 Топ юзери по записах</h3>
-                        <div id="topUsers"></div>
+                        <h3 class="font-bold mb-4">🏆 Топ-15 по записах</h3>
+                        <div id="topUsers" class="space-y-1"></div>
                     </div>
                     <div class="bg-white p-6 rounded-xl border shadow-sm">
                         <h3 class="font-bold mb-4">📊 Розподіл</h3>
-                        <div id="distributionStats"></div>
+                        <div id="distributionStats" class="space-y-3"></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold mb-4">📅 Активність по місяцях</h3>
+                        <div id="monthlyActivity" class="space-y-1"></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold mb-4">📱 Пристрої</h3>
+                        <div id="deviceStats" class="space-y-3"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Tab: Logs -->
-            <div id="tabLogs" class="hidden">
-                <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="font-bold mb-4">📋 Останні дії</h3>
-                    <p class="text-slate-400 text-sm">Логи дій (потребує окремого KV namespace)</p>
+            <!-- Tab: Security -->
+            <div id="tabSecurity" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold mb-4 text-red-600">⚠️ Підозріла активність</h3>
+                        <div id="suspiciousUsers" class="space-y-2"></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold mb-4">🔐 Статус безпеки</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-xl border border-green-100">
+                                <span class="text-sm font-bold text-green-700">✓ Rate Limiting</span>
+                                <span class="badge bg-green-100 text-green-700">Active</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-xl border border-green-100">
+                                <span class="text-sm font-bold text-green-700">✓ Auth via Headers</span>
+                                <span class="badge bg-green-100 text-green-700">Active</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-xl border border-green-100">
+                                <span class="text-sm font-bold text-green-700">✓ Device Fingerprint</span>
+                                <span class="badge bg-green-100 text-green-700">Active</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 rounded-xl border" id="encryptionStatus">
+                                <span class="text-sm font-bold">🔒 Encryption at Rest</span>
+                                <span class="badge">—</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-xl border border-green-100">
+                                <span class="text-sm font-bold text-green-700">✓ Dynamic Admin Token</span>
+                                <span class="badge bg-green-100 text-green-700">1h TTL</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-xl border border-green-100">
+                                <span class="text-sm font-bold text-green-700">✓ Payload Validation</span>
+                                <span class="badge bg-green-100 text-green-700">512KB max</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Settings -->
+            <div id="tabSettings" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold mb-4">🗄️ Дані</h3>
+                        <div class="space-y-3">
+                            <button onclick="exportFullBackup()" class="w-full py-3 bg-blue-50 text-blue-700 font-bold rounded-xl border border-blue-200 hover:bg-blue-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-database mr-2"></i>Повний бекап (JSON)</button>
+                            <button onclick="exportAllData()" class="w-full py-3 bg-green-50 text-green-700 font-bold rounded-xl border border-green-200 hover:bg-green-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-file-csv mr-2"></i>Експорт юзерів (CSV)</button>
+                            <button onclick="cleanupEmptyAccounts()" class="w-full py-3 bg-orange-50 text-orange-700 font-bold rounded-xl border border-orange-200 hover:bg-orange-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-broom mr-2"></i>Очистити пусті акаунти</button>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold mb-4">📢 Broadcast</h3>
+                        <textarea id="broadcastMsgSettings" rows="3" placeholder="Текст оголошення для всіх юзерів..." class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium mb-3 text-sm"></textarea>
+                        <button onclick="sendBroadcastFromSettings()" class="w-full py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 active:scale-95 transition-all text-sm"><i class="fa-solid fa-paper-plane mr-2"></i>Надіслати</button>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold mb-4">🔍 Пошук юзера</h3>
+                        <div class="flex gap-2">
+                            <input type="text" id="directUserSearch" placeholder="Логін юзера..." class="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium">
+                            <button onclick="directViewUser()" class="px-4 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm active:scale-95">👁</button>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold mb-4">ℹ️ Інфо</h3>
+                        <div class="space-y-2 text-sm text-slate-600">
+                            <p><strong>Worker:</strong> v3.2 Full Security</p>
+                            <p><strong>KV:</strong> Cloudflare Workers KV</p>
+                            <p><strong>Токен:</strong> <span class="text-xs text-slate-400" id="tokenInfo">—</span></p>
+                            <p><strong>Сесія:</strong> <span id="sessionTimer">—</span></p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- User Details Modal -->
-    <div id="userModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div id="userModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
         <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-black" id="modalUserTitle">Юзер</h3>
-                <button onclick="document.getElementById('userModal').classList.add('hidden')" class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200">✕</button>
+                <button onclick="document.getElementById('userModal').classList.add('hidden')" class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200 active:scale-90 transition-all">✕</button>
             </div>
             <div id="modalUserContent" class="text-sm"></div>
         </div>
     </div>
 
     <!-- Broadcast Modal -->
-    <div id="broadcastModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div id="broadcastModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <h3 class="text-xl font-black mb-4">📢 Оголошення</h3>
             <textarea id="broadcastMsg" rows="4" placeholder="Текст оголошення..." class="w-full p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium mb-4"></textarea>
             <div class="flex gap-3">
-                <button onclick="sendBroadcast()" class="flex-1 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600">Надіслати</button>
-                <button onclick="document.getElementById('broadcastModal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 font-bold rounded-xl hover:bg-slate-200">Скасувати</button>
+                <button onclick="sendBroadcast()" class="flex-1 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 active:scale-95 transition-all">Надіслати</button>
+                <button onclick="document.getElementById('broadcastModal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 font-bold rounded-xl hover:bg-slate-200 active:scale-95 transition-all">Скасувати</button>
             </div>
         </div>
     </div>
@@ -191,86 +289,29 @@
     <script>
         const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
         let adminToken = sessionStorage.getItem('admin_token') || '';
+        let adminLoginTime = parseInt(sessionStorage.getItem('admin_login_time') || '0');
         let allUsers = [];
         let selectedUsers = new Set();
+        let currentSort = { field: 'records', dir: 'desc' };
+        let currentPage = 0;
+        const PAGE_SIZE = 50;
 
-        // Auto-login if token exists
-        if (adminToken) {
+        // Auto-login if token exists and not expired
+        if (adminToken && (Date.now() - adminLoginTime < 3500000)) {
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('adminPanel').classList.remove('hidden');
             loadStats();
-        }
-
-        async function adminLogin() {
-            const pass = document.getElementById('adminPass').value;
-            const errEl = document.getElementById('loginError');
-            errEl.classList.add('hidden');
-            try {
-                const res = await fetch(WORKER_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'admin_login', pass })
-                });
-                const data = await res.json();
-                if (data.success && data.token) {
-                    adminToken = data.token;
-                    sessionStorage.setItem('admin_token', adminToken);
-                    document.getElementById('loginScreen').classList.add('hidden');
-                    document.getElementById('adminPanel').classList.remove('hidden');
-                    loadStats();
-                } else {
-                    errEl.textContent = 'Неправильний пароль';
-                    errEl.classList.remove('hidden');
-                }
-            } catch (e) {
-                errEl.textContent = "Помилка з'єднання";
-                errEl.classList.remove('hidden');
-            }
-        }
-
-        function adminLogout() {
+            startSessionTimer();
+        } else {
             sessionStorage.removeItem('admin_token');
             adminToken = '';
-            location.reload();
         }
 
-        function switchAdminTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById('tabUsers').classList.toggle('hidden', tab !== 'users');
-            document.getElementById('tabAnalytics').classList.toggle('hidden', tab !== 'analytics');
-            document.getElementById('tabLogs').classList.toggle('hidden', tab !== 'logs');
-            if (tab === 'analytics') renderAnalytics();
-        }
-
-        async function loadStats() {
-            document.getElementById('lastUpdate').textContent = 'Завантаження...';
-            try {
-                const res = await fetch(WORKER_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'admin_stats', adminToken })
-                });
-                const data = await res.json();
-                if (!data.success) {
-                    if (data.error === 'UNAUTHORIZED') adminLogout();
-                    return;
-                }
-                const { stats, users } = data;
-                allUsers = users;
-                document.getElementById('statUsers').textContent = stats.totalUsers;
-                document.getElementById('statActive').textContent = stats.activeThisMonth;
-                document.getElementById('statRecords').textContent = stats.totalRecords;
-                document.getElementById('statPro').textContent = stats.proUsers || 0;
-                document.getElementById('statGoogle').textContent = users.filter(u => u.hasGoogle).length;
-                document.getElementById('statRetention').textContent = stats.totalUsers > 0 ? Math.round((stats.activeThisMonth / stats.totalUsers) * 100) + '%' : '0%';
-                document.getElementById('usersCount').textContent = `${users.length} юзерів`;
-                document.getElementById('lastUpdate').textContent = `Оновлено: ${new Date().toLocaleTimeString('uk-UA')}`;
-                renderUsers(users);
-            } catch (e) {
-                document.getElementById('lastUpdate').textContent = 'Помилка';
-                console.error(e);
-            }
+        function showAdminToast(msg, type = 'success') {
+            const t = document.getElementById('adminToast');
+            t.textContent = msg;
+            t.className = `toast ${type} show`;
+            setTimeout(() => t.classList.remove('show'), 3000);
         }
 
         function escHtml(str) {
@@ -279,32 +320,90 @@
             return div.innerHTML;
         }
 
-        function renderUsers(users) {
-            document.getElementById('usersTableBody').innerHTML = users.map(u => {
-                const authBadge = u.hasGoogle ? '<span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[10px] font-bold">G</span>' : '<span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-[10px] font-bold">L</span>';
-                const proBadge = u.isPro ? '<span class="text-yellow-500">⭐</span>' : `<button class="give-pro text-[10px] px-1.5 py-0.5 bg-yellow-50 text-yellow-700 rounded border border-yellow-200 hover:bg-yellow-100 font-bold" data-login="${escHtml(u.login)}">+Pro</button>`;
-                return `<tr class="border-b hover:bg-slate-50 text-xs">
-                    <td class="p-3"><input type="checkbox" class="user-checkbox" data-login="${escHtml(u.login)}" onchange="updateSelection()"></td>
-                    <td class="p-3 font-bold text-slate-900 max-w-[150px] truncate" title="${escHtml(u.login)}">${escHtml(u.login)}</td>
-                    <td class="p-3 text-center">${authBadge}</td>
-                    <td class="p-3 text-center font-bold">${u.addresses || 1}</td>
-                    <td class="p-3 text-center font-bold">${u.records || 0}</td>
-                    <td class="p-3 text-center text-slate-400">${u.lastMonth || '—'}</td>
-                    <td class="p-3 text-center">${proBadge}</td>
-                    <td class="p-3 text-center">${u.activeThisMonth ? '<span class="text-green-500">●</span>' : '<span class="text-slate-300">○</span>'}</td>
-                    <td class="p-3 text-center">
-                        <div class="flex gap-1 justify-center">
-                            <button onclick="viewUser('${escHtml(u.login)}')" class="p-1.5 bg-slate-100 rounded hover:bg-slate-200" title="Деталі">👁</button>
-                            <button onclick="resetPassword('${escHtml(u.login)}')" class="p-1.5 bg-yellow-50 rounded hover:bg-yellow-100" title="Пароль">🔑</button>
-                            <button onclick="deleteUser('${escHtml(u.login)}')" class="p-1.5 bg-red-50 rounded hover:bg-red-100" title="Видалити">🗑</button>
-                        </div>
-                    </td>
-                </tr>`;
-            }).join('');
-            document.querySelectorAll('.give-pro').forEach(btn => btn.addEventListener('click', () => givePro(btn.dataset.login)));
+        function startSessionTimer() {
+            const el = document.getElementById('sessionTimer');
+            const tokenEl = document.getElementById('tokenInfo');
+            if (tokenEl) tokenEl.textContent = adminToken.slice(0, 8) + '...';
+            setInterval(() => {
+                const remaining = Math.max(0, 3600 - Math.floor((Date.now() - adminLoginTime) / 1000));
+                const min = Math.floor(remaining / 60);
+                const sec = remaining % 60;
+                if (el) el.textContent = `${min}:${sec.toString().padStart(2, '0')} залишилось`;
+                if (remaining <= 0) adminLogout();
+            }, 1000);
         }
 
-        function filterUsers() {
+        // =================== AUTH ===================
+        async function adminLogin() {
+            const pass = document.getElementById('adminPass').value;
+            const errEl = document.getElementById('loginError');
+            const btn = document.getElementById('loginBtn');
+            errEl.classList.add('hidden');
+            btn.textContent = 'Завантаження...';
+            btn.disabled = true;
+            try {
+                const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_login', pass }) });
+                const data = await res.json();
+                if (data.success && data.token) {
+                    adminToken = data.token;
+                    adminLoginTime = Date.now();
+                    sessionStorage.setItem('admin_token', adminToken);
+                    sessionStorage.setItem('admin_login_time', String(adminLoginTime));
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('adminPanel').classList.remove('hidden');
+                    loadStats();
+                    startSessionTimer();
+                } else {
+                    errEl.textContent = res.status === 429 ? 'Забагато спроб. Зачекайте.' : 'Неправильний пароль';
+                    errEl.classList.remove('hidden');
+                }
+            } catch (e) {
+                errEl.textContent = "Помилка з'єднання";
+                errEl.classList.remove('hidden');
+            }
+            btn.textContent = 'Увійти';
+            btn.disabled = false;
+        }
+
+        function adminLogout() { sessionStorage.clear(); adminToken = ''; location.reload(); }
+
+        // =================== TABS ===================
+        function switchAdminTab(tab, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            ['tabUsers', 'tabAnalytics', 'tabSecurity', 'tabSettings'].forEach(id => {
+                document.getElementById(id).classList.toggle('hidden', id !== 'tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+            });
+            if (tab === 'analytics') renderAnalytics();
+            if (tab === 'security') renderSecurity();
+        }
+
+        // =================== DATA LOADING ===================
+        async function loadStats() {
+            document.getElementById('lastUpdate').textContent = 'Завантаження...';
+            try {
+                const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_stats', adminToken }) });
+                const data = await res.json();
+                if (!data.success) { if (data.error === 'UNAUTHORIZED') adminLogout(); return; }
+                const { stats, users } = data;
+                allUsers = users;
+                document.getElementById('statUsers').textContent = stats.totalUsers;
+                document.getElementById('statActive').textContent = stats.activeThisMonth;
+                document.getElementById('statRecords').textContent = stats.totalRecords;
+                document.getElementById('statPro').textContent = stats.proUsers || 0;
+                document.getElementById('statGoogle').textContent = users.filter(u => u.hasGoogle).length;
+                document.getElementById('statRetention').textContent = stats.totalUsers > 0 ? Math.round((stats.activeThisMonth / stats.totalUsers) * 100) + '%' : '0%';
+                document.getElementById('statSuspicious').textContent = users.filter(u => u.suspicious > 0).length;
+                document.getElementById('usersCount').textContent = `${users.length} юзерів`;
+                document.getElementById('lastUpdate').textContent = `Оновлено: ${new Date().toLocaleTimeString('uk-UA')}`;
+                currentPage = 0;
+                renderUsers();
+                showAdminToast('Дані оновлено');
+            } catch (e) { document.getElementById('lastUpdate').textContent = 'Помилка'; showAdminToast('Помилка завантаження', 'error'); }
+        }
+
+        // =================== USERS TABLE ===================
+        function getFilteredUsers() {
             const q = (document.getElementById('searchUsers')?.value || '').toLowerCase();
             const typeFilter = document.getElementById('filterType').value;
             const proFilter = document.getElementById('filterPro').value;
@@ -317,30 +416,72 @@
                 if (proFilter === 'free' && u.isPro) return false;
                 if (activeFilter === 'active' && !u.activeThisMonth) return false;
                 if (activeFilter === 'inactive' && u.activeThisMonth) return false;
+                if (activeFilter === 'suspicious' && !(u.suspicious > 0)) return false;
                 return true;
             });
-            renderUsers(filtered);
+            // Sort
+            filtered.sort((a, b) => {
+                let va = a[currentSort.field], vb = b[currentSort.field];
+                if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb || '').toLowerCase(); }
+                if (currentSort.dir === 'asc') return va > vb ? 1 : -1;
+                return va < vb ? 1 : -1;
+            });
+            return filtered;
+        }
+
+        function renderUsers() {
+            const filtered = getFilteredUsers();
+            const start = currentPage * PAGE_SIZE;
+            const pageUsers = filtered.slice(start, start + PAGE_SIZE);
             document.getElementById('usersCount').textContent = `${filtered.length} з ${allUsers.length}`;
+            document.getElementById('pageInfo').textContent = `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} з ${filtered.length}`;
+
+            document.getElementById('usersTableBody').innerHTML = pageUsers.map(u => {
+                const authBadge = u.hasGoogle ? '<span class="badge bg-blue-50 text-blue-600">G</span>' : '<span class="badge bg-slate-100 text-slate-500">L</span>';
+                const proBadge = u.isPro ? '<span class="text-yellow-500">⭐</span>' : `<button class="give-pro badge bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 cursor-pointer" data-login="${escHtml(u.login)}">+Pro</button>`;
+                const suspBadge = u.suspicious > 0 ? `<span class="badge bg-red-50 text-red-500 ml-1">⚠${u.suspicious}</span>` : '';
+                return `<tr class="border-b user-row text-xs">
+                    <td class="p-3"><input type="checkbox" class="user-checkbox" data-login="${escHtml(u.login)}" onchange="updateSelection()"></td>
+                    <td class="p-3 font-bold text-slate-900 max-w-[180px] truncate" title="${escHtml(u.login)}">${escHtml(u.login)}${suspBadge}</td>
+                    <td class="p-3 text-center">${authBadge}</td>
+                    <td class="p-3 text-center font-bold">${u.records || 0}</td>
+                    <td class="p-3 text-center">${u.addresses || 1}</td>
+                    <td class="p-3 text-center text-slate-400">${u.lastMonth || '—'}</td>
+                    <td class="p-3 text-center">${u.devices || '?'}</td>
+                    <td class="p-3 text-center">${proBadge}</td>
+                    <td class="p-3 text-center">${u.activeThisMonth ? '<span class="text-green-500">●</span>' : '<span class="text-slate-300">○</span>'}</td>
+                    <td class="p-3 text-center">
+                        <div class="flex gap-1 justify-center">
+                            <button onclick="viewUser('${escHtml(u.login)}')" class="p-1.5 bg-slate-100 rounded hover:bg-slate-200 active:scale-90" title="Деталі">👁</button>
+                            <button onclick="resetPassword('${escHtml(u.login)}')" class="p-1.5 bg-yellow-50 rounded hover:bg-yellow-100 active:scale-90" title="Пароль">🔑</button>
+                            <button onclick="deleteUser('${escHtml(u.login)}')" class="p-1.5 bg-red-50 rounded hover:bg-red-100 active:scale-90" title="Видалити">🗑</button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+            document.querySelectorAll('.give-pro').forEach(btn => btn.addEventListener('click', () => givePro(btn.dataset.login)));
         }
 
-        function toggleSelectAll() {
-            const checked = document.getElementById('selectAll').checked;
-            document.querySelectorAll('.user-checkbox').forEach(cb => { cb.checked = checked; });
-            updateSelection();
-        }
+        function filterUsers() { currentPage = 0; renderUsers(); }
+        function sortUsers(field) { if (currentSort.field === field) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc'; else { currentSort.field = field; currentSort.dir = 'desc'; } renderUsers(); }
+        function nextPage() { const max = Math.ceil(getFilteredUsers().length / PAGE_SIZE) - 1; if (currentPage < max) { currentPage++; renderUsers(); } }
+        function prevPage() { if (currentPage > 0) { currentPage--; renderUsers(); } }
+        function toggleSelectAll() { const checked = document.getElementById('selectAll').checked; document.querySelectorAll('.user-checkbox').forEach(cb => { cb.checked = checked; }); updateSelection(); }
+        function updateSelection() { selectedUsers.clear(); document.querySelectorAll('.user-checkbox:checked').forEach(cb => selectedUsers.add(cb.dataset.login)); }
 
-        function updateSelection() {
-            selectedUsers.clear();
-            document.querySelectorAll('.user-checkbox:checked').forEach(cb => selectedUsers.add(cb.dataset.login));
-        }
-
-        async function massGivePro() {
-            if (selectedUsers.size === 0) return alert('Виберіть юзерів');
-            if (!confirm(`Видати Pro для ${selectedUsers.size} юзерів?`)) return;
-            for (const login of selectedUsers) {
-                await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_give_pro', adminToken, login }) });
+        // =================== ACTIONS ===================
+        async function massAction(type) {
+            if (selectedUsers.size === 0) return showAdminToast('Виберіть юзерів', 'error');
+            if (type === 'pro') {
+                if (!confirm(`Видати Pro для ${selectedUsers.size} юзерів?`)) return;
+                for (const login of selectedUsers) { await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_give_pro', adminToken, login }) }); }
+                showAdminToast(`Pro видано ${selectedUsers.size} юзерам`);
+            } else if (type === 'delete') {
+                if (!confirm(`ВИДАЛИТИ ${selectedUsers.size} юзерів???`)) return;
+                if (!confirm(`Точно???`)) return;
+                for (const login of selectedUsers) { await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_delete_user', adminToken, login }) }); }
+                showAdminToast(`Видалено ${selectedUsers.size} юзерів`);
             }
-            alert(`Pro видано ${selectedUsers.size} юзерам!`);
             selectedUsers.clear();
             loadStats();
         }
@@ -348,19 +489,19 @@
         async function givePro(login) {
             if (!confirm(`Видати Pro для ${login}?`)) return;
             const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_give_pro', adminToken, login }) });
-            const data = await res.json();
-            if (data.success) { alert('Pro видано!'); loadStats(); } else alert('Помилка');
+            if ((await res.json()).success) { showAdminToast('Pro видано!'); loadStats(); } else showAdminToast('Помилка', 'error');
         }
 
         async function viewUser(login) {
             document.getElementById('modalUserTitle').textContent = login;
-            document.getElementById('modalUserContent').innerHTML = '<p class="text-slate-400">Завантаження...</p>';
+            document.getElementById('modalUserContent').innerHTML = '<p class="text-slate-400 animate-pulse">Завантаження...</p>';
             document.getElementById('userModal').classList.remove('hidden');
             try {
                 const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_user_data', adminToken, login }) });
                 const data = await res.json();
-                if (!data.success) { document.getElementById('modalUserContent').innerHTML = '<p class="text-red-500">Помилка</p>'; return; }
+                if (!data.success) { document.getElementById('modalUserContent').innerHTML = '<p class="text-red-500 font-bold">Помилка завантаження</p>'; return; }
                 const ud = data.data;
+                const totalRecords = (ud.addresses || []).reduce((s, a) => (a.records?.length || 0) + s, 0);
                 let html = `<div class="space-y-4">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Тип</p><p class="font-bold">${ud.hasGoogle ? '🔵 Google' : '🔐 Login'}</p></div>
@@ -368,19 +509,23 @@
                         <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Створено</p><p class="font-bold text-xs">${ud.createdAt ? new Date(ud.createdAt).toLocaleDateString('uk-UA') : '—'}</p></div>
                         <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Оновлено</p><p class="font-bold text-xs">${ud.updatedAt ? new Date(ud.updatedAt).toLocaleDateString('uk-UA') : '—'}</p></div>
                         <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Адрес</p><p class="font-bold">${ud.addresses?.length || 0}</p></div>
-                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Записів</p><p class="font-bold">${(ud.addresses || []).reduce((s, a) => (a.records?.length || 0) + s, 0)}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Записів</p><p class="font-bold">${totalRecords}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Пристрої</p><p class="font-bold">${ud.knownDevices?.length || '—'}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Підозріло</p><p class="font-bold ${ud.suspiciousActivity > 0 ? 'text-red-500' : ''}">${ud.suspiciousActivity || 0}</p></div>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="givePro('${escHtml(login)}')" class="px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs font-bold">⭐ Дати Pro</button>
-                        <button onclick="revokePro('${escHtml(login)}')" class="px-3 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold">Забрати Pro</button>
-                        <button onclick="resetPassword('${escHtml(login)}')" class="px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold">🔑 Скинути пароль</button>
+                    ${ud.lastIP ? `<div class="bg-slate-50 p-3 rounded-xl text-xs"><strong>Last IP:</strong> ${escHtml(ud.lastIP)} | <strong>Last Device:</strong> ${(ud.lastDevice || '—').slice(0, 12)}...</div>` : ''}
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="givePro('${escHtml(login)}')" class="px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs font-bold active:scale-95">⭐ Дати Pro</button>
+                        <button onclick="revokePro('${escHtml(login)}')" class="px-3 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold active:scale-95">Забрати Pro</button>
+                        <button onclick="resetPassword('${escHtml(login)}')" class="px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold active:scale-95">🔑 Скинути пароль</button>
+                        <button onclick="deleteUser('${escHtml(login)}')" class="px-3 py-2 bg-red-500 text-white rounded-lg text-xs font-bold active:scale-95">🗑 Видалити</button>
                     </div>`;
                 if (ud.addresses) {
                     ud.addresses.forEach(addr => {
                         html += `<div class="bg-slate-50 p-4 rounded-xl"><p class="font-bold mb-2">🏠 ${escHtml(addr.name)}</p>`;
                         html += `<p class="text-xs text-slate-500 mb-2">Записів: ${addr.records?.length || 0}</p>`;
                         if (addr.records?.length) {
-                            const last5 = addr.records.sort((a, b) => b.month.localeCompare(a.month)).slice(0, 5);
+                            const last5 = [...addr.records].sort((a, b) => b.month.localeCompare(a.month)).slice(0, 5);
                             html += `<div class="space-y-1">${last5.map(r => `<div class="flex justify-between text-xs bg-white p-2 rounded-lg"><span>${r.month}</span><span class="font-bold">${r.total?.toFixed(0) || 0} ₴</span><span class="${r.paid ? 'text-green-500' : 'text-orange-500'}">${r.paid ? '✅' : '⏳'}</span></div>`).join('')}</div>`;
                         }
                         html += `</div>`;
@@ -388,75 +533,146 @@
                 }
                 html += `</div>`;
                 document.getElementById('modalUserContent').innerHTML = html;
-            } catch (e) { document.getElementById('modalUserContent').innerHTML = '<p class="text-red-500">Помилка мережі</p>'; }
+            } catch (e) { document.getElementById('modalUserContent').innerHTML = '<p class="text-red-500 font-bold">Помилка мережі</p>'; }
         }
 
         async function revokePro(login) {
             if (!confirm(`Забрати Pro у ${login}?`)) return;
             await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_revoke_pro', adminToken, login }) });
-            alert('Pro забрано');
-            loadStats();
-            document.getElementById('userModal').classList.add('hidden');
+            showAdminToast('Pro забрано'); loadStats(); document.getElementById('userModal').classList.add('hidden');
         }
 
         async function resetPassword(login) {
-            const newPass = prompt(`Новий пароль для ${login}:`);
-            if (!newPass || newPass.length < 4) return alert('Мін 4 символи');
+            const newPass = prompt(`Новий пароль для ${login} (мін 4 символи):`);
+            if (!newPass || newPass.length < 4) return showAdminToast('Мін 4 символи', 'error');
             const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(newPass));
             const hash = Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join('');
             const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_reset_password', adminToken, login, newPass: hash }) });
-            const data = await res.json();
-            alert(data.success ? 'Пароль змінено!' : 'Помилка');
+            (await res.json()).success ? showAdminToast('Пароль змінено!') : showAdminToast('Помилка', 'error');
         }
 
         async function deleteUser(login) {
             if (!confirm(`ВИДАЛИТИ ${login}?`)) return;
-            if (!confirm(`ТОЧНО видалити ${login}???`)) return;
+            if (!confirm(`ТОЧНО видалити ${login}??? Це незворотньо!`)) return;
             const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_delete_user', adminToken, login }) });
-            if ((await res.json()).success) { alert('Видалено'); loadStats(); }
+            if ((await res.json()).success) { showAdminToast('Видалено'); loadStats(); document.getElementById('userModal').classList.add('hidden'); }
         }
 
-        function renderAnalytics() {
-            const top = [...allUsers].sort((a, b) => b.records - a.records).slice(0, 10);
-            document.getElementById('topUsers').innerHTML = top.map((u, i) => `<div class="flex justify-between items-center py-2 ${i ? 'border-t' : ''}"><span class="font-bold text-sm">${i + 1}. ${escHtml(u.login)}</span><span class="text-sm font-black" style="color:#007aff">${u.records} зап.</span></div>`).join('');
+        function directViewUser() { const login = document.getElementById('directUserSearch').value.trim(); if (login) viewUser(login); }
 
+        // =================== ANALYTICS ===================
+        function renderAnalytics() {
+            // Top users
+            const top = [...allUsers].sort((a, b) => b.records - a.records).slice(0, 15);
+            document.getElementById('topUsers').innerHTML = top.map((u, i) => `<div class="flex justify-between items-center py-2 ${i ? 'border-t' : ''} text-sm"><span class="font-bold truncate max-w-[200px]">${i + 1}. ${escHtml(u.login)}</span><span class="font-black text-blue-600">${u.records}</span></div>`).join('') || '<p class="text-slate-400">Немає даних</p>';
+
+            // Distribution
             const googleCount = allUsers.filter(u => u.hasGoogle).length;
             const proCount = allUsers.filter(u => u.isPro).length;
             const activeCount = allUsers.filter(u => u.activeThisMonth).length;
             const withRecords = allUsers.filter(u => u.records > 0).length;
+            const total = allUsers.length || 1;
             document.getElementById('distributionStats').innerHTML = `
-                <div class="space-y-3">
-                    <div class="flex justify-between"><span>Google авторизація</span><span class="font-bold">${googleCount} (${Math.round(googleCount / allUsers.length * 100) || 0}%)</span></div>
-                    <div class="flex justify-between"><span>Pro юзери</span><span class="font-bold">${proCount} (${Math.round(proCount / allUsers.length * 100) || 0}%)</span></div>
-                    <div class="flex justify-between"><span>Активні цей місяць</span><span class="font-bold">${activeCount} (${Math.round(activeCount / allUsers.length * 100) || 0}%)</span></div>
-                    <div class="flex justify-between"><span>З записами</span><span class="font-bold">${withRecords} (${Math.round(withRecords / allUsers.length * 100) || 0}%)</span></div>
-                    <div class="flex justify-between"><span>Пусті акаунти</span><span class="font-bold">${allUsers.length - withRecords}</span></div>
-                </div>`;
+                <div class="flex justify-between"><span>Google авторизація</span><span class="font-bold">${googleCount} (${Math.round(googleCount / total * 100)}%)</span></div>
+                <div class="flex justify-between"><span>Pro юзери</span><span class="font-bold">${proCount} (${Math.round(proCount / total * 100)}%)</span></div>
+                <div class="flex justify-between"><span>Активні цей місяць</span><span class="font-bold">${activeCount} (${Math.round(activeCount / total * 100)}%)</span></div>
+                <div class="flex justify-between"><span>З записами</span><span class="font-bold">${withRecords} (${Math.round(withRecords / total * 100)}%)</span></div>
+                <div class="flex justify-between"><span>Пусті акаунти</span><span class="font-bold text-orange-600">${allUsers.length - withRecords}</span></div>`;
+
+            // Monthly activity
+            const months = {};
+            allUsers.forEach(u => { if (u.lastMonth && u.lastMonth !== '—') { months[u.lastMonth] = (months[u.lastMonth] || 0) + 1; } });
+            const sortedMonths = Object.entries(months).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 12);
+            document.getElementById('monthlyActivity').innerHTML = sortedMonths.map(([m, c]) => `<div class="flex justify-between items-center py-1 text-sm"><span class="text-slate-600">${m}</span><div class="flex items-center gap-2"><div class="h-2 bg-blue-500 rounded-full" style="width:${Math.max(4, c * 3)}px"></div><span class="font-bold text-xs">${c}</span></div></div>`).join('') || '<p class="text-slate-400">Немає даних</p>';
+
+            // Device stats
+            const deviceCounts = allUsers.map(u => u.devices || 0);
+            const avgDevices = deviceCounts.length ? (deviceCounts.reduce((a, b) => a + b, 0) / deviceCounts.length).toFixed(1) : 0;
+            const multiDevice = allUsers.filter(u => (u.devices || 0) > 1).length;
+            document.getElementById('deviceStats').innerHTML = `
+                <div class="flex justify-between"><span>Середня к-сть пристроїв</span><span class="font-bold">${avgDevices}</span></div>
+                <div class="flex justify-between"><span>Мультипристрій (2+)</span><span class="font-bold">${multiDevice}</span></div>
+                <div class="flex justify-between"><span>Підозріла активність</span><span class="font-bold text-red-500">${allUsers.filter(u => u.suspicious > 0).length}</span></div>`;
         }
 
+        // =================== SECURITY ===================
+        function renderSecurity() {
+            const suspicious = allUsers.filter(u => u.suspicious > 0).sort((a, b) => b.suspicious - a.suspicious);
+            document.getElementById('suspiciousUsers').innerHTML = suspicious.length ? suspicious.map(u => `<div class="flex justify-between items-center p-3 bg-red-50 rounded-xl border border-red-100"><div><span class="font-bold text-sm">${escHtml(u.login)}</span><span class="ml-2 badge bg-red-100 text-red-600">⚠️ ${u.suspicious} подій</span></div><button onclick="viewUser('${escHtml(u.login)}')" class="px-3 py-1 bg-white rounded-lg text-xs font-bold border hover:bg-slate-50 active:scale-95">👁</button></div>`).join('') : '<p class="text-slate-400">Все чисто! Підозрілих немає.</p>';
+
+            // Encryption status
+            const encEl = document.getElementById('encryptionStatus');
+            // We can't directly check from client, show info
+            encEl.innerHTML = `<span class="text-sm font-bold">🔒 Encryption at Rest</span><span class="badge bg-blue-50 text-blue-600">Якщо ENCRYPT_SECRET задано</span>`;
+        }
+
+        // =================== EXPORT ===================
         function exportAllData() {
-            const csv = 'Login,Type,Pro,Records,Addresses,LastMonth,Active\n' + allUsers.map(u => `${u.login},${u.hasGoogle ? 'Google' : 'Login'},${u.isPro ? 'Pro' : 'Free'},${u.records},${u.addresses},${u.lastMonth},${u.activeThisMonth ? 'Yes' : 'No'}`).join('\n');
-            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv' });
+            const csv = 'Login,Type,Pro,Records,Addresses,LastMonth,Active,Devices,Suspicious\n' + allUsers.map(u => `"${u.login}",${u.hasGoogle ? 'Google' : 'Login'},${u.isPro ? 'Pro' : 'Free'},${u.records},${u.addresses},"${u.lastMonth}",${u.activeThisMonth ? 'Yes' : 'No'},${u.devices || 0},${u.suspicious || 0}`).join('\n');
+            downloadFile('\uFEFF' + csv, 'komunalka_users.csv', 'text/csv');
+            showAdminToast('CSV експортовано');
+        }
+
+        async function exportFullBackup() {
+            showAdminToast('Завантаження повного бекапу...');
+            const fullData = [];
+            for (const u of allUsers) {
+                try {
+                    const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_user_data', adminToken, login: u.login }) });
+                    const data = await res.json();
+                    if (data.success) fullData.push({ login: u.login, ...data.data });
+                } catch (e) {}
+            }
+            downloadFile(JSON.stringify({ exportDate: new Date().toISOString(), version: '3.2', users: fullData }, null, 2), `komunalka_full_backup_${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
+            showAdminToast(`Бекап: ${fullData.length} юзерів`);
+        }
+
+        async function cleanupEmptyAccounts() {
+            const empty = allUsers.filter(u => u.records === 0);
+            if (!empty.length) return showAdminToast('Пустих акаунтів немає');
+            if (!confirm(`Видалити ${empty.length} пустих акаунтів (без жодного запису)?`)) return;
+            let deleted = 0;
+            for (const u of empty) {
+                const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_delete_user', adminToken, login: u.login }) });
+                if ((await res.json()).success) deleted++;
+            }
+            showAdminToast(`Видалено ${deleted} пустих акаунтів`);
+            loadStats();
+        }
+
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'komunalka_users.csv';
+            a.download = filename;
             a.click();
+            URL.revokeObjectURL(a.href);
         }
 
+        // =================== BROADCAST ===================
         function openBroadcast() { document.getElementById('broadcastModal').classList.remove('hidden'); }
-
         async function sendBroadcast() {
             const msg = document.getElementById('broadcastMsg').value.trim();
-            if (!msg) return;
+            if (!msg) return showAdminToast('Введіть текст', 'error');
             const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_broadcast', adminToken, message: msg }) });
-            if ((await res.json()).success) {
-                alert('Надіслано!');
-                document.getElementById('broadcastModal').classList.add('hidden');
-                document.getElementById('broadcastMsg').value = '';
-            }
+            if ((await res.json()).success) { showAdminToast('Оголошення надіслано!'); document.getElementById('broadcastModal').classList.add('hidden'); document.getElementById('broadcastMsg').value = ''; }
+            else showAdminToast('Помилка', 'error');
         }
 
+        async function sendBroadcastFromSettings() {
+            const msg = document.getElementById('broadcastMsgSettings').value.trim();
+            if (!msg) return showAdminToast('Введіть текст', 'error');
+            const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_broadcast', adminToken, message: msg }) });
+            if ((await res.json()).success) { showAdminToast('Оголошення надіслано!'); document.getElementById('broadcastMsgSettings').value = ''; }
+            else showAdminToast('Помилка', 'error');
+        }
+
+        // =================== KEYBOARD ===================
         document.getElementById('adminPass').addEventListener('keydown', e => { if (e.key === 'Enter') adminLogin(); });
+        document.getElementById('directUserSearch')?.addEventListener('keydown', e => { if (e.key === 'Enter') directViewUser(); });
+
+        // =================== AUTO-REFRESH ===================
+        setInterval(() => { if (adminToken && document.visibilityState === 'visible') loadStats(); }, 300000); // 5 min
     </script>
 </body>
 </html>
