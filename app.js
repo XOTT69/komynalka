@@ -101,7 +101,7 @@ function renderAddressModal() { const list = $('addressListModal'); if (!list) r
 const tabIds = ['tabDashboard', 'tabCalc', 'tabHistory', 'tabSettings'];
 const btnIds = ['btnTabDashboard', 'btnTabCalc', 'btnTabHistory', 'btnTabSettings'];
 
-ffunction switchTab(tabId, index) {
+function switchTab(tabId, index) {
     const activeTab = document.querySelector('.tab-active');
     const targetTab = $(tabId);
     if (!targetTab) return;
