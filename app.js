@@ -872,41 +872,61 @@ $('sortSelect')?.addEventListener('change',()=>renderRecords());
 // =================== EXPORT ===================
 function exportCSV(){if(!records.length)return showToast('Немає','⚠️');let h=['Місяць'];if(prefs.showWater)h.push('Вода(м3)','Вода(₴)');if(prefs.showHotWater)h.push('Гар(м3)','Гар(₴)');if(prefs.showElectro)h.push('Світло(кВт)','Світло(₴)');if(prefs.showGas)h.push('Газ(м3)','Газ(₴)');h.push('Інше(₴)','Всього(₴)','Статус');let csv='\uFEFF'+h.join(',')+'\n';[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).forEach(r=>{let row=[r.month];if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(2));if(prefs.showHotWater)row.push(Math.max(0,(r.hwCur||0)-(r.hwPrev||0)),(r.hotWaterCost||0).toFixed(2));if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(2));if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(2));row.push((r.customCost||0).toFixed(2),(r.total||0).toFixed(2),r.paid?'Оплачено':'Борг');csv+=row.join(',')+'\n';});const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`komunalka.csv`;link.click();showToast('Експортовано','📊');}
 
-function generatePDF(){
+async function generatePDF(){
     if(!records.length)return showToast('Немає','⚠️');
     const{jsPDF}=window.jspdf;
     const doc=new jsPDF();
+    
+    // Load Cyrillic font
+    try {
+        const fontUrl = 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/files/roboto-cyrillic-400-normal.woff';
+        const fontBoldUrl = 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/files/roboto-cyrillic-700-normal.woff';
+        const [fontResp, fontBoldResp] = await Promise.all([fetch(fontUrl), fetch(fontBoldUrl)]);
+        const [fontBuf, fontBoldBuf] = await Promise.all([fontResp.arrayBuffer(), fontBoldResp.arrayBuffer()]);
+        const fontBase64 = btoa(String.fromCharCode(...new Uint8Array(fontBuf)));
+        const fontBoldBase64 = btoa(String.fromCharCode(...new Uint8Array(fontBoldBuf)));
+        doc.addFileToVFS('Roboto-Regular.ttf', fontBase64);
+        doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+        doc.addFileToVFS('Roboto-Bold.ttf', fontBoldBase64);
+        doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+        doc.setFont('Roboto');
+    } catch(e) {
+        console.warn('Font load failed, using transliteration');
+    }
+    
     const addr=$('currentAddressDisplay')?.innerText||'';
     const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month));
+    const hasFont = doc.getFontList()['Roboto'];
+    const t = hasFont ? (s) => s : transliterate;
     
     // Header
     doc.setFillColor(0,122,255);
     doc.rect(0,0,210,35,'F');
     doc.setTextColor(255,255,255);
     doc.setFontSize(18);
-    doc.setFont(undefined,'bold');
-    doc.text('Komunalni platezhi',15,15);
+    doc.setFont(hasFont?'Roboto':undefined,'bold');
+    doc.text(t('Комунальні платежі'),15,15);
     doc.setFontSize(10);
-    doc.setFont(undefined,'normal');
-    doc.text(transliterate(addr),15,24);
+    doc.setFont(hasFont?'Roboto':undefined,'normal');
+    doc.text(t(addr),15,24);
     doc.setFontSize(8);
-    doc.text(new Date().toLocaleDateString('uk-UA',{day:'numeric',month:'numeric',year:'numeric'}),15,31);
+    doc.text(t('Згенеровано: ')+new Date().toLocaleDateString('uk-UA',{day:'numeric',month:'numeric',year:'numeric'}),15,31);
     doc.setTextColor(60,60,60);
     
     // Table
-    const tH=['Mis.'];
-    if(prefs.showWater)tH.push('Voda','UAH');
-    if(prefs.showElectro)tH.push('Svitlo','UAH');
-    if(prefs.showGas)tH.push('Gaz','UAH');
-    tH.push('Inshe','VSE','Status');
+    const tH=[t('Міс.')];
+    if(prefs.showWater)tH.push(t('Вода'),t('₴'));
+    if(prefs.showElectro)tH.push(t('Світло'),t('₴'));
+    if(prefs.showGas)tH.push(t('Газ'),t('₴'));
+    tH.push(t('Інше'),t('Всього'),t('Статус'));
     
     const tR=sorted.map(r=>{
-        const mN=r.month;
-        const row=[mN];
+        const mN=new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'2-digit'});
+        const row=[t(mN)];
         if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(0));
         if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(0));
         if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(0));
-        row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),r.paid?'OK':'BORH');
+        row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),r.paid?'OK':t('Борг'));
         return row;
     });
     
@@ -915,8 +935,8 @@ function generatePDF(){
         head:[tH],
         body:tR,
         theme:'striped',
-        headStyles:{fillColor:[0,122,255],textColor:[255,255,255],fontSize:7,fontStyle:'bold',halign:'center'},
-        bodyStyles:{fontSize:7,halign:'center'},
+        headStyles:{fillColor:[0,122,255],textColor:[255,255,255],fontSize:7,fontStyle:'bold',halign:'center',font:hasFont?'Roboto':undefined},
+        bodyStyles:{fontSize:7,halign:'center',font:hasFont?'Roboto':undefined},
         margin:{left:10,right:10}
     });
     
