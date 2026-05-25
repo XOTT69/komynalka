@@ -876,27 +876,27 @@ async function generatePDF(){
     if(!records.length)return showToast('Немає','⚠️');
     const{jsPDF}=window.jspdf;
     const doc=new jsPDF();
+    let hasFont = false;
     
-    // Load Cyrillic font
+    // Load Cyrillic font (TTF format required by jsPDF)
     try {
-        const fontUrl = 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/files/roboto-cyrillic-400-normal.woff';
-        const fontBoldUrl = 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/files/roboto-cyrillic-700-normal.woff';
-        const [fontResp, fontBoldResp] = await Promise.all([fetch(fontUrl), fetch(fontBoldUrl)]);
-        const [fontBuf, fontBoldBuf] = await Promise.all([fontResp.arrayBuffer(), fontBoldResp.arrayBuffer()]);
-        const fontBase64 = btoa(String.fromCharCode(...new Uint8Array(fontBuf)));
-        const fontBoldBase64 = btoa(String.fromCharCode(...new Uint8Array(fontBoldBuf)));
-        doc.addFileToVFS('Roboto-Regular.ttf', fontBase64);
-        doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-        doc.addFileToVFS('Roboto-Bold.ttf', fontBoldBase64);
-        doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
-        doc.setFont('Roboto');
-    } catch(e) {
-        console.warn('Font load failed, using transliteration');
-    }
+        const fontUrl = 'https://cdn.jsdelivr.net/gh/nicksib/jspdf-fonts@main/Roboto-Regular.ttf';
+        const resp = await fetch(fontUrl);
+        if (resp.ok) {
+            const buf = await resp.arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+            const fontBase64 = btoa(binary);
+            doc.addFileToVFS('Roboto.ttf', fontBase64);
+            doc.addFont('Roboto.ttf', 'Roboto', 'normal');
+            doc.setFont('Roboto', 'normal');
+            hasFont = true;
+        }
+    } catch(e) { console.warn('Font load failed:', e); }
     
-    const addr=$('currentAddressDisplay')?.innerText||'';
-    const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month));
-    const hasFont = doc.getFontList()['Roboto'];
+    const addr = $('currentAddressDisplay')?.innerText || '';
+    const sorted = [...records].sort((a,b) => new Date(b.month) - new Date(a.month));
     const t = hasFont ? (s) => s : transliterate;
     
     // Header
@@ -904,44 +904,43 @@ async function generatePDF(){
     doc.rect(0,0,210,35,'F');
     doc.setTextColor(255,255,255);
     doc.setFontSize(18);
-    doc.setFont(hasFont?'Roboto':undefined,'bold');
-    doc.text(t('Комунальні платежі'),15,15);
+    doc.text(t('Комунальні платежі'), 15, 15);
     doc.setFontSize(10);
-    doc.setFont(hasFont?'Roboto':undefined,'normal');
-    doc.text(t(addr),15,24);
+    doc.text(t(addr), 15, 24);
     doc.setFontSize(8);
-    doc.text(t('Згенеровано: ')+new Date().toLocaleDateString('uk-UA',{day:'numeric',month:'numeric',year:'numeric'}),15,31);
+    doc.text(new Date().toLocaleDateString('uk-UA', {day:'numeric', month:'numeric', year:'numeric'}), 15, 31);
     doc.setTextColor(60,60,60);
     
     // Table
-    const tH=[t('Міс.')];
-    if(prefs.showWater)tH.push(t('Вода'),t('₴'));
-    if(prefs.showElectro)tH.push(t('Світло'),t('₴'));
-    if(prefs.showGas)tH.push(t('Газ'),t('₴'));
-    tH.push(t('Інше'),t('Всього'),t('Статус'));
+    const tH = [t('Міс.')];
+    if(prefs.showWater) tH.push(t('Вода'), t('₴'));
+    if(prefs.showElectro) tH.push(t('Світло'), t('₴'));
+    if(prefs.showGas) tH.push(t('Газ'), t('₴'));
+    tH.push(t('Інше'), t('Всього'), t('Статус'));
     
-    const tR=sorted.map(r=>{
-        const mN=new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'2-digit'});
-        const row=[t(mN)];
-        if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(0));
-        if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(0));
-        if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(0));
-        row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),r.paid?'OK':t('Борг'));
+    const tR = sorted.map(r => {
+        const mN = r.month;
+        const row = [mN];
+        if(prefs.showWater) row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)), (r.waterCost||0).toFixed(0));
+        if(prefs.showElectro) row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)), (r.electroCost||0).toFixed(0));
+        if(prefs.showGas) row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)), (r.gasCost||0).toFixed(0));
+        row.push((r.customCost||0).toFixed(0), (r.total||0).toFixed(0), r.paid ? 'OK' : t('Борг'));
         return row;
     });
     
     doc.autoTable({
-        startY:40,
-        head:[tH],
-        body:tR,
-        theme:'striped',
-        headStyles:{fillColor:[0,122,255],textColor:[255,255,255],fontSize:7,fontStyle:'bold',halign:'center',font:hasFont?'Roboto':undefined},
-        bodyStyles:{fontSize:7,halign:'center',font:hasFont?'Roboto':undefined},
-        margin:{left:10,right:10}
+        startY: 40,
+        head: [tH],
+        body: tR,
+        theme: 'striped',
+        styles: { font: hasFont ? 'Roboto' : 'helvetica' },
+        headStyles: { fillColor:[0,122,255], textColor:[255,255,255], fontSize:7, fontStyle:'bold', halign:'center' },
+        bodyStyles: { fontSize:7, halign:'center' },
+        margin: { left:10, right:10 }
     });
     
     doc.save(`komunalka_${new Date().toISOString().slice(0,10)}.pdf`);
-    showToast('PDF!','📄');
+    showToast('PDF!', '📄');
 }
 
 function transliterate(text) {
