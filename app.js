@@ -872,7 +872,62 @@ $('sortSelect')?.addEventListener('change',()=>renderRecords());
 // =================== EXPORT ===================
 function exportCSV(){if(!records.length)return showToast('Немає','⚠️');let h=['Місяць'];if(prefs.showWater)h.push('Вода(м3)','Вода(₴)');if(prefs.showHotWater)h.push('Гар(м3)','Гар(₴)');if(prefs.showElectro)h.push('Світло(кВт)','Світло(₴)');if(prefs.showGas)h.push('Газ(м3)','Газ(₴)');h.push('Інше(₴)','Всього(₴)','Статус');let csv='\uFEFF'+h.join(',')+'\n';[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).forEach(r=>{let row=[r.month];if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(2));if(prefs.showHotWater)row.push(Math.max(0,(r.hwCur||0)-(r.hwPrev||0)),(r.hotWaterCost||0).toFixed(2));if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(2));if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(2));row.push((r.customCost||0).toFixed(2),(r.total||0).toFixed(2),r.paid?'Оплачено':'Борг');csv+=row.join(',')+'\n';});const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`komunalka.csv`;link.click();showToast('Експортовано','📊');}
 
-function generatePDF(){if(!records.length)return showToast('Немає','⚠️');const{jsPDF}=window.jspdf;const doc=new jsPDF();const addr=$('currentAddressDisplay')?.innerText||'';const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month));doc.setFillColor(0,122,255);doc.rect(0,0,210,40,'F');doc.setTextColor(255,255,255);doc.setFontSize(22);doc.setFont(undefined,'bold');doc.text('Комунальнi платежi',15,18);doc.setFontSize(11);doc.setFont(undefined,'normal');doc.text(addr,15,28);doc.setFontSize(9);doc.text('Згенеровано: '+new Date().toLocaleDateString('uk-UA',{day:'numeric',month:'long',year:'numeric'}),15,35);doc.setTextColor(60,60,60);let y=50;const tH=['Мiс.'];if(prefs.showWater)tH.push('💧','₴');if(prefs.showElectro)tH.push('⚡','₴');if(prefs.showGas)tH.push('🔥','₴');tH.push('Iнше','ВСЕ','');const tR=sorted.map(r=>{const mN=new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'2-digit'});const row=[mN];if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(0));if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(0));if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(0));row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),r.paid?'OK':'БОРГ');return row;});doc.autoTable({startY:y,head:[tH],body:tR,theme:'striped',headStyles:{fillColor:[0,122,255],textColor:[255,255,255],fontSize:7,fontStyle:'bold',halign:'center'},bodyStyles:{fontSize:7,halign:'center'},margin:{left:10,right:10}});doc.save(`komunalka_${new Date().toISOString().slice(0,10)}.pdf`);showToast('PDF!','📄');}
+function generatePDF(){
+    if(!records.length)return showToast('Немає','⚠️');
+    const{jsPDF}=window.jspdf;
+    const doc=new jsPDF();
+    const addr=$('currentAddressDisplay')?.innerText||'';
+    const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month));
+    
+    // Header
+    doc.setFillColor(0,122,255);
+    doc.rect(0,0,210,35,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(18);
+    doc.setFont(undefined,'bold');
+    doc.text('Komunalni platezhi',15,15);
+    doc.setFontSize(10);
+    doc.setFont(undefined,'normal');
+    doc.text(transliterate(addr),15,24);
+    doc.setFontSize(8);
+    doc.text(new Date().toLocaleDateString('uk-UA',{day:'numeric',month:'numeric',year:'numeric'}),15,31);
+    doc.setTextColor(60,60,60);
+    
+    // Table
+    const tH=['Mis.'];
+    if(prefs.showWater)tH.push('Voda','UAH');
+    if(prefs.showElectro)tH.push('Svitlo','UAH');
+    if(prefs.showGas)tH.push('Gaz','UAH');
+    tH.push('Inshe','VSE','Status');
+    
+    const tR=sorted.map(r=>{
+        const mN=r.month;
+        const row=[mN];
+        if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(0));
+        if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(0));
+        if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(0));
+        row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),r.paid?'OK':'BORH');
+        return row;
+    });
+    
+    doc.autoTable({
+        startY:40,
+        head:[tH],
+        body:tR,
+        theme:'striped',
+        headStyles:{fillColor:[0,122,255],textColor:[255,255,255],fontSize:7,fontStyle:'bold',halign:'center'},
+        bodyStyles:{fontSize:7,halign:'center'},
+        margin:{left:10,right:10}
+    });
+    
+    doc.save(`komunalka_${new Date().toISOString().slice(0,10)}.pdf`);
+    showToast('PDF!','📄');
+}
+
+function transliterate(text) {
+    const map = {'а':'a','б':'b','в':'v','г':'h','ґ':'g','д':'d','е':'e','є':'ye','ж':'zh','з':'z','и':'y','і':'i','ї':'yi','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ь':'','ю':'yu','я':'ya','А':'A','Б':'B','В':'V','Г':'H','Ґ':'G','Д':'D','Е':'E','Є':'Ye','Ж':'Zh','З':'Z','И':'Y','І':'I','Ї':'Yi','Й':'Y','К':'K','Л':'L','М':'M','Н':'N','О':'O','П':'P','Р':'R','С':'S','Т':'T','У':'U','Ф':'F','Х':'Kh','Ц':'Ts','Ч':'Ch','Ш':'Sh','Щ':'Shch','Ь':'','Ю':'Yu','Я':'Ya'};
+    return text.split('').map(c => map[c] || c).join('');
+}
 
 async function shareAllRecords(){if(!records.length)return showToast('Немає','⚠️');const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,6);let t=`📊 Комунальні\n📍 ${$('currentAddressDisplay')?.innerText||''}\n───────\n`;sorted.forEach(r=>{t+=`${new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'numeric'})}: ${fmt.format(r.total)} ₴ ${r.paid?'✅':'⏳'}\n`;});t+=`───────\nСередній: ${fmt.format(sorted.reduce((s,r)=>s+r.total,0)/sorted.length)} ₴/міс`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
 
