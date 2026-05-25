@@ -1,5 +1,5 @@
 // ============================================================
-// КОМУНАЛКА PWA v3.1 — Secure & Optimized
+// КОМУНАЛКА PWA v3.2 — Secure & Optimized
 // ============================================================
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
