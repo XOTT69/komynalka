@@ -603,18 +603,31 @@ function applyPreferences() {
     if ($('remWaterEnd')) $('remWaterEnd').value = prefs.remWaterEnd || 5;
     if ($('remElectroStart')) $('remElectroStart').value = prefs.remElectroStart || 28;
     if ($('remElectroEnd')) $('remElectroEnd').value = prefs.remElectroEnd || 3;
-    if ($('blockWater')) $('blockWater').style.display = prefs.showWater ? 'block' : 'none';
-    if ($('blockHotWater')) $('blockHotWater').style.display = prefs.showHotWater ? 'block' : 'none';
-    if ($('blockDrainage')) $('blockDrainage').style.display = prefs.showDrainage ? 'block' : 'none';
-    if ($('settingHotWaterWrap')) $('settingHotWaterWrap').style.display = prefs.showHotWater ? 'flex' : 'none';
-    if ($('settingDrainageWrap')) $('settingDrainageWrap').style.display = prefs.showDrainage ? 'flex' : 'none';
-    if ($('blockElectro')) $('blockElectro').style.display = prefs.showElectro ? 'block' : 'none';
-    if ($('blockGas')) $('blockGas').style.display = prefs.showGas ? 'block' : 'none';
-    if ($('blockCustomServices')) $('blockCustomServices').style.display = customServices.length > 0 ? 'block' : 'none';
+
+    // Calculator blocks
+    if ($('blockWater')) $('blockWater').style.display = prefs.showWater ? '' : 'none';
+    if ($('blockHotWater')) $('blockHotWater').style.display = prefs.showHotWater ? '' : 'none';
+    if ($('blockDrainage')) $('blockDrainage').style.display = prefs.showDrainage ? '' : 'none';
+    if ($('blockElectro')) $('blockElectro').style.display = prefs.showElectro ? '' : 'none';
+    if ($('blockGas')) $('blockGas').style.display = prefs.showGas ? '' : 'none';
+    if ($('blockCustomServices')) $('blockCustomServices').style.display = customServices.length > 0 ? '' : 'none';
+
+    // Tariff fields visibility
+    if ($('settingHotWaterWrap')) $('settingHotWaterWrap').style.display = prefs.showHotWater ? '' : 'none';
+    if ($('settingDrainageWrap')) $('settingDrainageWrap').style.display = prefs.showDrainage ? '' : 'none';
+    if ($('settingElectroWinterWrap')) $('settingElectroWinterWrap').style.display = (prefs.showElectro && prefs.electroWinter) ? '' : 'none';
+
+    // Electro sub-options
     if (prefs.electroTwoZone) { if ($('electroNightRow')) $('electroNightRow').style.display = 'flex'; if ($('lblDay1')) $('lblDay1').innerText = "(День)"; if ($('lblDay2')) $('lblDay2').innerText = "(День)"; }
     else { if ($('electroNightRow')) $('electroNightRow').style.display = 'none'; if ($('lblDay1')) $('lblDay1').innerText = ""; if ($('lblDay2')) $('lblDay2').innerText = ""; }
-    if ($('winterCheckboxWrapper')) $('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none';
-    if ($('settingElectroWinterWrap')) $('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'flex' : 'none';
+    if ($('winterCheckboxWrapper')) $('winterCheckboxWrapper').style.display = prefs.electroWinter ? '' : 'none';
+
+    // Service toggle active styling
+    document.querySelectorAll('.service-toggle').forEach(label => {
+        const input = label.querySelector('input[type="checkbox"]');
+        if (input) label.classList.toggle('active-service', input.checked);
+    });
+
     updateServiceChartOptions();
 }
 
