@@ -157,51 +157,170 @@
 
 <!-- TAB: Settings -->
 <div id="tabSettings" class="tab-hidden space-y-3 pt-2 pb-6">
-    <!-- Account -->
-    <div class="premium-card p-4"><div class="flex justify-between items-center"><div class="flex items-center gap-3"><div class="w-9 h-9 bg-brand-light rounded-xl flex items-center justify-center text-brand text-sm"><i class="fa-solid fa-user"></i></div><div><p class="font-bold text-sm text-slate-900 dark:text-white">Акаунт</p><p class="text-[10px] text-slate-400" id="accountLoginDisplay">—</p></div></div><div class="flex gap-2"><button id="changePassBtn" class="w-8 h-8 bg-slate-100 dark:bg-white/5 rounded-lg flex items-center justify-center text-slate-400 text-xs active:scale-90"><i class="fa-solid fa-key"></i></button><button id="btnLinkGoogle" type="button" class="px-3 py-1.5 bg-slate-100 dark:bg-white/5 rounded-lg text-[10px] font-bold text-slate-500 active:scale-95"><i class="fa-brands fa-google mr-1"></i>Google</button></div></div></div>
 
-    <!-- Theme -->
-    <div class="premium-card p-4"><div class="flex items-center justify-between"><span class="text-sm font-bold text-slate-900 dark:text-white"><i class="fa-solid fa-palette text-brand mr-2"></i>Тема</span><div class="flex bg-slate-100 dark:bg-black/50 p-1 rounded-lg"><button id="mode-light" class="px-3 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500">☀️</button><button id="mode-auto" class="px-3 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500">🔄</button><button id="mode-dark" class="px-3 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500">🌙</button></div></div></div>
+    <!-- Profile Card -->
+    <div class="premium-card p-5">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 bg-gradient-to-br from-brand to-blue-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-brand/20"><i class="fa-solid fa-user"></i></div>
+            <div class="flex-1">
+                <p class="font-black text-lg text-slate-900 dark:text-white" id="accountLoginDisplay">—</p>
+                <p class="text-[10px] text-slate-400 font-medium">Комуналка Pro v3.0</p>
+                <div id="proStatusBlock" class="hidden mt-1"><span class="text-[9px] font-bold text-yellow-600 bg-yellow-50 dark:bg-yellow-500/10 px-2 py-0.5 rounded-md">⭐ Pro</span></div>
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <button id="changePassBtn" class="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400 text-xs active:scale-90 transition-transform"><i class="fa-solid fa-key"></i></button>
+                <button id="btnLinkGoogle" type="button" class="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400 text-xs active:scale-90 transition-transform"><i class="fa-brands fa-google"></i></button>
+            </div>
+        </div>
+    </div>
 
-    <!-- Tariffs -->
-    <details class="premium-card overflow-hidden"><summary class="p-4 flex items-center justify-between cursor-pointer select-none"><span class="text-sm font-bold text-slate-900 dark:text-white"><i class="fa-solid fa-coins text-brand mr-2"></i>Тарифи</span><i class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform"></i></summary><div class="px-4 pb-4 space-y-3"><div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">💧 Хол. Вода /м³</span><input type="number" id="tWater" step="0.01" class="premium-input w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-lg font-bold outline-none text-right text-sm"></div><div id="settingHotWaterWrap" class="flex justify-between items-center" style="display:none"><span class="text-xs font-bold text-slate-500">🌡️ Гар. Вода /м³</span><input type="number" id="tHotWater" step="0.01" class="premium-input w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-lg font-bold outline-none text-right text-sm"></div><div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">⚡ Світло /кВт</span><input type="number" id="tElectroBase" step="0.01" class="premium-input w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-lg font-bold outline-none text-right text-sm"></div><div id="settingElectroWinterWrap" class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">❄️ Зимовий /кВт</span><input type="number" id="tElectroWinter" step="0.01" class="premium-input w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-lg font-bold outline-none text-right text-sm"></div><div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🔥 Газ /м³</span><input type="number" id="tGas" step="0.01" class="premium-input w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-lg font-bold outline-none text-right text-sm"></div></div></details>
+    <!-- Quick Settings Row -->
+    <div class="grid grid-cols-2 gap-3">
+        <!-- Theme -->
+        <div class="premium-card p-4">
+            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Тема</p>
+            <div class="flex bg-slate-100 dark:bg-black/50 p-1 rounded-xl">
+                <button id="mode-light" class="flex-1 py-2 text-[11px] font-bold rounded-lg transition-all text-slate-500 text-center">☀️</button>
+                <button id="mode-auto" class="flex-1 py-2 text-[11px] font-bold rounded-lg transition-all text-slate-500 text-center">🔄</button>
+                <button id="mode-dark" class="flex-1 py-2 text-[11px] font-bold rounded-lg transition-all text-slate-500 text-center">🌙</button>
+            </div>
+        </div>
+        <!-- Budget -->
+        <div class="premium-card p-4">
+            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Бюджет ₴/міс</p>
+            <input type="number" id="budgetInput" step="1" placeholder="—" class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2.5 rounded-xl font-black outline-none text-center text-lg">
+        </div>
+    </div>
 
-    <!-- Budget -->
-    <div class="premium-card p-4"><div class="flex items-center justify-between"><span class="text-sm font-bold text-slate-900 dark:text-white"><i class="fa-solid fa-wallet text-brand mr-2"></i>Бюджет</span><div class="flex items-center gap-2"><input type="number" id="budgetInput" step="1" placeholder="—" class="premium-input w-24 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-transparent px-3 py-2 rounded-lg font-bold outline-none text-right text-sm"><span class="text-[10px] text-slate-400">₴/міс</span></div></div></div>
+    <!-- Section: Tariffs & Services -->
+    <div class="premium-card overflow-hidden">
+        <div class="p-4 border-b border-slate-100 dark:border-white/5">
+            <p class="text-sm font-black text-slate-900 dark:text-white"><i class="fa-solid fa-sliders text-brand mr-2"></i>Налаштування послуг</p>
+        </div>
 
-    <!-- Services -->
-    <details class="premium-card overflow-hidden"><summary class="p-4 flex items-center justify-between cursor-pointer select-none"><span class="text-sm font-bold text-slate-900 dark:text-white"><i class="fa-solid fa-list-check text-brand mr-2"></i>Послуги</span><i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i></summary><div class="px-4 pb-4 space-y-3"><label class="flex justify-between items-center text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer"><span>💧 Холодна вода</span><div class="relative inline-flex items-center"><input type="checkbox" id="prefWater" class="sr-only peer"><div class="w-10 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors"></div><div class="absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform shadow-sm peer-checked:translate-x-4"></div></div></label><label class="flex justify-between items-center text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer"><span>🌡️ Гаряча вода</span><div class="relative inline-flex items-center"><input type="checkbox" id="prefHotWater" class="sr-only peer"><div class="w-10 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors"></div><div class="absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform shadow-sm peer-checked:translate-x-4"></div></div></label><label class="flex justify-between items-center text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer"><span>⚡ Електроенергія</span><div class="relative inline-flex items-center"><input type="checkbox" id="prefElectro" class="sr-only peer"><div class="w-10 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors"></div><div class="absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform shadow-sm peer-checked:translate-x-4"></div></div></label><div class="pl-6 space-y-2"><label class="flex justify-between items-center text-[10px] font-bold text-slate-400 cursor-pointer"><span>Двозонний</span><div class="relative inline-flex items-center"><input type="checkbox" id="prefElectroTwoZone" class="sr-only peer"><div class="w-8 h-5 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors"></div><div class="absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform shadow-sm peer-checked:translate-x-3"></div></div></label><label class="flex justify-between items-center text-[10px] font-bold text-slate-400 cursor-pointer"><span>Зимовий</span><div class="relative inline-flex items-center"><input type="checkbox" id="prefElectroWinter" class="sr-only peer"><div class="w-8 h-5 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors"></div><div class="absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform shadow-sm peer-checked:translate-x-3"></div></div></label></div><label class="flex justify-between items-center text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer"><span>🔥 Газ</span><div class="relative inline-flex items-center"><input type="checkbox" id="prefGas" class="sr-only peer"><div class="w-10 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors"></div><div class="absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform shadow-sm peer-checked:translate-x-4"></div></div></label></div></details>
+        <!-- Active Services -->
+        <div class="p-4 space-y-3">
+            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Активні послуги</p>
+            <div class="grid grid-cols-2 gap-2">
+                <label class="flex items-center gap-2.5 bg-slate-50 dark:bg-black/40 p-3 rounded-xl cursor-pointer border border-slate-100 dark:border-white/5 has-[:checked]:border-brand has-[:checked]:bg-brand-light transition-all">
+                    <input type="checkbox" id="prefWater" class="sr-only peer">
+                    <span class="text-lg">💧</span>
+                    <div class="flex-1"><p class="text-xs font-bold text-slate-700 dark:text-slate-200 peer-checked:text-brand">Вода</p></div>
+                    <div class="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-white/20 peer-checked:border-brand peer-checked:bg-brand flex items-center justify-center transition-all"><i class="fa-solid fa-check text-[8px] text-white opacity-0 peer-checked:opacity-100"></i></div>
+                </label>
+                <label class="flex items-center gap-2.5 bg-slate-50 dark:bg-black/40 p-3 rounded-xl cursor-pointer border border-slate-100 dark:border-white/5 has-[:checked]:border-brand has-[:checked]:bg-brand-light transition-all">
+                    <input type="checkbox" id="prefHotWater" class="sr-only peer">
+                    <span class="text-lg">🌡️</span>
+                    <div class="flex-1"><p class="text-xs font-bold text-slate-700 dark:text-slate-200">Гар. вода</p></div>
+                    <div class="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-white/20 peer-checked:border-brand peer-checked:bg-brand flex items-center justify-center transition-all"></div>
+                </label>
+                <label class="flex items-center gap-2.5 bg-slate-50 dark:bg-black/40 p-3 rounded-xl cursor-pointer border border-slate-100 dark:border-white/5 has-[:checked]:border-brand has-[:checked]:bg-brand-light transition-all">
+                    <input type="checkbox" id="prefElectro" class="sr-only peer">
+                    <span class="text-lg">⚡</span>
+                    <div class="flex-1"><p class="text-xs font-bold text-slate-700 dark:text-slate-200">Світло</p></div>
+                    <div class="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-white/20 peer-checked:border-brand peer-checked:bg-brand flex items-center justify-center transition-all"></div>
+                </label>
+                <label class="flex items-center gap-2.5 bg-slate-50 dark:bg-black/40 p-3 rounded-xl cursor-pointer border border-slate-100 dark:border-white/5 has-[:checked]:border-brand has-[:checked]:bg-brand-light transition-all">
+                    <input type="checkbox" id="prefGas" class="sr-only peer">
+                    <span class="text-lg">🔥</span>
+                    <div class="flex-1"><p class="text-xs font-bold text-slate-700 dark:text-slate-200">Газ</p></div>
+                    <div class="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-white/20 peer-checked:border-brand peer-checked:bg-brand flex items-center justify-center transition-all"></div>
+                </label>
+            </div>
 
-    <!-- Custom Services -->
-    <details class="premium-card overflow-hidden"><summary class="p-4 flex items-center justify-between cursor-pointer select-none"><span class="text-sm font-bold text-slate-900 dark:text-white"><i class="fa-solid fa-box-open text-brand mr-2"></i>Додаткові послуги</span><i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i></summary><div class="px-4 pb-4"><div id="customServicesSettingsList" class="space-y-2 mb-3"></div><button id="addCustomServiceBtn" class="w-full py-2.5 bg-brand-light text-brand font-bold rounded-lg text-xs border border-brand-border active:scale-[0.98]"><i class="fa-solid fa-plus mr-1"></i>Додати</button></div></details>
+            <!-- Electro sub-options -->
+            <div class="flex gap-2 pl-2">
+                <label class="flex items-center gap-2 bg-slate-50 dark:bg-black/40 px-3 py-2 rounded-lg cursor-pointer text-[10px] font-bold text-slate-500 border border-transparent has-[:checked]:border-indigo-200 has-[:checked]:bg-indigo-50 dark:has-[:checked]:bg-indigo-500/10 transition-all">
+                    <input type="checkbox" id="prefElectroTwoZone" class="sr-only peer">
+                    <span>🌙 Двозонний</span>
+                </label>
+                <label class="flex items-center gap-2 bg-slate-50 dark:bg-black/40 px-3 py-2 rounded-lg cursor-pointer text-[10px] font-bold text-slate-500 border border-transparent has-[:checked]:border-blue-200 has-[:checked]:bg-blue-50 dark:has-[:checked]:bg-blue-500/10 transition-all">
+                    <input type="checkbox" id="prefElectroWinter" class="sr-only peer">
+                    <span>❄️ Зимовий</span>
+                </label>
+            </div>
+        </div>
 
-    <!-- Reminders -->
-    <details class="premium-card overflow-hidden"><summary class="p-4 flex items-center justify-between cursor-pointer select-none"><span class="text-sm font-bold text-slate-900 dark:text-white"><i class="fa-solid fa-bell text-brand mr-2"></i>Нагадування</span><i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i></summary><div class="px-4 pb-4 space-y-3"><label class="flex justify-between items-center text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer"><span>Сповіщати</span><div class="relative inline-flex items-center"><input type="checkbox" id="prefReminders" class="sr-only peer"><div class="w-10 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors"></div><div class="absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform shadow-sm peer-checked:translate-x-4"></div></div></label><button id="enablePushBtn" class="w-full py-2.5 bg-brand-light text-brand font-bold rounded-lg text-xs border border-brand-border active:scale-[0.98] hidden"><i class="fa-solid fa-bell mr-1.5"></i>Push-сповіщення</button><p id="pushStatus" class="text-[10px] text-slate-400 text-center hidden"></p><div id="remindersSettings" class="space-y-2 hidden"><div class="flex justify-between items-center text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-black/40 p-2.5 rounded-lg"><span>💧 Вода</span><div class="flex gap-1.5 items-center"><input type="number" id="remWaterStart" min="1" max="31" class="w-10 bg-white dark:bg-[#2c2c2e] py-1.5 rounded text-center outline-none border border-slate-200 dark:border-transparent font-bold text-[10px]"><span>-</span><input type="number" id="remWaterEnd" min="1" max="31" class="w-10 bg-white dark:bg-[#2c2c2e] py-1.5 rounded text-center outline-none border border-slate-200 dark:border-transparent font-bold text-[10px]"></div></div><div class="flex justify-between items-center text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-black/40 p-2.5 rounded-lg"><span>⚡ Світло</span><div class="flex gap-1.5 items-center"><input type="number" id="remElectroStart" min="1" max="31" class="w-10 bg-white dark:bg-[#2c2c2e] py-1.5 rounded text-center outline-none border border-slate-200 dark:border-transparent font-bold text-[10px]"><span>-</span><input type="number" id="remElectroEnd" min="1" max="31" class="w-10 bg-white dark:bg-[#2c2c2e] py-1.5 rounded text-center outline-none border border-slate-200 dark:border-transparent font-bold text-[10px]"></div></div></div></div></details>
+        <!-- Tariffs -->
+        <details class="border-t border-slate-100 dark:border-white/5">
+            <summary class="p-4 flex items-center justify-between cursor-pointer select-none text-sm font-bold text-slate-600 dark:text-slate-300"><span>💰 Тарифи</span><i class="fa-solid fa-chevron-down text-slate-400 text-[10px]"></i></summary>
+            <div class="px-4 pb-4 grid grid-cols-2 gap-2">
+                <div class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl"><p class="text-[8px] font-bold text-slate-400 uppercase mb-1">💧 Вода</p><input type="number" id="tWater" step="0.01" class="premium-input w-full bg-white dark:bg-[#2c2c2e] px-2 py-1.5 rounded-lg font-bold outline-none text-center text-sm border border-slate-200 dark:border-transparent"></div>
+                <div id="settingHotWaterWrap" class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl" style="display:none"><p class="text-[8px] font-bold text-slate-400 uppercase mb-1">🌡️ Гар.</p><input type="number" id="tHotWater" step="0.01" class="premium-input w-full bg-white dark:bg-[#2c2c2e] px-2 py-1.5 rounded-lg font-bold outline-none text-center text-sm border border-slate-200 dark:border-transparent"></div>
+                <div class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl"><p class="text-[8px] font-bold text-slate-400 uppercase mb-1">⚡ Світло</p><input type="number" id="tElectroBase" step="0.01" class="premium-input w-full bg-white dark:bg-[#2c2c2e] px-2 py-1.5 rounded-lg font-bold outline-none text-center text-sm border border-slate-200 dark:border-transparent"></div>
+                <div id="settingElectroWinterWrap" class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl"><p class="text-[8px] font-bold text-slate-400 uppercase mb-1">❄️ Зимовий</p><input type="number" id="tElectroWinter" step="0.01" class="premium-input w-full bg-white dark:bg-[#2c2c2e] px-2 py-1.5 rounded-lg font-bold outline-none text-center text-sm border border-slate-200 dark:border-transparent"></div>
+                <div class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl"><p class="text-[8px] font-bold text-slate-400 uppercase mb-1">🔥 Газ</p><input type="number" id="tGas" step="0.01" class="premium-input w-full bg-white dark:bg-[#2c2c2e] px-2 py-1.5 rounded-lg font-bold outline-none text-center text-sm border border-slate-200 dark:border-transparent"></div>
+            </div>
+        </details>
 
-    <!-- Data -->
-    <div class="premium-card p-4"><p class="text-sm font-bold text-slate-900 dark:text-white mb-3"><i class="fa-solid fa-database text-brand mr-2"></i>Дані</p><div class="flex gap-2"><button id="exportJsonBtn" class="flex-1 py-2.5 bg-slate-50 dark:bg-black/50 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98]"><i class="fa-solid fa-download mr-1 text-brand"></i>JSON</button><button id="importJsonBtn" class="flex-1 py-2.5 bg-slate-50 dark:bg-black/50 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98]"><i class="fa-solid fa-upload mr-1 text-brand"></i>Імпорт</button><input type="file" id="importFileInput" accept=".json" class="hidden"></div></div>
+        <!-- Custom Services -->
+        <details class="border-t border-slate-100 dark:border-white/5">
+            <summary class="p-4 flex items-center justify-between cursor-pointer select-none text-sm font-bold text-slate-600 dark:text-slate-300"><span>📦 Додаткові послуги</span><i class="fa-solid fa-chevron-down text-slate-400 text-[10px]"></i></summary>
+            <div class="px-4 pb-4"><div id="customServicesSettingsList" class="space-y-2 mb-3"></div><button id="addCustomServiceBtn" class="w-full py-2.5 bg-brand-light text-brand font-bold rounded-xl text-xs border border-brand-border active:scale-[0.98]"><i class="fa-solid fa-plus mr-1"></i>Додати послугу</button></div>
+        </details>
+    </div>
+
+    <!-- Section: Notifications -->
+    <div class="premium-card overflow-hidden">
+        <div class="p-4 flex items-center justify-between">
+            <span class="text-sm font-black text-slate-900 dark:text-white"><i class="fa-solid fa-bell text-brand mr-2"></i>Нагадування</span>
+            <div class="relative inline-flex items-center"><input type="checkbox" id="prefReminders" class="sr-only peer"><div class="w-11 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors cursor-pointer"></div><div class="absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform shadow-sm peer-checked:translate-x-5 cursor-pointer"></div></div>
+        </div>
+        <div id="remindersSettings" class="hidden px-4 pb-4 space-y-2 border-t border-slate-100 dark:border-white/5 pt-3">
+            <button id="enablePushBtn" class="w-full py-2.5 bg-brand-light text-brand font-bold rounded-xl text-xs border border-brand-border active:scale-[0.98] hidden"><i class="fa-solid fa-bell mr-1.5"></i>Увімкнути Push</button>
+            <p id="pushStatus" class="text-[10px] text-slate-400 text-center hidden"></p>
+            <div class="flex justify-between items-center text-[10px] font-bold text-slate-500 bg-slate-50 dark:bg-black/40 p-3 rounded-xl"><span>💧 Вода (дні)</span><div class="flex gap-1.5 items-center"><input type="number" id="remWaterStart" min="1" max="31" class="w-10 bg-white dark:bg-[#2c2c2e] py-1.5 rounded-lg text-center outline-none border border-slate-200 dark:border-transparent font-bold text-[10px]"><span>—</span><input type="number" id="remWaterEnd" min="1" max="31" class="w-10 bg-white dark:bg-[#2c2c2e] py-1.5 rounded-lg text-center outline-none border border-slate-200 dark:border-transparent font-bold text-[10px]"></div></div>
+            <div class="flex justify-between items-center text-[10px] font-bold text-slate-500 bg-slate-50 dark:bg-black/40 p-3 rounded-xl"><span>⚡ Світло (дні)</span><div class="flex gap-1.5 items-center"><input type="number" id="remElectroStart" min="1" max="31" class="w-10 bg-white dark:bg-[#2c2c2e] py-1.5 rounded-lg text-center outline-none border border-slate-200 dark:border-transparent font-bold text-[10px]"><span>—</span><input type="number" id="remElectroEnd" min="1" max="31" class="w-10 bg-white dark:bg-[#2c2c2e] py-1.5 rounded-lg text-center outline-none border border-slate-200 dark:border-transparent font-bold text-[10px]"></div></div>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <button type="button" id="saveSettingsBtn" class="w-full bg-gradient-to-r from-brand to-blue-600 text-white rounded-2xl py-4 font-bold shadow-xl shadow-brand/20 text-base active:scale-[0.98] transition-transform"><i class="fa-solid fa-check-circle mr-2"></i>Зберегти налаштування</button>
+
+    <!-- Section: Data & Export -->
+    <div class="premium-card p-4">
+        <p class="text-sm font-black text-slate-900 dark:text-white mb-3"><i class="fa-solid fa-hard-drive text-brand mr-2"></i>Дані</p>
+        <div class="grid grid-cols-2 gap-2">
+            <button id="exportJsonBtn" class="py-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-download text-brand"></i>Бекап</button>
+            <button id="importJsonBtn" class="py-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-upload text-brand"></i>Імпорт</button>
+        </div>
+        <input type="file" id="importFileInput" accept=".json" class="hidden">
+    </div>
 
     <!-- PWA Install -->
-    <div id="pwaInstallBlock" class="hidden"><button id="installPwaBtn" class="w-full bg-gradient-to-r from-brand to-blue-600 text-white rounded-xl py-3.5 font-bold shadow-lg shadow-brand/20 active:scale-[0.98] text-sm"><i class="fa-solid fa-download mr-2"></i>Встановити на екран</button></div>
+    <div id="pwaInstallBlock" class="hidden"><button id="installPwaBtn" class="w-full bg-gradient-to-r from-brand to-blue-600 text-white rounded-2xl py-4 font-bold shadow-lg shadow-brand/20 active:scale-[0.98] text-sm"><i class="fa-solid fa-download mr-2"></i>Встановити на екран</button></div>
 
-    <!-- Save -->
-    <button type="button" id="saveSettingsBtn" class="w-full bg-apple-darker dark:bg-white text-white dark:text-apple-darker rounded-xl py-4 font-bold shadow-xl text-base active:scale-[0.98] transition-transform"><i class="fa-solid fa-floppy-disk mr-2"></i>Зберегти</button>
-
-    <!-- Share App -->
-    <div class="premium-card p-4"><div class="flex items-center justify-between mb-3"><span class="text-sm font-bold text-slate-900 dark:text-white"><i class="fa-solid fa-user-plus text-brand mr-2"></i>Запросити друга</span></div><p class="text-[10px] text-slate-400 mb-3">Поділіться додатком з друзями та сусідами</p><button id="shareAppBtn" class="w-full py-3 bg-gradient-to-r from-brand to-blue-500 text-white font-bold rounded-xl text-xs active:scale-[0.98] shadow-lg shadow-brand/20"><i class="fa-solid fa-share-nodes mr-1.5"></i>Поділитись посиланням</button></div>
+    <!-- Share & Support -->
+    <div class="grid grid-cols-2 gap-3">
+        <button id="shareAppBtn" class="premium-card p-4 active:scale-[0.98] transition-transform text-center">
+            <div class="w-10 h-10 bg-brand-light rounded-xl flex items-center justify-center text-brand mx-auto mb-2"><i class="fa-solid fa-share-nodes"></i></div>
+            <p class="text-xs font-bold text-slate-900 dark:text-white">Поділитись</p>
+            <p class="text-[9px] text-slate-400">з друзями</p>
+        </button>
+        <a href="https://send.monobank.ua/jar/58RYPiLjdS" target="_blank" class="premium-card p-4 active:scale-[0.98] transition-transform text-center block">
+            <div class="w-10 h-10 bg-pink-50 dark:bg-pink-500/10 rounded-xl flex items-center justify-center text-pink-500 mx-auto mb-2"><i class="fa-solid fa-heart"></i></div>
+            <p class="text-xs font-bold text-slate-900 dark:text-white">Підтримати</p>
+            <p class="text-[9px] text-slate-400">каву ☕</p>
+        </a>
+    </div>
 
     <!-- FAQ -->
-    <div class="premium-card p-4"><p class="text-sm font-bold text-slate-900 dark:text-white mb-3"><i class="fa-solid fa-circle-question text-brand mr-2"></i>Часті питання</p><div class="space-y-2"><details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer select-none">Як додати показники?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Натисніть "Внести показники" на головній або перейдіть у вкладку "Рахунок". Введіть попередні та нові показники.</p></details><details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer select-none">Чи можна вносити частково?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Так! Внесіть тільки воду зараз, а світло пізніше — дані об'єднаються автоматично в один місяць.</p></details><details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer select-none">Як працює офлайн?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Додаток зберігає дані локально. Коли з'явиться інтернет — автоматично синхронізує з хмарою.</p></details><details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer select-none">Що таке Pro?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Pro дає необмежену кількість адрес (безкоштовно — до 2). Активується після підтримки розробника.</p></details><details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer select-none">Мої дані в безпеці?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Так. Пароль хешується SHA-256 на клієнті. Дані зберігаються в Cloudflare KV. Ніхто крім вас не має доступу.</p></details></div></div>
+    <details class="premium-card overflow-hidden">
+        <summary class="p-4 flex items-center justify-between cursor-pointer select-none"><span class="text-sm font-bold text-slate-900 dark:text-white"><i class="fa-solid fa-circle-question text-brand mr-2"></i>FAQ</span><i class="fa-solid fa-chevron-down text-slate-400 text-[10px]"></i></summary>
+        <div class="px-4 pb-4 space-y-2">
+            <details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer">Як додати показники?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Натисніть "Внести" на головній або перейдіть у "Рахунок".</p></details>
+            <details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer">Можна вносити частково?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Так! Дані об'єднуються автоматично в один місяць.</p></details>
+            <details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer">Як працює офлайн?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Дані зберігаються локально і синхронізуються при підключенні.</p></details>
+            <details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer">Безпека даних?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Пароль хешується SHA-256. Дані в Cloudflare KV. Тільки ви маєте доступ.</p></details>
+        </div>
+    </details>
 
-    <!-- Donate -->
-    <div class="premium-card p-4"><div class="flex items-center justify-between"><div class="flex items-center gap-2"><i class="fa-solid fa-heart text-pink-500"></i><span class="text-sm font-bold text-slate-900 dark:text-white">Підтримати</span></div><a href="https://send.monobank.ua/jar/58RYPiLjdS" target="_blank" class="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold rounded-lg text-[10px] active:scale-[0.98] shadow-sm"><i class="fa-solid fa-mug-hot mr-1"></i>Каву ☕</a></div><div id="proStatusBlock" class="hidden mt-2 bg-green-50 dark:bg-green-500/10 p-2 rounded-lg text-center"><span class="text-[10px] font-bold text-green-600">⭐ Pro активовано</span></div></div>
-
-    <!-- Credit + Logout -->
-    <div class="text-center pt-2"><p class="text-[9px] text-slate-400">Розробник: <span class="font-bold text-slate-500">Антон Миколенко</span> • v3.0</p></div>
-    <button type="button" id="logoutBtn" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-xl py-3 border border-red-100 dark:border-red-500/20 active:scale-[0.98] text-sm"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Вийти</button>
-</div>
-
-</div></div><!-- end swipeContainer + max-w-md -->
+    <!-- Footer -->
+    <div class="text-center pt-2 space-y-3">
+        <p class="text-[9px] text-slate-400">by <span class="font-bold text-slate-500">Антон Миколенко</span> • v3.0</p>
+        <button type="button" id="logoutBtn" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-2xl py-3.5 border border-red-100 dark:border-red-500/20 active:scale-[0.98] text-sm transition-transform"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Вийти з акаунту</button>
+    </div>
+</div></div><!-- end max-w-md + swipeContainer -->
 <!-- Bottom Nav -->
 <nav class="fixed bottom-0 left-0 right-0 w-full shrink-0 z-40 glass border-t border-slate-200 dark:border-white/10 pb-5" id="bottomNav"><div class="max-w-md mx-auto flex justify-around items-center px-4 pt-2.5 pb-1.5"><button id="btnTabDashboard" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-brand active:scale-[0.92] transition-transform"><i class="fa-solid fa-house text-[20px]"></i><span class="text-[9px] font-bold">Головна</span></button><button id="btnTabCalc" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-calculator text-[20px]"></i><span class="text-[9px] font-bold">Рахунок</span></button><button id="btnTabHistory" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform relative"><i class="fa-solid fa-clock-rotate-left text-[20px]"></i><span class="text-[9px] font-bold">Історія</span><span id="debtBadge" class="hidden absolute -top-1 right-1/4 w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-lg badge-pulse">0</span></button><button id="btnTabSettings" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-gear text-[20px]"></i><span class="text-[9px] font-bold">Ще</span></button></div></nav>
 </div><!-- end appScreen -->
