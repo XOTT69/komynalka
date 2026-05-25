@@ -1137,5 +1137,50 @@ $('mode-dark')?.addEventListener('click', () => setThemeMode('dark'));
 let resizeTimeout;
 window.addEventListener('resize', () => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(() => { if (dashChart && dashChart.canvas) { dashChart.setupCanvas(); if (dashChart.width) dashChart.render(); } if (historyChart && historyChart.canvas) { historyChart.setupCanvas(); if (historyChart.width) historyChart.render(); } if (serviceChart && serviceChart.canvas) { serviceChart.setupCanvas(); if (serviceChart.width) serviceChart.render(); } if (donutChart && donutChart.canvas) { donutChart.setupCanvas(); if (donutChart.width) donutChart.render(); } }, 250); });
 
+// =================== PERFORMANCE: LAZY RENDER ===================
+// Intersection Observer for lazy chart rendering
+const chartObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const id = entry.target.id;
+            if (id === 'dashChartCanvas' && dashChart) { dashChart.setupCanvas(); dashChart.render(); }
+            if (id === 'donutCanvas' && donutChart) { donutChart.setupCanvas(); donutChart.render(); }
+            if (id === 'historyChartCanvas' && historyChart) { historyChart.setupCanvas(); historyChart.render(); }
+            if (id === 'serviceChartCanvas' && serviceChart) { serviceChart.setupCanvas(); serviceChart.render(); }
+        }
+    });
+}, { threshold: 0.1 });
+
+// Observe canvases when they exist
+['dashChartCanvas', 'donutCanvas', 'historyChartCanvas', 'serviceChartCanvas'].forEach(id => {
+    const el = $(id);
+    if (el) chartObserver.observe(el);
+});
+
+// =================== PERFORMANCE: DEBOUNCED SEARCH ===================
+let searchDebounce;
+$('searchRecords')?.removeEventListener('input', () => renderRecords());
+$('searchRecords')?.addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(renderRecords, 200);
+});
+
+// =================== PERFORMANCE: PRELOAD CRITICAL DATA ===================
+if ('connection' in navigator) {
+    // Save-Data mode detection
+    if (navigator.connection.saveData) {
+        document.documentElement.style.setProperty('--premium-shadow', 'none');
+    }
+}
+
+// =================== VIRTUAL SCROLL FOR LARGE LISTS ===================
+function shouldUseVirtualScroll() { return records.length > 50; }
+
+// Preconnect to worker
+const preconnect = document.createElement('link');
+preconnect.rel = 'preconnect';
+preconnect.href = WORKER_URL;
+document.head.appendChild(preconnect);
+
 // EOF
 
