@@ -100,7 +100,33 @@ function renderAddressModal() { const list = $('addressListModal'); if (!list) r
 // =================== TABS ===================
 const tabIds = ['tabDashboard', 'tabCalc', 'tabHistory', 'tabSettings'];
 const btnIds = ['btnTabDashboard', 'btnTabCalc', 'btnTabHistory', 'btnTabSettings'];
-function switchTab(tabId, index) { const activeTab = document.querySelector('.tab-active'); const targetTab = $(tabId); if (!targetTab) return; if (activeTab && activeTab !== targetTab) { activeTab.classList.add('tab-exit'); setTimeout(() => { activeTab.classList.remove('tab-active', 'tab-exit'); activeTab.classList.add('tab-hidden'); }, 150); } setTimeout(() => { targetTab.classList.remove('tab-hidden'); targetTab.classList.add('tab-active'); }, activeTab && activeTab !== targetTab ? 80 : 0); btnIds.forEach((id, i) => { const btn = $(id); if(!btn) return; btn.classList.toggle('text-brand', i === index); btn.classList.toggle('text-slate-400', i !== index); btn.classList.toggle('dark:text-slate-500', i !== index); }); if (tabId === 'tabDashboard') renderDashboard(); if (tabId === 'tabCalc') { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); } if (tabId === 'tabHistory') renderRecords(); if (tabId === 'tabSettings') renderSettingsCustomServices(); $('swipeContainer')?.scrollTo({ top: 0, behavior: 'smooth' }); haptic('tabSwitch'); }
+
+ffunction switchTab(tabId, index) {
+    const activeTab = document.querySelector('.tab-active');
+    const targetTab = $(tabId);
+    if (!targetTab) return;
+    if (activeTab && activeTab !== targetTab) {
+        activeTab.classList.add('tab-exit');
+        setTimeout(() => { activeTab.classList.remove('tab-active', 'tab-exit'); activeTab.classList.add('tab-hidden'); }, 150);
+    }
+    setTimeout(() => {
+        targetTab.classList.remove('tab-hidden');
+        targetTab.classList.add('tab-active');
+        // Wait for browser to paint, then render
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (tabId === 'tabDashboard') renderDashboard();
+                if (tabId === 'tabCalc') { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); }
+                if (tabId === 'tabHistory') renderRecords();
+                if (tabId === 'tabSettings') renderSettingsCustomServices();
+            });
+        });
+    }, activeTab && activeTab !== targetTab ? 80 : 0);
+    btnIds.forEach((id, i) => { const btn = $(id); if(!btn) return; btn.classList.toggle('text-brand', i === index); btn.classList.toggle('text-slate-400', i !== index); btn.classList.toggle('dark:text-slate-500', i !== index); });
+    $('swipeContainer')?.scrollTo({ top: 0, behavior: 'smooth' });
+    haptic('tabSwitch');
+}
+
 $('btnTabDashboard')?.addEventListener('click', () => switchTab('tabDashboard', 0));
 $('btnTabCalc')?.addEventListener('click', () => switchTab('tabCalc', 1));
 $('btnTabHistory')?.addEventListener('click', () => switchTab('tabHistory', 2));
@@ -760,6 +786,9 @@ function renderRecords() {
 function renderHistoryChart(sortedRecords) {
     if (!$('historyChartCanvas')) return;
     if (!historyChart) historyChart = new ChartEngine('historyChartCanvas', { padding: 30, barRadius: 5 });
+    // Force re-setup if dimensions are zero
+    if (!historyChart.width) historyChart.setupCanvas();
+    if (!historyChart.width) return; // still hidden, bail
     const recent = sortedRecords.slice(-10);
     const data = recent.map(r => ({ value: r.total, label: new Date(r.month + '-01').toLocaleString('uk-UA', { month: 'short' }).slice(0, 3), color: r.paid ? '#007aff' : '#ff9500' }));
     historyChart.setData(data);
@@ -771,6 +800,9 @@ function renderServiceChart() {
     const unit = (type === 'electro') ? 'кВт' : 'м³';
     if (!serviceChart) serviceChart = new ChartEngine('serviceChartCanvas', { padding: 24, barRadius: 4, unit });
     else serviceChart.options.unit = unit;
+    // Force re-setup if dimensions are zero
+    if (!serviceChart.width) serviceChart.setupCanvas();
+    if (!serviceChart.width) return; // still hidden, bail
     const sorted = [...records].sort((a, b) => new Date(a.month) - new Date(b.month)).slice(-8);
     const getValue = (rec) => { switch(type) { case 'water': return Math.max(0,(rec.wCur||0)-(rec.wPrev||0)); case 'hotWater': return Math.max(0,(rec.hwCur||0)-(rec.hwPrev||0)); case 'electro': return Math.max(0,(rec.dCur||0)-(rec.dPrev||0))+Math.max(0,(rec.nCur||0)-(rec.nPrev||0)); case 'gas': return Math.max(0,(rec.gCur||0)-(rec.gPrev||0)); default: return 0; } };
     const getColor = () => { switch(type) { case 'water': return '#3b82f6'; case 'hotWater': return '#ef4444'; case 'electro': return '#eab308'; case 'gas': return '#f97316'; default: return '#6b7280'; } };
