@@ -786,9 +786,12 @@ function renderRecords() {
 function renderHistoryChart(sortedRecords) {
     if (!$('historyChartCanvas')) return;
     if (!historyChart) historyChart = new ChartEngine('historyChartCanvas', { padding: 30, barRadius: 5 });
-    // Force re-setup if dimensions are zero
     if (!historyChart.width) historyChart.setupCanvas();
-    if (!historyChart.width) return; // still hidden, bail
+    if (!historyChart.width) {
+        // Canvas still not visible — retry
+        setTimeout(() => renderHistoryChart(sortedRecords), 200);
+        return;
+    }
     const recent = sortedRecords.slice(-10);
     const data = recent.map(r => ({ value: r.total, label: new Date(r.month + '-01').toLocaleString('uk-UA', { month: 'short' }).slice(0, 3), color: r.paid ? '#007aff' : '#ff9500' }));
     historyChart.setData(data);
@@ -800,9 +803,12 @@ function renderServiceChart() {
     const unit = (type === 'electro') ? 'кВт' : 'м³';
     if (!serviceChart) serviceChart = new ChartEngine('serviceChartCanvas', { padding: 24, barRadius: 4, unit });
     else serviceChart.options.unit = unit;
-    // Force re-setup if dimensions are zero
     if (!serviceChart.width) serviceChart.setupCanvas();
-    if (!serviceChart.width) return; // still hidden, bail
+    if (!serviceChart.width) {
+        // Canvas still not visible — retry
+        setTimeout(() => renderServiceChart(), 200);
+        return;
+    }
     const sorted = [...records].sort((a, b) => new Date(a.month) - new Date(b.month)).slice(-8);
     const getValue = (rec) => { switch(type) { case 'water': return Math.max(0,(rec.wCur||0)-(rec.wPrev||0)); case 'hotWater': return Math.max(0,(rec.hwCur||0)-(rec.hwPrev||0)); case 'electro': return Math.max(0,(rec.dCur||0)-(rec.dPrev||0))+Math.max(0,(rec.nCur||0)-(rec.nPrev||0)); case 'gas': return Math.max(0,(rec.gCur||0)-(rec.gPrev||0)); default: return 0; } };
     const getColor = () => { switch(type) { case 'water': return '#3b82f6'; case 'hotWater': return '#ef4444'; case 'electro': return '#eab308'; case 'gas': return '#f97316'; default: return '#6b7280'; } };
