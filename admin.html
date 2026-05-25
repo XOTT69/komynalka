@@ -20,7 +20,7 @@
             <div class="text-center mb-6">
                 <div class="w-16 h-16 bg-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl">🔒</div>
                 <h1 class="text-xl font-black">Адмін-панель</h1>
-                <p class="text-sm text-slate-500">Комуналка PWA v2.3</p>
+                <p class="text-sm text-slate-500">Комуналка PWA v3.0</p>
             </div>
             <input type="password" id="adminPass" placeholder="Пароль адміністратора" class="w-full p-4 border rounded-xl mb-4 outline-none focus:ring-2 focus:ring-red-500 font-medium">
             <button onclick="adminLogin()" class="w-full bg-red-500 text-white font-bold py-4 rounded-xl hover:bg-red-600 active:scale-95 transition-transform">Увійти</button>
@@ -68,8 +68,8 @@
                     <p class="text-3xl font-black text-orange-600" id="statRetention">0%</p>
                 </div>
                 <div class="stat-card bg-white p-6 rounded-2xl border shadow-sm">
-                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 bg-yellow-50 rounded-xl flex items-center justify-center text-yellow-500 text-xl">🏘️</div><span class="text-sm font-bold text-slate-500">Адрес</span></div>
-                    <p class="text-3xl font-black text-slate-900" id="statAddresses">0</p>
+                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 bg-yellow-50 rounded-xl flex items-center justify-center text-yellow-500 text-xl">⭐</div><span class="text-sm font-bold text-slate-500">Pro</span></div>
+                    <p class="text-3xl font-black text-yellow-600" id="statPro">0</p>
                 </div>
             </div>
 
@@ -92,6 +92,7 @@
                         <thead class="bg-slate-50 border-b">
                             <tr>
                                 <th class="text-left p-4 font-bold text-slate-500">Логін</th>
+                                <th class="text-center p-4 font-bold text-slate-500">Тип</th>
                                 <th class="text-center p-4 font-bold text-slate-500">Адреси</th>
                                 <th class="text-center p-4 font-bold text-slate-500">Записів</th>
                                 <th class="text-center p-4 font-bold text-slate-500">Останній</th>
@@ -161,7 +162,7 @@
                 $('statUsers').textContent = stats.totalUsers;
                 $('statActive').textContent = stats.activeThisMonth;
                 $('statRecords').textContent = stats.totalRecords;
-                $('statAddresses').textContent = stats.totalAddresses || '—';
+                $('statPro').textContent = stats.proUsers || 0;
                 $('statRetention').textContent = stats.totalUsers > 0 ? Math.round((stats.activeThisMonth / stats.totalUsers) * 100) + '%' : '0%';
                 $('usersCount').textContent = `${users.length} юзерів`;
                 $('lastUpdate').textContent = `Оновлено: ${new Date().toLocaleTimeString('uk-UA')}`;
@@ -170,13 +171,17 @@
         }
 
         function renderUsers(users) {
-            $('usersTableBody').innerHTML = users.map(u => `
+            $('usersTableBody').innerHTML = users.map(u => {
+                const authType = u.hasGoogle ? '<span class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold">Google</span>' : '<span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[10px] font-bold">Login</span>';
+                const proStatus = u.isPro ? '<span class="text-yellow-500 font-bold">⭐ Pro</span>' : '<button class="give-pro px-2 py-0.5 bg-yellow-50 text-yellow-600 rounded text-[10px] font-bold hover:bg-yellow-100 border border-yellow-200" data-login="'+escHtml(u.login)+'">Дати Pro</button>';
+                return `
                 <tr class="border-b hover:bg-slate-50 transition-colors">
                     <td class="p-4"><span class="font-bold text-slate-900">${escHtml(u.login)}</span></td>
+                    <td class="p-4 text-center">${authType}</td>
                     <td class="p-4 text-center"><span class="bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-bold text-xs">${u.addresses || 1}</span></td>
                     <td class="p-4 text-center font-bold">${u.records || 0}</td>
                     <td class="p-4 text-center text-slate-500">${u.lastMonth || '—'}</td>
-                    <td class="p-4 text-center">${u.isPro ? '<span class="text-yellow-500 font-bold">⭐</span>' : '<span class="text-slate-300">—</span>'}</td>
+                    <td class="p-4 text-center">${proStatus}</td>
                     <td class="p-4 text-center">${u.activeThisMonth ? '<span class="text-green-500 font-bold">●</span>' : '<span class="text-slate-300">○</span>'}</td>
                     <td class="p-4 text-center">
                         <div class="flex gap-1 justify-center">
@@ -185,14 +190,27 @@
                             <button onclick="deleteUser('${escHtml(u.login)}')" class="px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100" title="Видалити">🗑</button>
                         </div>
                     </td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
+            
+            // Give Pro buttons
+            document.querySelectorAll('.give-pro').forEach(btn => {
+                btn.addEventListener('click', () => givePro(btn.dataset.login));
+            });
         }
 
         function filterUsers(query) {
             const q = query.toLowerCase();
             const filtered = allUsers.filter(u => u.login.toLowerCase().includes(q));
             renderUsers(filtered);
+        }
+
+        async function givePro(login) {
+            if (!confirm(`Видати Pro для ${login}?`)) return;
+            const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_give_pro', adminToken, login }) });
+            const data = await res.json();
+            if (data.success) { alert(`Pro видано для ${login}!`); loadStats(); }
+            else alert('Помилка: ' + (data.error || 'unknown'));
         }
 
         async function viewUser(login) {
@@ -205,7 +223,12 @@
                 if (!data.success) { $('modalUserContent').innerHTML = '<p class="text-red-500">Помилка</p>'; return; }
                 const ud = data.data;
                 let html = `<div class="space-y-4">`;
-                html += `<div class="bg-slate-50 p-4 rounded-xl"><p class="text-xs font-bold text-slate-400 mb-1">Загальна інфо</p><p>Адрес: ${ud.addresses?.length || 0} | Створено: ${ud.createdAt || '?'} | Оновлено: ${ud.updatedAt || '?'}</p></div>`;
+                html += `<div class="grid grid-cols-2 gap-3">`;
+                html += `<div class="bg-slate-50 p-3 rounded-xl"><p class="text-[10px] font-bold text-slate-400 uppercase">Тип авторизації</p><p class="font-bold">${ud.hasGoogle ? '🔵 Google' : '🔐 Логін/пароль'}</p></div>`;
+                html += `<div class="bg-slate-50 p-3 rounded-xl"><p class="text-[10px] font-bold text-slate-400 uppercase">Pro статус</p><p class="font-bold">${ud.isPro ? '⭐ Pro' : '— Безкоштовний'}</p></div>`;
+                html += `<div class="bg-slate-50 p-3 rounded-xl"><p class="text-[10px] font-bold text-slate-400 uppercase">Адрес</p><p class="font-bold">${ud.addresses?.length || 0}</p></div>`;
+                html += `<div class="bg-slate-50 p-3 rounded-xl"><p class="text-[10px] font-bold text-slate-400 uppercase">Google UID</p><p class="font-bold text-xs truncate">${ud.googleUid || '—'}</p></div>`;
+                html += `</div>`;
                 if (ud.addresses) {
                     ud.addresses.forEach(addr => {
                         html += `<div class="bg-slate-50 p-4 rounded-xl"><p class="font-bold mb-2">🏠 ${addr.name}</p>`;
