@@ -1,10 +1,10 @@
 // ============================================================
-// КОМУНАЛКА PWA v2.3 — Premium + Partial Save + Photo + Report
+// КОМУНАЛКА PWA v3.0 — Premium Redesign (Fixed)
 // ============================================================
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '3.0.0';
 const firebaseConfig = { apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80", authDomain: "pwakomun.firebaseapp.com", projectId: "pwakomun", storageBucket: "pwakomun.firebasestorage.app", messagingSenderId: "4437974770", appId: "1:4437974770:web:bf7d2f7bac35eff5707a6b" };
 firebase.initializeApp(firebaseConfig);
 
@@ -18,6 +18,7 @@ let addresses = [], currentAddressId = 'default', isGuest = false, tariffs = {},
 let currentCalc = { waterCost: 0, hotWaterCost: 0, electroCost: 0, gasCost: 0, customCost: 0, total: 0 };
 const urlParams = new URLSearchParams(window.location.search), urlShareToken = urlParams.get('share');
 
+// =================== ACHIEVEMENTS ===================
 const ACHIEVEMENTS = [
     { id: 'first_record', emoji: '🎉', title: 'Перший запис', desc: 'Зберегли перший розрахунок', check: (r) => r.length >= 1 },
     { id: 'streak_3', emoji: '🔥', title: '3 місяці поспіль', desc: '3 місяці без перерви', check: (r) => getStreak(r) >= 3 },
@@ -27,27 +28,33 @@ const ACHIEVEMENTS = [
     { id: 'records_10', emoji: '📊', title: 'Аналітик', desc: '10+ записів', check: (r) => r.length >= 10 },
     { id: 'saver', emoji: '💰', title: 'Економ', desc: 'Знизили витрати 3 міс', check: (r) => checkSaverAchievement(r) },
     { id: 'multi_address', emoji: '🏘️', title: 'Мультивласник', desc: '2+ адреси', check: () => addresses.length >= 2 },
+    { id: 'budget_master', emoji: '🎯', title: 'Бюджетник', desc: 'Не перевищили бюджет 3 міс', check: (r) => checkBudgetAchievement(r) },
+    { id: 'night_owl', emoji: '🦉', title: 'Нічна сова', desc: '70%+ нічне споживання', check: (r) => checkNightOwl(r) },
 ];
-const ACHIEVEMENT_HINTS = { 'first_record': 'Збережіть перший розрахунок', 'streak_3': 'Вносіть показники 3 місяці без пропуску', 'streak_6': '6 місяців без пропуску', 'streak_12': 'Рік без пропуску', 'all_paid': 'Позначте всі записи як оплачені', 'records_10': 'Накопичте 10+ записів', 'saver': 'Знижуйте суму 3 місяці поспіль', 'multi_address': 'Додайте другу адресу' };
+const ACHIEVEMENT_HINTS = { 'first_record': 'Збережіть перший розрахунок', 'streak_3': 'Вносіть показники 3 місяці без пропуску', 'streak_6': '6 місяців без пропуску', 'streak_12': 'Рік без пропуску', 'all_paid': 'Позначте всі записи як оплачені', 'records_10': 'Накопичте 10+ записів', 'saver': 'Знижуйте суму 3 місяці поспіль', 'multi_address': 'Додайте другу адресу', 'budget_master': 'Не перевищуйте бюджет 3 міс поспіль', 'night_owl': 'Споживайте 70%+ електрики вночі' };
 
 function getStreak(recs) { if (!recs.length) return 0; const sorted = [...recs].sort((a, b) => new Date(b.month) - new Date(a.month)); let streak = 1; for (let i = 0; i < sorted.length - 1; i++) { const [y1, m1] = sorted[i].month.split('-').map(Number); const [y2, m2] = sorted[i + 1].month.split('-').map(Number); if ((y1 * 12 + m1) - (y2 * 12 + m2) === 1) streak++; else break; } return streak; }
 function checkSaverAchievement(recs) { if (recs.length < 4) return false; const sorted = [...recs].sort((a, b) => new Date(b.month) - new Date(a.month)); return sorted[0].total < sorted[1].total && sorted[1].total < sorted[2].total; }
+function checkBudgetAchievement(recs) { const budget = parseFloat(localStorage.getItem('k_budget')) || 0; if (!budget || recs.length < 3) return false; const sorted = [...recs].sort((a, b) => new Date(b.month) - new Date(a.month)).slice(0, 3); return sorted.every(r => r.total <= budget); }
+function checkNightOwl(recs) { if (recs.length === 0) return false; const last = [...recs].sort((a, b) => new Date(b.month) - new Date(a.month))[0]; const nightUsage = Math.max(0, (last.nCur || 0) - (last.nPrev || 0)); const dayUsage = Math.max(0, (last.dCur || 0) - (last.dPrev || 0)); const total = nightUsage + dayUsage; return total > 0 && (nightUsage / total) >= 0.7; }
 function getUnlockedAchievements() { return ACHIEVEMENTS.filter(a => a.check(records)); }
 function checkNewAchievements() { const unlocked = JSON.parse(localStorage.getItem('achievements_unlocked') || '[]'); const current = getUnlockedAchievements(); const newOnes = current.filter(a => !unlocked.includes(a.id)); if (newOnes.length > 0) { localStorage.setItem('achievements_unlocked', JSON.stringify(current.map(a => a.id))); showAchievementUnlock(newOnes[0]); } }
-function showAchievementUnlock(ach) { const t = $('achievementToast'); $('achievementEmoji').textContent = ach.emoji; $('achievementTitle').textContent = ach.title; $('achievementDesc').textContent = ach.desc; t.classList.remove('hidden'); setTimeout(() => { t.style.transform = 'translate(-50%,-50%) scale(1)'; t.style.opacity = '1'; }, 10); haptic('success'); setTimeout(() => { t.style.transform = 'translate(-50%,-50%) scale(0)'; t.style.opacity = '0'; setTimeout(() => t.classList.add('hidden'), 400); }, 3000); }
+function showAchievementUnlock(ach) { const t = $('achievementToast'); if (!t) return; $('achievementEmoji').textContent = ach.emoji; $('achievementTitle').textContent = ach.title; $('achievementDesc').textContent = ach.desc; t.classList.remove('hidden'); setTimeout(() => { t.style.transform = 'translate(-50%,-50%) scale(1)'; t.style.opacity = '1'; }, 10); haptic('success'); setTimeout(() => { t.style.transform = 'translate(-50%,-50%) scale(0)'; t.style.opacity = '0'; setTimeout(() => t.classList.add('hidden'), 400); }, 3000); }
 function renderAchievements() { const container = $('achievementsList'); if (!container) return; const unlocked = getUnlockedAchievements().map(a => a.id); container.innerHTML = ACHIEVEMENTS.map(a => `<div class="achievement ${unlocked.includes(a.id) ? '' : 'locked'} flex flex-col items-center gap-1 w-14 text-center cursor-pointer" data-ach-id="${a.id}"><span class="text-2xl">${a.emoji}</span><span class="text-[8px] font-bold text-slate-500 leading-tight">${a.title}</span></div>`).join(''); container.querySelectorAll('[data-ach-id]').forEach(el => { el.addEventListener('click', () => showAchievementDetail(el.dataset.achId)); }); }
 function showAchievementDetail(achId) { const ach = ACHIEVEMENTS.find(a => a.id === achId); if (!ach) return; const isUnlocked = ach.check(records); $('achDetailEmoji').textContent = ach.emoji; $('achDetailTitle').textContent = ach.title; $('achDetailDesc').textContent = ach.desc; $('achDetailHow').textContent = ACHIEVEMENT_HINTS[achId] || '—'; const s = $('achDetailStatus'); if (isUnlocked) { s.textContent = '✓ Отримано'; s.className = 'text-xs font-bold px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-500/10 text-green-600'; } else { s.textContent = '🔒 Заблоковано'; s.className = 'text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-400'; } $('achievementDetailModal').classList.remove('hidden'); haptic('light'); }
 
+// =================== ONBOARDING ===================
 let onboardingStep = 0;
-function showOnboarding() { if (localStorage.getItem('onboarding_v2_done')) return; $('onboardingOverlay').classList.remove('hidden'); }
-function updateOnboardingSlide() { const slides = document.querySelectorAll('.onboarding-slide'); slides.forEach((s, i) => { s.style.transform = i === onboardingStep ? 'translateX(0)' : i < onboardingStep ? 'translateX(-100%)' : 'translateX(100%)'; s.style.opacity = i === onboardingStep ? '1' : '0'; }); const dots = $('onboardingDots').children; for (let i = 0; i < dots.length; i++) dots[i].className = i === onboardingStep ? 'w-8 h-2 rounded-full bg-brand transition-all' : 'w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 transition-all'; $('onboardingBtn').textContent = onboardingStep === 2 ? 'Почати! 🚀' : 'Далі'; }
-function finishOnboarding() { localStorage.setItem('onboarding_v2_done', '1'); $('onboardingOverlay').classList.add('hidden'); }
+function showOnboarding() { if (localStorage.getItem('onboarding_v3_done')) return; $('onboardingOverlay')?.classList.remove('hidden'); }
+function updateOnboardingSlide() { const slides = document.querySelectorAll('.onboarding-slide'); slides.forEach((s, i) => { s.style.transform = i === onboardingStep ? 'translateX(0)' : i < onboardingStep ? 'translateX(-100%)' : 'translateX(100%)'; s.style.opacity = i === onboardingStep ? '1' : '0'; }); const dots = $('onboardingDots')?.children; if (dots) for (let i = 0; i < dots.length; i++) dots[i].className = i === onboardingStep ? 'w-8 h-2 rounded-full bg-brand transition-all' : 'w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 transition-all'; if ($('onboardingBtn')) $('onboardingBtn').textContent = onboardingStep === 2 ? 'Почати! 🚀' : 'Далі'; }
+function finishOnboarding() { localStorage.setItem('onboarding_v3_done', '1'); $('onboardingOverlay')?.classList.add('hidden'); }
 $('onboardingBtn')?.addEventListener('click', () => { if (onboardingStep < 2) { onboardingStep++; updateOnboardingSlide(); } else finishOnboarding(); });
 $('onboardingSkip')?.addEventListener('click', finishOnboarding);
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(e => console.error('SW:', e)); }); }
 
+// =================== UTILS ===================
 let toastTimeout;
-function showToast(msg, icon = '✅') { const t = $('toast'); $('toastMsg').innerText = msg; $('toastIcon').innerText = icon; t.classList.remove('-translate-y-24', 'opacity-0'); haptic(icon === '✅' ? 'success' : icon === '❌' || icon === '⚠️' ? 'error' : 'notification'); clearTimeout(toastTimeout); toastTimeout = setTimeout(() => t.classList.add('-translate-y-24', 'opacity-0'), 2500); }
+function showToast(msg, icon = '✅') { const t = $('toast'); if (!t) return; $('toastMsg').innerText = msg; $('toastIcon').innerText = icon; t.classList.remove('-translate-y-24', 'opacity-0'); haptic(icon === '✅' ? 'success' : icon === '❌' || icon === '⚠️' ? 'error' : 'notification'); clearTimeout(toastTimeout); toastTimeout = setTimeout(() => t.classList.add('-translate-y-24', 'opacity-0'), 2500); }
 function vibe(pattern = 10) { if (navigator.vibrate) navigator.vibrate(Array.isArray(pattern) ? pattern : [pattern]); }
 const hapticPatterns = { light: [5], medium: [10], heavy: [20], success: [10, 50, 10], error: [50, 30, 50], notification: [15, 100, 15], tabSwitch: [3] };
 function haptic(type) { vibe(hapticPatterns[type] || hapticPatterns.light); }
@@ -60,38 +67,40 @@ async function syncToCloud() { syncCurrentAddress(); saveToLocal(); if (isGuest 
 window.addEventListener('online', () => { showToast('Онлайн', '🌐'); syncToCloud(); });
 window.addEventListener('offline', () => { setSyncState('offline'); showToast('Офлайн', '📴'); });
 
+// =================== THEME ===================
 let currentMode = localStorage.getItem('themeMode') || 'auto';
 function setThemeMode(mode) { currentMode = mode; localStorage.setItem('themeMode', mode); applyThemeMode(); ['light', 'auto', 'dark'].forEach(m => { const b = $('mode-' + m); if (!b) return; b.classList.remove('bg-white', 'dark:bg-[#2c2c2e]', 'text-slate-900', 'dark:text-white', 'shadow-sm'); if (m === mode) b.classList.add('bg-white', 'dark:bg-[#2c2c2e]', 'text-slate-900', 'dark:text-white', 'shadow-sm'); }); }
-function applyThemeMode() { const isDark = currentMode === 'dark' || (currentMode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.classList.toggle('dark', isDark); $('metaThemeColor').setAttribute("content", isDark ? "#000000" : "#f2f2f7"); }
+function applyThemeMode() { const isDark = currentMode === 'dark' || (currentMode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.classList.toggle('dark', isDark); $('metaThemeColor')?.setAttribute("content", isDark ? "#000000" : "#f2f2f7"); }
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (currentMode === 'auto') applyThemeMode(); });
 setThemeMode(currentMode);
+// =================== AUTH ===================
+$('authForm')?.addEventListener('submit', async (e) => { e.preventDefault(); await performLogin($('authLogin').value.trim(), $('authPass').value, false); });
+$('togglePassBtn')?.addEventListener('click', () => { const p = $('authPass'); p.type = p.type === 'password' ? 'text' : 'password'; $('passEyeIcon').className = p.type === 'password' ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash'; });
+$('googleAuthBtn')?.addEventListener('click', async () => { const provider = new firebase.auth.GoogleAuthProvider(); try { const result = await firebase.auth().signInWithPopup(provider); googleUser = result.user; await performLogin(null, null, false, googleUser.uid); } catch (e) { if (e.code !== 'auth/popup-closed-by-user') showToast("Помилка Google", "❌"); } });
 
-$('authForm').addEventListener('submit', async (e) => { e.preventDefault(); await performLogin($('authLogin').value.trim(), $('authPass').value, false); });
-$('togglePassBtn').addEventListener('click', () => { const p = $('authPass'); p.type = p.type === 'password' ? 'text' : 'password'; $('passEyeIcon').className = p.type === 'password' ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash'; });
-$('googleAuthBtn').addEventListener('click', async () => { const provider = new firebase.auth.GoogleAuthProvider(); try { const result = await firebase.auth().signInWithPopup(provider); googleUser = result.user; await performLogin(null, null, false, googleUser.uid); } catch (e) { if (e.code !== 'auth/popup-closed-by-user') showToast("Помилка Google", "❌"); } });
+async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) { const errEl = $('authError'); const spinner = $('authSpinner'); const btnText = $('authBtnText'); errEl?.classList.add('hidden'); if (btnText) btnText.textContent = "Завантаження..."; spinner?.classList.remove('hidden'); try { let url = `${WORKER_URL}?t=${Date.now()}`; let passHash = null; if (uid) { url += `&uid=${uid}`; } else { passHash = isAlreadyHashed ? rawPass : await getHash(rawPass); url += `&phone=${encodeURIComponent(rawLogin)}&pass=${passHash}`; } const res = await fetch(url, { cache: "no-store" }); const data = await res.json(); if (res.status === 404 && uid) { $('linkModal')?.classList.remove('hidden'); if (btnText) btnText.textContent = "Увійти"; spinner?.classList.add('hidden'); return; } if (res.status === 403 || data.error === "WRONG_PASSWORD") throw new Error("WRONG_PASSWORD"); if (res.status === 404 || (!uid && !data.success)) { sessionLogin = rawLogin; sessionPass = passHash; addresses = [{ id: 'default', name: 'Мій дім', tariffs: { ...defaultTariffs }, prefs: { ...defaultPrefs }, records: [], customServices: [...defaultCustomServices] }]; currentAddressId = 'default'; await syncToCloud(); } else if (res.status === 200 && data.success) { if (data.data.addresses) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId || addresses[0].id; } else { addresses = [{ id: 'default', name: 'Мій дім', tariffs: data.data.tariffs || { ...defaultTariffs }, prefs: { ...defaultPrefs, ...(data.data.prefs || {}) }, records: data.data.records || [], customServices: data.data.customServices || [...defaultCustomServices] }]; currentAddressId = 'default'; } if (uid) { sessionLogin = data.linkedLogin || `uid_${uid}`; localStorage.setItem('k_uid', uid); } else { sessionLogin = rawLogin; sessionPass = passHash; } } if (!uid) { localStorage.setItem('k_login', sessionLogin); localStorage.setItem('k_passHash', sessionPass); } loadCurrentAddress(); if (records.length === 0) showOnboarding(); } catch (err) { if (btnText) btnText.textContent = "Увійти"; spinner?.classList.add('hidden'); if (errEl) { errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль!" : "Помилка: " + err.message; errEl.classList.remove('hidden'); } } }
 
-async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) { const errEl = $('authError'); const spinner = $('authSpinner'); const btnText = $('authBtnText'); errEl.classList.add('hidden'); btnText.textContent = "Завантаження..."; spinner.classList.remove('hidden'); try { let url = `${WORKER_URL}?t=${Date.now()}`; let passHash = null; if (uid) { url += `&uid=${uid}`; } else { passHash = isAlreadyHashed ? rawPass : await getHash(rawPass); url += `&phone=${encodeURIComponent(rawLogin)}&pass=${passHash}`; } const res = await fetch(url, { cache: "no-store" }); const data = await res.json(); if (res.status === 404 && uid) { $('linkModal').classList.remove('hidden'); btnText.textContent = "Увійти"; spinner.classList.add('hidden'); return; } if (res.status === 403 || data.error === "WRONG_PASSWORD") throw new Error("WRONG_PASSWORD"); if (res.status === 404 || (!uid && !data.success)) { sessionLogin = rawLogin; sessionPass = passHash; addresses = [{ id: 'default', name: 'Мій дім', tariffs: { ...defaultTariffs }, prefs: { ...defaultPrefs }, records: [], customServices: [...defaultCustomServices] }]; currentAddressId = 'default'; await syncToCloud(); } else if (res.status === 200 && data.success) { if (data.data.addresses) { addresses = data.data.addresses; currentAddressId = data.data.currentAddressId || addresses[0].id; } else { addresses = [{ id: 'default', name: 'Мій дім', tariffs: data.data.tariffs || { ...defaultTariffs }, prefs: { ...defaultPrefs, ...(data.data.prefs || {}) }, records: data.data.records || [], customServices: data.data.customServices || [...defaultCustomServices] }]; currentAddressId = 'default'; } if (uid) { sessionLogin = data.linkedLogin || `uid_${uid}`; localStorage.setItem('k_uid', uid); } else { sessionLogin = rawLogin; sessionPass = passHash; } } if (!uid) { localStorage.setItem('k_login', sessionLogin); localStorage.setItem('k_passHash', sessionPass); } loadCurrentAddress(); if (records.length === 0) showOnboarding(); } catch (err) { btnText.textContent = "Увійти"; spinner.classList.add('hidden'); errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль!" : "Помилка: " + err.message; errEl.classList.remove('hidden'); } }
-
-$('linkYesBtn').addEventListener('click', () => { const lgn = prompt("Логін:"); const pss = prompt("Пароль:"); if (lgn && pss) linkAccount(lgn, pss); });
-$('linkNoBtn').addEventListener('click', async () => { $('linkModal').classList.add('hidden'); sessionLogin = `uid_${googleUser.uid}`; localStorage.setItem('k_uid', googleUser.uid); localStorage.setItem('k_login', sessionLogin); addresses = [{ id: 'default', name: 'Мій дім', tariffs: { ...defaultTariffs }, prefs: { ...defaultPrefs }, records: [], customServices: [...defaultCustomServices] }]; currentAddressId = 'default'; await syncToCloud(); loadCurrentAddress(); showToast("Акаунт створено!"); });
-async function linkAccount(lgn, pss) { const passHash = await getHash(pss); const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: "link_google", login: lgn, pass: passHash, uid: googleUser.uid }) }); const data = await res.json(); if (data.success) { $('linkModal').classList.add('hidden'); showToast("Підв'язано!"); performLogin(null, null, false, googleUser.uid); } else alert("Помилка."); }
+$('linkYesBtn')?.addEventListener('click', () => { const lgn = prompt("Логін:"); const pss = prompt("Пароль:"); if (lgn && pss) linkAccount(lgn, pss); });
+$('linkNoBtn')?.addEventListener('click', async () => { $('linkModal')?.classList.add('hidden'); sessionLogin = `uid_${googleUser.uid}`; localStorage.setItem('k_uid', googleUser.uid); localStorage.setItem('k_login', sessionLogin); addresses = [{ id: 'default', name: 'Мій дім', tariffs: { ...defaultTariffs }, prefs: { ...defaultPrefs }, records: [], customServices: [...defaultCustomServices] }]; currentAddressId = 'default'; await syncToCloud(); loadCurrentAddress(); showToast("Акаунт створено!"); });
+async function linkAccount(lgn, pss) { const passHash = await getHash(pss); const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: "link_google", login: lgn, pass: passHash, uid: googleUser.uid }) }); const data = await res.json(); if (data.success) { $('linkModal')?.classList.add('hidden'); showToast("Підв'язано!"); performLogin(null, null, false, googleUser.uid); } else alert("Помилка."); }
 $('btnLinkGoogle')?.addEventListener('click', async () => { if (!sessionLogin) return alert("Спочатку увійдіть."); const provider = new firebase.auth.GoogleAuthProvider(); try { const result = await firebase.auth().signInWithPopup(provider); const uid = result.user.uid; const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: "link_google", login: sessionLogin, uid }) }); if ((await res.json()).success) { showToast("Google підв'язано!"); localStorage.setItem('k_uid', uid); updateGoogleButton(); } } catch (e) { showToast("Скасовано", "⚠️"); } });
 function updateGoogleButton() { if (localStorage.getItem('k_uid') && $('btnLinkGoogle')) { $('btnLinkGoogle').innerHTML = '<i class="fa-solid fa-check mr-1"></i>OK'; $('btnLinkGoogle').className = 'px-3 py-1.5 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-600 font-bold rounded-lg text-[10px] pointer-events-none'; } }
+
 // =================== ADDRESS ===================
-function loadCurrentAddress() { if (!addresses || addresses.length === 0) { const backup = loadFromLocal(); if (backup) { addresses = backup.addresses || []; currentAddressId = backup.currentAddressId || 'default'; } } const addr = addresses.find(a => a.id === currentAddressId) || addresses[0]; currentAddressId = addr.id; tariffs = { ...defaultTariffs, ...(addr.tariffs || {}) }; prefs = { ...defaultPrefs, ...(addr.prefs || {}) }; records = addr.records || []; customServices = addr.customServices || [...defaultCustomServices]; $('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : ''); initAppUI(); checkProStatus(); }
+function loadCurrentAddress() { if (!addresses || addresses.length === 0) { const backup = loadFromLocal(); if (backup) { addresses = backup.addresses || []; currentAddressId = backup.currentAddressId || 'default'; } } if (!addresses.length) return; const addr = addresses.find(a => a.id === currentAddressId) || addresses[0]; currentAddressId = addr.id; tariffs = { ...defaultTariffs, ...(addr.tariffs || {}) }; prefs = { ...defaultPrefs, ...(addr.prefs || {}) }; records = addr.records || []; customServices = addr.customServices || [...defaultCustomServices]; if ($('currentAddressDisplay')) $('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : ''); initAppUI(); checkProStatus(); }
 function syncCurrentAddress() { const idx = addresses.findIndex(a => a.id === currentAddressId); if (idx >= 0) { addresses[idx].tariffs = tariffs; addresses[idx].prefs = prefs; addresses[idx].records = records; addresses[idx].customServices = customServices; } }
-function openAddressModal() { $('addressModal').classList.remove('hidden'); setTimeout(() => $('addressModalContent').classList.remove('translate-y-full'), 10); renderAddressModal(); }
-function closeAddressModal() { $('addressModalContent').classList.add('translate-y-full'); setTimeout(() => $('addressModal').classList.add('hidden'), 400); }
-$('addressHeaderTrigger').addEventListener('click', openAddressModal);
-$('closeAddressModalBtn').addEventListener('click', closeAddressModal);
-$('addressModal').addEventListener('click', (e) => { if (e.target === $('addressModal')) closeAddressModal(); });
-$('addAddressBtn').addEventListener('click', () => { if (addresses.length >= 3 && !isPro()) { closeAddressModal(); showProModal(); return; } const name = prompt("Назва об'єкту:"); if (name && name.trim()) { syncCurrentAddress(); const newId = 'addr_' + Date.now(); addresses.push({ id: newId, name: name.trim(), tariffs: { ...defaultTariffs }, prefs: { ...defaultPrefs }, records: [], customServices: [{ id: "s1", name: "Квартплата", defaultSum: "" }] }); currentAddressId = newId; loadCurrentAddress(); syncToCloud(); closeAddressModal(); showToast("Додано"); checkNewAchievements(); } });
-function renderAddressModal() { $('addressListModal').innerHTML = addresses.map(a => `<div class="flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95 cursor-pointer ${a.id === currentAddressId ? 'bg-brand border-brand text-white shadow-lg shadow-brand/20' : 'bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200'}" data-addr-id="${a.id}"><span class="font-bold text-lg truncate pr-2 flex-1">${a.name}</span><div class="flex gap-1.5 shrink-0"><button class="addr-edit p-2 rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white' : 'bg-white dark:bg-[#2c2c2e] text-slate-400'}" data-id="${a.id}"><i class="fa-solid fa-pen"></i></button>${a.id !== currentAddressId && addresses.length > 1 ? `<button class="addr-del p-2 text-slate-400 bg-white dark:bg-[#2c2c2e] rounded-xl shadow-sm" data-id="${a.id}"><i class="fa-solid fa-trash"></i></button>` : ''}</div></div>`).join(''); $('addressListModal').querySelectorAll('[data-addr-id]').forEach(el => { el.addEventListener('click', (e) => { if (e.target.closest('.addr-edit') || e.target.closest('.addr-del')) return; syncCurrentAddress(); currentAddressId = el.dataset.addrId; loadCurrentAddress(); syncToCloud(); closeAddressModal(); }); }); $('addressListModal').querySelectorAll('.addr-edit').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); const addr = addresses.find(a => a.id === btn.dataset.id); const name = prompt("Нова назва:", addr.name); if (name && name.trim()) { addr.name = name.trim(); renderAddressModal(); if (btn.dataset.id === currentAddressId) $('currentAddressDisplay').innerText = addr.name; syncToCloud(); } }); }); $('addressListModal').querySelectorAll('.addr-del').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); if (confirm("Видалити?")) { addresses = addresses.filter(a => a.id !== btn.dataset.id); if (currentAddressId === btn.dataset.id) { currentAddressId = addresses[0].id; loadCurrentAddress(); } syncToCloud(); renderAddressModal(); } }); }); }
+function openAddressModal() { $('addressModal')?.classList.remove('hidden'); setTimeout(() => $('addressModalContent')?.classList.remove('translate-y-full'), 10); renderAddressModal(); }
+function closeAddressModal() { $('addressModalContent')?.classList.add('translate-y-full'); setTimeout(() => $('addressModal')?.classList.add('hidden'), 400); }
+$('addressHeaderTrigger')?.addEventListener('click', openAddressModal);
+$('closeAddressModalBtn')?.addEventListener('click', closeAddressModal);
+$('addressModal')?.addEventListener('click', (e) => { if (e.target === $('addressModal')) closeAddressModal(); });
+$('addAddressBtn')?.addEventListener('click', () => { if (addresses.length >= 3 && !isPro()) { closeAddressModal(); showProModal(); return; } const name = prompt("Назва об'єкту:"); if (name && name.trim()) { syncCurrentAddress(); const newId = 'addr_' + Date.now(); addresses.push({ id: newId, name: name.trim(), tariffs: { ...defaultTariffs }, prefs: { ...defaultPrefs }, records: [], customServices: [{ id: "s1", name: "Квартплата", defaultSum: "" }] }); currentAddressId = newId; loadCurrentAddress(); syncToCloud(); closeAddressModal(); showToast("Додано"); checkNewAchievements(); } });
+function renderAddressModal() { const list = $('addressListModal'); if (!list) return; list.innerHTML = addresses.map(a => `<div class="flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95 cursor-pointer ${a.id === currentAddressId ? 'bg-brand border-brand text-white shadow-lg shadow-brand/20' : 'bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200'}" data-addr-id="${a.id}"><span class="font-bold text-lg truncate pr-2 flex-1">${a.name}</span><div class="flex gap-1.5 shrink-0"><button class="addr-edit p-2 rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white' : 'bg-white dark:bg-[#2c2c2e] text-slate-400'}" data-id="${a.id}"><i class="fa-solid fa-pen"></i></button>${a.id !== currentAddressId && addresses.length > 1 ? `<button class="addr-del p-2 text-slate-400 bg-white dark:bg-[#2c2c2e] rounded-xl shadow-sm" data-id="${a.id}"><i class="fa-solid fa-trash"></i></button>` : ''}</div></div>`).join(''); list.querySelectorAll('[data-addr-id]').forEach(el => { el.addEventListener('click', (e) => { if (e.target.closest('.addr-edit') || e.target.closest('.addr-del')) return; syncCurrentAddress(); currentAddressId = el.dataset.addrId; loadCurrentAddress(); syncToCloud(); closeAddressModal(); }); }); list.querySelectorAll('.addr-edit').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); const addr = addresses.find(a => a.id === btn.dataset.id); const name = prompt("Нова назва:", addr.name); if (name && name.trim()) { addr.name = name.trim(); renderAddressModal(); if (btn.dataset.id === currentAddressId) $('currentAddressDisplay').innerText = addr.name; syncToCloud(); } }); }); list.querySelectorAll('.addr-del').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); if (confirm("Видалити?")) { addresses = addresses.filter(a => a.id !== btn.dataset.id); if (currentAddressId === btn.dataset.id) { currentAddressId = addresses[0].id; loadCurrentAddress(); } syncToCloud(); renderAddressModal(); } }); }); }
 
 // =================== TABS ===================
 const tabIds = ['tabDashboard', 'tabCalc', 'tabHistory', 'tabSettings'];
 const btnIds = ['btnTabDashboard', 'btnTabCalc', 'btnTabHistory', 'btnTabSettings'];
-function switchTab(tabId, index) { const activeTab = document.querySelector('.tab-active'); const targetTab = $(tabId); if (activeTab && activeTab !== targetTab) { activeTab.classList.add('tab-exit'); setTimeout(() => { activeTab.classList.remove('tab-active', 'tab-exit'); activeTab.classList.add('tab-hidden'); }, 150); } setTimeout(() => { targetTab.classList.remove('tab-hidden'); targetTab.classList.add('tab-active'); }, activeTab ? 80 : 0); btnIds.forEach((id, i) => { const btn = $(id); if(!btn) return; btn.classList.toggle('text-brand', i === index); btn.classList.toggle('text-slate-400', i !== index); btn.classList.toggle('dark:text-slate-500', i !== index); }); if (tabId === 'tabDashboard') renderDashboard(); if (tabId === 'tabCalc') { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); } if (tabId === 'tabHistory') renderRecords(); if (tabId === 'tabSettings') renderSettingsCustomServices(); $('swipeContainer').scrollTo({ top: 0, behavior: 'smooth' }); haptic('tabSwitch'); }
+function switchTab(tabId, index) { const activeTab = document.querySelector('.tab-active'); const targetTab = $(tabId); if (!targetTab) return; if (activeTab && activeTab !== targetTab) { activeTab.classList.add('tab-exit'); setTimeout(() => { activeTab.classList.remove('tab-active', 'tab-exit'); activeTab.classList.add('tab-hidden'); }, 150); } setTimeout(() => { targetTab.classList.remove('tab-hidden'); targetTab.classList.add('tab-active'); }, activeTab && activeTab !== targetTab ? 80 : 0); btnIds.forEach((id, i) => { const btn = $(id); if(!btn) return; btn.classList.toggle('text-brand', i === index); btn.classList.toggle('text-slate-400', i !== index); btn.classList.toggle('dark:text-slate-500', i !== index); }); if (tabId === 'tabDashboard') renderDashboard(); if (tabId === 'tabCalc') { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); } if (tabId === 'tabHistory') renderRecords(); if (tabId === 'tabSettings') renderSettingsCustomServices(); $('swipeContainer')?.scrollTo({ top: 0, behavior: 'smooth' }); haptic('tabSwitch'); }
 $('btnTabDashboard')?.addEventListener('click', () => switchTab('tabDashboard', 0));
 $('btnTabCalc')?.addEventListener('click', () => switchTab('tabCalc', 1));
 $('btnTabHistory')?.addEventListener('click', () => switchTab('tabHistory', 2));
@@ -99,16 +108,276 @@ $('btnTabSettings')?.addEventListener('click', () => switchTab('tabSettings', 3)
 $('dashAddBtn')?.addEventListener('click', () => switchTab('tabCalc', 1));
 $('dashHistoryBtn')?.addEventListener('click', () => switchTab('tabHistory', 2));
 let touchStartX = 0;
-$('swipeContainer').addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
-$('swipeContainer').addEventListener('touchend', e => { if (isGuest) return; const dist = touchStartX - e.changedTouches[0].screenX; const curIdx = tabIds.findIndex(id => $(id)?.classList.contains('tab-active')); if (dist > 70 && curIdx < tabIds.length - 1) switchTab(tabIds[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabIds[curIdx - 1], curIdx - 1); }, { passive: true });
+$('swipeContainer')?.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+$('swipeContainer')?.addEventListener('touchend', e => { if (isGuest) return; const dist = touchStartX - e.changedTouches[0].screenX; const curIdx = tabIds.findIndex(id => $(id)?.classList.contains('tab-active')); if (dist > 70 && curIdx < tabIds.length - 1) switchTab(tabIds[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabIds[curIdx - 1], curIdx - 1); }, { passive: true });
 
-$('quickActionsBtn').addEventListener('click', () => $('quickActionsModal').classList.remove('hidden'));
-$('qaExport').addEventListener('click', () => { exportCSV(); $('quickActionsModal').classList.add('hidden'); });
-$('qaPdf').addEventListener('click', () => { generatePDF(); $('quickActionsModal').classList.add('hidden'); });
-$('qaShare').addEventListener('click', () => { shareAllRecords(); $('quickActionsModal').classList.add('hidden'); });
-$('qaSync').addEventListener('click', () => { syncToCloud(); showToast('Синхронізовано'); $('quickActionsModal').classList.add('hidden'); });
-$('qaImage')?.addEventListener('click', () => { shareAsImage(); $('quickActionsModal').classList.add('hidden'); });
+$('quickActionsBtn')?.addEventListener('click', () => $('quickActionsModal')?.classList.remove('hidden'));
+$('qaExport')?.addEventListener('click', () => { exportCSV(); $('quickActionsModal')?.classList.add('hidden'); });
+$('qaPdf')?.addEventListener('click', () => { generatePDF(); $('quickActionsModal')?.classList.add('hidden'); });
+$('qaShare')?.addEventListener('click', () => { shareAllRecords(); $('quickActionsModal')?.classList.add('hidden'); });
+$('qaSync')?.addEventListener('click', () => { syncToCloud(); showToast('Синхронізовано'); $('quickActionsModal')?.classList.add('hidden'); });
+$('qaImage')?.addEventListener('click', () => { shareAsImage(); $('quickActionsModal')?.classList.add('hidden'); });
 
+// =================== CANVAS CHART ENGINE ===================
+class ChartEngine {
+    constructor(canvasId, options = {}) {
+        this.canvas = $(canvasId);
+        if (!this.canvas) return;
+        this.ctx = this.canvas.getContext('2d');
+        this.options = { padding: 40, barRadius: 8, animDuration: 600, unit: null, colors: { grid: 'rgba(0,0,0,0.05)', text: '#8e8e93' }, ...options };
+        this.data = [];
+        this.animProgress = 0;
+        this.tooltip = null;
+        this.width = 0;
+        this.height = 0;
+        this.interactionBound = false;
+        this.setupCanvas();
+        this.setupInteraction();
+    }
+
+    setupCanvas() {
+        if (!this.canvas) return;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = this.canvas.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        this.width = rect.width;
+        this.height = rect.height;
+    }
+
+    setupInteraction() {
+        if (!this.canvas || this.interactionBound) return;
+        this.interactionBound = true;
+        this.canvas.addEventListener('touchstart', (e) => this.handleTouch(e), { passive: true });
+        this.canvas.addEventListener('mousemove', (e) => this.handleHover(e));
+        this.canvas.addEventListener('mouseleave', () => { this.tooltip = null; this.render(); });
+    }
+
+    handleTouch(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.touches[0].clientX - rect.left;
+        this.findBar(x);
+        haptic('light');
+    }
+
+    handleHover(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        this.findBar(x);
+    }
+
+    findBar(x) {
+        if (!this.data.length) return;
+        const { padding } = this.options;
+        const chartWidth = this.width - padding * 2;
+        const barWidth = chartWidth / this.data.length;
+        const index = Math.floor((x - padding) / barWidth);
+        if (index >= 0 && index < this.data.length) {
+            this.tooltip = { index, x: padding + index * barWidth + barWidth / 2 };
+        } else {
+            this.tooltip = null;
+        }
+        this.render();
+    }
+
+    setData(data) {
+        this.data = data;
+        if (!this.width || !this.height) {
+            this.setupCanvas();
+            if (!this.width || !this.height) return;
+        }
+        this.animate();
+    }
+
+    animate() {
+        this.animProgress = 0;
+        const start = performance.now();
+        const tick = (now) => {
+            this.animProgress = Math.min((now - start) / this.options.animDuration, 1);
+            this.animProgress = 1 - Math.pow(1 - this.animProgress, 3);
+            this.render();
+            if (this.animProgress < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }
+
+    render() {
+        if (!this.ctx || !this.width) return;
+        const { ctx, width, height, data, options } = this;
+        const { padding, barRadius, colors } = options;
+        ctx.clearRect(0, 0, width, height);
+        if (!data.length) { ctx.fillStyle = colors.text; ctx.font = '12px -apple-system'; ctx.textAlign = 'center'; ctx.fillText('Немає даних', width / 2, height / 2); return; }
+
+        const chartWidth = width - padding * 2;
+        const chartHeight = height - padding * 1.8;
+        const max = Math.max(...data.map(d => d.value), 1);
+        const barWidth = chartWidth / data.length;
+        const barPad = barWidth * 0.25;
+
+        // Grid lines
+        ctx.strokeStyle = colors.grid;
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i <= 3; i++) {
+            const y = padding / 2 + (chartHeight / 3) * i;
+            ctx.beginPath();
+            ctx.moveTo(padding, y);
+            ctx.lineTo(width - padding, y);
+            ctx.stroke();
+        }
+
+        // Bars
+        data.forEach((d, i) => {
+            const barH = Math.max(2, (d.value / max) * chartHeight * this.animProgress);
+            const x = padding + i * barWidth + barPad;
+            const y = padding / 2 + chartHeight - barH;
+            const w = barWidth - barPad * 2;
+            const r = Math.min(barRadius, w / 2, barH / 2);
+
+            ctx.shadowColor = d.color + '40';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetY = 4;
+
+            ctx.beginPath();
+            ctx.moveTo(x, y + barH);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + barH);
+            ctx.closePath();
+
+            const grad = ctx.createLinearGradient(x, y, x, y + barH);
+            grad.addColorStop(0, d.color);
+            grad.addColorStop(1, d.color + '80');
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+
+            if (this.tooltip && this.tooltip.index === i) {
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.fill();
+            }
+
+            ctx.fillStyle = colors.text;
+            ctx.font = 'bold 9px -apple-system';
+            ctx.textAlign = 'center';
+            ctx.fillText(d.label, x + w / 2, height - 6);
+        });
+
+        // Tooltip
+        if (this.tooltip && this.tooltip.index < data.length) {
+            const d = data[this.tooltip.index];
+            const tooltipText = this.options.unit ? `${d.value} ${this.options.unit}` : `${fmt.format(d.value)} ₴`;
+            ctx.font = 'bold 11px -apple-system';
+            const tw = ctx.measureText(tooltipText).width + 16;
+            const tx = Math.min(Math.max(this.tooltip.x - tw / 2, 4), width - tw - 4);
+            const ty = 4;
+            ctx.fillStyle = 'rgba(0,0,0,0.85)';
+            ctx.beginPath();
+            if (ctx.roundRect) { ctx.roundRect(tx, ty, tw, 22, 6); } else { ctx.rect(tx, ty, tw, 22); }
+            ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.fillText(tooltipText, tx + tw / 2, ty + 15);
+        }
+    }
+}
+
+class DonutChart {
+    constructor(canvasId) {
+        this.canvas = $(canvasId);
+        if (!this.canvas) return;
+        this.ctx = this.canvas.getContext('2d');
+        this.data = [];
+        this.animProgress = 0;
+        this.width = 0;
+        this.height = 0;
+        this.setupCanvas();
+    }
+
+    setupCanvas() {
+        if (!this.canvas) return;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = this.canvas.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        this.width = rect.width;
+        this.height = rect.height;
+    }
+
+    setData(data) {
+        this.data = data.filter(d => d.value > 0);
+        if (!this.width || !this.height) {
+            this.setupCanvas();
+            if (!this.width || !this.height) return;
+        }
+        this.animate();
+    }
+
+    animate() {
+        this.animProgress = 0;
+        const start = performance.now();
+        const tick = (now) => {
+            this.animProgress = Math.min((now - start) / 800, 1);
+            this.animProgress = 1 - Math.pow(1 - this.animProgress, 3);
+            this.render();
+            if (this.animProgress < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }
+
+    render() {
+        if (!this.ctx || !this.width) return;
+        const { ctx, width, height, data } = this;
+        ctx.clearRect(0, 0, width, height);
+        if (!data.length) return;
+
+        const cx = width / 2;
+        const cy = height / 2;
+        const radius = Math.min(width, height) / 2 - 8;
+        const innerRadius = radius * 0.6;
+        const total = data.reduce((s, d) => s + d.value, 0);
+
+        let startAngle = -Math.PI / 2;
+        data.forEach(d => {
+            const sliceAngle = (d.value / total) * Math.PI * 2 * this.animProgress;
+            const endAngle = startAngle + sliceAngle;
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, startAngle, endAngle);
+            ctx.arc(cx, cy, innerRadius, endAngle, startAngle, true);
+            ctx.closePath();
+
+            ctx.fillStyle = d.color;
+            ctx.shadowColor = d.color + '30';
+            ctx.shadowBlur = 4;
+            ctx.fill();
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+
+            startAngle = endAngle;
+        });
+
+        const totalText = fmt.format(total);
+        const fontSize = totalText.length > 9 ? 10 : totalText.length > 7 ? 12 : 14;
+        ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#fff' : '#1c1c1e';
+        ctx.font = `bold ${fontSize}px -apple-system`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(totalText, cx, cy - 4);
+        ctx.fillStyle = '#8e8e93';
+        ctx.font = '9px -apple-system';
+        ctx.fillText('₴', cx, cy + 10);
+    }
+}
+
+let dashChart, historyChart, serviceChart, donutChart;
 // =================== DASHBOARD ===================
 function renderDashboard() {
     const hour = new Date().getHours(); let greeting = 'Доброго дня!'; if (hour < 6) greeting = 'Доброї ночі!'; else if (hour < 12) greeting = 'Доброго ранку!'; else if (hour >= 18) greeting = 'Доброго вечора!';
@@ -118,28 +387,170 @@ function renderDashboard() {
     const streak = getStreak(records); if ($('streakValue')) $('streakValue').textContent = streak; renderStreakDots(streak);
     const curRec = records.find(r => r.month === curMonth); animateNumber($('dashCurrentMonth'), curRec ? curRec.total : 0);
     if ($('dashRecordsCount')) $('dashRecordsCount').textContent = records.length;
-    if (records.length > 0) { const avg = records.reduce((s, r) => s + r.total, 0) / records.length; if ($('dashAvg')) $('dashAvg').textContent = fmt.format(avg) + ' ₴'; }
+    if (records.length > 0) { const avg = records.reduce((s, r) => s + r.total, 0) / records.length; if ($('dashAvg')) $('dashAvg').textContent = fmt.format(avg) + ' ₴'; } else { if ($('dashAvg')) $('dashAvg').textContent = '0 ₴'; }
     const unpaid = records.filter(r => !r.paid); const debtTotal = unpaid.reduce((s, r) => s + r.total, 0);
     if (unpaid.length > 0) { $('dashDebtCard')?.classList.remove('hidden'); animateNumber($('dashDebt'), debtTotal); if ($('dashDebtMonths')) $('dashDebtMonths').textContent = `${unpaid.length} міс. не оплачено`; $('debtBadge')?.classList.remove('hidden'); if ($('debtBadge')) $('debtBadge').textContent = unpaid.length; }
     else { $('dashDebtCard')?.classList.add('hidden'); $('debtBadge')?.classList.add('hidden'); }
-    renderDashChart(); renderSmartInsight(curRec, curMonth); renderAchievements();
+
+    renderDashCanvasChart();
+    renderBudgetProgress(curRec);
+    renderDonutChart(curRec);
+    renderSmartInsight(curRec, curMonth);
+    renderAchievements();
+    renderTips();
     const unlocked = getUnlockedAchievements().length; if ($('achCounter')) $('achCounter').textContent = `${unlocked}/${ACHIEVEMENTS.length}`;
     checkReminders();
 }
-function renderSmartInsight(curRec, curMonth) { const insightEl = $('dashInsight'); const textEl = $('dashInsightText'); if (!insightEl || !textEl) return; if (records.length < 2) { insightEl.classList.add('hidden'); return; } const sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)); const [sy, sm] = curMonth.split('-').map(Number); const prevDate = new Date(sy, sm - 2); const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`; const prevRec = sorted.find(r => r.month === prevMonth); let insight = ''; if (curRec && prevRec && prevRec.total > 0) { const diff = Math.round(((curRec.total - prevRec.total) / prevRec.total) * 100); if (diff < -10) insight = `Зекономили ${Math.abs(diff)}% vs ${new Date(prevMonth + '-01').toLocaleString('uk-UA', { month: 'long' })} 🎉`; else if (diff > 15) insight = `Витрати +${diff}% порівняно з минулим місяцем`; else if (diff >= -10 && diff <= 5) insight = `Витрати стабільні — чудово! 👍`; } if (!insight && records.length >= 3) { const avg = sorted.slice(0, 3).reduce((s, r) => s + r.total, 0) / 3; insight = `Середні за 3 міс: ${fmt.format(avg)} ₴`; } if (!insight) { const streak = getStreak(records); if (streak >= 3) insight = `Серія ${streak} міс. — так тримати! 🔥`; } if (insight) { insightEl.classList.remove('hidden'); textEl.textContent = insight; } else { insightEl.classList.add('hidden'); } }
+
+function renderBudgetProgress(curRec) {
+    const budgetEl = $('budgetProgressCard');
+    if (!budgetEl) return;
+    const budget = parseFloat(localStorage.getItem('k_budget')) || 0;
+    if (!budget) { budgetEl.classList.add('hidden'); return; }
+    budgetEl.classList.remove('hidden');
+    const spent = curRec ? curRec.total : 0;
+    const percent = Math.min((spent / budget) * 100, 100);
+    const remaining = Math.max(budget - spent, 0);
+    const isOver = spent > budget;
+    if ($('budgetSpent')) $('budgetSpent').textContent = fmt.format(spent);
+    if ($('budgetLimit')) $('budgetLimit').textContent = fmt.format(budget);
+    if ($('budgetRemaining')) { $('budgetRemaining').textContent = isOver ? `Перевищено на ${fmt.format(spent - budget)} ₴` : `Залишок: ${fmt.format(remaining)} ₴`; $('budgetRemaining').className = `text-[10px] font-bold ${isOver ? 'text-red-500' : 'text-green-600'}`; }
+    const bar = $('budgetBar');
+    if (bar) { bar.style.width = `${percent}%`; bar.className = `h-full rounded-full transition-all duration-700 ${isOver ? 'bg-gradient-to-r from-red-400 to-red-600' : percent > 80 ? 'bg-gradient-to-r from-orange-400 to-orange-500' : 'bg-gradient-to-r from-brand to-blue-500'}`; }
+    if ($('budgetPercent')) $('budgetPercent').textContent = `${Math.round(percent)}%`;
+}
+
+function renderDonutChart(curRec) {
+    if (!$('donutCanvas')) return;
+    if (!donutChart) donutChart = new DonutChart('donutCanvas');
+    if (!curRec || curRec.total === 0) { if (donutChart.ctx && donutChart.width) donutChart.ctx.clearRect(0, 0, donutChart.width, donutChart.height); const legend = $('donutLegend'); if (legend) legend.innerHTML = '<span class="text-[9px] text-slate-400">Немає даних</span>'; return; }
+    const data = [];
+    if (curRec.waterCost > 0) data.push({ value: curRec.waterCost, color: '#3b82f6', label: 'Вода' });
+    if (curRec.hotWaterCost > 0) data.push({ value: curRec.hotWaterCost, color: '#ef4444', label: 'Гар.' });
+    if (curRec.electroCost > 0) data.push({ value: curRec.electroCost, color: '#eab308', label: 'Світло' });
+    if (curRec.gasCost > 0) data.push({ value: curRec.gasCost, color: '#f97316', label: 'Газ' });
+    if (curRec.customCost > 0) data.push({ value: curRec.customCost, color: '#a855f7', label: 'Інше' });
+    donutChart.setData(data);
+    const legend = $('donutLegend');
+    if (legend) { legend.innerHTML = data.map(d => `<div class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full" style="background:${d.color}"></div><span class="text-[9px] font-bold text-slate-500">${d.label}</span></div>`).join(''); }
+}
+
+function renderDashCanvasChart() {
+    if (!$('dashChartCanvas')) return;
+    if (!dashChart) dashChart = new ChartEngine('dashChartCanvas', { padding: 24, barRadius: 6 });
+    const sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)).slice(0, 8).reverse();
+    const data = sorted.map(r => ({ value: r.total, label: new Date(r.month + '-01').toLocaleString('uk-UA', { month: 'short' }).slice(0, 3), color: r.paid ? '#007aff' : '#ff9500' }));
+    dashChart.setData(data);
+}
+
+function renderSmartInsight(curRec, curMonth) { const insightEl = $('dashInsight'); const textEl = $('dashInsightText'); if (!insightEl || !textEl) return; if (records.length < 2) { insightEl.classList.add('hidden'); return; } const sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)); const [sy, sm] = curMonth.split('-').map(Number); const prevDate = new Date(sy, sm - 2); const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`; const prevRec = sorted.find(r => r.month === prevMonth); let insight = ''; if (curRec && prevRec && prevRec.total > 0) { const diff = Math.round(((curRec.total - prevRec.total) / prevRec.total) * 100); if (diff < -10) insight = `Зекономили ${Math.abs(diff)}% vs ${new Date(prevMonth + '-01').toLocaleString('uk-UA', { month: 'long' })} 🎉`; else if (diff > 15) insight = `Витрати +${diff}% порівняно з минулим місяцем`; else if (diff >= -10 && diff <= 5) insight = `Витрати стабільні — чудово! 👍`; } if (!insight && records.length >= 3) { const avg = sorted.slice(0, 3).reduce((s, r) => s + r.total, 0) / 3; insight = `Середні за 3 міс: ${fmt.format(avg)} ₴`; } if (!insight) { const str = getStreak(records); if (str >= 3) insight = `Серія ${str} міс. — так тримати! 🔥`; } if (insight) { insightEl.classList.remove('hidden'); textEl.textContent = insight; } else { insightEl.classList.add('hidden'); } }
 function renderStreakDots(streak) { const container = $('streakDots'); if (!container) return; let html = ''; for (let i = 0; i < 6; i++) html += `<div class="streak-dot ${i < streak ? 'active' : 'inactive'} ${i === 0 ? 'today' : ''}"></div>`; container.innerHTML = html; }
-function renderDashChart() { const container = $('dashChart'); if (!container) return; if (records.length === 0) { container.innerHTML = '<span class="text-xs text-slate-400 m-auto">Немає даних</span>'; return; } const sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)).slice(0, 6).reverse(); const max = Math.max(...sorted.map(r => r.total), 1); container.innerHTML = sorted.map((r, i) => { const h = (r.total / max) * 100; const mName = new Date(r.month + '-01').toLocaleString('uk-UA', { month: 'short' }).slice(0, 3); const bg = r.paid ? 'var(--brand)' : 'linear-gradient(to top, #fb923c, #fcd34d)'; return `<div class="flex flex-col items-center flex-1 h-full justify-end"><div class="w-full rounded-t-lg bg-slate-100 dark:bg-white/5 overflow-hidden flex items-end" style="height:100%"><div class="w-full rounded-t-lg transition-all duration-700" style="height:${Math.max(6, h)}%;background:${bg};opacity:${0.5 + (i / 6) * 0.5}"></div></div><span class="text-[8px] text-slate-400 font-bold mt-1.5">${mName}</span></div>`; }).join(''); }
 function animateNumber(el, target) { if (!el) return; const current = parseFloat(el.textContent.replace(/[^\d.,]/g, '').replace(',', '.')) || 0; if (Math.abs(current - target) < 0.01) { el.textContent = fmt.format(target) + ' ₴'; return; } const duration = 400; const start = performance.now(); const from = current; function tick(now) { const elapsed = now - start; const progress = Math.min(elapsed / duration, 1); const eased = 1 - Math.pow(1 - progress, 3); el.textContent = fmt.format(from + (target - from) * eased) + ' ₴'; if (progress < 1) requestAnimationFrame(tick); } requestAnimationFrame(tick); }
 
 // =================== CALCULATION ===================
 const readingInputIds = ['wPrev', 'wCur', 'hwPrev', 'hwCur', 'dPrev', 'dCur', 'nPrev', 'nCur', 'gPrev', 'gCur'];
 function getV(id) { return Math.max(0, parseFloat($(id)?.value) || 0); }
-function calculatePreview() { if (prefs.showWater) currentCalc.waterCost = Math.max(0, getV('wCur') - getV('wPrev')) * tariffs.water; else currentCalc.waterCost = 0; if (prefs.showHotWater) currentCalc.hotWaterCost = Math.max(0, getV('hwCur') - getV('hwPrev')) * tariffs.hotWater; else currentCalc.hotWaterCost = 0; if (prefs.showElectro) { const dV = Math.max(0, getV('dCur') - getV('dPrev')); const nV = prefs.electroTwoZone ? Math.max(0, getV('nCur') - getV('nPrev')) : 0; const tEl = dV + nV; if (tEl === 0) currentCalc.electroCost = 0; else if (prefs.electroWinter && $('isWinterInput').checked) { if (tEl <= tariffs.winterLimit) currentCalc.electroCost = dV * tariffs.electroWinter + nV * tariffs.electroWinter * tariffs.nightCoef; else { const dp = dV / tEl, np = nV / tEl; currentCalc.electroCost = tariffs.winterLimit * dp * tariffs.electroWinter + tariffs.winterLimit * np * tariffs.electroWinter * tariffs.nightCoef + (tEl - tariffs.winterLimit) * dp * tariffs.electroBase + (tEl - tariffs.winterLimit) * np * tariffs.electroBase * tariffs.nightCoef; } } else currentCalc.electroCost = dV * tariffs.electroBase + nV * tariffs.electroBase * tariffs.nightCoef; } else currentCalc.electroCost = 0; if (prefs.showGas) currentCalc.gasCost = Math.max(0, getV('gCur') - getV('gPrev')) * tariffs.gas; else currentCalc.gasCost = 0; currentCalc.customCost = 0; customServices.forEach(srv => { let val = parseFloat($(`custom_${srv.id}`)?.value); if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum); if (!isNaN(val)) currentCalc.customCost += val; }); currentCalc.total = currentCalc.waterCost + currentCalc.hotWaterCost + currentCalc.electroCost + currentCalc.gasCost + currentCalc.customCost; if (!validateReadingsUI()) return; $('heroTotal').innerHTML = `${fmt.format(currentCalc.total)} <span class="text-2xl font-bold text-white/40">₴</span>`; $('waterCostDisplay').innerText = fmt.format(currentCalc.waterCost) + ' ₴'; $('hotWaterCostDisplay').innerText = fmt.format(currentCalc.hotWaterCost) + ' ₴'; $('electroCostDisplay').innerText = fmt.format(currentCalc.electroCost) + ' ₴'; $('gasCostDisplay').innerText = fmt.format(currentCalc.gasCost) + ' ₴'; $('customCostDisplay').innerText = fmt.format(currentCalc.customCost) + ' ₴'; updateMonthComparison(); updateSmartForecast(); updatePartialIndicator(); }
-function validateReadingsUI() { const pairs = [['wPrev', 'wCur'], ['hwPrev', 'hwCur'], ['dPrev', 'dCur'], ['nPrev', 'nCur'], ['gPrev', 'gCur']]; let hasInvalid = false; pairs.forEach(([prevId, curId]) => { const prevEl = $(prevId), curEl = $(curId); if (!prevEl || !curEl || prevEl.offsetParent === null) return; const prevVal = parseFloat(prevEl.value || '0'); const curVal = parseFloat(curEl.value || '0'); const invalid = curEl.value !== '' && prevEl.value !== '' && curVal < prevVal; prevEl.classList.toggle('input-invalid', invalid); curEl.classList.toggle('input-invalid', invalid); if (invalid) hasInvalid = true; }); const btn = $('submitFormBtn'); if (btn) { btn.disabled = hasInvalid; btn.classList.toggle('opacity-60', hasInvalid); } if (hasInvalid) $('heroTotal').innerHTML = `<span class="text-lg text-red-300">Перевірте показники</span>`; return !hasInvalid; }
-function updatePartialIndicator() { const w = $('partialWater'), e = $('partialElectro'), g = $('partialGas'); if (w) w.className = `partial-dot ${(getV('wCur') > 0 || getV('hwCur') > 0) ? 'filled' : 'empty'}`; if (e) e.className = `partial-dot ${getV('dCur') > 0 ? 'filled' : 'empty'}`; if (g) g.className = `partial-dot ${getV('gCur') > 0 ? 'filled' : 'empty'}`; }
-function updateSmartBadges() { const update = (prevId, curId, badgeId, unit, color, activeBg) => { const badge = $(badgeId); if (!badge) return; const d = getV(curId) - getV(prevId); badge.innerText = d > 0 ? `+${d} ${unit}` : `0 ${unit}`; badge.className = d > 0 ? `absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 ${activeBg} ${color} shadow-md px-2.5 py-1.5 rounded-xl text-[11px] font-bold` : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-md border border-slate-100 dark:border-white/10 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-slate-400'; }; if (prefs.showWater) update('wPrev', 'wCur', 'wDiffBadge', 'м³', 'text-blue-600', 'bg-blue-100 dark:bg-blue-500/20'); if (prefs.showHotWater) update('hwPrev', 'hwCur', 'hwDiffBadge', 'м³', 'text-red-600', 'bg-red-100 dark:bg-red-500/20'); if (prefs.showElectro) { update('dPrev', 'dCur', 'dDiffBadge', 'кВт', 'text-yellow-600', 'bg-yellow-100 dark:bg-yellow-500/20'); if (prefs.electroTwoZone) update('nPrev', 'nCur', 'nDiffBadge', 'кВт', 'text-indigo-500', 'bg-indigo-100 dark:bg-indigo-500/20'); } if (prefs.showGas) update('gPrev', 'gCur', 'gDiffBadge', 'м³', 'text-orange-500', 'bg-orange-100 dark:bg-orange-500/20'); }
-function updateMonthComparison() { const comp = $('monthComparison'); if (!comp) return; if (records.length === 0 || currentCalc.total === 0) { comp.classList.add('hidden'); return; } const selectedMonth = $('monthInput')?.value; if (!selectedMonth) { comp.classList.add('hidden'); return; } const [sy, sm] = selectedMonth.split('-').map(Number); const prevDate = new Date(sy, sm - 2); const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`; const prevRec = records.find(r => r.month === prevMonth); if (!prevRec || prevRec.total === 0) { comp.classList.add('hidden'); return; } const diff = ((currentCalc.total - prevRec.total) / prevRec.total) * 100; comp.classList.remove('hidden'); $('comparisonIcon').className = diff < 0 ? 'fa-solid fa-arrow-trend-down' : 'fa-solid fa-arrow-trend-up'; $('comparisonText').textContent = `${diff > 0 ? '+' : ''}${Math.round(diff)}% vs ${new Date(prevMonth + '-01').toLocaleString('uk-UA', { month: 'short' })}`; comp.style.color = diff < 0 ? '#34c759' : diff > 5 ? '#ff3b30' : '#8e8e93'; }
-function updateSmartForecast() { if (!records || records.length === 0) { $('smartForecast').innerText = "—"; return; } const selectedMonth = $('monthInput')?.value; if (!selectedMonth) { $('smartForecast').innerText = "—"; return; } const [, sm] = selectedMonth.split('-').map(Number); const sameMonth = records.filter(r => { const [, rm] = r.month.split('-').map(Number); return rm === sm; }); if (sameMonth.length > 0) { const avg = sameMonth.reduce((s, r) => s + r.total, 0) / sameMonth.length; $('smartForecast').innerText = `~ ${fmt.format(avg)} ₴`; return; } const sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)); const avg = sorted.slice(0, 3).reduce((s, r) => s + r.total, 0) / Math.min(3, sorted.length); $('smartForecast').innerText = `~ ${fmt.format(avg)} ₴`; }
+
+function calculatePreview() {
+    if (prefs.showWater) currentCalc.waterCost = Math.max(0, getV('wCur') - getV('wPrev')) * tariffs.water;
+    else currentCalc.waterCost = 0;
+    if (prefs.showHotWater) currentCalc.hotWaterCost = Math.max(0, getV('hwCur') - getV('hwPrev')) * tariffs.hotWater;
+    else currentCalc.hotWaterCost = 0;
+    if (prefs.showElectro) {
+        const dV = Math.max(0, getV('dCur') - getV('dPrev'));
+        const nV = prefs.electroTwoZone ? Math.max(0, getV('nCur') - getV('nPrev')) : 0;
+        const tEl = dV + nV;
+        if (tEl === 0) currentCalc.electroCost = 0;
+        else if (prefs.electroWinter && $('isWinterInput')?.checked) {
+            if (tEl <= tariffs.winterLimit) currentCalc.electroCost = dV * tariffs.electroWinter + nV * tariffs.electroWinter * tariffs.nightCoef;
+            else { const dp = dV / tEl, np = nV / tEl; currentCalc.electroCost = tariffs.winterLimit * dp * tariffs.electroWinter + tariffs.winterLimit * np * tariffs.electroWinter * tariffs.nightCoef + (tEl - tariffs.winterLimit) * dp * tariffs.electroBase + (tEl - tariffs.winterLimit) * np * tariffs.electroBase * tariffs.nightCoef; }
+        } else currentCalc.electroCost = dV * tariffs.electroBase + nV * tariffs.electroBase * tariffs.nightCoef;
+    } else currentCalc.electroCost = 0;
+    if (prefs.showGas) currentCalc.gasCost = Math.max(0, getV('gCur') - getV('gPrev')) * tariffs.gas;
+    else currentCalc.gasCost = 0;
+    currentCalc.customCost = 0;
+    customServices.forEach(srv => { let val = parseFloat($(`custom_${srv.id}`)?.value); if (isNaN(val) && srv.defaultSum) val = parseFloat(srv.defaultSum); if (!isNaN(val)) currentCalc.customCost += val; });
+    currentCalc.total = currentCalc.waterCost + currentCalc.hotWaterCost + currentCalc.electroCost + currentCalc.gasCost + currentCalc.customCost;
+    if (!validateReadingsUI()) return;
+    if ($('heroTotal')) $('heroTotal').innerHTML = `${fmt.format(currentCalc.total)} <span class="text-2xl font-bold text-white/40">₴</span>`;
+    if ($('waterCostDisplay')) $('waterCostDisplay').innerText = fmt.format(currentCalc.waterCost) + ' ₴';
+    if ($('hotWaterCostDisplay')) $('hotWaterCostDisplay').innerText = fmt.format(currentCalc.hotWaterCost) + ' ₴';
+    if ($('electroCostDisplay')) $('electroCostDisplay').innerText = fmt.format(currentCalc.electroCost) + ' ₴';
+    if ($('gasCostDisplay')) $('gasCostDisplay').innerText = fmt.format(currentCalc.gasCost) + ' ₴';
+    if ($('customCostDisplay')) $('customCostDisplay').innerText = fmt.format(currentCalc.customCost) + ' ₴';
+    updateMonthComparison();
+    updateSmartForecast();
+    updatePartialIndicator();
+}
+
+function validateReadingsUI() {
+    const pairs = [['wPrev', 'wCur'], ['hwPrev', 'hwCur'], ['dPrev', 'dCur'], ['nPrev', 'nCur'], ['gPrev', 'gCur']];
+    let hasInvalid = false;
+    pairs.forEach(([prevId, curId]) => {
+        const prevEl = $(prevId), curEl = $(curId);
+        if (!prevEl || !curEl || prevEl.offsetParent === null) return;
+        const prevVal = parseFloat(prevEl.value || '0');
+        const curVal = parseFloat(curEl.value || '0');
+        const invalid = curEl.value !== '' && prevEl.value !== '' && curVal < prevVal;
+        prevEl.classList.toggle('input-invalid', invalid);
+        curEl.classList.toggle('input-invalid', invalid);
+        if (invalid) hasInvalid = true;
+    });
+    const btn = $('submitFormBtn');
+    if (btn) { btn.disabled = hasInvalid; btn.classList.toggle('opacity-60', hasInvalid); }
+    if (hasInvalid && $('heroTotal')) $('heroTotal').innerHTML = `<span class="text-lg text-red-300">Перевірте показники</span>`;
+    return !hasInvalid;
+}
+
+function updatePartialIndicator() {
+    const w = $('partialWater'), e = $('partialElectro'), g = $('partialGas');
+    if (w) w.className = `partial-dot ${(getV('wCur') > 0 || getV('hwCur') > 0) ? 'filled' : 'empty'}`;
+    if (e) e.className = `partial-dot ${getV('dCur') > 0 ? 'filled' : 'empty'}`;
+    if (g) g.className = `partial-dot ${getV('gCur') > 0 ? 'filled' : 'empty'}`;
+}
+
+function updateSmartBadges() {
+    const update = (prevId, curId, badgeId, unit, color, activeBg) => {
+        const badge = $(badgeId); if (!badge) return;
+        const d = getV(curId) - getV(prevId);
+        badge.innerText = d > 0 ? `+${d} ${unit}` : `0 ${unit}`;
+        badge.className = d > 0 ? `absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 ${activeBg} ${color} shadow-md px-2.5 py-1.5 rounded-xl text-[11px] font-bold` : 'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-md border border-slate-100 dark:border-white/10 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-slate-400';
+    };
+    if (prefs.showWater) update('wPrev', 'wCur', 'wDiffBadge', 'м³', 'text-blue-600', 'bg-blue-100 dark:bg-blue-500/20');
+    if (prefs.showHotWater) update('hwPrev', 'hwCur', 'hwDiffBadge', 'м³', 'text-red-600', 'bg-red-100 dark:bg-red-500/20');
+    if (prefs.showElectro) { update('dPrev', 'dCur', 'dDiffBadge', 'кВт', 'text-yellow-600', 'bg-yellow-100 dark:bg-yellow-500/20'); if (prefs.electroTwoZone) update('nPrev', 'nCur', 'nDiffBadge', 'кВт', 'text-indigo-500', 'bg-indigo-100 dark:bg-indigo-500/20'); }
+    if (prefs.showGas) update('gPrev', 'gCur', 'gDiffBadge', 'м³', 'text-orange-500', 'bg-orange-100 dark:bg-orange-500/20');
+}
+
+function updateMonthComparison() {
+    const comp = $('monthComparison'); if (!comp) return;
+    if (records.length === 0 || currentCalc.total === 0) { comp.classList.add('hidden'); return; }
+    const selectedMonth = $('monthInput')?.value;
+    if (!selectedMonth) { comp.classList.add('hidden'); return; }
+    const [sy, sm] = selectedMonth.split('-').map(Number);
+    const prevDate = new Date(sy, sm - 2);
+    const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+    const prevRec = records.find(r => r.month === prevMonth);
+    if (!prevRec || prevRec.total === 0) { comp.classList.add('hidden'); return; }
+    const diff = ((currentCalc.total - prevRec.total) / prevRec.total) * 100;
+    comp.classList.remove('hidden');
+    if ($('comparisonIcon')) $('comparisonIcon').className = diff < 0 ? 'fa-solid fa-arrow-trend-down' : 'fa-solid fa-arrow-trend-up';
+    if ($('comparisonText')) $('comparisonText').textContent = `${diff > 0 ? '+' : ''}${Math.round(diff)}% vs ${new Date(prevMonth + '-01').toLocaleString('uk-UA', { month: 'short' })}`;
+    comp.style.color = diff < 0 ? '#34c759' : diff > 5 ? '#ff3b30' : '#8e8e93';
+}
+
+function updateSmartForecast() {
+    const el = $('smartForecast'); if (!el) return;
+    if (!records || records.length === 0) { el.innerText = "—"; return; }
+    const selectedMonth = $('monthInput')?.value;
+    if (!selectedMonth) { el.innerText = "—"; return; }
+    const [, sm] = selectedMonth.split('-').map(Number);
+    const sameMonth = records.filter(r => { const [, rm] = r.month.split('-').map(Number); return rm === sm; });
+    if (sameMonth.length > 0) { const avg = sameMonth.reduce((s, r) => s + r.total, 0) / sameMonth.length; el.innerText = `~ ${fmt.format(avg)} ₴`; return; }
+    const sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month));
+    const avg = sorted.slice(0, 3).reduce((s, r) => s + r.total, 0) / Math.min(3, sorted.length);
+    el.innerText = `~ ${fmt.format(avg)} ₴`;
+}
 
 readingInputIds.forEach(id => { const el = $(id); if (el) el.addEventListener('input', () => { calculatePreview(); updateSmartBadges(); }); });
 $('isWinterInput')?.addEventListener('change', calculatePreview);
@@ -156,31 +567,131 @@ readingInputIds.forEach(id => { $(id)?.addEventListener('input', debouncedDraft)
 document.addEventListener('input', (e) => { if (e.target.classList.contains('custom-srv-input') || e.target.id === 'recordNote') debouncedDraft(); });
 
 // =================== FORM SUBMIT ===================
-$('utilityForm').addEventListener('submit', (e) => {
-    e.preventDefault(); if (!validateReadingsUI()) { showToast('Перевірте показники', '⚠️'); return; }
-    const hasWater = prefs.showWater && (getV('wCur') > 0 || getV('wPrev') > 0); const hasHotWater = prefs.showHotWater && (getV('hwCur') > 0 || getV('hwPrev') > 0); const hasElectro = prefs.showElectro && (getV('dCur') > 0 || getV('dPrev') > 0 || getV('nCur') > 0); const hasGas = prefs.showGas && (getV('gCur') > 0 || getV('gPrev') > 0); const hasCustom = customServices.some(srv => { const v = parseFloat($(`custom_${srv.id}`)?.value); return !isNaN(v) && v > 0; });
+$('utilityForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!validateReadingsUI()) { showToast('Перевірте показники', '⚠️'); return; }
+    const hasWater = prefs.showWater && (getV('wCur') > 0 || getV('wPrev') > 0);
+    const hasHotWater = prefs.showHotWater && (getV('hwCur') > 0 || getV('hwPrev') > 0);
+    const hasElectro = prefs.showElectro && (getV('dCur') > 0 || getV('dPrev') > 0 || getV('nCur') > 0);
+    const hasGas = prefs.showGas && (getV('gCur') > 0 || getV('gPrev') > 0);
+    const hasCustom = customServices.some(srv => { const v = parseFloat($(`custom_${srv.id}`)?.value); return !isNaN(v) && v > 0; });
     if (!hasWater && !hasHotWater && !hasElectro && !hasGas && !hasCustom) { showToast('Заповніть хоча б одну послугу', '⚠️'); return; }
-    let cData = {}; customServices.forEach(srv => { let v = parseFloat($(`custom_${srv.id}`)?.value); if (isNaN(v) && srv.defaultSum) v = parseFloat(srv.defaultSum); if (!isNaN(v) && v > 0) cData[srv.id] = { name: srv.name, val: v }; });
-    const month = $('monthInput').value; const existingIdx = records.findIndex(r => r.month === month);
-    const newData = { id: Date.now(), month, wPrev: hasWater ? getV('wPrev') : 0, wCur: hasWater ? getV('wCur') : 0, hwPrev: hasHotWater ? getV('hwPrev') : 0, hwCur: hasHotWater ? getV('hwCur') : 0, dPrev: hasElectro ? getV('dPrev') : 0, dCur: hasElectro ? getV('dCur') : 0, nPrev: (hasElectro && prefs.electroTwoZone) ? getV('nPrev') : 0, nCur: (hasElectro && prefs.electroTwoZone) ? getV('nCur') : 0, gPrev: hasGas ? getV('gPrev') : 0, gCur: hasGas ? getV('gCur') : 0, customData: cData, note: $('recordNote').value.trim(), waterCost: hasWater ? currentCalc.waterCost : 0, hotWaterCost: hasHotWater ? currentCalc.hotWaterCost : 0, electroCost: hasElectro ? currentCalc.electroCost : 0, gasCost: hasGas ? currentCalc.gasCost : 0, customCost: currentCalc.customCost, total: currentCalc.total, paid: false, _filled: { water: hasWater, hotWater: hasHotWater, electro: hasElectro, gas: hasGas, custom: hasCustom } };
-    if (existingIdx >= 0) { const existing = records[existingIdx]; const merged = { ...existing, ...newData, id: existing.id, paid: existing.paid }; if (!hasWater && existing._filled?.water) { merged.wPrev = existing.wPrev; merged.wCur = existing.wCur; merged.waterCost = existing.waterCost; merged._filled.water = true; } if (!hasHotWater && existing._filled?.hotWater) { merged.hwPrev = existing.hwPrev; merged.hwCur = existing.hwCur; merged.hotWaterCost = existing.hotWaterCost; merged._filled.hotWater = true; } if (!hasElectro && existing._filled?.electro) { merged.dPrev = existing.dPrev; merged.dCur = existing.dCur; merged.nPrev = existing.nPrev; merged.nCur = existing.nCur; merged.electroCost = existing.electroCost; merged._filled.electro = true; } if (!hasGas && existing._filled?.gas) { merged.gPrev = existing.gPrev; merged.gCur = existing.gCur; merged.gasCost = existing.gasCost; merged._filled.gas = true; } if (!hasCustom && existing._filled?.custom) { merged.customData = { ...existing.customData, ...cData }; merged.customCost = existing.customCost; merged._filled.custom = true; } else if (hasCustom) { merged.customData = { ...(existing.customData || {}), ...cData }; } merged.total = (merged.waterCost||0)+(merged.hotWaterCost||0)+(merged.electroCost||0)+(merged.gasCost||0)+(merged.customCost||0); merged.note = newData.note || existing.note; records[existingIdx] = merged; showToast("Оновлено! 🔄"); }
-    else { records.push(newData); showToast("Збережено! ✨"); }
-    clearDraft(); $('submitFormBtn').classList.add('save-btn-success'); setTimeout(() => $('submitFormBtn').classList.remove('save-btn-success'), 600);
-    syncToCloud(); const [y, m] = $('monthInput').value.split('-'); const nD = new Date(y, m); $('monthInput').value = `${nD.getFullYear()}-${String(nD.getMonth() + 1).padStart(2, '0')}`; fillPreviousReadings(); calculatePreview(); updateSmartBadges(); checkNewAchievements(); switchTab('tabDashboard', 0);
+
+    let cData = {};
+    customServices.forEach(srv => { let v = parseFloat($(`custom_${srv.id}`)?.value); if (isNaN(v) && srv.defaultSum) v = parseFloat(srv.defaultSum); if (!isNaN(v) && v > 0) cData[srv.id] = { name: srv.name, val: v }; });
+    const month = $('monthInput').value;
+    const existingIdx = records.findIndex(r => r.month === month);
+
+    const newData = { id: Date.now(), month, wPrev: hasWater ? getV('wPrev') : 0, wCur: hasWater ? getV('wCur') : 0, hwPrev: hasHotWater ? getV('hwPrev') : 0, hwCur: hasHotWater ? getV('hwCur') : 0, dPrev: hasElectro ? getV('dPrev') : 0, dCur: hasElectro ? getV('dCur') : 0, nPrev: (hasElectro && prefs.electroTwoZone) ? getV('nPrev') : 0, nCur: (hasElectro && prefs.electroTwoZone) ? getV('nCur') : 0, gPrev: hasGas ? getV('gPrev') : 0, gCur: hasGas ? getV('gCur') : 0, customData: cData, note: $('recordNote')?.value?.trim() || '', waterCost: hasWater ? currentCalc.waterCost : 0, hotWaterCost: hasHotWater ? currentCalc.hotWaterCost : 0, electroCost: hasElectro ? currentCalc.electroCost : 0, gasCost: hasGas ? currentCalc.gasCost : 0, customCost: currentCalc.customCost, total: currentCalc.total, paid: false, _filled: { water: hasWater, hotWater: hasHotWater, electro: hasElectro, gas: hasGas, custom: hasCustom } };
+
+    if (existingIdx >= 0) {
+        const existing = records[existingIdx];
+        const merged = { ...existing, ...newData, id: existing.id, paid: existing.paid };
+        if (!hasWater && existing._filled?.water) { merged.wPrev = existing.wPrev; merged.wCur = existing.wCur; merged.waterCost = existing.waterCost; merged._filled.water = true; }
+        if (!hasHotWater && existing._filled?.hotWater) { merged.hwPrev = existing.hwPrev; merged.hwCur = existing.hwCur; merged.hotWaterCost = existing.hotWaterCost; merged._filled.hotWater = true; }
+        if (!hasElectro && existing._filled?.electro) { merged.dPrev = existing.dPrev; merged.dCur = existing.dCur; merged.nPrev = existing.nPrev; merged.nCur = existing.nCur; merged.electroCost = existing.electroCost; merged._filled.electro = true; }
+        if (!hasGas && existing._filled?.gas) { merged.gPrev = existing.gPrev; merged.gCur = existing.gCur; merged.gasCost = existing.gasCost; merged._filled.gas = true; }
+        if (!hasCustom && existing._filled?.custom) { merged.customData = { ...existing.customData, ...cData }; merged.customCost = existing.customCost; merged._filled.custom = true; }
+        else if (hasCustom) { merged.customData = { ...(existing.customData || {}), ...cData }; }
+        merged.total = (merged.waterCost||0)+(merged.hotWaterCost||0)+(merged.electroCost||0)+(merged.gasCost||0)+(merged.customCost||0);
+        merged.note = newData.note || existing.note;
+        records[existingIdx] = merged;
+        showToast("Оновлено! 🔄");
+    } else {
+        records.push(newData);
+        showToast("Збережено! ✨");
+    }
+
+    clearDraft();
+    $('submitFormBtn')?.classList.add('save-btn-success');
+    setTimeout(() => $('submitFormBtn')?.classList.remove('save-btn-success'), 600);
+    syncToCloud();
+    const [y, m] = $('monthInput').value.split('-');
+    const nD = new Date(y, m);
+    $('monthInput').value = `${nD.getFullYear()}-${String(nD.getMonth() + 1).padStart(2, '0')}`;
+    fillPreviousReadings(); calculatePreview(); updateSmartBadges(); checkNewAchievements();
+    switchTab('tabDashboard', 0);
 });
 
 $('btnClearFields')?.addEventListener('click', () => { readingInputIds.forEach(id => { const el = $(id); if (el) { el.value = ''; el.classList.remove('input-invalid'); } }); document.querySelectorAll('.custom-srv-input').forEach(el => el.value = ''); if ($('recordNote')) $('recordNote').value = ''; calculatePreview(); updateSmartBadges(); clearDraft(); showToast('Очищено', '🧼'); });
 
-function fillPreviousReadings() { try { readingInputIds.forEach(id => { if($(id)) $(id).value = ''; }); document.querySelectorAll('.custom-srv-input').forEach(el => el.value = ''); if ($('recordNote')) $('recordNote').value = ''; const selectedMonth = $('monthInput')?.value; if (!selectedMonth || records.length === 0) { loadDraft(); return; } const [sy, sm] = selectedMonth.split('-').map(Number); const prevDate = new Date(sy, sm - 2); const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`; const prevRecord = records.find(r => r.month === prevMonth); if (prevRecord) { if (prefs.showWater && prevRecord.wCur != null) $('wPrev').value = prevRecord.wCur; if (prefs.showHotWater && prevRecord.hwCur != null) $('hwPrev').value = prevRecord.hwCur; if (prefs.showElectro) { if (prevRecord.dCur != null) $('dPrev').value = prevRecord.dCur; if (prefs.electroTwoZone && prevRecord.nCur != null) $('nPrev').value = prevRecord.nCur; } if (prefs.showGas && prevRecord.gCur != null) $('gPrev').value = prevRecord.gCur; } const currentRecord = records.find(r => r.month === selectedMonth); if (currentRecord) { if (prefs.showWater) { if (currentRecord.wPrev != null) $('wPrev').value = currentRecord.wPrev; if (currentRecord.wCur != null) $('wCur').value = currentRecord.wCur; } if (prefs.showHotWater) { if (currentRecord.hwPrev != null) $('hwPrev').value = currentRecord.hwPrev; if (currentRecord.hwCur != null) $('hwCur').value = currentRecord.hwCur; } if (prefs.showElectro) { if (currentRecord.dPrev != null) $('dPrev').value = currentRecord.dPrev; if (currentRecord.dCur != null) $('dCur').value = currentRecord.dCur; if (prefs.electroTwoZone) { if (currentRecord.nPrev != null) $('nPrev').value = currentRecord.nPrev; if (currentRecord.nCur != null) $('nCur').value = currentRecord.nCur; } } if (prefs.showGas) { if (currentRecord.gPrev != null) $('gPrev').value = currentRecord.gPrev; if (currentRecord.gCur != null) $('gCur').value = currentRecord.gCur; } if (currentRecord.customData) { Object.keys(currentRecord.customData).forEach(srvId => { const el = $(`custom_${srvId}`); if (el) el.value = currentRecord.customData[srvId].val; }); } if ($('recordNote')) $('recordNote').value = currentRecord.note || ''; } else { customServices.forEach(srv => { const el = $(`custom_${srv.id}`); if (el && srv.defaultSum) el.value = srv.defaultSum; }); loadDraft(); } const mo = new Date(selectedMonth + '-01').getMonth() + 1; if ($('isWinterInput')) $('isWinterInput').checked = mo >= 10 || mo <= 4; } catch(e) { console.error('fillPreviousReadings:', e); } }
+// =================== FILL PREVIOUS READINGS ===================
+function fillPreviousReadings() {
+    try {
+        readingInputIds.forEach(id => { if($(id)) $(id).value = ''; });
+        document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
+        if ($('recordNote')) $('recordNote').value = '';
+        const selectedMonth = $('monthInput')?.value;
+        if (!selectedMonth || records.length === 0) { loadDraft(); return; }
+        const [sy, sm] = selectedMonth.split('-').map(Number);
+        const prevDate = new Date(sy, sm - 2);
+        const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+        const prevRecord = records.find(r => r.month === prevMonth);
+        if (prevRecord) {
+            if (prefs.showWater && prevRecord.wCur != null) $('wPrev').value = prevRecord.wCur;
+            if (prefs.showHotWater && prevRecord.hwCur != null) $('hwPrev').value = prevRecord.hwCur;
+            if (prefs.showElectro) { if (prevRecord.dCur != null) $('dPrev').value = prevRecord.dCur; if (prefs.electroTwoZone && prevRecord.nCur != null) $('nPrev').value = prevRecord.nCur; }
+            if (prefs.showGas && prevRecord.gCur != null) $('gPrev').value = prevRecord.gCur;
+        }
+        const currentRecord = records.find(r => r.month === selectedMonth);
+        if (currentRecord) {
+            if (prefs.showWater) { if (currentRecord.wPrev != null) $('wPrev').value = currentRecord.wPrev; if (currentRecord.wCur != null) $('wCur').value = currentRecord.wCur; }
+            if (prefs.showHotWater) { if (currentRecord.hwPrev != null) $('hwPrev').value = currentRecord.hwPrev; if (currentRecord.hwCur != null) $('hwCur').value = currentRecord.hwCur; }
+            if (prefs.showElectro) { if (currentRecord.dPrev != null) $('dPrev').value = currentRecord.dPrev; if (currentRecord.dCur != null) $('dCur').value = currentRecord.dCur; if (prefs.electroTwoZone) { if (currentRecord.nPrev != null) $('nPrev').value = currentRecord.nPrev; if (currentRecord.nCur != null) $('nCur').value = currentRecord.nCur; } }
+            if (prefs.showGas) { if (currentRecord.gPrev != null) $('gPrev').value = currentRecord.gPrev; if (currentRecord.gCur != null) $('gCur').value = currentRecord.gCur; }
+            if (currentRecord.customData) { Object.keys(currentRecord.customData).forEach(srvId => { const el = $(`custom_${srvId}`); if (el) el.value = currentRecord.customData[srvId].val; }); }
+            if ($('recordNote')) $('recordNote').value = currentRecord.note || '';
+        } else {
+            customServices.forEach(srv => { const el = $(`custom_${srv.id}`); if (el && srv.defaultSum) el.value = srv.defaultSum; });
+            loadDraft();
+        }
+        const mo = new Date(selectedMonth + '-01').getMonth() + 1;
+        if ($('isWinterInput')) $('isWinterInput').checked = mo >= 10 || mo <= 4;
+    } catch(e) { console.error('fillPreviousReadings:', e); }
+}
 // =================== SETTINGS ===================
 function updateServiceChartOptions() { const select = $('serviceChartSelect'); if (!select) return; const cur = select.value; select.innerHTML = ''; if (prefs.showWater) select.innerHTML += '<option value="water">💧 Вода</option>'; if (prefs.showHotWater) select.innerHTML += '<option value="hotWater">🌡️ Гар. Вода</option>'; if (prefs.showElectro) select.innerHTML += '<option value="electro">⚡ Світло</option>'; if (prefs.showGas) select.innerHTML += '<option value="gas">🔥 Газ</option>'; if (select.querySelector(`option[value="${cur}"]`)) select.value = cur; }
-function applyPreferences() { if($('prefWater')) $('prefWater').checked = prefs.showWater; if($('prefHotWater')) $('prefHotWater').checked = prefs.showHotWater; if($('prefElectro')) $('prefElectro').checked = prefs.showElectro; if($('prefGas')) $('prefGas').checked = prefs.showGas; if($('prefElectroTwoZone')) $('prefElectroTwoZone').checked = prefs.electroTwoZone; if($('prefElectroWinter')) $('prefElectroWinter').checked = prefs.electroWinter; if($('prefReminders')) { $('prefReminders').checked = prefs.remindersEnabled; if($('remindersSettings')) $('remindersSettings').style.display = prefs.remindersEnabled ? 'block' : 'none'; } if($('remWaterStart')) $('remWaterStart').value = prefs.remWaterStart || 1; if($('remWaterEnd')) $('remWaterEnd').value = prefs.remWaterEnd || 5; if($('remElectroStart')) $('remElectroStart').value = prefs.remElectroStart || 28; if($('remElectroEnd')) $('remElectroEnd').value = prefs.remElectroEnd || 3; $('blockWater').style.display = prefs.showWater ? 'block' : 'none'; $('blockHotWater').style.display = prefs.showHotWater ? 'block' : 'none'; if($('settingHotWaterWrap')) $('settingHotWaterWrap').style.display = prefs.showHotWater ? 'flex' : 'none'; $('blockElectro').style.display = prefs.showElectro ? 'block' : 'none'; $('blockGas').style.display = prefs.showGas ? 'block' : 'none'; $('blockCustomServices').style.display = customServices.length > 0 ? 'block' : 'none'; if (prefs.electroTwoZone) { $('electroNightRow').style.display = 'flex'; $('lblDay1').innerText = "(День)"; $('lblDay2').innerText = "(День)"; } else { $('electroNightRow').style.display = 'none'; $('lblDay1').innerText = ""; $('lblDay2').innerText = ""; } if($('winterCheckboxWrapper')) $('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none'; if($('settingElectroWinterWrap')) $('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'flex' : 'none'; updateServiceChartOptions(); }
+
+function applyPreferences() {
+    if($('prefWater')) $('prefWater').checked = prefs.showWater;
+    if($('prefHotWater')) $('prefHotWater').checked = prefs.showHotWater;
+    if($('prefElectro')) $('prefElectro').checked = prefs.showElectro;
+    if($('prefGas')) $('prefGas').checked = prefs.showGas;
+    if($('prefElectroTwoZone')) $('prefElectroTwoZone').checked = prefs.electroTwoZone;
+    if($('prefElectroWinter')) $('prefElectroWinter').checked = prefs.electroWinter;
+    if($('prefReminders')) { $('prefReminders').checked = prefs.remindersEnabled; if($('remindersSettings')) $('remindersSettings').style.display = prefs.remindersEnabled ? 'block' : 'none'; }
+    if($('remWaterStart')) $('remWaterStart').value = prefs.remWaterStart || 1;
+    if($('remWaterEnd')) $('remWaterEnd').value = prefs.remWaterEnd || 5;
+    if($('remElectroStart')) $('remElectroStart').value = prefs.remElectroStart || 28;
+    if($('remElectroEnd')) $('remElectroEnd').value = prefs.remElectroEnd || 3;
+    if ($('blockWater')) $('blockWater').style.display = prefs.showWater ? 'block' : 'none';
+    if ($('blockHotWater')) $('blockHotWater').style.display = prefs.showHotWater ? 'block' : 'none';
+    if($('settingHotWaterWrap')) $('settingHotWaterWrap').style.display = prefs.showHotWater ? 'flex' : 'none';
+    if ($('blockElectro')) $('blockElectro').style.display = prefs.showElectro ? 'block' : 'none';
+    if ($('blockGas')) $('blockGas').style.display = prefs.showGas ? 'block' : 'none';
+    if ($('blockCustomServices')) $('blockCustomServices').style.display = customServices.length > 0 ? 'block' : 'none';
+    if (prefs.electroTwoZone) { if ($('electroNightRow')) $('electroNightRow').style.display = 'flex'; if ($('lblDay1')) $('lblDay1').innerText = "(День)"; if ($('lblDay2')) $('lblDay2').innerText = "(День)"; }
+    else { if ($('electroNightRow')) $('electroNightRow').style.display = 'none'; if ($('lblDay1')) $('lblDay1').innerText = ""; if ($('lblDay2')) $('lblDay2').innerText = ""; }
+    if($('winterCheckboxWrapper')) $('winterCheckboxWrapper').style.display = prefs.electroWinter ? 'flex' : 'none';
+    if($('settingElectroWinterWrap')) $('settingElectroWinterWrap').style.display = prefs.electroWinter ? 'flex' : 'none';
+    updateServiceChartOptions();
+}
+
 ['prefWater', 'prefHotWater', 'prefElectro', 'prefGas', 'prefElectroTwoZone', 'prefElectroWinter'].forEach(id => { $(id)?.addEventListener('change', () => { prefs.showWater = $('prefWater')?.checked ?? prefs.showWater; prefs.showHotWater = $('prefHotWater')?.checked ?? prefs.showHotWater; prefs.showElectro = $('prefElectro')?.checked ?? prefs.showElectro; prefs.showGas = $('prefGas')?.checked ?? prefs.showGas; prefs.electroTwoZone = $('prefElectroTwoZone')?.checked ?? prefs.electroTwoZone; prefs.electroWinter = $('prefElectroWinter')?.checked ?? prefs.electroWinter; applyPreferences(); renderCalcCustomServices(); calculatePreview(); updateSmartBadges(); }); });
 $('prefReminders')?.addEventListener('change', function () { if($('remindersSettings')) $('remindersSettings').style.display = this.checked ? 'block' : 'none'; });
-$('saveSettingsBtn')?.addEventListener('click', () => { tariffs = { water: parseFloat($('tWater')?.value) || defaultTariffs.water, hotWater: parseFloat($('tHotWater')?.value) || defaultTariffs.hotWater, electroBase: parseFloat($('tElectroBase')?.value) || defaultTariffs.electroBase, electroWinter: parseFloat($('tElectroWinter')?.value) || defaultTariffs.electroWinter, winterLimit: 2000, nightCoef: 0.5, gas: parseFloat($('tGas')?.value) || defaultTariffs.gas }; prefs = { showWater: $('prefWater')?.checked, showHotWater: $('prefHotWater')?.checked, showElectro: $('prefElectro')?.checked, showGas: $('prefGas')?.checked, electroTwoZone: $('prefElectroTwoZone')?.checked, electroWinter: $('prefElectroWinter')?.checked, remindersEnabled: $('prefReminders')?.checked, remWaterStart: parseInt($('remWaterStart')?.value) || 1, remWaterEnd: parseInt($('remWaterEnd')?.value) || 5, remElectroStart: parseInt($('remElectroStart')?.value) || 28, remElectroEnd: parseInt($('remElectroEnd')?.value) || 3 }; customServices = customServices.filter(s => s.name.trim() !== ""); localStorage.setItem('k_budget', $('budgetInput')?.value || '0'); syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); updateSmartBadges(); checkReminders(); showToast("Збережено ✓"); });
+
+$('saveSettingsBtn')?.addEventListener('click', () => {
+    tariffs = { water: parseFloat($('tWater')?.value) || defaultTariffs.water, hotWater: parseFloat($('tHotWater')?.value) || defaultTariffs.hotWater, electroBase: parseFloat($('tElectroBase')?.value) || defaultTariffs.electroBase, electroWinter: parseFloat($('tElectroWinter')?.value) || defaultTariffs.electroWinter, winterLimit: 2000, nightCoef: 0.5, gas: parseFloat($('tGas')?.value) || defaultTariffs.gas };
+    prefs = { showWater: $('prefWater')?.checked, showHotWater: $('prefHotWater')?.checked, showElectro: $('prefElectro')?.checked, showGas: $('prefGas')?.checked, electroTwoZone: $('prefElectroTwoZone')?.checked, electroWinter: $('prefElectroWinter')?.checked, remindersEnabled: $('prefReminders')?.checked, remWaterStart: parseInt($('remWaterStart')?.value) || 1, remWaterEnd: parseInt($('remWaterEnd')?.value) || 5, remElectroStart: parseInt($('remElectroStart')?.value) || 28, remElectroEnd: parseInt($('remElectroEnd')?.value) || 3 };
+    customServices = customServices.filter(s => s.name.trim() !== "");
+    localStorage.setItem('k_budget', $('budgetInput')?.value || '0');
+    syncToCloud(); applyPreferences(); renderCalcCustomServices(); calculatePreview(); updateSmartBadges(); checkReminders();
+    showToast("Збережено ✓");
+});
 
 function renderSettingsCustomServices() { const list = $('customServicesSettingsList'); if(!list) return; list.innerHTML = customServices.map((srv, i) => `<div class="flex gap-2 items-center bg-slate-50 dark:bg-black/50 p-2 rounded-xl border border-slate-100 dark:border-white/5"><input type="text" value="${srv.name}" data-idx="${i}" data-field="name" placeholder="Назва" class="cs-setting-input flex-1 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2.5 py-2.5 border border-transparent focus:border-brand transition-colors"><input type="number" step="0.01" value="${srv.defaultSum}" data-idx="${i}" data-field="sum" placeholder="₴" class="cs-setting-input w-16 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2 py-2.5 text-center border border-transparent focus:border-brand transition-colors"><button type="button" class="cs-del p-2 text-slate-400 hover:text-red-500 bg-white dark:bg-[#2c2c2e] rounded-lg transition-colors" data-idx="${i}"><i class="fa-solid fa-trash text-[10px]"></i></button></div>`).join(''); list.querySelectorAll('.cs-setting-input').forEach(input => { input.addEventListener('change', () => { const idx = parseInt(input.dataset.idx); if (input.dataset.field === 'name') customServices[idx].name = input.value; else customServices[idx].defaultSum = input.value; }); }); list.querySelectorAll('.cs-del').forEach(btn => { btn.addEventListener('click', () => { customServices.splice(parseInt(btn.dataset.idx), 1); renderSettingsCustomServices(); }); }); }
 $('addCustomServiceBtn')?.addEventListener('click', () => { customServices.push({ id: 's' + Date.now(), name: "", defaultSum: "" }); renderSettingsCustomServices(); });
+
 function renderCalcCustomServices() { const c = $('customServicesContainer'); if(!c) return; if (customServices.length === 0) { c.innerHTML = ''; return; } c.innerHTML = customServices.map(srv => `<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-1.5 text-center">${srv.name || 'Послуга'}</span><input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input premium-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-white/10" placeholder="${srv.defaultSum || '0.00'}"></div>`).join(''); document.querySelectorAll('.custom-srv-input').forEach(input => input.addEventListener('input', calculatePreview)); }
 
 function checkReminders() { const monthKey = new Date().getFullYear() + '-' + new Date().getMonth(); if (!prefs.remindersEnabled || localStorage.getItem('lastSubmittedMonth') === monthKey) { $('reminderBanner')?.classList.add('hidden'); return; } const d = new Date().getDate(); let msgs = []; const wS = prefs.remWaterStart || 1, wE = prefs.remWaterEnd || 5, eS = prefs.remElectroStart || 28, eE = prefs.remElectroEnd || 3; const isW = wS <= wE ? (d >= wS && d <= wE) : (d >= wS || d <= wE); const isE = eS <= eE ? (d >= eS && d <= eE) : (d >= eS || d <= eE); if (isW && (prefs.showWater || prefs.showHotWater)) msgs.push("💧 Воду"); if (isE && prefs.showElectro) msgs.push("⚡️ Світло"); if (msgs.length > 0) { $('reminderBanner')?.classList.remove('hidden'); if($('reminderText')) $('reminderText').innerText = "Передайте: " + msgs.join(" та "); } else $('reminderBanner')?.classList.add('hidden'); }
@@ -188,38 +699,158 @@ $('reminderDismissBtn')?.addEventListener('click', () => { localStorage.setItem(
 $('changePassBtn')?.addEventListener('click', async () => { const oldPass = prompt("Поточний:"); if (!oldPass) return; const newPass = prompt("Новий (мін 4):"); if (!newPass || newPass.length < 4) return showToast("Мін 4", "⚠️"); if (newPass !== prompt("Підтвердіть:")) return showToast("Не збігаються", "❌"); try { const oldHash = await getHash(oldPass); const newHash = await getHash(newPass); const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: "change_password", login: sessionLogin, oldPass: oldHash, newPass: newHash }) }); if ((await res.json()).success) { sessionPass = newHash; localStorage.setItem('k_passHash', newHash); showToast("Змінено!", "✅"); } else showToast("Неправильний пароль", "❌"); } catch (e) { showToast("Помилка", "❌"); } });
 
 // =================== SWIPE ===================
-function initSwipe(card, index) { let startX = 0, currentX = 0, isSwiping = false; const threshold = 80; card.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isSwiping = true; card.classList.add('swiping'); }, { passive: true }); card.addEventListener('touchmove', (e) => { if (!isSwiping) return; currentX = e.touches[0].clientX - startX; const limited = Math.sign(currentX) * Math.min(Math.abs(currentX), 120); card.style.transform = `translateX(${limited}px)`; const l = card.querySelector('.swipe-bg-left'), r = card.querySelector('.swipe-bg-right'); if (l) l.style.opacity = currentX < -30 ? '1' : '0'; if (r) r.style.opacity = currentX > 30 ? '1' : '0'; }, { passive: true }); card.addEventListener('touchend', () => { isSwiping = false; card.classList.remove('swiping'); card.style.transform = ''; const l = card.querySelector('.swipe-bg-left'), r = card.querySelector('.swipe-bg-right'); if (l) l.style.opacity = '0'; if (r) r.style.opacity = '0'; if (currentX < -threshold) { card.style.transform = 'translateX(-100%)'; card.style.opacity = '0'; setTimeout(() => deleteRecord(index), 300); } else if (currentX > threshold) { card.style.transform = 'translateX(100%)'; card.style.opacity = '0'; setTimeout(() => togglePaid(index), 300); } currentX = 0; }, { passive: true }); }
+function initSwipe(card, index) {
+    let startX = 0, currentX = 0, isSwiping = false; const threshold = 80;
+    card.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isSwiping = true; card.classList.add('swiping'); }, { passive: true });
+    card.addEventListener('touchmove', (e) => { if (!isSwiping) return; currentX = e.touches[0].clientX - startX; const limited = Math.sign(currentX) * Math.min(Math.abs(currentX), 120); card.style.transform = `translateX(${limited}px)`; const l = card.querySelector('.swipe-bg-left'), r = card.querySelector('.swipe-bg-right'); if (l) l.style.opacity = currentX < -30 ? '1' : '0'; if (r) r.style.opacity = currentX > 30 ? '1' : '0'; }, { passive: true });
+    card.addEventListener('touchend', () => { isSwiping = false; card.classList.remove('swiping'); card.style.transform = ''; const l = card.querySelector('.swipe-bg-left'), r = card.querySelector('.swipe-bg-right'); if (l) l.style.opacity = '0'; if (r) r.style.opacity = '0'; if (currentX < -threshold) { card.style.transform = 'translateX(-100%)'; card.style.opacity = '0'; setTimeout(() => deleteRecord(index), 300); } else if (currentX > threshold) { card.style.transform = 'translateX(100%)'; card.style.opacity = '0'; setTimeout(() => togglePaid(index), 300); } currentX = 0; }, { passive: true });
+}
 
 // =================== RECORDS ===================
-function renderRecords() { const list = $('recordsList'); if (!list) return; if (records.length === 0) { list.innerHTML = `<div class="text-center py-12"><i class="fa-solid fa-clock-rotate-left text-4xl text-slate-300 dark:text-slate-600 mb-4"></i><p class="text-slate-500 font-medium">Ще немає записів</p></div>`; if($('statsAvg')) $('statsAvg').innerText = '0 ₴'; if($('statsTotalPaid')) $('statsTotalPaid').innerText = '0 ₴'; if($('statsMin')) $('statsMin').innerText = '0 ₴'; if($('statsMax')) $('statsMax').innerText = '0 ₴'; if($('statsCount')) $('statsCount').innerText = '0'; if($('chartContainer')) $('chartContainer').innerHTML = '<span class="text-xs text-slate-400 m-auto">Немає даних</span>'; renderServiceChart(); return; } const totals = records.map(r => r.total); if($('statsAvg')) $('statsAvg').innerText = fmt.format(totals.reduce((a,b)=>a+b,0)/totals.length) + ' ₴'; if($('statsTotalPaid')) $('statsTotalPaid').innerText = fmt.format(records.filter(r=>r.paid).reduce((s,r)=>s+r.total,0)) + ' ₴'; if($('statsMin')) $('statsMin').innerText = fmt.format(Math.min(...totals)) + ' ₴'; if($('statsMax')) $('statsMax').innerText = fmt.format(Math.max(...totals)) + ' ₴'; if($('statsCount')) $('statsCount').innerText = records.length; let sorted = [...records]; const sortVal = $('sortSelect')?.value || 'date-desc'; switch(sortVal) { case 'date-desc': sorted.sort((a,b)=>new Date(b.month)-new Date(a.month)); break; case 'date-asc': sorted.sort((a,b)=>new Date(a.month)-new Date(b.month)); break; case 'amount-desc': sorted.sort((a,b)=>b.total-a.total); break; case 'amount-asc': sorted.sort((a,b)=>a.total-b.total); break; } if (currentFilter==='paid') sorted=sorted.filter(r=>r.paid); else if (currentFilter==='unpaid') sorted=sorted.filter(r=>!r.paid); const search=$('searchRecords')?.value?.toLowerCase()||''; if(search) sorted=sorted.filter(r=>new Date(r.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'}).toLowerCase().includes(search)||r.month.includes(search)); renderChart([...records].sort((a,b)=>new Date(b.month)-new Date(a.month))); renderServiceChart(); list.innerHTML=''; if(!sorted.length){list.innerHTML=`<div class="text-center py-8"><p class="text-slate-400 font-medium">Нічого не знайдено</p></div>`;return;} let lastYear=null; sorted.forEach(rec=>{const idx=records.indexOf(rec);const yr=rec.month.split('-')[0];if(yr!==lastYear){lastYear=yr;const h=document.createElement('div');h.className="flex items-center gap-4 mt-6 mb-3";h.innerHTML=`<h2 class="text-lg font-black text-slate-300 dark:text-slate-600">${yr}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-white/5"></div>`;list.appendChild(h);}list.appendChild(createRecordCard(rec,idx));}); }
+function renderRecords() {
+    const list = $('recordsList'); if (!list) return;
+    if (records.length === 0) {
+        list.innerHTML = `<div class="text-center py-12"><i class="fa-solid fa-clock-rotate-left text-4xl text-slate-300 dark:text-slate-600 mb-4"></i><p class="text-slate-500 font-medium">Ще немає записів</p></div>`;
+        if($('statsAvg')) $('statsAvg').innerText = '0 ₴'; if($('statsTotalPaid')) $('statsTotalPaid').innerText = '0 ₴'; if($('statsMin')) $('statsMin').innerText = '0 ₴'; if($('statsMax')) $('statsMax').innerText = '0 ₴'; if($('statsCount')) $('statsCount').innerText = '0';
+        renderHistoryChart([]); renderServiceChart(); return;
+    }
+    const totals = records.map(r => r.total);
+    if($('statsAvg')) $('statsAvg').innerText = fmt.format(totals.reduce((a,b)=>a+b,0)/totals.length) + ' ₴';
+    if($('statsTotalPaid')) $('statsTotalPaid').innerText = fmt.format(records.filter(r=>r.paid).reduce((s,r)=>s+r.total,0)) + ' ₴';
+    if($('statsMin')) $('statsMin').innerText = fmt.format(Math.min(...totals)) + ' ₴';
+    if($('statsMax')) $('statsMax').innerText = fmt.format(Math.max(...totals)) + ' ₴';
+    if($('statsCount')) $('statsCount').innerText = records.length;
 
-function createRecordCard(rec, index) { const card = document.createElement('div'); card.className = `premium-card swipe-card p-5 relative overflow-hidden cursor-pointer select-none ${rec.paid ? '' : 'ring-1 ring-orange-400/20'}`; const dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', { month: 'long' }); const [rY, rM] = rec.month.split('-'); const filledServices = []; if (rec._filled?.water||rec.waterCost>0) filledServices.push('💧'); if (rec._filled?.hotWater||rec.hotWaterCost>0) filledServices.push('🌡️'); if (rec._filled?.electro||rec.electroCost>0) filledServices.push('⚡'); if (rec._filled?.gas||rec.gasCost>0) filledServices.push('🔥'); if (rec._filled?.custom||rec.customCost>0) filledServices.push('📦'); const totalExp=(prefs.showWater?1:0)+(prefs.showHotWater?1:0)+(prefs.showElectro?1:0)+(prefs.showGas?1:0)+(customServices.length>0?1:0); const isPartial=filledServices.length<totalExp&&filledServices.length>0; const partialBadge=isPartial?`<span class="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-md ml-2">Частково</span>`:''; const prevYR=records.find(r=>r.month===(parseInt(rY)-1)+'-'+rM);let yoy=''; if(prevYR&&prevYR.total>0&&rec.total>0){const p=Math.round(((rec.total-prevYR.total)/prevYR.total)*100);if(p<0)yoy=`<span class="text-[9px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-0.5 rounded-md ml-2">↓${p}%</span>`;else if(p>0)yoy=`<span class="text-[9px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-md ml-2">↑+${p}%</span>`;} const pW=rec.total>0?((rec.waterCost||0)/rec.total)*100:0;const pHW=rec.total>0?((rec.hotWaterCost||0)/rec.total)*100:0;const pE=rec.total>0?((rec.electroCost||0)/rec.total)*100:0;const pG=rec.total>0?((rec.gasCost||0)/rec.total)*100:0; const conic=`conic-gradient(#3b82f6 0% ${pW}%,#ef4444 ${pW}% ${pW+pHW}%,#eab308 ${pW+pHW}% ${pW+pHW+pE}%,#f97316 ${pW+pHW+pE}% ${pW+pHW+pE+pG}%,#a855f7 ${pW+pHW+pE+pG}% 100%)`; card.innerHTML=`${!rec.paid?'<div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-400/15 to-transparent rounded-bl-[4rem]"></div>':''}<div class="flex justify-between items-center relative z-10" onclick="toggleDetails(${index})"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4><div class="flex items-center flex-wrap gap-1"><span class="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid?'bg-brand-light text-brand':'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid?'Оплачено':'Борг'}</span>${partialBadge}${yoy}</div></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-full text-slate-400"><i id="chevron-${index}" class="fa-solid fa-chevron-down transition-transform duration-300"></i></div></div></div><div id="details-${index}" class="hidden" onclick="event.stopPropagation()"><div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5">${rec.total>0?`<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background:${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span>💧 Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span>🌡️ Гар.</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span>⚡ Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span>🔥 Газ</span><span>${Math.round(pG)}%</span></div>`:''}${(100-pW-pHW-pE-pG)>1?`<div class="flex justify-between"><span>📦 Інше</span><span>${Math.round(100-pW-pHW-pE-pG)}%</span></div>`:''}</div></div>`:''}<div class="space-y-3">${rec.waterCost>0?`<div class="flex justify-between"><span class="font-bold">💧 Вода</span><span class="font-black">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.wPrev}→${rec.wCur}</span><span class="text-blue-500">+${rec.wCur-rec.wPrev} м³</span></div>`:''}${rec.hotWaterCost>0?`<div class="flex justify-between"><span class="font-bold">🌡️ Гар.</span><span class="font-black">${fmt.format(rec.hotWaterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.hwPrev}→${rec.hwCur}</span><span class="text-red-500">+${rec.hwCur-rec.hwPrev} м³</span></div>`:''}${rec.electroCost>0?`<div class="flex justify-between"><span class="font-bold">⚡ Світло</span><span class="font-black">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>Д:${rec.dPrev}→${rec.dCur}</span><span class="text-yellow-600">+${rec.dCur-rec.dPrev}</span></div>${(rec.nCur||rec.nPrev)?`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl mt-1"><span>Н:${rec.nPrev}→${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur-rec.nPrev}</span></div>`:''}`:''}${rec.gasCost>0?`<div class="flex justify-between"><span class="font-bold">🔥 Газ</span><span class="font-black">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.gPrev}→${rec.gCur}</span><span class="text-orange-500">+${rec.gCur-rec.gPrev} м³</span></div>`:''}${rec.customCost>0?`<div class="flex justify-between"><span class="font-bold">📦 Інше</span><span class="font-black">${fmt.format(rec.customCost)} ₴</span></div>${rec.customData?Object.values(rec.customData).filter(s=>s.val>0).map(s=>`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${s.name}</span><span class="text-purple-500">${fmt.format(s.val)} ₴</span></div>`).join(''):''}`:'' }${rec.note?`<div class="mt-3 p-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs text-slate-500 italic"><i class="fa-solid fa-sticky-note mr-1"></i>${rec.note}</div>`:''}</div></div><div class="flex gap-2.5 mt-4 pt-3 border-t border-slate-100 dark:border-white/5"><button type="button" class="rec-pay flex-1 py-3.5 rounded-2xl font-bold text-xs border active:scale-[0.96] transition-all ${rec.paid?'bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 border-slate-200 dark:border-white/10':'bg-gradient-to-r from-brand to-blue-600 text-white shadow-lg border-brand'}" data-idx="${index}">${rec.paid?'↩ Скасувати':'✓ Оплачено'}</button><button type="button" class="rec-share w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 active:scale-[0.90] transition-transform" data-idx="${index}"><i class="fa-solid fa-share-nodes"></i></button><button type="button" class="rec-edit w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 active:scale-[0.90] transition-transform" data-idx="${index}"><i class="fa-solid fa-pen"></i></button><button type="button" class="rec-del w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 active:scale-[0.90] transition-transform" data-idx="${index}"><i class="fa-solid fa-trash"></i></button></div></div>`; const swL=document.createElement('div');swL.className='swipe-bg-left';swL.innerHTML='<i class="fa-solid fa-trash mr-2"></i>Видалити'; const swR=document.createElement('div');swR.className='swipe-bg-right';swR.innerHTML=`<i class="fa-solid fa-${rec.paid?'rotate-left':'check'} mr-2"></i>${rec.paid?'Скасувати':'Оплачено'}`; card.insertBefore(swL,card.firstChild);card.insertBefore(swR,card.firstChild); initSwipe(card,index); setTimeout(()=>{card.querySelector('.rec-pay')?.addEventListener('click',(e)=>{e.stopPropagation();togglePaid(index);});card.querySelector('.rec-share')?.addEventListener('click',(e)=>{e.stopPropagation();shareRecord(index);});card.querySelector('.rec-edit')?.addEventListener('click',(e)=>{e.stopPropagation();editRecord(index);});card.querySelector('.rec-del')?.addEventListener('click',(e)=>{e.stopPropagation();deleteRecord(index);});},0); return card; }
+    let sorted = [...records];
+    const sortVal = $('sortSelect')?.value || 'date-desc';
+    switch(sortVal) { case 'date-desc': sorted.sort((a,b)=>new Date(b.month)-new Date(a.month)); break; case 'date-asc': sorted.sort((a,b)=>new Date(a.month)-new Date(b.month)); break; case 'amount-desc': sorted.sort((a,b)=>b.total-a.total); break; case 'amount-asc': sorted.sort((a,b)=>a.total-b.total); break; }
+    if (currentFilter==='paid') sorted=sorted.filter(r=>r.paid); else if (currentFilter==='unpaid') sorted=sorted.filter(r=>!r.paid);
+    const search=$('searchRecords')?.value?.toLowerCase()||'';
+    if(search) sorted=sorted.filter(r=>new Date(r.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'}).toLowerCase().includes(search)||r.month.includes(search));
 
-window.toggleDetails = function(i){const el=$(`details-${i}`);const ch=$(`chevron-${i}`);if(el.classList.contains('hidden')){el.classList.remove('hidden');ch.style.transform='rotate(180deg)';}else{el.classList.add('hidden');ch.style.transform='rotate(0deg)';}};
+    renderHistoryChart([...records].sort((a,b)=>new Date(a.month)-new Date(b.month)));
+    renderServiceChart();
+    list.innerHTML='';
+    if(!sorted.length){list.innerHTML=`<div class="text-center py-8"><p class="text-slate-400 font-medium">Нічого не знайдено</p></div>`;return;}
+
+    // Batch actions bar
+    const unpaidCount = sorted.filter(r => !r.paid).length;
+    if (unpaidCount > 0 && currentFilter !== 'paid') {
+        const batchBar = document.createElement('div');
+        batchBar.className = 'bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-2xl flex justify-between items-center text-white mb-4';
+        batchBar.innerHTML = `<div><p class="text-xs font-bold opacity-80">${unpaidCount} неоплачених</p><p class="text-sm font-black">${fmt.format(sorted.filter(r=>!r.paid).reduce((s,r)=>s+r.total,0))} ₴</p></div><button class="batch-pay-btn px-4 py-2 bg-white/20 rounded-xl text-xs font-bold active:scale-95 transition-transform border border-white/20 hover:bg-white/30">✓ Оплатити всі</button>`;
+        list.appendChild(batchBar);
+        batchBar.querySelector('.batch-pay-btn')?.addEventListener('click', () => {
+            if (confirm(`Позначити ${unpaidCount} записів як оплачені?`)) {
+                records.forEach(r => { if (!r.paid) r.paid = true; });
+                renderRecords(); renderDashboard(); syncToCloud(); checkNewAchievements();
+                showToast(`${unpaidCount} записів оплачено!`, '✅');
+            }
+        });
+    }
+
+    let lastYear=null;
+    sorted.forEach(rec=>{
+        const idx=records.indexOf(rec); const yr=rec.month.split('-')[0];
+        if(yr!==lastYear){lastYear=yr;const h=document.createElement('div');h.className="flex items-center gap-4 mt-6 mb-3";h.innerHTML=`<h2 class="text-lg font-black text-slate-300 dark:text-slate-600">${yr}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-white/5"></div>`;list.appendChild(h);}
+        list.appendChild(createRecordCard(rec,idx));
+    });
+}
+
+function renderHistoryChart(sortedRecords) {
+    if (!$('historyChartCanvas')) return;
+    if (!historyChart) historyChart = new ChartEngine('historyChartCanvas', { padding: 30, barRadius: 5 });
+    const recent = sortedRecords.slice(-10);
+    const data = recent.map(r => ({ value: r.total, label: new Date(r.month + '-01').toLocaleString('uk-UA', { month: 'short' }).slice(0, 3), color: r.paid ? '#007aff' : '#ff9500' }));
+    historyChart.setData(data);
+}
+
+function renderServiceChart() {
+    if (!$('serviceChartCanvas') || records.length === 0) { if ($('serviceChartSummary')) $('serviceChartSummary').innerHTML = ''; return; }
+    const type = $('serviceChartSelect')?.value || 'water';
+    const unit = (type === 'electro') ? 'кВт' : 'м³';
+    if (!serviceChart) serviceChart = new ChartEngine('serviceChartCanvas', { padding: 24, barRadius: 4, unit });
+    else serviceChart.options.unit = unit;
+    const sorted = [...records].sort((a, b) => new Date(a.month) - new Date(b.month)).slice(-8);
+    const getValue = (rec) => { switch(type) { case 'water': return Math.max(0,(rec.wCur||0)-(rec.wPrev||0)); case 'hotWater': return Math.max(0,(rec.hwCur||0)-(rec.hwPrev||0)); case 'electro': return Math.max(0,(rec.dCur||0)-(rec.dPrev||0))+Math.max(0,(rec.nCur||0)-(rec.nPrev||0)); case 'gas': return Math.max(0,(rec.gCur||0)-(rec.gPrev||0)); default: return 0; } };
+    const getColor = () => { switch(type) { case 'water': return '#3b82f6'; case 'hotWater': return '#ef4444'; case 'electro': return '#eab308'; case 'gas': return '#f97316'; default: return '#6b7280'; } };
+    const color = getColor();
+    const data = sorted.map(rec => ({ value: getValue(rec), label: new Date(rec.month + '-01').toLocaleString('uk-UA', { month: 'short' }).slice(0, 3), color }));
+    serviceChart.setData(data);
+
+    const values = data.map(d => d.value);
+    const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+    const last = values[values.length - 1] || 0;
+    const prevLast = values.length > 1 ? values[values.length - 2] : last;
+    const trendPct = prevLast > 0 ? Math.round(((last - prevLast) / prevLast) * 100) : 0;
+    const summary = $('serviceChartSummary');
+    if (summary) summary.innerHTML = `<span>Сер.: <span style="color:${color}" class="font-black">${Math.round(avg)} ${unit}/міс</span></span><span>Ост.: <span class="${trendPct < 0 ? 'text-green-600' : trendPct > 0 ? 'text-red-500' : 'text-slate-500'} font-black">${last} ${unit} (${trendPct > 0 ? '+' : ''}${trendPct}%)</span></span>`;
+}
+$('serviceChartSelect')?.addEventListener('change', renderServiceChart);
+
+function createRecordCard(rec, index) {
+    const card = document.createElement('div');
+    card.className = `premium-card swipe-card p-5 relative overflow-hidden cursor-pointer select-none ${rec.paid ? '' : 'ring-1 ring-orange-400/20'}`;
+    const dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', { month: 'long' });
+    const [rY, rM] = rec.month.split('-');
+    const filledServices = [];
+    if (rec._filled?.water||rec.waterCost>0) filledServices.push('💧');
+    if (rec._filled?.hotWater||rec.hotWaterCost>0) filledServices.push('🌡️');
+    if (rec._filled?.electro||rec.electroCost>0) filledServices.push('⚡');
+    if (rec._filled?.gas||rec.gasCost>0) filledServices.push('🔥');
+    if (rec._filled?.custom||rec.customCost>0) filledServices.push('📦');
+    const totalExp=(prefs.showWater?1:0)+(prefs.showHotWater?1:0)+(prefs.showElectro?1:0)+(prefs.showGas?1:0)+(customServices.length>0?1:0);
+    const isPartial=filledServices.length<totalExp&&filledServices.length>0;
+    const partialBadge=isPartial?`<span class="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-md ml-2">Частково</span>`:'';
+    const prevYR=records.find(r=>r.month===(parseInt(rY)-1)+'-'+rM);let yoy='';
+    if(prevYR&&prevYR.total>0&&rec.total>0){const p=Math.round(((rec.total-prevYR.total)/prevYR.total)*100);if(p<0)yoy=`<span class="text-[9px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-0.5 rounded-md ml-2">↓${Math.abs(p)}%</span>`;else if(p>0)yoy=`<span class="text-[9px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-md ml-2">↑+${p}%</span>`;}
+    const pW=rec.total>0?((rec.waterCost||0)/rec.total)*100:0;const pHW=rec.total>0?((rec.hotWaterCost||0)/rec.total)*100:0;const pE=rec.total>0?((rec.electroCost||0)/rec.total)*100:0;const pG=rec.total>0?((rec.gasCost||0)/rec.total)*100:0;
+    const conic=`conic-gradient(#3b82f6 0% ${pW}%,#ef4444 ${pW}% ${pW+pHW}%,#eab308 ${pW+pHW}% ${pW+pHW+pE}%,#f97316 ${pW+pHW+pE}% ${pW+pHW+pE+pG}%,#a855f7 ${pW+pHW+pE+pG}% 100%)`;
+
+    card.innerHTML=`${!rec.paid?'<div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-400/15 to-transparent rounded-bl-[4rem]"></div>':''}<div class="flex justify-between items-center relative z-10" onclick="toggleDetails(${index})"><div><h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${dStr}</h4><div class="flex items-center flex-wrap gap-1"><span class="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid?'bg-brand-light text-brand':'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid?'Оплачено':'Борг'}</span>${partialBadge}${yoy}</div></div><div class="flex items-center gap-3"><span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span><div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-full text-slate-400"><i id="chevron-${index}" class="fa-solid fa-chevron-down transition-transform duration-300"></i></div></div></div><div id="details-${index}" class="hidden" onclick="event.stopPropagation()"><div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5">${rec.total>0?`<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background:${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span>💧 Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span>🌡️ Гар.</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span>⚡ Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span>🔥 Газ</span><span>${Math.round(pG)}%</span></div>`:''}${(100-pW-pHW-pE-pG)>1?`<div class="flex justify-between"><span>📦 Інше</span><span>${Math.round(100-pW-pHW-pE-pG)}%</span></div>`:''}</div></div>`:''}<div class="space-y-3">${rec.waterCost>0?`<div class="flex justify-between"><span class="font-bold">💧 Вода</span><span class="font-black">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.wPrev}→${rec.wCur}</span><span class="text-blue-500">+${rec.wCur-rec.wPrev} м³</span></div>`:''}${rec.hotWaterCost>0?`<div class="flex justify-between"><span class="font-bold">🌡️ Гар.</span><span class="font-black">${fmt.format(rec.hotWaterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.hwPrev}→${rec.hwCur}</span><span class="text-red-500">+${rec.hwCur-rec.hwPrev} м³</span></div>`:''}${rec.electroCost>0?`<div class="flex justify-between"><span class="font-bold">⚡ Світло</span><span class="font-black">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>Д:${rec.dPrev}→${rec.dCur}</span><span class="text-yellow-600">+${rec.dCur-rec.dPrev}</span></div>${(rec.nCur||rec.nPrev)?`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl mt-1"><span>Н:${rec.nPrev}→${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur-rec.nPrev}</span></div>`:''}`:''}${rec.gasCost>0?`<div class="flex justify-between"><span class="font-bold">🔥 Газ</span><span class="font-black">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.gPrev}→${rec.gCur}</span><span class="text-orange-500">+${rec.gCur-rec.gPrev} м³</span></div>`:''}${rec.customCost>0?`<div class="flex justify-between"><span class="font-bold">📦 Інше</span><span class="font-black">${fmt.format(rec.customCost)} ₴</span></div>${rec.customData?Object.values(rec.customData).filter(s=>s.val>0).map(s=>`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${s.name}</span><span class="text-purple-500">${fmt.format(s.val)} ₴</span></div>`).join(''):''}`:''}${rec.note?`<div class="mt-3 p-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs text-slate-500 italic"><i class="fa-solid fa-sticky-note mr-1"></i>${rec.note}</div>`:''}</div></div><div class="flex gap-2.5 mt-4 pt-3 border-t border-slate-100 dark:border-white/5"><button type="button" class="rec-pay flex-1 py-3.5 rounded-2xl font-bold text-xs border active:scale-[0.96] transition-all ${rec.paid?'bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 border-slate-200 dark:border-white/10':'bg-gradient-to-r from-brand to-blue-600 text-white shadow-lg border-brand'}" data-idx="${index}">${rec.paid?'↩ Скасувати':'✓ Оплачено'}</button><button type="button" class="rec-share w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 active:scale-[0.90] transition-transform" data-idx="${index}"><i class="fa-solid fa-share-nodes"></i></button><button type="button" class="rec-edit w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 active:scale-[0.90] transition-transform" data-idx="${index}"><i class="fa-solid fa-pen"></i></button><button type="button" class="rec-del w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 active:scale-[0.90] transition-transform" data-idx="${index}"><i class="fa-solid fa-trash"></i></button></div></div>`;
+
+    const swL=document.createElement('div');swL.className='swipe-bg-left';swL.innerHTML='<i class="fa-solid fa-trash mr-2"></i>Видалити';
+    const swR=document.createElement('div');swR.className='swipe-bg-right';swR.innerHTML=`<i class="fa-solid fa-${rec.paid?'rotate-left':'check'} mr-2"></i>${rec.paid?'Скасувати':'Оплачено'}`;
+    card.insertBefore(swL,card.firstChild);card.insertBefore(swR,card.firstChild);
+    initSwipe(card,index);
+
+    setTimeout(()=>{
+        card.querySelector('.rec-pay')?.addEventListener('click',(e)=>{e.stopPropagation();togglePaid(index);});
+        card.querySelector('.rec-share')?.addEventListener('click',(e)=>{e.stopPropagation();shareRecord(index);});
+        card.querySelector('.rec-edit')?.addEventListener('click',(e)=>{e.stopPropagation();editRecord(index);});
+        card.querySelector('.rec-del')?.addEventListener('click',(e)=>{e.stopPropagation();deleteRecord(index);});
+    },0);
+    return card;
+}
+
+window.toggleDetails = function(i){const el=$(`details-${i}`);const ch=$(`chevron-${i}`);if(!el||!ch)return;if(el.classList.contains('hidden')){el.classList.remove('hidden');ch.style.transform='rotate(180deg)';}else{el.classList.add('hidden');ch.style.transform='rotate(0deg)';}};
 function togglePaid(i){records[i].paid=!records[i].paid;renderRecords();renderDashboard();syncToCloud();checkNewAchievements();}
-async function shareRecord(i){const r=records[i];const d=new Date(r.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'});let t=`🧾 Комуналка за ${d}\n📍 ${$('currentAddressDisplay').innerText}\n──────────\n`;if(r.waterCost>0)t+=`💧 Вода: ${fmt.format(r.waterCost)} ₴\n`;if(r.hotWaterCost>0)t+=`🌡️ Гар.: ${fmt.format(r.hotWaterCost)} ₴\n`;if(r.electroCost>0)t+=`⚡ Світло: ${fmt.format(r.electroCost)} ₴\n`;if(r.gasCost>0)t+=`🔥 Газ: ${fmt.format(r.gasCost)} ₴\n`;if(r.customCost>0)t+=`📦 Інше: ${fmt.format(r.customCost)} ₴\n`;t+=`──────────\n💰 Всього: ${fmt.format(r.total)} ₴\n${r.paid?'✅ Оплачено':'⏳ Очікує'}`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
-function editRecord(i){const rec=records[i];$('monthInput').value=rec.month;if(prefs.showWater){$('wPrev').value=rec.wPrev||'';$('wCur').value=rec.wCur||'';}if(prefs.showHotWater){$('hwPrev').value=rec.hwPrev||'';$('hwCur').value=rec.hwCur||'';}if(prefs.showElectro){$('dPrev').value=rec.dPrev||'';$('dCur').value=rec.dCur||'';$('nPrev').value=rec.nPrev||'';$('nCur').value=rec.nCur||'';}if(prefs.showGas){$('gPrev').value=rec.gPrev||'';$('gCur').value=rec.gCur||'';}if(rec.customData)Object.keys(rec.customData).forEach(id=>{const el=$(`custom_${id}`);if(el)el.value=rec.customData[id].val;});if($('recordNote'))$('recordNote').value=rec.note||'';const m=new Date(rec.month+'-01').getMonth()+1;$('isWinterInput').checked=m>=10||m<=4;switchTab('tabCalc',1);calculatePreview();updateSmartBadges();}
+async function shareRecord(i){const r=records[i];const d=new Date(r.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'});let t=`🧾 Комуналка за ${d}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n──────────\n`;if(r.waterCost>0)t+=`💧 Вода: ${fmt.format(r.waterCost)} ₴\n`;if(r.hotWaterCost>0)t+=`🌡️ Гар.: ${fmt.format(r.hotWaterCost)} ₴\n`;if(r.electroCost>0)t+=`⚡ Світло: ${fmt.format(r.electroCost)} ₴\n`;if(r.gasCost>0)t+=`🔥 Газ: ${fmt.format(r.gasCost)} ₴\n`;if(r.customCost>0)t+=`📦 Інше: ${fmt.format(r.customCost)} ₴\n`;t+=`──────────\n💰 Всього: ${fmt.format(r.total)} ₴\n${r.paid?'✅ Оплачено':'⏳ Очікує'}`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
+function editRecord(i){const rec=records[i];if($('monthInput'))$('monthInput').value=rec.month;if(prefs.showWater){if($('wPrev'))$('wPrev').value=rec.wPrev||'';if($('wCur'))$('wCur').value=rec.wCur||'';}if(prefs.showHotWater){if($('hwPrev'))$('hwPrev').value=rec.hwPrev||'';if($('hwCur'))$('hwCur').value=rec.hwCur||'';}if(prefs.showElectro){if($('dPrev'))$('dPrev').value=rec.dPrev||'';if($('dCur'))$('dCur').value=rec.dCur||'';if($('nPrev'))$('nPrev').value=rec.nPrev||'';if($('nCur'))$('nCur').value=rec.nCur||'';}if(prefs.showGas){if($('gPrev'))$('gPrev').value=rec.gPrev||'';if($('gCur'))$('gCur').value=rec.gCur||'';}if(rec.customData)Object.keys(rec.customData).forEach(id=>{const el=$(`custom_${id}`);if(el)el.value=rec.customData[id].val;});if($('recordNote'))$('recordNote').value=rec.note||'';const m=new Date(rec.month+'-01').getMonth()+1;if($('isWinterInput'))$('isWinterInput').checked=m>=10||m<=4;switchTab('tabCalc',1);calculatePreview();updateSmartBadges();}
 function deleteRecord(i){if(confirm('Видалити?')){records.splice(i,1);renderRecords();renderDashboard();syncToCloud();showToast('Видалено','🗑');}}
 
-// =================== CHARTS ===================
-function renderChart(sortedRecords){const container=$('chartContainer');if(!container)return;const recent=sortedRecords.slice(0,6).reverse();if(!recent.length){container.innerHTML='<span class="text-sm text-slate-400 m-auto">Немає даних</span>';return;}const max=Math.max(...recent.map(r=>r.total));let html='';const empty=6-recent.length;for(let i=0;i<empty;i++)html+=`<div class="flex flex-col items-center flex-1 opacity-0"><div class="w-full h-full"></div></div>`;html+=recent.map(r=>{const h=max>0?(r.total/max)*100:0;const mName=new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3);const bg=r.paid?'var(--brand)':'linear-gradient(to top, #fb923c, #fcd34d)';return`<div class="flex flex-col items-center flex-1 h-full justify-end px-1"><div class="w-full flex items-end justify-center rounded-t-lg bg-slate-100 dark:bg-white/5 overflow-hidden" style="height:100%"><div class="w-full rounded-t-lg transition-all duration-1000" style="height:${Math.max(4,h)}%;background:${bg}"></div></div><span class="text-[9px] text-slate-500 font-bold mt-2">${mName}</span></div>`;}).join('');container.innerHTML=html;}
-function renderServiceChart(){const container=$('serviceChartContainer');const summary=$('serviceChartSummary');if(!container||records.length===0){if(container)container.innerHTML='<span class="text-xs text-slate-400 m-auto">Немає даних</span>';if(summary)summary.innerHTML='';return;}const type=$('serviceChartSelect')?.value||'water';const sorted=[...records].sort((a,b)=>new Date(a.month)-new Date(b.month)).slice(-8);const getValue=(rec)=>{switch(type){case'water':return Math.max(0,(rec.wCur||0)-(rec.wPrev||0));case'hotWater':return Math.max(0,(rec.hwCur||0)-(rec.hwPrev||0));case'electro':return Math.max(0,(rec.dCur||0)-(rec.dPrev||0))+Math.max(0,(rec.nCur||0)-(rec.nPrev||0));case'gas':return Math.max(0,(rec.gCur||0)-(rec.gPrev||0));default:return 0;}};const getUnit=()=>{switch(type){case'water':case'hotWater':case'gas':return'м³';case'electro':return'кВт';default:return'';}};const getColor=()=>{switch(type){case'water':return'#3b82f6';case'hotWater':return'#ef4444';case'electro':return'#eab308';case'gas':return'#f97316';default:return'#6b7280';}};const values=sorted.map(getValue);const max=Math.max(...values,1);const unit=getUnit();const color=getColor();container.innerHTML=sorted.map((rec,i)=>{const val=values[i];const h=(val/max)*100;const mName=new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3);let trend='';if(i>0&&values[i-1]>0){const d=val-values[i-1];if(d>0)trend=`<span class="text-[8px] text-red-500 font-bold">↑</span>`;else if(d<0)trend=`<span class="text-[8px] text-green-500 font-bold">↓</span>`;}return`<div class="flex flex-col items-center flex-1 h-full justify-end"><div class="w-full rounded-t-md bg-slate-100 dark:bg-white/5 overflow-hidden flex items-end" style="height:100%"><div class="w-full rounded-t-md transition-all duration-700" style="height:${Math.max(4,h)}%;background:${color};opacity:${0.5+(i/sorted.length)*0.5}"></div></div><div class="flex flex-col items-center mt-1"><span class="text-[8px] text-slate-500 font-bold">${mName}</span>${trend}</div></div>`;}).join('');const avg=values.reduce((a,b)=>a+b,0)/values.length;const last=values[values.length-1]||0;const prevLast=values.length>1?values[values.length-2]:last;const trendPct=prevLast>0?Math.round(((last-prevLast)/prevLast)*100):0;if(summary)summary.innerHTML=`<span>Сер.: <span style="color:${color}" class="font-black">${Math.round(avg)} ${unit}/міс</span></span><span>Ост.: <span class="${trendPct<0?'text-green-600':trendPct>0?'text-red-500':'text-slate-500'} font-black">${last} ${unit} (${trendPct>0?'+':''}${trendPct}%)</span></span>`;}
-$('serviceChartSelect')?.addEventListener('change',renderServiceChart);
 $('filterToggleBtn')?.addEventListener('click',()=>$('filterPanel')?.classList.toggle('hidden'));
 $('filterButtons')?.addEventListener('click',(e)=>{const btn=e.target.closest('.filter-btn');if(!btn)return;currentFilter=btn.dataset.filter;document.querySelectorAll('.filter-btn').forEach(b=>{b.classList.remove('bg-brand','text-white');b.classList.add('bg-slate-100','dark:bg-[#2c2c2e]','text-slate-600','dark:text-slate-400');});btn.classList.remove('bg-slate-100','dark:bg-[#2c2c2e]','text-slate-600','dark:text-slate-400');btn.classList.add('bg-brand','text-white');renderRecords();});
 $('searchRecords')?.addEventListener('input',()=>renderRecords());
 $('sortSelect')?.addEventListener('change',()=>renderRecords());
-
 // =================== EXPORT ===================
 function exportCSV(){if(!records.length)return showToast('Немає','⚠️');let h=['Місяць'];if(prefs.showWater)h.push('Вода(м3)','Вода(₴)');if(prefs.showHotWater)h.push('Гар(м3)','Гар(₴)');if(prefs.showElectro)h.push('Світло(кВт)','Світло(₴)');if(prefs.showGas)h.push('Газ(м3)','Газ(₴)');h.push('Інше(₴)','Всього(₴)','Статус');let csv='\uFEFF'+h.join(',')+'\n';[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).forEach(r=>{let row=[r.month];if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(2));if(prefs.showHotWater)row.push(Math.max(0,(r.hwCur||0)-(r.hwPrev||0)),(r.hotWaterCost||0).toFixed(2));if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(2));if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(2));row.push((r.customCost||0).toFixed(2),(r.total||0).toFixed(2),r.paid?'Оплачено':'Борг');csv+=row.join(',')+'\n';});const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`komunalka.csv`;link.click();showToast('Експортовано','📊');}
-function generatePDF(){if(!records.length)return showToast('Немає','⚠️');const{jsPDF}=window.jspdf;const doc=new jsPDF();const addr=$('currentAddressDisplay').innerText;const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month));doc.setFillColor(0,122,255);doc.rect(0,0,210,40,'F');doc.setTextColor(255,255,255);doc.setFontSize(22);doc.setFont(undefined,'bold');doc.text('Комунальнi платежi',15,18);doc.setFontSize(11);doc.setFont(undefined,'normal');doc.text(addr,15,28);doc.setFontSize(9);doc.text('Згенеровано: '+new Date().toLocaleDateString('uk-UA',{day:'numeric',month:'long',year:'numeric'}),15,35);doc.setTextColor(60,60,60);let y=50;const tH=['Мiс.'];if(prefs.showWater)tH.push('💧','₴');if(prefs.showElectro)tH.push('⚡','₴');if(prefs.showGas)tH.push('🔥','₴');tH.push('Iнше','ВСЕ','');const tR=sorted.map(r=>{const mN=new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'2-digit'});const row=[mN];if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(0));if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(0));if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(0));row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),r.paid?'OK':'БОРГ');return row;});doc.autoTable({startY:y,head:[tH],body:tR,theme:'striped',headStyles:{fillColor:[0,122,255],textColor:[255,255,255],fontSize:7,fontStyle:'bold',halign:'center'},bodyStyles:{fontSize:7,halign:'center'},margin:{left:10,right:10}});doc.save(`komunalka_${new Date().toISOString().slice(0,10)}.pdf`);showToast('PDF!','📄');}
-async function shareAllRecords(){if(!records.length)return showToast('Немає','⚠️');const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,6);let t=`📊 Комунальні\n📍 ${$('currentAddressDisplay').innerText}\n───────\n`;sorted.forEach(r=>{t+=`${new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'numeric'})}: ${fmt.format(r.total)} ₴ ${r.paid?'✅':'⏳'}\n`;});t+=`───────\nСередній: ${fmt.format(sorted.reduce((s,r)=>s+r.total,0)/sorted.length)} ₴/міс`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
-$('exportCsvBtn')?.addEventListener('click',exportCSV);$('exportPdfBtn')?.addEventListener('click',generatePDF);$('shareAllBtn')?.addEventListener('click',shareAllRecords);
+
+function generatePDF(){if(!records.length)return showToast('Немає','⚠️');const{jsPDF}=window.jspdf;const doc=new jsPDF();const addr=$('currentAddressDisplay')?.innerText||'';const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month));doc.setFillColor(0,122,255);doc.rect(0,0,210,40,'F');doc.setTextColor(255,255,255);doc.setFontSize(22);doc.setFont(undefined,'bold');doc.text('Комунальнi платежi',15,18);doc.setFontSize(11);doc.setFont(undefined,'normal');doc.text(addr,15,28);doc.setFontSize(9);doc.text('Згенеровано: '+new Date().toLocaleDateString('uk-UA',{day:'numeric',month:'long',year:'numeric'}),15,35);doc.setTextColor(60,60,60);let y=50;const tH=['Мiс.'];if(prefs.showWater)tH.push('💧','₴');if(prefs.showElectro)tH.push('⚡','₴');if(prefs.showGas)tH.push('🔥','₴');tH.push('Iнше','ВСЕ','');const tR=sorted.map(r=>{const mN=new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'2-digit'});const row=[mN];if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(0));if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(0));if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(0));row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),r.paid?'OK':'БОРГ');return row;});doc.autoTable({startY:y,head:[tH],body:tR,theme:'striped',headStyles:{fillColor:[0,122,255],textColor:[255,255,255],fontSize:7,fontStyle:'bold',halign:'center'},bodyStyles:{fontSize:7,halign:'center'},margin:{left:10,right:10}});doc.save(`komunalka_${new Date().toISOString().slice(0,10)}.pdf`);showToast('PDF!','📄');}
+
+async function shareAllRecords(){if(!records.length)return showToast('Немає','⚠️');const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,6);let t=`📊 Комунальні\n📍 ${$('currentAddressDisplay')?.innerText||''}\n───────\n`;sorted.forEach(r=>{t+=`${new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'numeric'})}: ${fmt.format(r.total)} ₴ ${r.paid?'✅':'⏳'}\n`;});t+=`───────\nСередній: ${fmt.format(sorted.reduce((s,r)=>s+r.total,0)/sorted.length)} ₴/міс`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
+
+$('exportCsvBtn')?.addEventListener('click',exportCSV);
+$('exportPdfBtn')?.addEventListener('click',generatePDF);
+$('shareAllBtn')?.addEventListener('click',shareAllRecords);
 $('exportJsonBtn')?.addEventListener('click',()=>{syncCurrentAddress();const data={version:APP_VERSION,exportDate:new Date().toISOString(),addresses,currentAddressId};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`komunalka_backup.json`;link.click();showToast('Бекап','💾');});
 $('importJsonBtn')?.addEventListener('click',()=>$('importFileInput')?.click());
 $('importFileInput')?.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=(ev)=>{try{const data=JSON.parse(ev.target.result);if(data.addresses&&Array.isArray(data.addresses)){if(confirm(`Імпорт ${data.addresses.length} об'єктів?`)){addresses=data.addresses;currentAddressId=data.currentAddressId||addresses[0].id;loadCurrentAddress();syncToCloud();showToast('Імпортовано!','✅');}}else showToast('Невірний формат','❌');}catch(err){showToast('Помилка','❌');}};reader.readAsText(file);e.target.value='';});
-let deferredPrompt;window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;$('pwaInstallBlock')?.classList.remove('hidden');});
+
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;$('pwaInstallBlock')?.classList.remove('hidden');});
 $('installPwaBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;if(outcome==='accepted')$('pwaInstallBlock')?.classList.add('hidden');deferredPrompt=null;});
+
 function logout(){if(isGuest){window.location.href=window.location.pathname;return;}if(confirm('Вийти?')){localStorage.clear();if(googleUser)firebase.auth().signOut();location.reload();}}
 $('logoutBtn')?.addEventListener('click',logout);
 
@@ -231,19 +862,35 @@ setTimeout(initPush,1000);setTimeout(scheduleLocalReminder,3000);
 
 // =================== PHOTO ===================
 let photoTargetInput=null;
-document.querySelectorAll('.photo-scan-btn').forEach(btn=>{btn.addEventListener('click',()=>{photoTargetInput=btn.dataset.photoTarget;$('photoPreview').classList.add('hidden');$('photoRecognizedValue').value='';$('photoCaptureModal').classList.remove('hidden');haptic('light');});});
-$('photoFileInput')?.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=(ev)=>{$('photoImg').src=ev.target.result;$('photoPreview').classList.remove('hidden');};reader.readAsDataURL(file);e.target.value='';});
-function closePhotoModal(){$('photoCaptureModal').classList.add('hidden');}
-function applyPhotoValue(){const val=$('photoRecognizedValue').value;if(!val||!photoTargetInput)return;const target=$(photoTargetInput);if(target){target.value=val;calculatePreview();updateSmartBadges();showToast('Внесено!','✅');}closePhotoModal();}
+document.querySelectorAll('.photo-scan-btn').forEach(btn=>{btn.addEventListener('click',()=>{photoTargetInput=btn.dataset.photoTarget;$('photoPreview')?.classList.add('hidden');if($('photoRecognizedValue'))$('photoRecognizedValue').value='';$('photoCaptureModal')?.classList.remove('hidden');haptic('light');});});
+$('photoFileInput')?.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=(ev)=>{if($('photoImg'))$('photoImg').src=ev.target.result;$('photoPreview')?.classList.remove('hidden');};reader.readAsDataURL(file);e.target.value='';});
+function closePhotoModal(){$('photoCaptureModal')?.classList.add('hidden');}
+function applyPhotoValue(){const val=$('photoRecognizedValue')?.value;if(!val||!photoTargetInput)return;const target=$(photoTargetInput);if(target){target.value=val;calculatePreview();updateSmartBadges();showToast('Внесено!','✅');}closePhotoModal();}
 
 // =================== YEAR REPORT ===================
 $('yearReportBtn')?.addEventListener('click',()=>generateYearReport());
-function generateYearReport(){const year=new Date().getFullYear();const yr=records.filter(r=>r.month.startsWith(String(year)));if(!yr.length){showToast('Немає даних за рік','⚠️');return;}$('yearReportYear').textContent=year;const total=yr.reduce((s,r)=>s+r.total,0);const avg=total/yr.length;const maxR=yr.reduce((a,b)=>a.total>b.total?a:b);const minR=yr.reduce((a,b)=>a.total<b.total?a:b);const paid=yr.filter(r=>r.paid).length;const wT=yr.reduce((s,r)=>s+(r.waterCost||0),0);const hwT=yr.reduce((s,r)=>s+(r.hotWaterCost||0),0);const eT=yr.reduce((s,r)=>s+(r.electroCost||0),0);const gT=yr.reduce((s,r)=>s+(r.gasCost||0),0);const cT=yr.reduce((s,r)=>s+(r.customCost||0),0);const maxM=new Date(maxR.month+'-01').toLocaleString('uk-UA',{month:'long'});const minM=new Date(minR.month+'-01').toLocaleString('uk-UA',{month:'long'});const streak=getStreak(records);let html=`<div class="text-center mb-2"><p class="text-3xl font-black text-slate-900 dark:text-white">${fmt.format(total)} ₴</p><p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Загальні витрати</p></div><div class="grid grid-cols-2 gap-3"><div class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl text-center"><p class="text-[9px] font-bold text-slate-400 uppercase">Середній</p><p class="text-lg font-black text-slate-900 dark:text-white">${fmt.format(avg)} ₴</p></div><div class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl text-center"><p class="text-[9px] font-bold text-slate-400 uppercase">Місяців</p><p class="text-lg font-black text-slate-900 dark:text-white">${yr.length}</p></div></div><div class="bg-green-50 dark:bg-green-500/10 p-4 rounded-2xl"><div class="flex justify-between"><span class="text-sm font-bold text-green-700 dark:text-green-400">📉 Найдешевший</span><span class="font-black text-green-700 dark:text-green-400">${fmt.format(minR.total)} ₴</span></div><p class="text-[10px] text-green-600/70 mt-0.5">${minM}</p></div><div class="bg-red-50 dark:bg-red-500/10 p-4 rounded-2xl"><div class="flex justify-between"><span class="text-sm font-bold text-red-700 dark:text-red-400">📈 Найдорожчий</span><span class="font-black text-red-700 dark:text-red-400">${fmt.format(maxR.total)} ₴</span></div><p class="text-[10px] text-red-600/70 mt-0.5">${maxM}</p></div><div class="bg-slate-50 dark:bg-black/40 p-4 rounded-2xl"><p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-3">Розподіл</p><div class="space-y-2">${wT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">💧 Вода</span><span class="font-black">${fmt.format(wT)} ₴ (${Math.round(wT/total*100)}%)</span></div>`:''}${hwT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">🌡️ Гар.</span><span class="font-black">${fmt.format(hwT)} ₴ (${Math.round(hwT/total*100)}%)</span></div>`:''}${eT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">⚡ Світло</span><span class="font-black">${fmt.format(eT)} ₴ (${Math.round(eT/total*100)}%)</span></div>`:''}${gT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">🔥 Газ</span><span class="font-black">${fmt.format(gT)} ₴ (${Math.round(gT/total*100)}%)</span></div>`:''}${cT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">📦 Інше</span><span class="font-black">${fmt.format(cT)} ₴ (${Math.round(cT/total*100)}%)</span></div>`:''}</div></div><div class="grid grid-cols-2 gap-3"><div class="bg-brand-light p-3 rounded-xl text-center border border-brand-border"><p class="text-[9px] font-bold text-brand uppercase">Оплачено</p><p class="text-lg font-black text-brand">${paid}/${yr.length}</p></div><div class="bg-orange-50 dark:bg-orange-500/10 p-3 rounded-xl text-center border border-orange-100 dark:border-orange-500/20"><p class="text-[9px] font-bold text-orange-500 uppercase">Серія</p><p class="text-lg font-black text-orange-500">${streak} 🔥</p></div></div>`;$('yearReportContent').innerHTML=html;$('yearReportModal').classList.remove('hidden');haptic('success');}
+function generateYearReport(){
+    const year=new Date().getFullYear();const yr=records.filter(r=>r.month.startsWith(String(year)));
+    if(!yr.length){showToast('Немає даних за рік','⚠️');return;}
+    if($('yearReportYear'))$('yearReportYear').textContent=year;
+    const total=yr.reduce((s,r)=>s+r.total,0);const avg=total/yr.length;
+    const maxR=yr.reduce((a,b)=>a.total>b.total?a:b);const minR=yr.reduce((a,b)=>a.total<b.total?a:b);
+    const paid=yr.filter(r=>r.paid).length;
+    const wT=yr.reduce((s,r)=>s+(r.waterCost||0),0);const hwT=yr.reduce((s,r)=>s+(r.hotWaterCost||0),0);
+    const eT=yr.reduce((s,r)=>s+(r.electroCost||0),0);const gT=yr.reduce((s,r)=>s+(r.gasCost||0),0);
+    const cT=yr.reduce((s,r)=>s+(r.customCost||0),0);
+    const maxM=new Date(maxR.month+'-01').toLocaleString('uk-UA',{month:'long'});
+    const minM=new Date(minR.month+'-01').toLocaleString('uk-UA',{month:'long'});
+    const streak=getStreak(records);
+    let html=`<div class="text-center mb-2"><p class="text-3xl font-black text-slate-900 dark:text-white">${fmt.format(total)} ₴</p><p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Загальні витрати</p></div><div class="grid grid-cols-2 gap-3"><div class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl text-center"><p class="text-[9px] font-bold text-slate-400 uppercase">Середній</p><p class="text-lg font-black text-slate-900 dark:text-white">${fmt.format(avg)} ₴</p></div><div class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl text-center"><p class="text-[9px] font-bold text-slate-400 uppercase">Місяців</p><p class="text-lg font-black text-slate-900 dark:text-white">${yr.length}</p></div></div><div class="bg-green-50 dark:bg-green-500/10 p-4 rounded-2xl"><div class="flex justify-between"><span class="text-sm font-bold text-green-700 dark:text-green-400">📉 Найдешевший</span><span class="font-black text-green-700 dark:text-green-400">${fmt.format(minR.total)} ₴</span></div><p class="text-[10px] text-green-600/70 mt-0.5">${minM}</p></div><div class="bg-red-50 dark:bg-red-500/10 p-4 rounded-2xl"><div class="flex justify-between"><span class="text-sm font-bold text-red-700 dark:text-red-400">📈 Найдорожчий</span><span class="font-black text-red-700 dark:text-red-400">${fmt.format(maxR.total)} ₴</span></div><p class="text-[10px] text-red-600/70 mt-0.5">${maxM}</p></div><div class="bg-slate-50 dark:bg-black/40 p-4 rounded-2xl"><p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-3">Розподіл</p><div class="space-y-2">${wT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">💧 Вода</span><span class="font-black">${fmt.format(wT)} ₴ (${Math.round(wT/total*100)}%)</span></div>`:''}${hwT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">🌡️ Гар.</span><span class="font-black">${fmt.format(hwT)} ₴ (${Math.round(hwT/total*100)}%)</span></div>`:''}${eT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">⚡ Світло</span><span class="font-black">${fmt.format(eT)} ₴ (${Math.round(eT/total*100)}%)</span></div>`:''}${gT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">🔥 Газ</span><span class="font-black">${fmt.format(gT)} ₴ (${Math.round(gT/total*100)}%)</span></div>`:''}${cT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">📦 Інше</span><span class="font-black">${fmt.format(cT)} ₴ (${Math.round(cT/total*100)}%)</span></div>`:''}</div></div><div class="grid grid-cols-2 gap-3"><div class="bg-brand-light p-3 rounded-xl text-center border border-brand-border"><p class="text-[9px] font-bold text-brand uppercase">Оплачено</p><p class="text-lg font-black text-brand">${paid}/${yr.length}</p></div><div class="bg-orange-50 dark:bg-orange-500/10 p-3 rounded-xl text-center border border-orange-100 dark:border-orange-500/20"><p class="text-[9px] font-bold text-orange-500 uppercase">Серія</p><p class="text-lg font-black text-orange-500">${streak} 🔥</p></div></div>`;
+    if($('yearReportContent'))$('yearReportContent').innerHTML=html;
+    $('yearReportModal')?.classList.remove('hidden');haptic('success');
+}
 
-async function shareYearReport(){const year=new Date().getFullYear();const yr=records.filter(r=>r.month.startsWith(String(year)));if(!yr.length)return;const total=yr.reduce((s,r)=>s+r.total,0);const avg=total/yr.length;const streak=getStreak(records);let t=`📊 Річний звіт ${year}\n📍 ${$('currentAddressDisplay').innerText}\n═══════════════\n💰 Всього: ${fmt.format(total)} ₴\n📈 Середній: ${fmt.format(avg)} ₴/міс\n📅 Записів: ${yr.length}\n🔥 Серія: ${streak} міс.\n═══════════════\nКомуналка PWA • by Антон Миколенко`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
+async function shareYearReport(){const year=new Date().getFullYear();const yr=records.filter(r=>r.month.startsWith(String(year)));if(!yr.length)return;const total=yr.reduce((s,r)=>s+r.total,0);const avg=total/yr.length;const streak=getStreak(records);let t=`📊 Річний звіт ${year}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n═══════════════\n💰 Всього: ${fmt.format(total)} ₴\n📈 Середній: ${fmt.format(avg)} ₴/міс\n📅 Записів: ${yr.length}\n🔥 Серія: ${streak} міс.\n═══════════════\nКомуналка PWA • by Антон Миколенко`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
 
 // =================== SHARE AS IMAGE ===================
-async function shareAsImage(){const now=new Date();const curMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;const curRec=records.find(r=>r.month===curMonth);if(!curRec){showToast('Немає даних','⚠️');return;}const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;const ctx=canvas.getContext('2d');const grad=ctx.createLinearGradient(0,0,1080,1350);grad.addColorStop(0,'#007aff');grad.addColorStop(1,'#0051d4');ctx.fillStyle=grad;ctx.fillRect(0,0,1080,1350);ctx.globalAlpha=0.1;ctx.fillStyle='white';ctx.beginPath();ctx.arc(900,200,300,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(180,1100,200,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='600 36px -apple-system, sans-serif';ctx.textAlign='center';ctx.fillText('Мої комунальні',540,120);const monthName=new Date(curMonth+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'});ctx.fillStyle='white';ctx.font='800 56px -apple-system, sans-serif';ctx.fillText(monthName,540,200);ctx.font='900 120px -apple-system, sans-serif';ctx.fillText(`${fmt.format(curRec.total)} ₴`,540,380);ctx.font='700 40px -apple-system, sans-serif';ctx.fillStyle=curRec.paid?'#34c759':'#ff9500';ctx.fillText(curRec.paid?'✅ Оплачено':'⏳ Очікує оплати',540,460);ctx.fillStyle='rgba(255,255,255,0.15)';ctx.beginPath();ctx.roundRect(80,520,920,500,40);ctx.fill();ctx.textAlign='left';ctx.fillStyle='white';let y=600;const items=[];if(curRec.waterCost>0)items.push(['💧 Вода',curRec.waterCost]);if(curRec.hotWaterCost>0)items.push(['🌡️ Гар. вода',curRec.hotWaterCost]);if(curRec.electroCost>0)items.push(['⚡ Світло',curRec.electroCost]);if(curRec.gasCost>0)items.push(['🔥 Газ',curRec.gasCost]);if(curRec.customCost>0)items.push(['📦 Інше',curRec.customCost]);items.forEach(([name,cost])=>{ctx.font='600 42px -apple-system, sans-serif';ctx.fillStyle='rgba(255,255,255,0.8)';ctx.fillText(name,140,y);ctx.textAlign='right';ctx.fillStyle='white';ctx.font='800 42px -apple-system, sans-serif';ctx.fillText(`${fmt.format(cost)} ₴`,940,y);ctx.textAlign='left';y+=70;});ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='500 28px -apple-system, sans-serif';ctx.fillText('Комуналка PWA • by Антон Миколенко',540,1280);canvas.toBlob(async(blob)=>{if(!blob)return;const file=new File([blob],`komunalka_${curMonth}.png`,{type:'image/png'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'Мої комунальні'});return;}catch(e){}}const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`komunalka_${curMonth}.png`;a.click();URL.revokeObjectURL(url);showToast('Зображення збережено!','📸');},'image/png');}
+async function shareAsImage(){const now=new Date();const curMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;const curRec=records.find(r=>r.month===curMonth);if(!curRec){showToast('Немає даних','⚠️');return;}const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;const ctx=canvas.getContext('2d');const grad=ctx.createLinearGradient(0,0,1080,1350);grad.addColorStop(0,'#007aff');grad.addColorStop(1,'#0051d4');ctx.fillStyle=grad;ctx.fillRect(0,0,1080,1350);ctx.globalAlpha=0.1;ctx.fillStyle='white';ctx.beginPath();ctx.arc(900,200,300,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(180,1100,200,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='600 36px -apple-system, sans-serif';ctx.textAlign='center';ctx.fillText('Мої комунальні',540,120);const monthName=new Date(curMonth+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'});ctx.fillStyle='white';ctx.font='800 56px -apple-system, sans-serif';ctx.fillText(monthName,540,200);ctx.font='900 120px -apple-system, sans-serif';ctx.fillText(`${fmt.format(curRec.total)} ₴`,540,380);ctx.font='700 40px -apple-system, sans-serif';ctx.fillStyle=curRec.paid?'#34c759':'#ff9500';ctx.fillText(curRec.paid?'✅ Оплачено':'⏳ Очікує оплати',540,460);ctx.fillStyle='rgba(255,255,255,0.15)';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(80,520,920,500,40);else ctx.rect(80,520,920,500);ctx.fill();ctx.textAlign='left';ctx.fillStyle='white';let y=600;const items=[];if(curRec.waterCost>0)items.push(['💧 Вода',curRec.waterCost]);if(curRec.hotWaterCost>0)items.push(['🌡️ Гар. вода',curRec.hotWaterCost]);if(curRec.electroCost>0)items.push(['⚡ Світло',curRec.electroCost]);if(curRec.gasCost>0)items.push(['🔥 Газ',curRec.gasCost]);if(curRec.customCost>0)items.push(['📦 Інше',curRec.customCost]);items.forEach(([name,cost])=>{ctx.font='600 42px -apple-system, sans-serif';ctx.fillStyle='rgba(255,255,255,0.8)';ctx.fillText(name,140,y);ctx.textAlign='right';ctx.fillStyle='white';ctx.font='800 42px -apple-system, sans-serif';ctx.fillText(`${fmt.format(cost)} ₴`,940,y);ctx.textAlign='left';y+=70;});ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='500 28px -apple-system, sans-serif';ctx.fillText('Комуналка PWA • by Антон Миколенко',540,1280);canvas.toBlob(async(blob)=>{if(!blob)return;const file=new File([blob],`komunalka_${curMonth}.png`,{type:'image/png'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:'Мої комунальні'});return;}catch(e){}}const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`komunalka_${curMonth}.png`;a.click();URL.revokeObjectURL(url);showToast('Зображення збережено!','📸');},'image/png');}
 
 // =================== SHARE APP ===================
 $('shareAppBtn')?.addEventListener('click', async () => {
@@ -252,13 +899,106 @@ $('shareAppBtn')?.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(text); showToast('Посилання скопійовано!', '📋'); } catch(e) { prompt('Скопіюйте:', text); }
 });
 
+// =================== CONSUMPTION TRENDS ===================
+function getConsumptionTrend(type, months = 6) {
+    const sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)).slice(0, months);
+    if (sorted.length < 2) return null;
+    const values = sorted.map(r => {
+        switch(type) {
+            case 'water': return Math.max(0, (r.wCur || 0) - (r.wPrev || 0));
+            case 'electro': return Math.max(0, (r.dCur || 0) - (r.dPrev || 0)) + Math.max(0, (r.nCur || 0) - (r.nPrev || 0));
+            case 'gas': return Math.max(0, (r.gCur || 0) - (r.gPrev || 0));
+            default: return r.total;
+        }
+    }).reverse();
+    const first = values.slice(0, Math.ceil(values.length / 2));
+    const second = values.slice(Math.ceil(values.length / 2));
+    const avgFirst = first.reduce((a, b) => a + b, 0) / first.length;
+    const avgSecond = second.reduce((a, b) => a + b, 0) / second.length;
+    if (avgFirst === 0) return 0;
+    return Math.round(((avgSecond - avgFirst) / avgFirst) * 100);
+}
+
+// =================== TIPS ENGINE ===================
+function getSmartTips() {
+    const tips = [];
+    if (records.length >= 3) {
+        const waterTrend = getConsumptionTrend('water');
+        if (waterTrend && waterTrend > 20) tips.push({ emoji: '💧', text: `Споживання води зросло на ${waterTrend}%. Перевірте крани.` });
+        const electroTrend = getConsumptionTrend('electro');
+        if (electroTrend && electroTrend > 20) tips.push({ emoji: '⚡', text: `Електрика +${electroTrend}%. Перевірте прилади.` });
+        if (electroTrend && electroTrend < -10) tips.push({ emoji: '🎉', text: `Електрика -${Math.abs(electroTrend)}%! Чудова економія!` });
+    }
+    const budget = parseFloat(localStorage.getItem('k_budget')) || 0;
+    if (budget && records.length > 0) {
+        const last = [...records].sort((a, b) => new Date(b.month) - new Date(a.month))[0];
+        if (last.total > budget * 1.2) tips.push({ emoji: '⚠️', text: `Перевищили бюджет на ${Math.round(((last.total - budget) / budget) * 100)}%` });
+    }
+    const unpaid = records.filter(r => !r.paid);
+    if (unpaid.length >= 3) tips.push({ emoji: '💳', text: `${unpaid.length} неоплачених місяців. Оплатіть борг.` });
+    if (prefs.showElectro && prefs.electroTwoZone && records.length > 0) {
+        const last = [...records].sort((a, b) => new Date(b.month) - new Date(a.month))[0];
+        const nightUsage = Math.max(0, (last.nCur || 0) - (last.nPrev || 0));
+        const dayUsage = Math.max(0, (last.dCur || 0) - (last.dPrev || 0));
+        const total = nightUsage + dayUsage;
+        if (total > 0 && nightUsage / total < 0.3) tips.push({ emoji: '🌙', text: 'Спробуйте більше електрики вночі — дешевше.' });
+    }
+    return tips.slice(0, 3);
+}
+
+function renderTips() {
+    const container = $('tipsContainer');
+    if (!container) return;
+    const tips = getSmartTips();
+    if (!tips.length) { container.classList.add('hidden'); return; }
+    container.classList.remove('hidden');
+    const listEl = $('tipsList');
+    if (listEl) listEl.innerHTML = tips.map(t => `<div class="flex items-start gap-3 bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5"><span class="text-lg shrink-0">${t.emoji}</span><p class="text-xs font-medium text-slate-600 dark:text-slate-300">${t.text}</p></div>`).join('');
+}
+
 // =================== INIT ===================
-function initAppUI(){$('authScreen').classList.add('hidden');$('appScreen').classList.remove('hidden');$('appScreen').classList.add('flex');if($('tWater'))$('tWater').value=tariffs.water;if($('tHotWater'))$('tHotWater').value=tariffs.hotWater;if($('tElectroBase'))$('tElectroBase').value=tariffs.electroBase;if($('tElectroWinter'))$('tElectroWinter').value=tariffs.electroWinter;if($('tGas'))$('tGas').value=tariffs.gas;if($('budgetInput'))$('budgetInput').value=localStorage.getItem('k_budget')||'';if($('accountLoginDisplay'))$('accountLoginDisplay').textContent=sessionLogin||'—';updateGoogleButton();applyPreferences();renderCalcCustomServices();fillPreviousReadings();switchTab('tabDashboard',0);calculatePreview();updateSmartBadges();renderDashboard();const vis=readingInputIds.map(id=>$(id)).filter(el=>el&&el.offsetParent!==null);vis.forEach((input,idx,arr)=>{input.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();const next=arr[idx+1];if(next)next.focus();else $('submitFormBtn')?.focus();}});});}
+function initAppUI(){
+    $('authScreen')?.classList.add('hidden');
+    $('appScreen')?.classList.remove('hidden');
+    $('appScreen')?.classList.add('flex');
+    if($('tWater'))$('tWater').value=tariffs.water;
+    if($('tHotWater'))$('tHotWater').value=tariffs.hotWater;
+    if($('tElectroBase'))$('tElectroBase').value=tariffs.electroBase;
+    if($('tElectroWinter'))$('tElectroWinter').value=tariffs.electroWinter;
+    if($('tGas'))$('tGas').value=tariffs.gas;
+    if($('budgetInput'))$('budgetInput').value=localStorage.getItem('k_budget')||'';
+    if($('accountLoginDisplay'))$('accountLoginDisplay').textContent=sessionLogin||'—';
+    updateGoogleButton();
+    applyPreferences();
+    renderCalcCustomServices();
+    fillPreviousReadings();
+    switchTab('tabDashboard',0);
+    calculatePreview();
+    updateSmartBadges();
+    renderDashboard();
+
+    // Enter key navigation between inputs
+    const vis=readingInputIds.map(id=>$(id)).filter(el=>el&&el.offsetParent!==null);
+    vis.forEach((input,idx,arr)=>{
+        input.addEventListener('keydown',(e)=>{
+            if(e.key==='Enter'){e.preventDefault();const next=arr[idx+1];if(next)next.focus();else $('submitFormBtn')?.focus();}
+        });
+    });
+}
 
 // =================== GUEST / AUTO-LOGIN ===================
-if(urlShareToken){isGuest=true;$('authScreen').classList.add('hidden');$('appScreen').classList.remove('hidden');$('appScreen').classList.add('flex');$('btnTabSettings').style.display='none';$('addressHeaderTrigger').style.pointerEvents='none';if($('addressArrowIcon'))$('addressArrowIcon').style.display='none';fetch(`${WORKER_URL}?share=${urlShareToken}`,{cache:"no-store"}).then(r=>r.json()).then(data=>{if(data.success){addresses=data.data.addresses;currentAddressId=data.data.currentAddressId;loadCurrentAddress();}else alert("Посилання недійсне.");});}
-else if(localStorage.getItem('k_uid'))performLogin(null,null,false,localStorage.getItem('k_uid'));
-else if(sessionLogin&&sessionPass)performLogin(sessionLogin,sessionPass,true);
+if(urlShareToken){
+    isGuest=true;
+    $('authScreen')?.classList.add('hidden');
+    $('appScreen')?.classList.remove('hidden');
+    $('appScreen')?.classList.add('flex');
+    if($('btnTabSettings'))$('btnTabSettings').style.display='none';
+    if($('addressHeaderTrigger'))$('addressHeaderTrigger').style.pointerEvents='none';
+    if($('addressArrowIcon'))$('addressArrowIcon').style.display='none';
+    fetch(`${WORKER_URL}?share=${urlShareToken}`,{cache:"no-store"}).then(r=>r.json()).then(data=>{if(data.success){addresses=data.data.addresses;currentAddressId=data.data.currentAddressId;loadCurrentAddress();}else alert("Посилання недійсне.");});
+}
+else if(localStorage.getItem('k_uid')) performLogin(null,null,false,localStorage.getItem('k_uid'));
+else if(sessionLogin&&sessionPass) performLogin(sessionLogin,sessionPass,true);
 
 $('mode-light')?.addEventListener('click',()=>setThemeMode('light'));
 $('mode-auto')?.addEventListener('click',()=>setThemeMode('auto'));
@@ -266,8 +1006,26 @@ $('mode-dark')?.addEventListener('click',()=>setThemeMode('dark'));
 
 // =================== FREEMIUM & PRO ===================
 function isPro() { return localStorage.getItem('k_pro') === '1'; }
-function showProModal() { $('proModal').classList.remove('hidden'); haptic('notification'); }
-function activatePro() { localStorage.setItem('k_pro', '1'); $('proModal').classList.add('hidden'); if ($('proStatusBlock')) $('proStatusBlock').classList.remove('hidden'); showToast('Pro активовано! Дякуємо! 💛', '⭐'); }
+function showProModal() { $('proModal')?.classList.remove('hidden'); haptic('notification'); }
+function activatePro() { localStorage.setItem('k_pro', '1'); $('proModal')?.classList.add('hidden'); if ($('proStatusBlock')) $('proStatusBlock').classList.remove('hidden'); showToast('Pro активовано! Дякуємо! 💛', '⭐'); }
 $('proActivateBtn')?.addEventListener('click', () => { const code = prompt('Введіть код активації або напишіть "підтримав":'); if (code && (code.toLowerCase().includes('підтримав') || code.toLowerCase().includes('pro') || code === '2024' || code === '49')) { activatePro(); } else if (code) { showToast('Невірний код', '❌'); } });
 function checkProStatus() { if (isPro() && $('proStatusBlock')) $('proStatusBlock').classList.remove('hidden'); }
+
+// =================== RESIZE HANDLER FOR CHARTS ===================
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        if (dashChart && dashChart.canvas) { dashChart.setupCanvas(); if (dashChart.width) dashChart.render(); }
+        if (historyChart && historyChart.canvas) { historyChart.setupCanvas(); if (historyChart.width) historyChart.render(); }
+        if (serviceChart && serviceChart.canvas) { serviceChart.setupCanvas(); if (serviceChart.width) serviceChart.render(); }
+        if (donutChart && donutChart.canvas) { donutChart.setupCanvas(); if (donutChart.width) donutChart.render(); }
+    }, 250);
+});
+
+// =================== GLOBAL FUNCTIONS FOR HTML ONCLICK ===================
+window.closePhotoModal = closePhotoModal;
+window.applyPhotoValue = applyPhotoValue;
+window.shareYearReport = shareYearReport;
+
 // EOF
