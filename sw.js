@@ -1,5 +1,5 @@
-const CACHE_NAME = 'komunalka-v3';
-const PRECACHE_URLS = ['./', './index.html', './app.js', './manifest.json', './icon.png'];
+const CACHE_NAME = 'komunalka-v3.2';
+const PRECACHE_URLS = ['./', './index.html', './app.js', './year-report-image.js', './manifest.json', './icon.png'];
 
 self.addEventListener('install', event => {
     self.skipWaiting();
@@ -7,19 +7,62 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-    event.waitUntil(caches.keys().then(names => Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n)))).then(() => self.clients.claim()));
+    event.waitUntil(
+        caches.keys().then(names => Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n))))
+            .then(() => self.clients.claim())
+    );
 });
 
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
-    if (url.hostname.includes('workers.dev') || url.hostname.includes('googleapis.com') || url.hostname.includes('gstatic.com') || url.hostname.includes('firebaseapp.com') || url.hostname.includes('cdnjs.cloudflare.com')) return;
-    event.respondWith(fetch(event.request).then(response => { if (response && response.status === 200 && response.type === 'basic') { const clone = response.clone(); caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)); } return response; }).catch(() => caches.match(event.request)));
+
+    // API & external — network only, don't cache
+    if (url.hostname.includes('workers.dev') || url.hostname.includes('googleapis.com') || url.hostname.includes('gstatic.com') || url.hostname.includes('firebaseapp.com') || url.hostname.includes('google-analytics.com') || url.hostname.includes('googletagmanager.com')) {
+        return;
+    }
+
+    // CDN resources — cache first, then network
+    if (url.hostname.includes('cdnjs.cloudflare.com') || url.hostname.includes('cdn.tailwindcss.com') || url.hostname.includes('cdn.jsdelivr.net')) {
+        event.respondWith(
+            caches.match(event.request).then(cached => {
+                if (cached) return cached;
+                return fetch(event.request).then(response => {
+                    if (response.ok) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                    }
+                    return response;
+                }).catch(() => cached);
+            })
+        );
+        return;
+    }
+
+    // App files — stale-while-revalidate
+    event.respondWith(
+        caches.match(event.request).then(cached => {
+            const fetchPromise = fetch(event.request).then(response => {
+                if (response && response.status === 200 && response.type === 'basic') {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                }
+                return response;
+            }).catch(() => cached);
+
+            return cached || fetchPromise;
+        })
+    );
 });
 
 // Push notification handler
 self.addEventListener('push', event => {
     const data = event.data ? event.data.json() : { title: 'Комуналка 🏠', body: 'Час передати показники!' };
-    event.waitUntil(self.registration.showNotification(data.title, { body: data.body, icon: 'icon.png', badge: 'icon.png', vibrate: [100, 50, 100] }));
+    event.waitUntil(self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: 'icon.png',
+        badge: 'icon.png',
+        vibrate: [100, 50, 100]
+    }));
 });
 
 self.addEventListener('notificationclick', event => {
