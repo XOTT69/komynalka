@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Комуналка — Адмін v2</title>
+    <title>Комуналка — Адмін v3.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -21,7 +21,7 @@
             <div class="text-center mb-6">
                 <div class="w-16 h-16 bg-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl">🔒</div>
                 <h1 class="text-xl font-black">Адмін-панель</h1>
-                <p class="text-sm text-slate-500">Комуналка PWA v3.0</p>
+                <p class="text-sm text-slate-500">Комуналка PWA v3.1</p>
             </div>
             <input type="password" id="adminPass" placeholder="Пароль адміністратора" class="w-full p-4 border rounded-xl mb-4 outline-none focus:ring-2 focus:ring-red-500 font-medium">
             <button onclick="adminLogin()" class="w-full bg-red-500 text-white font-bold py-4 rounded-xl hover:bg-red-600 active:scale-95 transition-transform">Увійти</button>
@@ -88,12 +88,11 @@
 
             <!-- Tab: Users -->
             <div id="tabUsers">
-                <!-- Search & Filters -->
                 <div class="bg-white p-4 rounded-xl border shadow-sm mb-4">
                     <div class="flex gap-3 items-center flex-wrap">
                         <div class="relative flex-1 min-w-[200px]">
                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                            <input type="text" id="searchUsers" placeholder="Пошук по логіну або email..." oninput="filterUsers()" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-lg border outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium">
+                            <input type="text" id="searchUsers" placeholder="Пошук по логіну..." oninput="filterUsers()" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-lg border outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium">
                         </div>
                         <select id="filterType" onchange="filterUsers()" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
                             <option value="all">Всі типи</option>
@@ -113,7 +112,6 @@
                     </div>
                 </div>
 
-                <!-- Users Table -->
                 <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
                     <div class="p-4 border-b flex justify-between items-center">
                         <h2 class="font-bold text-lg"><i class="fa-solid fa-users mr-2 text-slate-400"></i>Користувачі</h2>
@@ -128,7 +126,6 @@
                                 <tr>
                                     <th class="text-left p-3 font-bold text-slate-500"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
                                     <th class="text-left p-3 font-bold text-slate-500">Логін</th>
-                                    <th class="text-left p-3 font-bold text-slate-500">Email</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Тип</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Адр.</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Зап.</th>
@@ -148,14 +145,6 @@
             <div id="tabAnalytics" class="hidden">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="bg-white p-6 rounded-xl border shadow-sm">
-                        <h3 class="font-bold mb-4">📈 Реєстрації по місяцях</h3>
-                        <div id="registrationChart" class="h-48 flex items-end gap-1"></div>
-                    </div>
-                    <div class="bg-white p-6 rounded-xl border shadow-sm">
-                        <h3 class="font-bold mb-4">⚡ Активність по місяцях</h3>
-                        <div id="activityChart" class="h-48 flex items-end gap-1"></div>
-                    </div>
-                    <div class="bg-white p-6 rounded-xl border shadow-sm">
                         <h3 class="font-bold mb-4">🏆 Топ юзери по записах</h3>
                         <div id="topUsers"></div>
                     </div>
@@ -170,7 +159,7 @@
             <div id="tabLogs" class="hidden">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
                     <h3 class="font-bold mb-4">📋 Останні дії</h3>
-                    <p class="text-slate-400 text-sm">Логи дій будуть тут (потребує окремого KV namespace для логів)</p>
+                    <p class="text-slate-400 text-sm">Логи дій (потребує окремого KV namespace)</p>
                 </div>
             </div>
         </div>
@@ -181,7 +170,7 @@
         <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-black" id="modalUserTitle">Юзер</h3>
-                <button onclick="$('userModal').classList.add('hidden')" class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200">✕</button>
+                <button onclick="document.getElementById('userModal').classList.add('hidden')" class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200">✕</button>
             </div>
             <div id="modalUserContent" class="text-sm"></div>
         </div>
@@ -194,75 +183,115 @@
             <textarea id="broadcastMsg" rows="4" placeholder="Текст оголошення..." class="w-full p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium mb-4"></textarea>
             <div class="flex gap-3">
                 <button onclick="sendBroadcast()" class="flex-1 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600">Надіслати</button>
-                <button onclick="$('broadcastModal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 font-bold rounded-xl hover:bg-slate-200">Скасувати</button>
+                <button onclick="document.getElementById('broadcastModal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 font-bold rounded-xl hover:bg-slate-200">Скасувати</button>
             </div>
         </div>
     </div>
 
     <script>
-        const $ = id => document.getElementById(id);
         const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
         let adminToken = sessionStorage.getItem('admin_token') || '';
         let allUsers = [];
         let selectedUsers = new Set();
 
-        if (adminToken) { $('loginScreen').classList.add('hidden'); $('adminPanel').classList.remove('hidden'); loadStats(); }
-
-        async function adminLogin() {
-            const pass = $('adminPass').value;
-            try {
-                const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_login', pass }) });
-                const data = await res.json();
-                if (data.success) { adminToken = data.token; sessionStorage.setItem('admin_token', adminToken); $('loginScreen').classList.add('hidden'); $('adminPanel').classList.remove('hidden'); loadStats(); }
-                else { $('loginError').textContent = 'Неправильний пароль'; $('loginError').classList.remove('hidden'); }
-            } catch(e) { $('loginError').textContent = 'Помилка з\'єднання'; $('loginError').classList.remove('hidden'); }
+        // Auto-login if token exists
+        if (adminToken) {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('adminPanel').classList.remove('hidden');
+            loadStats();
         }
 
-        function adminLogout() { sessionStorage.removeItem('admin_token'); location.reload(); }
+        async function adminLogin() {
+            const pass = document.getElementById('adminPass').value;
+            const errEl = document.getElementById('loginError');
+            errEl.classList.add('hidden');
+            try {
+                const res = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'admin_login', pass })
+                });
+                const data = await res.json();
+                if (data.success && data.token) {
+                    adminToken = data.token;
+                    sessionStorage.setItem('admin_token', adminToken);
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('adminPanel').classList.remove('hidden');
+                    loadStats();
+                } else {
+                    errEl.textContent = 'Неправильний пароль';
+                    errEl.classList.remove('hidden');
+                }
+            } catch (e) {
+                errEl.textContent = "Помилка з'єднання";
+                errEl.classList.remove('hidden');
+            }
+        }
+
+        function adminLogout() {
+            sessionStorage.removeItem('admin_token');
+            adminToken = '';
+            location.reload();
+        }
 
         function switchAdminTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
-            $('tabUsers').classList.toggle('hidden', tab !== 'users');
-            $('tabAnalytics').classList.toggle('hidden', tab !== 'analytics');
-            $('tabLogs').classList.toggle('hidden', tab !== 'logs');
+            document.getElementById('tabUsers').classList.toggle('hidden', tab !== 'users');
+            document.getElementById('tabAnalytics').classList.toggle('hidden', tab !== 'analytics');
+            document.getElementById('tabLogs').classList.toggle('hidden', tab !== 'logs');
             if (tab === 'analytics') renderAnalytics();
         }
 
         async function loadStats() {
-            $('lastUpdate').textContent = 'Завантаження...';
+            document.getElementById('lastUpdate').textContent = 'Завантаження...';
             try {
-                const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_stats', adminToken }) });
+                const res = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'admin_stats', adminToken })
+                });
                 const data = await res.json();
-                if (!data.success) { if(data.error === 'UNAUTHORIZED') adminLogout(); return; }
+                if (!data.success) {
+                    if (data.error === 'UNAUTHORIZED') adminLogout();
+                    return;
+                }
                 const { stats, users } = data;
                 allUsers = users;
-                $('statUsers').textContent = stats.totalUsers;
-                $('statActive').textContent = stats.activeThisMonth;
-                $('statRecords').textContent = stats.totalRecords;
-                $('statPro').textContent = stats.proUsers || 0;
-                $('statGoogle').textContent = users.filter(u => u.hasGoogle).length;
-                $('statRetention').textContent = stats.totalUsers > 0 ? Math.round((stats.activeThisMonth / stats.totalUsers) * 100) + '%' : '0%';
-                $('usersCount').textContent = `${users.length} юзерів`;
-                $('lastUpdate').textContent = `Оновлено: ${new Date().toLocaleTimeString('uk-UA')}`;
+                document.getElementById('statUsers').textContent = stats.totalUsers;
+                document.getElementById('statActive').textContent = stats.activeThisMonth;
+                document.getElementById('statRecords').textContent = stats.totalRecords;
+                document.getElementById('statPro').textContent = stats.proUsers || 0;
+                document.getElementById('statGoogle').textContent = users.filter(u => u.hasGoogle).length;
+                document.getElementById('statRetention').textContent = stats.totalUsers > 0 ? Math.round((stats.activeThisMonth / stats.totalUsers) * 100) + '%' : '0%';
+                document.getElementById('usersCount').textContent = `${users.length} юзерів`;
+                document.getElementById('lastUpdate').textContent = `Оновлено: ${new Date().toLocaleTimeString('uk-UA')}`;
                 renderUsers(users);
-            } catch(e) { $('lastUpdate').textContent = 'Помилка'; console.error(e); }
+            } catch (e) {
+                document.getElementById('lastUpdate').textContent = 'Помилка';
+                console.error(e);
+            }
+        }
+
+        function escHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
         }
 
         function renderUsers(users) {
-            $('usersTableBody').innerHTML = users.map(u => {
+            document.getElementById('usersTableBody').innerHTML = users.map(u => {
                 const authBadge = u.hasGoogle ? '<span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[10px] font-bold">G</span>' : '<span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-[10px] font-bold">L</span>';
                 const proBadge = u.isPro ? '<span class="text-yellow-500">⭐</span>' : `<button class="give-pro text-[10px] px-1.5 py-0.5 bg-yellow-50 text-yellow-700 rounded border border-yellow-200 hover:bg-yellow-100 font-bold" data-login="${escHtml(u.login)}">+Pro</button>`;
                 return `<tr class="border-b hover:bg-slate-50 text-xs">
                     <td class="p-3"><input type="checkbox" class="user-checkbox" data-login="${escHtml(u.login)}" onchange="updateSelection()"></td>
                     <td class="p-3 font-bold text-slate-900 max-w-[150px] truncate" title="${escHtml(u.login)}">${escHtml(u.login)}</td>
-                    <td class="p-3 text-slate-500 max-w-[150px] truncate" title="${u.email||''}">${u.email || '—'}</td>
                     <td class="p-3 text-center">${authBadge}</td>
-                    <td class="p-3 text-center font-bold">${u.addresses||1}</td>
-                    <td class="p-3 text-center font-bold">${u.records||0}</td>
-                    <td class="p-3 text-center text-slate-400">${u.lastMonth||'—'}</td>
+                    <td class="p-3 text-center font-bold">${u.addresses || 1}</td>
+                    <td class="p-3 text-center font-bold">${u.records || 0}</td>
+                    <td class="p-3 text-center text-slate-400">${u.lastMonth || '—'}</td>
                     <td class="p-3 text-center">${proBadge}</td>
-                    <td class="p-3 text-center">${u.activeThisMonth?'<span class="text-green-500">●</span>':'<span class="text-slate-300">○</span>'}</td>
+                    <td class="p-3 text-center">${u.activeThisMonth ? '<span class="text-green-500">●</span>' : '<span class="text-slate-300">○</span>'}</td>
                     <td class="p-3 text-center">
                         <div class="flex gap-1 justify-center">
                             <button onclick="viewUser('${escHtml(u.login)}')" class="p-1.5 bg-slate-100 rounded hover:bg-slate-200" title="Деталі">👁</button>
@@ -276,12 +305,12 @@
         }
 
         function filterUsers() {
-            const q = ($('searchUsers')?.value || '').toLowerCase();
-            const typeFilter = $('filterType').value;
-            const proFilter = $('filterPro').value;
-            const activeFilter = $('filterActive').value;
+            const q = (document.getElementById('searchUsers')?.value || '').toLowerCase();
+            const typeFilter = document.getElementById('filterType').value;
+            const proFilter = document.getElementById('filterPro').value;
+            const activeFilter = document.getElementById('filterActive').value;
             let filtered = allUsers.filter(u => {
-                if (q && !u.login.toLowerCase().includes(q) && !(u.email||'').toLowerCase().includes(q)) return false;
+                if (q && !u.login.toLowerCase().includes(q)) return false;
                 if (typeFilter === 'google' && !u.hasGoogle) return false;
                 if (typeFilter === 'login' && u.hasGoogle) return false;
                 if (proFilter === 'pro' && !u.isPro) return false;
@@ -291,11 +320,11 @@
                 return true;
             });
             renderUsers(filtered);
-            $('usersCount').textContent = `${filtered.length} з ${allUsers.length}`;
+            document.getElementById('usersCount').textContent = `${filtered.length} з ${allUsers.length}`;
         }
 
         function toggleSelectAll() {
-            const checked = $('selectAll').checked;
+            const checked = document.getElementById('selectAll').checked;
             document.querySelectorAll('.user-checkbox').forEach(cb => { cb.checked = checked; });
             updateSelection();
         }
@@ -309,7 +338,7 @@
             if (selectedUsers.size === 0) return alert('Виберіть юзерів');
             if (!confirm(`Видати Pro для ${selectedUsers.size} юзерів?`)) return;
             for (const login of selectedUsers) {
-                await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_give_pro', adminToken, login }) });
+                await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_give_pro', adminToken, login }) });
             }
             alert(`Pro видано ${selectedUsers.size} юзерам!`);
             selectedUsers.clear();
@@ -318,30 +347,28 @@
 
         async function givePro(login) {
             if (!confirm(`Видати Pro для ${login}?`)) return;
-            const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_give_pro', adminToken, login }) });
+            const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_give_pro', adminToken, login }) });
             const data = await res.json();
-            if (data.success) { alert(`Pro видано!`); loadStats(); } else alert('Помилка');
+            if (data.success) { alert('Pro видано!'); loadStats(); } else alert('Помилка');
         }
 
         async function viewUser(login) {
-            $('modalUserTitle').textContent = login;
-            $('modalUserContent').innerHTML = '<p class="text-slate-400">Завантаження...</p>';
-            $('userModal').classList.remove('hidden');
+            document.getElementById('modalUserTitle').textContent = login;
+            document.getElementById('modalUserContent').innerHTML = '<p class="text-slate-400">Завантаження...</p>';
+            document.getElementById('userModal').classList.remove('hidden');
             try {
-                const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_user_data', adminToken, login }) });
+                const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_user_data', adminToken, login }) });
                 const data = await res.json();
-                if (!data.success) { $('modalUserContent').innerHTML = '<p class="text-red-500">Помилка</p>'; return; }
+                if (!data.success) { document.getElementById('modalUserContent').innerHTML = '<p class="text-red-500">Помилка</p>'; return; }
                 const ud = data.data;
                 let html = `<div class="space-y-4">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Тип</p><p class="font-bold">${ud.hasGoogle ? '🔵 Google' : '🔐 Login'}</p></div>
                         <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Pro</p><p class="font-bold">${ud.isPro ? '⭐ Pro' : '— Free'}</p></div>
-                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Email</p><p class="font-bold text-xs truncate">${ud.email || '—'}</p></div>
-                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Google UID</p><p class="font-bold text-[10px] truncate">${ud.googleUid || '—'}</p></div>
                         <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Створено</p><p class="font-bold text-xs">${ud.createdAt ? new Date(ud.createdAt).toLocaleDateString('uk-UA') : '—'}</p></div>
                         <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Оновлено</p><p class="font-bold text-xs">${ud.updatedAt ? new Date(ud.updatedAt).toLocaleDateString('uk-UA') : '—'}</p></div>
                         <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Адрес</p><p class="font-bold">${ud.addresses?.length || 0}</p></div>
-                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Записів</p><p class="font-bold">${(ud.addresses||[]).reduce((s,a)=>(a.records?.length||0)+s,0)}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Записів</p><p class="font-bold">${(ud.addresses || []).reduce((s, a) => (a.records?.length || 0) + s, 0)}</p></div>
                     </div>
                     <div class="flex gap-2">
                         <button onclick="givePro('${escHtml(login)}')" class="px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs font-bold">⭐ Дати Pro</button>
@@ -350,24 +377,26 @@
                     </div>`;
                 if (ud.addresses) {
                     ud.addresses.forEach(addr => {
-                        html += `<div class="bg-slate-50 p-4 rounded-xl"><p class="font-bold mb-2">🏠 ${addr.name}</p>`;
+                        html += `<div class="bg-slate-50 p-4 rounded-xl"><p class="font-bold mb-2">🏠 ${escHtml(addr.name)}</p>`;
                         html += `<p class="text-xs text-slate-500 mb-2">Записів: ${addr.records?.length || 0}</p>`;
                         if (addr.records?.length) {
-                            const last5 = addr.records.sort((a,b)=>b.month.localeCompare(a.month)).slice(0,5);
-                            html += `<div class="space-y-1">${last5.map(r=>`<div class="flex justify-between text-xs bg-white p-2 rounded-lg"><span>${r.month}</span><span class="font-bold">${r.total?.toFixed(0)||0} ₴</span><span class="${r.paid?'text-green-500':'text-orange-500'}">${r.paid?'✅':'⏳'}</span></div>`).join('')}</div>`;
+                            const last5 = addr.records.sort((a, b) => b.month.localeCompare(a.month)).slice(0, 5);
+                            html += `<div class="space-y-1">${last5.map(r => `<div class="flex justify-between text-xs bg-white p-2 rounded-lg"><span>${r.month}</span><span class="font-bold">${r.total?.toFixed(0) || 0} ₴</span><span class="${r.paid ? 'text-green-500' : 'text-orange-500'}">${r.paid ? '✅' : '⏳'}</span></div>`).join('')}</div>`;
                         }
                         html += `</div>`;
                     });
                 }
                 html += `</div>`;
-                $('modalUserContent').innerHTML = html;
-            } catch(e) { $('modalUserContent').innerHTML = '<p class="text-red-500">Помилка мережі</p>'; }
+                document.getElementById('modalUserContent').innerHTML = html;
+            } catch (e) { document.getElementById('modalUserContent').innerHTML = '<p class="text-red-500">Помилка мережі</p>'; }
         }
 
         async function revokePro(login) {
             if (!confirm(`Забрати Pro у ${login}?`)) return;
-            await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_revoke_pro', adminToken, login }) });
-            alert('Pro забрано'); loadStats(); $('userModal').classList.add('hidden');
+            await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_revoke_pro', adminToken, login }) });
+            alert('Pro забрано');
+            loadStats();
+            document.getElementById('userModal').classList.add('hidden');
         }
 
         async function resetPassword(login) {
@@ -375,53 +404,59 @@
             if (!newPass || newPass.length < 4) return alert('Мін 4 символи');
             const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(newPass));
             const hash = Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join('');
-            const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_reset_password', adminToken, login, newPass: hash }) });
-            alert((await res.json()).success ? 'Пароль змінено!' : 'Помилка');
+            const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_reset_password', adminToken, login, newPass: hash }) });
+            const data = await res.json();
+            alert(data.success ? 'Пароль змінено!' : 'Помилка');
         }
 
         async function deleteUser(login) {
             if (!confirm(`ВИДАЛИТИ ${login}?`)) return;
             if (!confirm(`ТОЧНО видалити ${login}???`)) return;
-            const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_delete_user', adminToken, login }) });
+            const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_delete_user', adminToken, login }) });
             if ((await res.json()).success) { alert('Видалено'); loadStats(); }
         }
 
         function renderAnalytics() {
-            // Top users
-            const top = [...allUsers].sort((a,b)=>b.records-a.records).slice(0,10);
-            $('topUsers').innerHTML = top.map((u,i) => `<div class="flex justify-between items-center py-2 ${i?'border-t':''}"><span class="font-bold text-sm">${i+1}. ${u.login}</span><span class="text-sm font-black text-brand">${u.records} зап.</span></div>`).join('');
+            const top = [...allUsers].sort((a, b) => b.records - a.records).slice(0, 10);
+            document.getElementById('topUsers').innerHTML = top.map((u, i) => `<div class="flex justify-between items-center py-2 ${i ? 'border-t' : ''}"><span class="font-bold text-sm">${i + 1}. ${escHtml(u.login)}</span><span class="text-sm font-black" style="color:#007aff">${u.records} зап.</span></div>`).join('');
 
-            // Distribution
-            const googleCount = allUsers.filter(u=>u.hasGoogle).length;
-            const proCount = allUsers.filter(u=>u.isPro).length;
-            const activeCount = allUsers.filter(u=>u.activeThisMonth).length;
-            const withRecords = allUsers.filter(u=>u.records>0).length;
-            $('distributionStats').innerHTML = `
+            const googleCount = allUsers.filter(u => u.hasGoogle).length;
+            const proCount = allUsers.filter(u => u.isPro).length;
+            const activeCount = allUsers.filter(u => u.activeThisMonth).length;
+            const withRecords = allUsers.filter(u => u.records > 0).length;
+            document.getElementById('distributionStats').innerHTML = `
                 <div class="space-y-3">
-                    <div class="flex justify-between"><span>Google авторизація</span><span class="font-bold">${googleCount} (${Math.round(googleCount/allUsers.length*100)||0}%)</span></div>
-                    <div class="flex justify-between"><span>Pro юзери</span><span class="font-bold">${proCount} (${Math.round(proCount/allUsers.length*100)||0}%)</span></div>
-                    <div class="flex justify-between"><span>Активні цей місяць</span><span class="font-bold">${activeCount} (${Math.round(activeCount/allUsers.length*100)||0}%)</span></div>
-                    <div class="flex justify-between"><span>З записами</span><span class="font-bold">${withRecords} (${Math.round(withRecords/allUsers.length*100)||0}%)</span></div>
-                    <div class="flex justify-between"><span>Пусті акаунти</span><span class="font-bold">${allUsers.length-withRecords}</span></div>
+                    <div class="flex justify-between"><span>Google авторизація</span><span class="font-bold">${googleCount} (${Math.round(googleCount / allUsers.length * 100) || 0}%)</span></div>
+                    <div class="flex justify-between"><span>Pro юзери</span><span class="font-bold">${proCount} (${Math.round(proCount / allUsers.length * 100) || 0}%)</span></div>
+                    <div class="flex justify-between"><span>Активні цей місяць</span><span class="font-bold">${activeCount} (${Math.round(activeCount / allUsers.length * 100) || 0}%)</span></div>
+                    <div class="flex justify-between"><span>З записами</span><span class="font-bold">${withRecords} (${Math.round(withRecords / allUsers.length * 100) || 0}%)</span></div>
+                    <div class="flex justify-between"><span>Пусті акаунти</span><span class="font-bold">${allUsers.length - withRecords}</span></div>
                 </div>`;
         }
 
         function exportAllData() {
-            const csv = 'Login,Email,Type,Pro,Records,Addresses,LastMonth,Active\n' + allUsers.map(u => `${u.login},${u.email||''},${u.hasGoogle?'Google':'Login'},${u.isPro?'Pro':'Free'},${u.records},${u.addresses},${u.lastMonth},${u.activeThisMonth?'Yes':'No'}`).join('\n');
-            const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'});
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'komunalka_users.csv'; a.click();
+            const csv = 'Login,Type,Pro,Records,Addresses,LastMonth,Active\n' + allUsers.map(u => `${u.login},${u.hasGoogle ? 'Google' : 'Login'},${u.isPro ? 'Pro' : 'Free'},${u.records},${u.addresses},${u.lastMonth},${u.activeThisMonth ? 'Yes' : 'No'}`).join('\n');
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'komunalka_users.csv';
+            a.click();
         }
 
-        function openBroadcast() { $('broadcastModal').classList.remove('hidden'); }
+        function openBroadcast() { document.getElementById('broadcastModal').classList.remove('hidden'); }
+
         async function sendBroadcast() {
-            const msg = $('broadcastMsg').value.trim();
+            const msg = document.getElementById('broadcastMsg').value.trim();
             if (!msg) return;
-            const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_broadcast', adminToken, message: msg }) });
-            if ((await res.json()).success) { alert('Надіслано!'); $('broadcastModal').classList.add('hidden'); $('broadcastMsg').value = ''; }
+            const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_broadcast', adminToken, message: msg }) });
+            if ((await res.json()).success) {
+                alert('Надіслано!');
+                document.getElementById('broadcastModal').classList.add('hidden');
+                document.getElementById('broadcastMsg').value = '';
+            }
         }
 
-        function escHtml(str) { return (str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-        $('adminPass').addEventListener('keydown', e => { if(e.key === 'Enter') adminLogin(); });
+        document.getElementById('adminPass').addEventListener('keydown', e => { if (e.key === 'Enter') adminLogin(); });
     </script>
 </body>
 </html>
