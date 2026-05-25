@@ -1,24 +1,21 @@
-const CACHE_NAME = 'komunalka-v3.0.1';
+const CACHE_NAME = 'komunalka-RESET';
 const PRECACHE_URLS = ['./', './index.html', './app.js', './manifest.json', './icon.png'];
 
 self.addEventListener('install', event => {
-    self.skipWaiting(); // Force activate immediately
+    self.skipWaiting();
     event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS)));
 });
 
 self.addEventListener('activate', event => {
-    // Delete ALL old caches
     event.waitUntil(
         caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))))
-            .then(() => caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS)))
             .then(() => self.clients.claim())
     );
 });
 
 self.addEventListener('fetch', event => {
-    const url = new URL(event.request.url);
-    if (url.hostname.includes('workers.dev') || url.hostname.includes('googleapis.com') || url.hostname.includes('gstatic.com') || url.hostname.includes('firebaseapp.com') || url.hostname.includes('cdnjs.cloudflare.com')) return;
-    event.respondWith(fetch(event.request).then(response => { if (response && response.status === 200 && response.type === 'basic') { const clone = response.clone(); caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)); } return response; }).catch(() => caches.match(event.request)));
+    // Поки що — завжди network first, без кешу
+    return;
 });
 
 self.addEventListener('push', event => {
