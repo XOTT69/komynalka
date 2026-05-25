@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Комуналка — Адмін</title>
+    <title>Комуналка — Адмін v2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; }
         .stat-card { transition: transform .15s; }
         .stat-card:hover { transform: translateY(-2px); }
+        .tab-btn.active { background: #007aff; color: white; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -32,7 +33,7 @@
     <div id="adminPanel" class="hidden">
         <!-- Header -->
         <div class="bg-white border-b sticky top-0 z-40">
-            <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center text-white font-bold">⚡</div>
                     <div>
@@ -40,69 +41,136 @@
                         <p class="text-xs text-slate-400" id="lastUpdate">—</p>
                     </div>
                 </div>
-                <div class="flex gap-3">
-                    <button onclick="loadStats()" class="px-4 py-2 bg-slate-100 rounded-xl text-sm font-bold hover:bg-slate-200 active:scale-95 transition-transform"><i class="fa-solid fa-sync mr-1"></i>Оновити</button>
-                    <button onclick="openBroadcast()" class="px-4 py-2 bg-blue-500 text-white rounded-xl text-sm font-bold hover:bg-blue-600 active:scale-95 transition-transform"><i class="fa-solid fa-bullhorn mr-1"></i>Оголошення</button>
-                    <button onclick="adminLogout()" class="px-4 py-2 bg-red-50 text-red-500 rounded-xl text-sm font-bold hover:bg-red-100 active:scale-95 transition-transform">Вийти</button>
+                <div class="flex gap-2">
+                    <button onclick="loadStats()" class="px-3 py-2 bg-slate-100 rounded-lg text-sm font-bold hover:bg-slate-200"><i class="fa-solid fa-sync mr-1"></i>Оновити</button>
+                    <button onclick="openBroadcast()" class="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold hover:bg-blue-600"><i class="fa-solid fa-bullhorn mr-1"></i>Оголошення</button>
+                    <button onclick="exportAllData()" class="px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-bold hover:bg-green-600"><i class="fa-solid fa-download mr-1"></i>Export</button>
+                    <button onclick="adminLogout()" class="px-3 py-2 bg-red-50 text-red-500 rounded-lg text-sm font-bold hover:bg-red-100">Вийти</button>
                 </div>
             </div>
         </div>
 
-        <div class="max-w-6xl mx-auto px-6 py-8">
+        <div class="max-w-7xl mx-auto px-6 py-6">
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-                <div class="stat-card bg-white p-6 rounded-2xl border shadow-sm">
-                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 text-xl">👥</div><span class="text-sm font-bold text-slate-500">Юзерів</span></div>
-                    <p class="text-3xl font-black text-slate-900" id="statUsers">0</p>
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+                <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
+                    <p class="text-2xl font-black text-slate-900" id="statUsers">0</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Юзерів</p>
                 </div>
-                <div class="stat-card bg-white p-6 rounded-2xl border shadow-sm">
-                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-500 text-xl">🔥</div><span class="text-sm font-bold text-slate-500">Активні</span></div>
-                    <p class="text-3xl font-black text-green-600" id="statActive">0</p>
+                <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
+                    <p class="text-2xl font-black text-green-600" id="statActive">0</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Активні</p>
                 </div>
-                <div class="stat-card bg-white p-6 rounded-2xl border shadow-sm">
-                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-500 text-xl">📊</div><span class="text-sm font-bold text-slate-500">Записів</span></div>
-                    <p class="text-3xl font-black text-slate-900" id="statRecords">0</p>
+                <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
+                    <p class="text-2xl font-black text-slate-900" id="statRecords">0</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Записів</p>
                 </div>
-                <div class="stat-card bg-white p-6 rounded-2xl border shadow-sm">
-                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 text-xl">📈</div><span class="text-sm font-bold text-slate-500">Retention</span></div>
-                    <p class="text-3xl font-black text-orange-600" id="statRetention">0%</p>
+                <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
+                    <p class="text-2xl font-black text-orange-600" id="statRetention">0%</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Retention</p>
                 </div>
-                <div class="stat-card bg-white p-6 rounded-2xl border shadow-sm">
-                    <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 bg-yellow-50 rounded-xl flex items-center justify-center text-yellow-500 text-xl">⭐</div><span class="text-sm font-bold text-slate-500">Pro</span></div>
-                    <p class="text-3xl font-black text-yellow-600" id="statPro">0</p>
+                <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
+                    <p class="text-2xl font-black text-yellow-600" id="statPro">0</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Pro</p>
                 </div>
-            </div>
-
-            <!-- Search -->
-            <div class="bg-white p-4 rounded-2xl border shadow-sm mb-6">
-                <div class="relative">
-                    <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                    <input type="text" id="searchUsers" placeholder="Пошук по логіну..." oninput="filterUsers(this.value)" class="w-full pl-12 pr-4 py-3 bg-slate-50 rounded-xl border outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+                <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
+                    <p class="text-2xl font-black text-blue-600" id="statGoogle">0</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Google</p>
                 </div>
             </div>
 
-            <!-- Users Table -->
-            <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
-                <div class="p-4 border-b flex justify-between items-center">
-                    <h2 class="font-bold text-lg"><i class="fa-solid fa-users mr-2 text-slate-400"></i>Користувачі</h2>
-                    <span class="text-sm text-slate-400" id="usersCount">0 юзерів</span>
+            <!-- Tabs -->
+            <div class="flex gap-2 mb-4">
+                <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600" onclick="switchAdminTab('users')">👥 Юзери</button>
+                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600" onclick="switchAdminTab('analytics')">📊 Аналітика</button>
+                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600" onclick="switchAdminTab('logs')">📋 Логи</button>
+            </div>
+
+            <!-- Tab: Users -->
+            <div id="tabUsers">
+                <!-- Search & Filters -->
+                <div class="bg-white p-4 rounded-xl border shadow-sm mb-4">
+                    <div class="flex gap-3 items-center flex-wrap">
+                        <div class="relative flex-1 min-w-[200px]">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="searchUsers" placeholder="Пошук по логіну або email..." oninput="filterUsers()" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-lg border outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium">
+                        </div>
+                        <select id="filterType" onchange="filterUsers()" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
+                            <option value="all">Всі типи</option>
+                            <option value="google">Google</option>
+                            <option value="login">Login</option>
+                        </select>
+                        <select id="filterPro" onchange="filterUsers()" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
+                            <option value="all">Всі</option>
+                            <option value="pro">Pro</option>
+                            <option value="free">Free</option>
+                        </select>
+                        <select id="filterActive" onchange="filterUsers()" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
+                            <option value="all">Всі</option>
+                            <option value="active">Активні</option>
+                            <option value="inactive">Неактивні</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-slate-50 border-b">
-                            <tr>
-                                <th class="text-left p-4 font-bold text-slate-500">Логін</th>
-                                <th class="text-center p-4 font-bold text-slate-500">Тип</th>
-                                <th class="text-center p-4 font-bold text-slate-500">Адреси</th>
-                                <th class="text-center p-4 font-bold text-slate-500">Записів</th>
-                                <th class="text-center p-4 font-bold text-slate-500">Останній</th>
-                                <th class="text-center p-4 font-bold text-slate-500">Pro</th>
-                                <th class="text-center p-4 font-bold text-slate-500">Активний</th>
-                                <th class="text-center p-4 font-bold text-slate-500">Дії</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersTableBody"></tbody>
-                    </table>
+
+                <!-- Users Table -->
+                <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+                    <div class="p-4 border-b flex justify-between items-center">
+                        <h2 class="font-bold text-lg"><i class="fa-solid fa-users mr-2 text-slate-400"></i>Користувачі</h2>
+                        <div class="flex gap-2 items-center">
+                            <span class="text-sm text-slate-400" id="usersCount">0</span>
+                            <button onclick="massGivePro()" class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-lg text-xs font-bold hover:bg-yellow-100 border border-yellow-200"><i class="fa-solid fa-star mr-1"></i>Mass Pro</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 border-b">
+                                <tr>
+                                    <th class="text-left p-3 font-bold text-slate-500"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                                    <th class="text-left p-3 font-bold text-slate-500">Логін</th>
+                                    <th class="text-left p-3 font-bold text-slate-500">Email</th>
+                                    <th class="text-center p-3 font-bold text-slate-500">Тип</th>
+                                    <th class="text-center p-3 font-bold text-slate-500">Адр.</th>
+                                    <th class="text-center p-3 font-bold text-slate-500">Зап.</th>
+                                    <th class="text-center p-3 font-bold text-slate-500">Останній</th>
+                                    <th class="text-center p-3 font-bold text-slate-500">Pro</th>
+                                    <th class="text-center p-3 font-bold text-slate-500">●</th>
+                                    <th class="text-center p-3 font-bold text-slate-500">Дії</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Analytics -->
+            <div id="tabAnalytics" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold mb-4">📈 Реєстрації по місяцях</h3>
+                        <div id="registrationChart" class="h-48 flex items-end gap-1"></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold mb-4">⚡ Активність по місяцях</h3>
+                        <div id="activityChart" class="h-48 flex items-end gap-1"></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold mb-4">🏆 Топ юзери по записах</h3>
+                        <div id="topUsers"></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold mb-4">📊 Розподіл</h3>
+                        <div id="distributionStats"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Logs -->
+            <div id="tabLogs" class="hidden">
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <h3 class="font-bold mb-4">📋 Останні дії</h3>
+                    <p class="text-slate-400 text-sm">Логи дій будуть тут (потребує окремого KV namespace для логів)</p>
                 </div>
             </div>
         </div>
@@ -110,7 +178,7 @@
 
     <!-- User Details Modal -->
     <div id="userModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-black" id="modalUserTitle">Юзер</h3>
                 <button onclick="$('userModal').classList.add('hidden')" class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200">✕</button>
@@ -123,10 +191,10 @@
     <div id="broadcastModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <h3 class="text-xl font-black mb-4">📢 Оголошення</h3>
-            <textarea id="broadcastMsg" rows="4" placeholder="Текст оголошення для всіх юзерів..." class="w-full p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium mb-4"></textarea>
+            <textarea id="broadcastMsg" rows="4" placeholder="Текст оголошення..." class="w-full p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium mb-4"></textarea>
             <div class="flex gap-3">
-                <button onclick="sendBroadcast()" class="flex-1 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 active:scale-95 transition-transform">Надіслати</button>
-                <button onclick="$('broadcastModal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 font-bold rounded-xl hover:bg-slate-200 active:scale-95 transition-transform">Скасувати</button>
+                <button onclick="sendBroadcast()" class="flex-1 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600">Надіслати</button>
+                <button onclick="$('broadcastModal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 font-bold rounded-xl hover:bg-slate-200">Скасувати</button>
             </div>
         </div>
     </div>
@@ -136,6 +204,7 @@
         const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
         let adminToken = sessionStorage.getItem('admin_token') || '';
         let allUsers = [];
+        let selectedUsers = new Set();
 
         if (adminToken) { $('loginScreen').classList.add('hidden'); $('adminPanel').classList.remove('hidden'); loadStats(); }
 
@@ -151,6 +220,15 @@
 
         function adminLogout() { sessionStorage.removeItem('admin_token'); location.reload(); }
 
+        function switchAdminTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            $('tabUsers').classList.toggle('hidden', tab !== 'users');
+            $('tabAnalytics').classList.toggle('hidden', tab !== 'analytics');
+            $('tabLogs').classList.toggle('hidden', tab !== 'logs');
+            if (tab === 'analytics') renderAnalytics();
+        }
+
         async function loadStats() {
             $('lastUpdate').textContent = 'Завантаження...';
             try {
@@ -163,54 +241,86 @@
                 $('statActive').textContent = stats.activeThisMonth;
                 $('statRecords').textContent = stats.totalRecords;
                 $('statPro').textContent = stats.proUsers || 0;
+                $('statGoogle').textContent = users.filter(u => u.hasGoogle).length;
                 $('statRetention').textContent = stats.totalUsers > 0 ? Math.round((stats.activeThisMonth / stats.totalUsers) * 100) + '%' : '0%';
                 $('usersCount').textContent = `${users.length} юзерів`;
                 $('lastUpdate').textContent = `Оновлено: ${new Date().toLocaleTimeString('uk-UA')}`;
                 renderUsers(users);
-            } catch(e) { $('lastUpdate').textContent = 'Помилка завантаження'; }
+            } catch(e) { $('lastUpdate').textContent = 'Помилка'; console.error(e); }
         }
 
         function renderUsers(users) {
             $('usersTableBody').innerHTML = users.map(u => {
-                const authType = u.hasGoogle ? '<span class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[10px] font-bold">Google</span>' : '<span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[10px] font-bold">Login</span>';
-                const proStatus = u.isPro ? '<span class="text-yellow-500 font-bold">⭐ Pro</span>' : '<button class="give-pro px-2 py-0.5 bg-yellow-50 text-yellow-600 rounded text-[10px] font-bold hover:bg-yellow-100 border border-yellow-200" data-login="'+escHtml(u.login)+'">Дати Pro</button>';
-                return `
-                <tr class="border-b hover:bg-slate-50 transition-colors">
-                    <td class="p-4"><span class="font-bold text-slate-900">${escHtml(u.login)}</span></td>
-                    <td class="p-4 text-center">${authType}</td>
-                    <td class="p-4 text-center"><span class="bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-bold text-xs">${u.addresses || 1}</span></td>
-                    <td class="p-4 text-center font-bold">${u.records || 0}</td>
-                    <td class="p-4 text-center text-slate-500">${u.lastMonth || '—'}</td>
-                    <td class="p-4 text-center">${proStatus}</td>
-                    <td class="p-4 text-center">${u.activeThisMonth ? '<span class="text-green-500 font-bold">●</span>' : '<span class="text-slate-300">○</span>'}</td>
-                    <td class="p-4 text-center">
+                const authBadge = u.hasGoogle ? '<span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[10px] font-bold">G</span>' : '<span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-[10px] font-bold">L</span>';
+                const proBadge = u.isPro ? '<span class="text-yellow-500">⭐</span>' : `<button class="give-pro text-[10px] px-1.5 py-0.5 bg-yellow-50 text-yellow-700 rounded border border-yellow-200 hover:bg-yellow-100 font-bold" data-login="${escHtml(u.login)}">+Pro</button>`;
+                return `<tr class="border-b hover:bg-slate-50 text-xs">
+                    <td class="p-3"><input type="checkbox" class="user-checkbox" data-login="${escHtml(u.login)}" onchange="updateSelection()"></td>
+                    <td class="p-3 font-bold text-slate-900 max-w-[150px] truncate" title="${escHtml(u.login)}">${escHtml(u.login)}</td>
+                    <td class="p-3 text-slate-500 max-w-[150px] truncate" title="${u.email||''}">${u.email || '—'}</td>
+                    <td class="p-3 text-center">${authBadge}</td>
+                    <td class="p-3 text-center font-bold">${u.addresses||1}</td>
+                    <td class="p-3 text-center font-bold">${u.records||0}</td>
+                    <td class="p-3 text-center text-slate-400">${u.lastMonth||'—'}</td>
+                    <td class="p-3 text-center">${proBadge}</td>
+                    <td class="p-3 text-center">${u.activeThisMonth?'<span class="text-green-500">●</span>':'<span class="text-slate-300">○</span>'}</td>
+                    <td class="p-3 text-center">
                         <div class="flex gap-1 justify-center">
-                            <button onclick="viewUser('${escHtml(u.login)}')" class="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-bold hover:bg-slate-200" title="Переглянути">👁</button>
-                            <button onclick="resetPassword('${escHtml(u.login)}')" class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-lg text-xs font-bold hover:bg-yellow-100" title="Скинути пароль">🔑</button>
-                            <button onclick="deleteUser('${escHtml(u.login)}')" class="px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100" title="Видалити">🗑</button>
+                            <button onclick="viewUser('${escHtml(u.login)}')" class="p-1.5 bg-slate-100 rounded hover:bg-slate-200" title="Деталі">👁</button>
+                            <button onclick="resetPassword('${escHtml(u.login)}')" class="p-1.5 bg-yellow-50 rounded hover:bg-yellow-100" title="Пароль">🔑</button>
+                            <button onclick="deleteUser('${escHtml(u.login)}')" class="p-1.5 bg-red-50 rounded hover:bg-red-100" title="Видалити">🗑</button>
                         </div>
                     </td>
                 </tr>`;
             }).join('');
-            
-            // Give Pro buttons
-            document.querySelectorAll('.give-pro').forEach(btn => {
-                btn.addEventListener('click', () => givePro(btn.dataset.login));
-            });
+            document.querySelectorAll('.give-pro').forEach(btn => btn.addEventListener('click', () => givePro(btn.dataset.login)));
         }
 
-        function filterUsers(query) {
-            const q = query.toLowerCase();
-            const filtered = allUsers.filter(u => u.login.toLowerCase().includes(q));
+        function filterUsers() {
+            const q = ($('searchUsers')?.value || '').toLowerCase();
+            const typeFilter = $('filterType').value;
+            const proFilter = $('filterPro').value;
+            const activeFilter = $('filterActive').value;
+            let filtered = allUsers.filter(u => {
+                if (q && !u.login.toLowerCase().includes(q) && !(u.email||'').toLowerCase().includes(q)) return false;
+                if (typeFilter === 'google' && !u.hasGoogle) return false;
+                if (typeFilter === 'login' && u.hasGoogle) return false;
+                if (proFilter === 'pro' && !u.isPro) return false;
+                if (proFilter === 'free' && u.isPro) return false;
+                if (activeFilter === 'active' && !u.activeThisMonth) return false;
+                if (activeFilter === 'inactive' && u.activeThisMonth) return false;
+                return true;
+            });
             renderUsers(filtered);
+            $('usersCount').textContent = `${filtered.length} з ${allUsers.length}`;
+        }
+
+        function toggleSelectAll() {
+            const checked = $('selectAll').checked;
+            document.querySelectorAll('.user-checkbox').forEach(cb => { cb.checked = checked; });
+            updateSelection();
+        }
+
+        function updateSelection() {
+            selectedUsers.clear();
+            document.querySelectorAll('.user-checkbox:checked').forEach(cb => selectedUsers.add(cb.dataset.login));
+        }
+
+        async function massGivePro() {
+            if (selectedUsers.size === 0) return alert('Виберіть юзерів');
+            if (!confirm(`Видати Pro для ${selectedUsers.size} юзерів?`)) return;
+            for (const login of selectedUsers) {
+                await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_give_pro', adminToken, login }) });
+            }
+            alert(`Pro видано ${selectedUsers.size} юзерам!`);
+            selectedUsers.clear();
+            loadStats();
         }
 
         async function givePro(login) {
             if (!confirm(`Видати Pro для ${login}?`)) return;
             const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_give_pro', adminToken, login }) });
             const data = await res.json();
-            if (data.success) { alert(`Pro видано для ${login}!`); loadStats(); }
-            else alert('Помилка: ' + (data.error || 'unknown'));
+            if (data.success) { alert(`Pro видано!`); loadStats(); } else alert('Помилка');
         }
 
         async function viewUser(login) {
@@ -222,24 +332,29 @@
                 const data = await res.json();
                 if (!data.success) { $('modalUserContent').innerHTML = '<p class="text-red-500">Помилка</p>'; return; }
                 const ud = data.data;
-                let html = `<div class="space-y-4">`;
-                html += `<div class="grid grid-cols-2 gap-3">`;
-                html += `<div class="bg-slate-50 p-3 rounded-xl"><p class="text-[10px] font-bold text-slate-400 uppercase">Тип авторизації</p><p class="font-bold">${ud.hasGoogle ? '🔵 Google' : '🔐 Логін/пароль'}</p></div>`;
-                html += `<div class="bg-slate-50 p-3 rounded-xl"><p class="text-[10px] font-bold text-slate-400 uppercase">Pro статус</p><p class="font-bold">${ud.isPro ? '⭐ Pro' : '— Безкоштовний'}</p></div>`;
-                html += `<div class="bg-slate-50 p-3 rounded-xl"><p class="text-[10px] font-bold text-slate-400 uppercase">Адрес</p><p class="font-bold">${ud.addresses?.length || 0}</p></div>`;
-                html += `<div class="bg-slate-50 p-3 rounded-xl"><p class="text-[10px] font-bold text-slate-400 uppercase">Google UID</p><p class="font-bold text-xs truncate">${ud.googleUid || '—'}</p></div>`;
-                html += `</div>`;
+                let html = `<div class="space-y-4">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Тип</p><p class="font-bold">${ud.hasGoogle ? '🔵 Google' : '🔐 Login'}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Pro</p><p class="font-bold">${ud.isPro ? '⭐ Pro' : '— Free'}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Email</p><p class="font-bold text-xs truncate">${ud.email || '—'}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Google UID</p><p class="font-bold text-[10px] truncate">${ud.googleUid || '—'}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Створено</p><p class="font-bold text-xs">${ud.createdAt ? new Date(ud.createdAt).toLocaleDateString('uk-UA') : '—'}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Оновлено</p><p class="font-bold text-xs">${ud.updatedAt ? new Date(ud.updatedAt).toLocaleDateString('uk-UA') : '—'}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Адрес</p><p class="font-bold">${ud.addresses?.length || 0}</p></div>
+                        <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Записів</p><p class="font-bold">${(ud.addresses||[]).reduce((s,a)=>(a.records?.length||0)+s,0)}</p></div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="givePro('${escHtml(login)}')" class="px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs font-bold">⭐ Дати Pro</button>
+                        <button onclick="revokePro('${escHtml(login)}')" class="px-3 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold">Забрати Pro</button>
+                        <button onclick="resetPassword('${escHtml(login)}')" class="px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold">🔑 Скинути пароль</button>
+                    </div>`;
                 if (ud.addresses) {
                     ud.addresses.forEach(addr => {
                         html += `<div class="bg-slate-50 p-4 rounded-xl"><p class="font-bold mb-2">🏠 ${addr.name}</p>`;
-                        html += `<p class="text-xs text-slate-500 mb-2">Записів: ${addr.records?.length || 0} | Послуг: ${addr.customServices?.length || 0}</p>`;
-                        if (addr.records && addr.records.length > 0) {
-                            const last3 = addr.records.sort((a,b) => b.month.localeCompare(a.month)).slice(0, 3);
-                            html += `<div class="space-y-1">`;
-                            last3.forEach(r => {
-                                html += `<div class="flex justify-between text-xs bg-white p-2 rounded-lg"><span>${r.month}</span><span class="font-bold">${r.total?.toFixed(2) || 0} ₴</span><span class="${r.paid ? 'text-green-500' : 'text-orange-500'}">${r.paid ? '✅' : '⏳'}</span></div>`;
-                            });
-                            html += `</div>`;
+                        html += `<p class="text-xs text-slate-500 mb-2">Записів: ${addr.records?.length || 0}</p>`;
+                        if (addr.records?.length) {
+                            const last5 = addr.records.sort((a,b)=>b.month.localeCompare(a.month)).slice(0,5);
+                            html += `<div class="space-y-1">${last5.map(r=>`<div class="flex justify-between text-xs bg-white p-2 rounded-lg"><span>${r.month}</span><span class="font-bold">${r.total?.toFixed(0)||0} ₴</span><span class="${r.paid?'text-green-500':'text-orange-500'}">${r.paid?'✅':'⏳'}</span></div>`).join('')}</div>`;
                         }
                         html += `</div>`;
                     });
@@ -249,35 +364,63 @@
             } catch(e) { $('modalUserContent').innerHTML = '<p class="text-red-500">Помилка мережі</p>'; }
         }
 
+        async function revokePro(login) {
+            if (!confirm(`Забрати Pro у ${login}?`)) return;
+            await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_revoke_pro', adminToken, login }) });
+            alert('Pro забрано'); loadStats(); $('userModal').classList.add('hidden');
+        }
+
         async function resetPassword(login) {
             const newPass = prompt(`Новий пароль для ${login}:`);
             if (!newPass || newPass.length < 4) return alert('Мін 4 символи');
             const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(newPass));
             const hash = Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join('');
             const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_reset_password', adminToken, login, newPass: hash }) });
-            const data = await res.json();
-            alert(data.success ? `Пароль для ${login} змінено!` : 'Помилка');
+            alert((await res.json()).success ? 'Пароль змінено!' : 'Помилка');
         }
 
         async function deleteUser(login) {
-            if (!confirm(`ВИДАЛИТИ юзера ${login}? Це незворотня дія!`)) return;
-            if (!confirm(`Точно видалити ${login}???`)) return;
+            if (!confirm(`ВИДАЛИТИ ${login}?`)) return;
+            if (!confirm(`ТОЧНО видалити ${login}???`)) return;
             const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_delete_user', adminToken, login }) });
-            const data = await res.json();
-            if (data.success) { alert('Видалено'); loadStats(); } else alert('Помилка');
+            if ((await res.json()).success) { alert('Видалено'); loadStats(); }
+        }
+
+        function renderAnalytics() {
+            // Top users
+            const top = [...allUsers].sort((a,b)=>b.records-a.records).slice(0,10);
+            $('topUsers').innerHTML = top.map((u,i) => `<div class="flex justify-between items-center py-2 ${i?'border-t':''}"><span class="font-bold text-sm">${i+1}. ${u.login}</span><span class="text-sm font-black text-brand">${u.records} зап.</span></div>`).join('');
+
+            // Distribution
+            const googleCount = allUsers.filter(u=>u.hasGoogle).length;
+            const proCount = allUsers.filter(u=>u.isPro).length;
+            const activeCount = allUsers.filter(u=>u.activeThisMonth).length;
+            const withRecords = allUsers.filter(u=>u.records>0).length;
+            $('distributionStats').innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex justify-between"><span>Google авторизація</span><span class="font-bold">${googleCount} (${Math.round(googleCount/allUsers.length*100)||0}%)</span></div>
+                    <div class="flex justify-between"><span>Pro юзери</span><span class="font-bold">${proCount} (${Math.round(proCount/allUsers.length*100)||0}%)</span></div>
+                    <div class="flex justify-between"><span>Активні цей місяць</span><span class="font-bold">${activeCount} (${Math.round(activeCount/allUsers.length*100)||0}%)</span></div>
+                    <div class="flex justify-between"><span>З записами</span><span class="font-bold">${withRecords} (${Math.round(withRecords/allUsers.length*100)||0}%)</span></div>
+                    <div class="flex justify-between"><span>Пусті акаунти</span><span class="font-bold">${allUsers.length-withRecords}</span></div>
+                </div>`;
+        }
+
+        function exportAllData() {
+            const csv = 'Login,Email,Type,Pro,Records,Addresses,LastMonth,Active\n' + allUsers.map(u => `${u.login},${u.email||''},${u.hasGoogle?'Google':'Login'},${u.isPro?'Pro':'Free'},${u.records},${u.addresses},${u.lastMonth},${u.activeThisMonth?'Yes':'No'}`).join('\n');
+            const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'komunalka_users.csv'; a.click();
         }
 
         function openBroadcast() { $('broadcastModal').classList.remove('hidden'); }
-
         async function sendBroadcast() {
             const msg = $('broadcastMsg').value.trim();
             if (!msg) return;
             const res = await fetch(WORKER_URL, { method: 'POST', body: JSON.stringify({ action: 'admin_broadcast', adminToken, message: msg }) });
-            const data = await res.json();
-            if (data.success) { alert('Оголошення збережено!'); $('broadcastModal').classList.add('hidden'); $('broadcastMsg').value = ''; }
+            if ((await res.json()).success) { alert('Надіслано!'); $('broadcastModal').classList.add('hidden'); $('broadcastMsg').value = ''; }
         }
 
-        function escHtml(str) { return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function escHtml(str) { return (str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
         $('adminPass').addEventListener('keydown', e => { if(e.key === 'Enter') adminLogin(); });
     </script>
 </body>
