@@ -783,13 +783,12 @@ function renderRecords() {
     });
 }
 
-function renderHistoryChart(sortedRecords) {
+function renderHistoryChart(sortedRecords, retryCount = 0) {
     if (!$('historyChartCanvas')) return;
     if (!historyChart) historyChart = new ChartEngine('historyChartCanvas', { padding: 30, barRadius: 5 });
     if (!historyChart.width) historyChart.setupCanvas();
     if (!historyChart.width) {
-        // Canvas still not visible — retry
-        setTimeout(() => renderHistoryChart(sortedRecords), 200);
+        if (retryCount < 5) setTimeout(() => renderHistoryChart(sortedRecords, retryCount + 1), 200);
         return;
     }
     const recent = sortedRecords.slice(-10);
@@ -797,7 +796,7 @@ function renderHistoryChart(sortedRecords) {
     historyChart.setData(data);
 }
 
-function renderServiceChart() {
+function renderServiceChart(retryCount = 0) {
     if (!$('serviceChartCanvas') || records.length === 0) { if ($('serviceChartSummary')) $('serviceChartSummary').innerHTML = ''; return; }
     const type = $('serviceChartSelect')?.value || 'water';
     const unit = (type === 'electro') ? 'кВт' : 'м³';
@@ -805,8 +804,7 @@ function renderServiceChart() {
     else serviceChart.options.unit = unit;
     if (!serviceChart.width) serviceChart.setupCanvas();
     if (!serviceChart.width) {
-        // Canvas still not visible — retry
-        setTimeout(() => renderServiceChart(), 200);
+        if (retryCount < 5) setTimeout(() => renderServiceChart(retryCount + 1), 200);
         return;
     }
     const sorted = [...records].sort((a, b) => new Date(a.month) - new Date(b.month)).slice(-8);
