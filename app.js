@@ -1,10 +1,10 @@
 // ============================================================
-// КОМУНАЛКА PWA v3.1 — Secure & Optimized
+// КОМУНАЛКА PWA v3.2 — Secure & Optimized
 // ============================================================
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
-const APP_VERSION = '3.1.0';
+const APP_VERSION = '3.2.0';
 const MAX_ADDRESSES_FREE = 3;
 
 const firebaseConfig = { apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80", authDomain: "pwakomun.firebaseapp.com", projectId: "pwakomun", storageBucket: "pwakomun.firebasestorage.app", messagingSenderId: "4437974770", appId: "1:4437974770:web:bf7d2f7bac35eff5707a6b" };
@@ -19,11 +19,38 @@ const defaultPrefs = { showWater: true, showHotWater: false, showElectro: true, 
 const defaultCustomServices = [{ id: "s1", name: "Квартплата", defaultSum: "" }, { id: "s2", name: "Сміття", defaultSum: "" }];
 let addresses = [], currentAddressId = 'default', isGuest = false, tariffs = {}, prefs = {}, records = [], customServices = [];
 let currentCalc = { waterCost: 0, hotWaterCost: 0, electroCost: 0, gasCost: 0, customCost: 0, total: 0 };
-const urlParams = new URLSearchParams(window.location.search), urlShareToken = urlParams.get('share');
+const urlParamsObj = new URLSearchParams(window.location.search), urlShareToken = urlParamsObj.get('share');
+
+// =================== DEVICE FINGERPRINT ===================
+function getDeviceFingerprint() {
+    let fp = localStorage.getItem('k_device_fp');
+    if (!fp) {
+        const raw = navigator.userAgent + navigator.language + screen.width + 'x' + screen.height + new Date().getTimezoneOffset();
+        // Simple hash
+        let hash = 0;
+        for (let i = 0; i < raw.length; i++) {
+            const chr = raw.charCodeAt(i);
+            hash = ((hash << 5) - hash) + chr;
+            hash |= 0;
+        }
+        fp = Math.abs(hash).toString(36) + Date.now().toString(36);
+        localStorage.setItem('k_device_fp', fp);
+    }
+    return fp;
+}
+const DEVICE_FP = getDeviceFingerprint();
 
 // =================== UTILS ===================
 let toastTimeout;
-function showToast(msg, icon = '✅') { const t = $('toast'); if (!t) return; $('toastMsg').innerText = msg; $('toastIcon').innerText = icon; t.classList.remove('-translate-y-24', 'opacity-0'); haptic(icon === '✅' ? 'success' : icon === '❌' || icon === '⚠️' ? 'error' : 'notification'); clearTimeout(toastTimeout); toastTimeout = setTimeout(() => t.classList.add('-translate-y-24', 'opacity-0'), 2500); }
+function showToast(msg, icon = '✅') {
+    const t = $('toast'); if (!t) return;
+    $('toastMsg').innerText = msg;
+    $('toastIcon').innerText = icon;
+    t.classList.remove('-translate-y-24', 'opacity-0');
+    haptic(icon === '✅' ? 'success' : icon === '❌' || icon === '⚠️' ? 'error' : 'notification');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => t.classList.add('-translate-y-24', 'opacity-0'), 2500);
+}
 
 function vibe(pattern = 10) { if (navigator.vibrate) navigator.vibrate(Array.isArray(pattern) ? pattern : [pattern]); }
 const hapticPatterns = { light: [5], medium: [10], heavy: [20], success: [10, 50, 10], error: [50, 30, 50], notification: [15, 100, 15], tabSwitch: [3] };
@@ -44,9 +71,11 @@ function escapeHtml(str) {
 // =================== SECURE FETCH ===================
 async function secureFetch(method, params = {}, body = null) {
     let url = WORKER_URL;
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-Device-FP': DEVICE_FP
+    };
 
-    // Auth via Authorization header (not URL params)
     const uid = localStorage.getItem('k_uid');
     if (uid) {
         headers['Authorization'] = `Bearer uid:${uid}`;
@@ -54,10 +83,9 @@ async function secureFetch(method, params = {}, body = null) {
         headers['Authorization'] = `Bearer login:${btoa(unescape(encodeURIComponent(sessionLogin)))}:${sessionPass}`;
     }
 
-    // Only non-sensitive params in URL
-    const urlParams = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => { if (v != null) urlParams.set(k, v); });
-    const qs = urlParams.toString();
+    const urlP = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v != null) urlP.set(k, v); });
+    const qs = urlP.toString();
     if (qs) url += '?' + qs;
 
     const options = { method, headers, cache: 'no-store' };
@@ -66,7 +94,39 @@ async function secureFetch(method, params = {}, body = null) {
     return fetch(url, options);
 }
 
+// =================== BROADCAST CHECK ===================
+async function checkBroadcast() {
+    try {
+        const res = await secureFetch('POST', {}, { action: 'get_broadcast' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && data.message) {
+            const lastSeen = localStorage.getItem('k_broadcast_seen') || '';
+            if (data.date !== lastSeen) {
+                showBroadcastBanner(data.message, data.date);
+            }
+        }
+    } catch (e) {}
+}
+
+function showBroadcastBanner(message, date) {
+    const existing = $('broadcastBanner');
+    if (existing) existing.remove();
+    const banner = document.createElement('div');
+    banner.id = 'broadcastBanner';
+    banner.className = 'fixed top-0 left-0 right-0 z-[800] bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-4 flex items-center gap-3 shadow-xl animate-slide-down';
+    banner.innerHTML = `<span class="text-lg">📢</span><p class="flex-1 text-sm font-bold">${escapeHtml(message)}</p><button onclick="dismissBroadcast('${escapeHtml(date)}')" class="px-3 py-1.5 bg-white/20 rounded-lg text-xs font-bold active:scale-95 transition-transform">✕</button>`;
+    document.body.appendChild(banner);
+}
+
+function dismissBroadcast(date) {
+    localStorage.setItem('k_broadcast_seen', date);
+    $('broadcastBanner')?.remove();
+}
+window.dismissBroadcast = dismissBroadcast;
+
 // =================== SYNC ===================
+let syncDebounceTimer;
 async function syncToCloud() {
     syncCurrentAddress();
     saveToLocal();
@@ -74,7 +134,7 @@ async function syncToCloud() {
     if (isGuest && urlShareToken) {
         await fetch(`${WORKER_URL}?share=${urlShareToken}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Device-FP': DEVICE_FP },
             body: JSON.stringify({ addresses })
         });
         return;
@@ -91,8 +151,12 @@ async function syncToCloud() {
         setSyncState('synced');
     } catch (e) {
         setSyncState('offline');
-        showToast('Збережено локально', '💾');
     }
+}
+
+function debouncedSync() {
+    clearTimeout(syncDebounceTimer);
+    syncDebounceTimer = setTimeout(syncToCloud, 2000);
 }
 
 window.addEventListener('online', () => { showToast('Онлайн', '🌐'); syncToCloud(); });
@@ -100,12 +164,23 @@ window.addEventListener('offline', () => { setSyncState('offline'); showToast('�
 
 // =================== THEME ===================
 let currentMode = localStorage.getItem('themeMode') || 'auto';
-function setThemeMode(mode) { currentMode = mode; localStorage.setItem('themeMode', mode); applyThemeMode(); ['light', 'auto', 'dark'].forEach(m => { const b = $('mode-' + m); if (!b) return; b.classList.remove('bg-white', 'dark:bg-[#2c2c2e]', 'text-slate-900', 'dark:text-white', 'shadow-sm'); if (m === mode) b.classList.add('bg-white', 'dark:bg-[#2c2c2e]', 'text-slate-900', 'dark:text-white', 'shadow-sm'); }); }
-function applyThemeMode() { const isDark = currentMode === 'dark' || (currentMode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.classList.toggle('dark', isDark); $('metaThemeColor')?.setAttribute("content", isDark ? "#000000" : "#f2f2f7"); }
+function setThemeMode(mode) {
+    currentMode = mode; localStorage.setItem('themeMode', mode); applyThemeMode();
+    ['light', 'auto', 'dark'].forEach(m => {
+        const b = $('mode-' + m); if (!b) return;
+        b.classList.remove('bg-white', 'dark:bg-[#2c2c2e]', 'text-slate-900', 'dark:text-white', 'shadow-sm');
+        if (m === mode) b.classList.add('bg-white', 'dark:bg-[#2c2c2e]', 'text-slate-900', 'dark:text-white', 'shadow-sm');
+    });
+}
+function applyThemeMode() {
+    const isDark = currentMode === 'dark' || (currentMode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('dark', isDark);
+    $('metaThemeColor')?.setAttribute("content", isDark ? "#000000" : "#f2f2f7");
+}
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (currentMode === 'auto') applyThemeMode(); });
 setThemeMode(currentMode);
 
-// =================== WELCOME (замість onboarding) ===================
+// =================== WELCOME ===================
 function showWelcome() { if (localStorage.getItem('welcome_done')) return; $('welcomeTooltip')?.classList.remove('hidden'); }
 function dismissWelcome() { localStorage.setItem('welcome_done', '1'); $('welcomeTooltip')?.classList.add('hidden'); }
 window.dismissWelcome = dismissWelcome;
@@ -138,7 +213,6 @@ async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) {
             passHash = isAlreadyHashed ? rawPass : await getHash(rawPass);
         }
 
-        // Temporarily set credentials for secureFetch
         const prevLogin = sessionLogin, prevPass = sessionPass;
         if (uid) { localStorage.setItem('k_uid', uid); }
         else { sessionLogin = rawLogin; sessionPass = passHash; }
@@ -147,7 +221,6 @@ async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) {
         const data = await res.json();
 
         if (res.status === 404 && uid) {
-            // Restore previous creds
             sessionLogin = prevLogin; sessionPass = prevPass;
             localStorage.removeItem('k_uid');
             $('linkModal')?.classList.remove('hidden');
@@ -160,7 +233,6 @@ async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) {
         if (res.status === 429) throw new Error("Забагато спроб. Зачекайте.");
 
         if (res.status === 404 || (!uid && !data.success)) {
-            // New user
             sessionLogin = rawLogin;
             sessionPass = passHash;
             addresses = [{ id: 'default', name: 'Мій дім', tariffs: { ...defaultTariffs }, prefs: { ...defaultPrefs }, records: [], customServices: [...defaultCustomServices] }];
@@ -190,6 +262,7 @@ async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) {
 
         loadCurrentAddress();
         if (records.length === 0) showWelcome();
+        checkBroadcast();
     } catch (err) {
         if (btnText) btnText.textContent = "Увійти";
         if (spinner) spinner.classList.add('hidden');
@@ -232,7 +305,12 @@ $('btnLinkGoogle')?.addEventListener('click', async () => {
     } catch (e) { showToast("Скасовано", "⚠️"); }
 });
 
-function updateGoogleButton() { if (localStorage.getItem('k_uid') && $('btnLinkGoogle')) { $('btnLinkGoogle').innerHTML = '<i class="fa-solid fa-check"></i>'; $('btnLinkGoogle').className = 'w-9 h-9 bg-green-50 dark:bg-green-500/10 rounded-xl flex items-center justify-center text-green-500 text-xs pointer-events-none'; } }
+function updateGoogleButton() {
+    if (localStorage.getItem('k_uid') && $('btnLinkGoogle')) {
+        $('btnLinkGoogle').innerHTML = '<i class="fa-solid fa-check"></i>';
+        $('btnLinkGoogle').className = 'w-9 h-9 bg-green-50 dark:bg-green-500/10 rounded-xl flex items-center justify-center text-green-500 text-xs pointer-events-none';
+    }
+}
 
 // =================== ADDRESS ===================
 function loadCurrentAddress() {
@@ -282,7 +360,10 @@ function renderAddressModal() {
     const list = $('addressListModal'); if (!list) return;
     list.innerHTML = addresses.map(a => `<div class="flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95 cursor-pointer ${a.id === currentAddressId ? 'bg-brand border-brand text-white shadow-lg shadow-brand/20' : 'bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200'}" data-addr-id="${a.id}"><span class="font-bold text-lg truncate pr-2 flex-1">${escapeHtml(a.name)}</span><div class="flex gap-1.5 shrink-0"><button class="addr-edit p-2 rounded-xl shadow-sm ${a.id === currentAddressId ? 'bg-white/20 text-white' : 'bg-white dark:bg-[#2c2c2e] text-slate-400'}" data-id="${a.id}"><i class="fa-solid fa-pen"></i></button>${a.id !== currentAddressId && addresses.length > 1 ? `<button class="addr-del p-2 text-slate-400 bg-white dark:bg-[#2c2c2e] rounded-xl shadow-sm" data-id="${a.id}"><i class="fa-solid fa-trash"></i></button>` : ''}</div></div>`).join('');
     list.querySelectorAll('[data-addr-id]').forEach(el => {
-        el.addEventListener('click', (e) => { if (e.target.closest('.addr-edit') || e.target.closest('.addr-del')) return; syncCurrentAddress(); currentAddressId = el.dataset.addrId; loadCurrentAddress(); syncToCloud(); closeAddressModal(); });
+        el.addEventListener('click', (e) => {
+            if (e.target.closest('.addr-edit') || e.target.closest('.addr-del')) return;
+            syncCurrentAddress(); currentAddressId = el.dataset.addrId; loadCurrentAddress(); syncToCloud(); closeAddressModal();
+        });
     });
     list.querySelectorAll('.addr-edit').forEach(btn => {
         btn.addEventListener('click', (e) => { e.stopPropagation(); const addr = addresses.find(a => a.id === btn.dataset.id); const name = prompt("Нова назва:", addr.name); if (name && name.trim()) { addr.name = name.trim(); renderAddressModal(); if (btn.dataset.id === currentAddressId) $('currentAddressDisplay').innerText = addr.name; syncToCloud(); } });
@@ -353,9 +434,17 @@ $('btnTabSettings')?.addEventListener('click', () => switchTab('tabSettings', 3)
 $('dashAddBtn')?.addEventListener('click', () => switchTab('tabCalc', 1));
 $('dashHistoryBtn')?.addEventListener('click', () => switchTab('tabHistory', 2));
 
-let touchStartX = 0;
-$('swipeContainer')?.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
-$('swipeContainer')?.addEventListener('touchend', e => { if (isGuest) return; const dist = touchStartX - e.changedTouches[0].screenX; const curIdx = tabIds.findIndex(id => $(id)?.classList.contains('tab-active')); if (dist > 70 && curIdx < tabIds.length - 1) switchTab(tabIds[curIdx + 1], curIdx + 1); else if (dist < -70 && curIdx > 0) switchTab(tabIds[curIdx - 1], curIdx - 1); }, { passive: true });
+let touchStartX = 0, touchStartY = 0;
+$('swipeContainer')?.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; touchStartY = e.changedTouches[0].screenY; }, { passive: true });
+$('swipeContainer')?.addEventListener('touchend', e => {
+    if (isGuest) return;
+    const distX = touchStartX - e.changedTouches[0].screenX;
+    const distY = Math.abs(touchStartY - e.changedTouches[0].screenY);
+    if (distY > Math.abs(distX)) return; // vertical scroll, ignore
+    const curIdx = tabIds.findIndex(id => $(id)?.classList.contains('tab-active'));
+    if (distX > 80 && curIdx < tabIds.length - 1) switchTab(tabIds[curIdx + 1], curIdx + 1);
+    else if (distX < -80 && curIdx > 0) switchTab(tabIds[curIdx - 1], curIdx - 1);
+}, { passive: true });
 
 $('quickActionsBtn')?.addEventListener('click', () => $('quickActionsModal')?.classList.remove('hidden'));
 $('qaExport')?.addEventListener('click', () => { exportCSV(); $('quickActionsModal')?.classList.add('hidden'); });
@@ -363,6 +452,7 @@ $('qaPdf')?.addEventListener('click', () => { generatePDF(); $('quickActionsModa
 $('qaShare')?.addEventListener('click', () => { shareAllRecords(); $('quickActionsModal')?.classList.add('hidden'); });
 $('qaSync')?.addEventListener('click', () => { syncToCloud(); showToast('Синхронізовано'); $('quickActionsModal')?.classList.add('hidden'); });
 $('qaImage')?.addEventListener('click', () => { if (typeof shareAsImage === 'function') shareAsImage(); $('quickActionsModal')?.classList.add('hidden'); });
+
 // =================== CANVAS CHART ENGINE ===================
 class ChartEngine {
     constructor(canvasId, options = {}) {
@@ -768,7 +858,8 @@ $('utilityForm')?.addEventListener('submit', (e) => {
     $('submitFormBtn')?.classList.add('save-btn-success');
     setTimeout(() => $('submitFormBtn')?.classList.remove('save-btn-success'), 600);
     syncToCloud();
-    const [y, m] = $('monthInput').value.split('-');
+    // Advance to next month
+    const [y, m] = $('monthInput').value.split('-').map(Number);
     const nD = new Date(y, m);
     $('monthInput').value = `${nD.getFullYear()}-${String(nD.getMonth() + 1).padStart(2, '0')}`;
     fillPreviousReadings(); calculatePreview(); updateSmartBadges(); checkNewAchievements();
@@ -784,7 +875,7 @@ function fillPreviousReadings() {
         document.querySelectorAll('.custom-srv-input').forEach(el => el.value = '');
         if ($('recordNote')) $('recordNote').value = '';
         const selectedMonth = $('monthInput')?.value;
-        if (!selectedMonth || records.length === 0) { loadDraft(); return; }
+        if (!selectedMonth || records.length === 0) { autoSetWinter(selectedMonth); loadDraft(); return; }
         const [sy, sm] = selectedMonth.split('-').map(Number);
         const prevDate = new Date(sy, sm - 2); const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
         const prevRecord = records.find(r => r.month === prevMonth);
@@ -806,10 +897,16 @@ function fillPreviousReadings() {
             customServices.forEach(srv => { const el = $(`custom_${srv.id}`); if (el && srv.defaultSum) el.value = srv.defaultSum; });
             loadDraft();
         }
-        const mo = new Date(selectedMonth + '-01').getMonth() + 1;
-        if ($('isWinterInput')) $('isWinterInput').checked = mo >= 10 || mo <= 4;
+        autoSetWinter(selectedMonth);
     } catch (e) { console.error('fillPreviousReadings:', e); }
 }
+
+function autoSetWinter(month) {
+    if (!month || !$('isWinterInput')) return;
+    const mo = new Date(month + '-01').getMonth() + 1;
+    $('isWinterInput').checked = mo >= 10 || mo <= 4;
+}
+
 // =================== SETTINGS ===================
 function updateServiceChartOptions() { const select = $('serviceChartSelect'); if (!select) return; const cur = select.value; select.innerHTML = ''; if (prefs.showWater) select.innerHTML += '<option value="water">💧 Вода</option>'; if (prefs.showHotWater) select.innerHTML += '<option value="hotWater">🌡️ Гар. Вода</option>'; if (prefs.showElectro) select.innerHTML += '<option value="electro">⚡ Світло</option>'; if (prefs.showGas) select.innerHTML += '<option value="gas">🔥 Газ</option>'; if (select.querySelector(`option[value="${cur}"]`)) select.value = cur; }
 
@@ -853,7 +950,7 @@ $('saveSettingsBtn')?.addEventListener('click', () => {
 function renderSettingsCustomServices() { const list = $('customServicesSettingsList'); if (!list) return; list.innerHTML = customServices.map((srv, i) => `<div class="flex gap-2 items-center bg-slate-50 dark:bg-black/50 p-2 rounded-xl border border-slate-100 dark:border-white/5"><input type="text" value="${escapeHtml(srv.name)}" data-idx="${i}" data-field="name" placeholder="Назва" class="cs-setting-input flex-1 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2.5 py-2.5 border border-transparent focus:border-brand transition-colors"><input type="number" step="0.01" value="${srv.defaultSum}" data-idx="${i}" data-field="sum" placeholder="₴" class="cs-setting-input w-16 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2 py-2.5 text-center border border-transparent focus:border-brand transition-colors"><button type="button" class="cs-del p-2 text-slate-400 hover:text-red-500 bg-white dark:bg-[#2c2c2e] rounded-lg transition-colors" data-idx="${i}"><i class="fa-solid fa-trash text-[10px]"></i></button></div>`).join(''); list.querySelectorAll('.cs-setting-input').forEach(input => { input.addEventListener('change', () => { const idx = parseInt(input.dataset.idx); if (input.dataset.field === 'name') customServices[idx].name = input.value; else customServices[idx].defaultSum = input.value; }); }); list.querySelectorAll('.cs-del').forEach(btn => { btn.addEventListener('click', () => { customServices.splice(parseInt(btn.dataset.idx), 1); renderSettingsCustomServices(); }); }); }
 $('addCustomServiceBtn')?.addEventListener('click', () => { customServices.push({ id: 's' + Date.now(), name: "", defaultSum: "" }); renderSettingsCustomServices(); });
 
-function renderCalcCustomServices() { const c = $('customServicesContainer'); if (!c) return; if (customServices.length === 0) { c.innerHTML = ''; return; } c.innerHTML = customServices.map(srv => `<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-1.5 text-center">${escapeHtml(srv.name) || 'Послуга'}</span><input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input premium-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-white/10" placeholder="${srv.defaultSum || '0.00'}"></div>`).join(''); document.querySelectorAll('.custom-srv-input').forEach(input => input.addEventListener('input', calculatePreview)); }
+function renderCalcCustomServices() { const c = $('customServicesContainer'); if (!c) return; if (customServices.length === 0) { c.innerHTML = ''; return; } c.innerHTML = customServices.map(srv => `<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-1.5 text-center">${escapeHtml(srv.name) || 'Послуга'}</span><input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input premium-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-white/10" placeholder="${srv.defaultSum || '0.00'}"></div>`).join(''); document.querySelectorAll('.custom-srv-input').forEach(input => input.addEventListener('input', () => { calculatePreview(); debouncedDraft(); })); }
 
 function checkReminders() { const monthKey = new Date().getFullYear() + '-' + new Date().getMonth(); if (!prefs.remindersEnabled || localStorage.getItem('lastSubmittedMonth') === monthKey) { $('reminderBanner')?.classList.add('hidden'); return; } const d = new Date().getDate(); let msgs = []; const wS = prefs.remWaterStart || 1, wE = prefs.remWaterEnd || 5, eS = prefs.remElectroStart || 28, eE = prefs.remElectroEnd || 3; const isW = wS <= wE ? (d >= wS && d <= wE) : (d >= wS || d <= wE); const isE = eS <= eE ? (d >= eS && d <= eE) : (d >= eS || d <= eE); if (isW && (prefs.showWater || prefs.showHotWater)) msgs.push("💧 Воду"); if (isE && prefs.showElectro) msgs.push("⚡️ Світло"); if (msgs.length > 0) { $('reminderBanner')?.classList.remove('hidden'); if ($('reminderText')) $('reminderText').innerText = "Передайте: " + msgs.join(" та "); } else $('reminderBanner')?.classList.add('hidden'); }
 $('reminderDismissBtn')?.addEventListener('click', () => { localStorage.setItem('lastSubmittedMonth', new Date().getFullYear() + '-' + new Date().getMonth()); $('reminderBanner')?.classList.add('hidden'); showToast("Нагадаємо наступного місяця", "🔔"); });
@@ -868,16 +965,15 @@ function initSwipe(card, recordId) {
     card.addEventListener('touchend', () => { isSwiping = false; card.classList.remove('swiping'); card.style.transform = ''; const l = card.querySelector('.swipe-bg-left'), r = card.querySelector('.swipe-bg-right'); if (l) l.style.opacity = '0'; if (r) r.style.opacity = '0'; if (currentX < -threshold) { card.style.transform = 'translateX(-100%)'; card.style.opacity = '0'; setTimeout(() => deleteRecordById(recordId), 300); } else if (currentX > threshold) { card.style.transform = 'translateX(100%)'; card.style.opacity = '0'; setTimeout(() => togglePaidById(recordId), 300); } currentX = 0; }, { passive: true });
 }
 
-// =================== RECORDS (FIXED: use record.id instead of index) ===================
+// =================== RECORDS ===================
 function findRecordIndex(id) { return records.findIndex(r => r.id === id); }
-
 function togglePaidById(id) { const idx = findRecordIndex(id); if (idx < 0) return; records[idx].paid = !records[idx].paid; renderRecords(); renderDashboard(); syncToCloud(); checkNewAchievements(); }
 function deleteRecordById(id) { records = records.filter(r => r.id !== id); renderRecords(); renderDashboard(); syncToCloud(); showToast('Видалено', '🗑'); }
 
 function renderRecords() {
     const list = $('recordsList'); if (!list) return;
     if (records.length === 0) {
-        list.innerHTML = `<div class="text-center py-12"><i class="fa-solid fa-clock-rotate-left text-4xl text-slate-300 dark:text-slate-600 mb-4"></i><p class="text-slate-500 font-medium">Ще немає записів</p></div>`;
+        list.innerHTML = `<div class="text-center py-12"><i class="fa-solid fa-clock-rotate-left text-4xl text-slate-300 dark:text-slate-600 mb-4"></i><p class="text-slate-500 font-medium">Ще немає записів</p><p class="text-xs text-slate-400 mt-1">Додайте перший запис у вкладці "Рахунок"</p></div>`;
         if ($('statsAvg')) $('statsAvg').innerText = '0 ₴'; if ($('statsTotalPaid')) $('statsTotalPaid').innerText = '0 ₴'; if ($('statsMin')) $('statsMin').innerText = '0 ₴'; if ($('statsMax')) $('statsMax').innerText = '0 ₴'; if ($('statsCount')) $('statsCount').innerText = '0';
         renderHistoryChart([]); renderServiceChart(); return;
     }
@@ -977,7 +1073,6 @@ function createRecordCard(rec) {
     card.insertBefore(swL, card.firstChild); card.insertBefore(swR, card.firstChild);
     initSwipe(card, recId);
 
-    // Event delegation for card actions
     card.addEventListener('click', (e) => {
         const target = e.target.closest('[data-toggle-details]');
         if (target) { const panel = card.querySelector('.details-panel'); const chevron = card.querySelector('.chevron-icon'); if (panel) { panel.classList.toggle('hidden'); if (chevron) chevron.style.transform = panel.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'; } return; }
@@ -992,15 +1087,17 @@ function createRecordCard(rec) {
 
 async function shareRecordById(id) { const rec = records.find(r => r.id === id); if (!rec) return; const d = new Date(rec.month + '-01').toLocaleString('uk-UA', { month: 'long', year: 'numeric' }); let t = `🧾 Комуналка за ${d}\n📍 ${$('currentAddressDisplay')?.innerText || ''}\n──────────\n`; if (rec.waterCost > 0) t += `💧 Вода: ${fmt.format(rec.waterCost)} ₴\n`; if (rec.hotWaterCost > 0) t += `🌡️ Гар.: ${fmt.format(rec.hotWaterCost)} ₴\n`; if (rec.electroCost > 0) t += `⚡ Світло: ${fmt.format(rec.electroCost)} ₴\n`; if (rec.gasCost > 0) t += `🔥 Газ: ${fmt.format(rec.gasCost)} ₴\n`; if (rec.customCost > 0) t += `📦 Інше: ${fmt.format(rec.customCost)} ₴\n`; t += `──────────\n💰 Всього: ${fmt.format(rec.total)} ₴\n${rec.paid ? '✅ Оплачено' : '⏳ Очікує'}`; if (navigator.share) { try { await navigator.share({ text: t }); return; } catch (e) {} } try { await navigator.clipboard.writeText(t); showToast("Скопійовано!", "📋"); } catch (e) { prompt(":", t); } }
 
-function editRecordById(id) { const rec = records.find(r => r.id === id); if (!rec) return; if ($('monthInput')) $('monthInput').value = rec.month; if (prefs.showWater) { if ($('wPrev')) $('wPrev').value = rec.wPrev || ''; if ($('wCur')) $('wCur').value = rec.wCur || ''; } if (prefs.showHotWater) { if ($('hwPrev')) $('hwPrev').value = rec.hwPrev || ''; if ($('hwCur')) $('hwCur').value = rec.hwCur || ''; } if (prefs.showElectro) { if ($('dPrev')) $('dPrev').value = rec.dPrev || ''; if ($('dCur')) $('dCur').value = rec.dCur || ''; if ($('nPrev')) $('nPrev').value = rec.nPrev || ''; if ($('nCur')) $('nCur').value = rec.nCur || ''; } if (prefs.showGas) { if ($('gPrev')) $('gPrev').value = rec.gPrev || ''; if ($('gCur')) $('gCur').value = rec.gCur || ''; } if (rec.customData) Object.keys(rec.customData).forEach(srvId => { const el = $(`custom_${srvId}`); if (el) el.value = rec.customData[srvId].val; }); if ($('recordNote')) $('recordNote').value = rec.note || ''; const m = new Date(rec.month + '-01').getMonth() + 1; if ($('isWinterInput')) $('isWinterInput').checked = m >= 10 || m <= 4; switchTab('tabCalc', 1); calculatePreview(); updateSmartBadges(); }
+function editRecordById(id) { const rec = records.find(r => r.id === id); if (!rec) return; if ($('monthInput')) $('monthInput').value = rec.month; if (prefs.showWater) { if ($('wPrev')) $('wPrev').value = rec.wPrev || ''; if ($('wCur')) $('wCur').value = rec.wCur || ''; } if (prefs.showHotWater) { if ($('hwPrev')) $('hwPrev').value = rec.hwPrev || ''; if ($('hwCur')) $('hwCur').value = rec.hwCur || ''; } if (prefs.showElectro) { if ($('dPrev')) $('dPrev').value = rec.dPrev || ''; if ($('dCur')) $('dCur').value = rec.dCur || ''; if ($('nPrev')) $('nPrev').value = rec.nPrev || ''; if ($('nCur')) $('nCur').value = rec.nCur || ''; } if (prefs.showGas) { if ($('gPrev')) $('gPrev').value = rec.gPrev || ''; if ($('gCur')) $('gCur').value = rec.gCur || ''; } if (rec.customData) Object.keys(rec.customData).forEach(srvId => { const el = $(`custom_${srvId}`); if (el) el.value = rec.customData[srvId].val; }); if ($('recordNote')) $('recordNote').value = rec.note || ''; autoSetWinter(rec.month); switchTab('tabCalc', 1); calculatePreview(); updateSmartBadges(); }
 
+// =================== FILTER & SEARCH ===================
+let searchDebounceTimer;
 $('filterToggleBtn')?.addEventListener('click', () => $('filterPanel')?.classList.toggle('hidden'));
 $('filterButtons')?.addEventListener('click', (e) => { const btn = e.target.closest('.filter-btn'); if (!btn) return; currentFilter = btn.dataset.filter; document.querySelectorAll('.filter-btn').forEach(b => { b.classList.remove('bg-brand', 'text-white'); b.classList.add('bg-slate-100', 'dark:bg-[#2c2c2e]', 'text-slate-600', 'dark:text-slate-400'); }); btn.classList.remove('bg-slate-100', 'dark:bg-[#2c2c2e]', 'text-slate-600', 'dark:text-slate-400'); btn.classList.add('bg-brand', 'text-white'); renderRecords(); });
-$('searchRecords')?.addEventListener('input', () => renderRecords());
+$('searchRecords')?.addEventListener('input', () => { clearTimeout(searchDebounceTimer); searchDebounceTimer = setTimeout(renderRecords, 200); });
 $('sortSelect')?.addEventListener('change', () => renderRecords());
 
 // =================== EXPORT ===================
-function exportCSV() { if (!records.length) return showToast('Немає', '⚠️'); let h = ['Місяць']; if (prefs.showWater) h.push('Вода(м3)', 'Вода(₴)'); if (prefs.showHotWater) h.push('Гар(м3)', 'Гар(₴)'); if (prefs.showElectro) h.push('Світло(кВт)', 'Світло(₴)'); if (prefs.showGas) h.push('Газ(м3)', 'Газ(₴)'); h.push('Інше(₴)', 'Всього(₴)', 'Статус'); let csv = '\uFEFF' + h.join(',') + '\n'; [...records].sort((a, b) => new Date(b.month) - new Date(a.month)).forEach(r => { let row = [r.month]; if (prefs.showWater) row.push(Math.max(0, (r.wCur || 0) - (r.wPrev || 0)), (r.waterCost || 0).toFixed(2)); if (prefs.showHotWater) row.push(Math.max(0, (r.hwCur || 0) - (r.hwPrev || 0)), (r.hotWaterCost || 0).toFixed(2)); if (prefs.showElectro) row.push(Math.max(0, (r.dCur || 0) - (r.dPrev || 0)) + Math.max(0, (r.nCur || 0) - (r.nPrev || 0)), (r.electroCost || 0).toFixed(2)); if (prefs.showGas) row.push(Math.max(0, (r.gCur || 0) - (r.gPrev || 0)), (r.gasCost || 0).toFixed(2)); row.push((r.customCost || 0).toFixed(2), (r.total || 0).toFixed(2), r.paid ? 'Оплачено' : 'Борг'); csv += row.join(',') + '\n'; }); const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `komunalka.csv`; link.click(); showToast('Експортовано', '📊'); }
+function exportCSV() { if (!records.length) return showToast('Немає', '⚠️'); let h = ['Місяць']; if (prefs.showWater) h.push('Вода(м3)', 'Вода(₴)'); if (prefs.showHotWater) h.push('Гар(м3)', 'Гар(₴)'); if (prefs.showElectro) h.push('Світло(кВт)', 'Світло(₴)'); if (prefs.showGas) h.push('Газ(м3)', 'Газ(₴)'); h.push('Інше(₴)', 'Всього(₴)', 'Статус'); let csv = '\uFEFF' + h.join(',') + '\n'; [...records].sort((a, b) => new Date(b.month) - new Date(a.month)).forEach(r => { let row = [r.month]; if (prefs.showWater) row.push(Math.max(0, (r.wCur || 0) - (r.wPrev || 0)), (r.waterCost || 0).toFixed(2)); if (prefs.showHotWater) row.push(Math.max(0, (r.hwCur || 0) - (r.hwPrev || 0)), (r.hotWaterCost || 0).toFixed(2)); if (prefs.showElectro) row.push(Math.max(0, (r.dCur || 0) - (r.dPrev || 0)) + Math.max(0, (r.nCur || 0) - (r.nPrev || 0)), (r.electroCost || 0).toFixed(2)); if (prefs.showGas) row.push(Math.max(0, (r.gCur || 0) - (r.gPrev || 0)), (r.gasCost || 0).toFixed(2)); row.push((r.customCost || 0).toFixed(2), (r.total || 0).toFixed(2), r.paid ? 'Оплачено' : 'Борг'); csv += row.join(',') + '\n'; }); const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `komunalka.csv`; link.click(); URL.revokeObjectURL(link.href); showToast('Експортовано', '📊'); }
 
 async function generatePDF() { if (!records.length) return showToast('Немає', '⚠️'); const { jsPDF } = window.jspdf; const doc = new jsPDF(); let hasFont = false; try { const fontUrl = 'https://cdn.jsdelivr.net/gh/nicksib/jspdf-fonts@main/Roboto-Regular.ttf'; const resp = await fetch(fontUrl); if (resp.ok) { const buf = await resp.arrayBuffer(); const bytes = new Uint8Array(buf); let binary = ''; for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]); doc.addFileToVFS('Roboto.ttf', btoa(binary)); doc.addFont('Roboto.ttf', 'Roboto', 'normal'); doc.setFont('Roboto', 'normal'); hasFont = true; } } catch (e) {} const t = hasFont ? (s) => s : transliterate; doc.setFillColor(0, 122, 255); doc.rect(0, 0, 210, 35, 'F'); doc.setTextColor(255, 255, 255); doc.setFontSize(18); doc.text(t('Комунальні платежі'), 15, 15); doc.setFontSize(10); doc.text(t($('currentAddressDisplay')?.innerText || ''), 15, 24); doc.setTextColor(60, 60, 60); const tH = [t('Міс.')]; if (prefs.showWater) tH.push(t('Вода'), t('₴')); if (prefs.showElectro) tH.push(t('Світло'), t('₴')); if (prefs.showGas) tH.push(t('Газ'), t('₴')); tH.push(t('Інше'), t('Всього'), t('Статус')); const tR = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)).map(r => { const row = [r.month]; if (prefs.showWater) row.push(Math.max(0, (r.wCur || 0) - (r.wPrev || 0)), (r.waterCost || 0).toFixed(0)); if (prefs.showElectro) row.push(Math.max(0, (r.dCur || 0) - (r.dPrev || 0)) + Math.max(0, (r.nCur || 0) - (r.nPrev || 0)), (r.electroCost || 0).toFixed(0)); if (prefs.showGas) row.push(Math.max(0, (r.gCur || 0) - (r.gPrev || 0)), (r.gasCost || 0).toFixed(0)); row.push((r.customCost || 0).toFixed(0), (r.total || 0).toFixed(0), r.paid ? 'OK' : t('Борг')); return row; }); doc.autoTable({ startY: 40, head: [tH], body: tR, theme: 'striped', styles: { font: hasFont ? 'Roboto' : 'helvetica' }, headStyles: { fillColor: [0, 122, 255], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold', halign: 'center' }, bodyStyles: { fontSize: 7, halign: 'center' }, margin: { left: 10, right: 10 } }); doc.save(`komunalka_${new Date().toISOString().slice(0, 10)}.pdf`); showToast('PDF!', '📄'); }
 function transliterate(text) { const map = { 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g', 'д': 'd', 'е': 'e', 'є': 'ye', 'ж': 'zh', 'з': 'z', 'и': 'y', 'і': 'i', 'ї': 'yi', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ь': '', 'ю': 'yu', 'я': 'ya', 'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'H', 'Ґ': 'G', 'Д': 'D', 'Е': 'E', 'Є': 'Ye', 'Ж': 'Zh', 'З': 'Z', 'И': 'Y', 'І': 'I', 'Ї': 'Yi', 'Й': 'Y', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'Kh', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shch', 'Ь': '', 'Ю': 'Yu', 'Я': 'Ya' }; return text.split('').map(c => map[c] || c).join(''); }
@@ -1010,7 +1107,7 @@ async function shareAllRecords() { if (!records.length) return showToast('Нем
 $('exportCsvBtn')?.addEventListener('click', exportCSV);
 $('exportPdfBtn')?.addEventListener('click', generatePDF);
 $('shareAllBtn')?.addEventListener('click', shareAllRecords);
-$('exportJsonBtn')?.addEventListener('click', () => { syncCurrentAddress(); const data = { version: APP_VERSION, exportDate: new Date().toISOString(), addresses, currentAddressId }; const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `komunalka_backup.json`; link.click(); showToast('Бекап', '💾'); });
+$('exportJsonBtn')?.addEventListener('click', () => { syncCurrentAddress(); const data = { version: APP_VERSION, exportDate: new Date().toISOString(), addresses, currentAddressId }; const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `komunalka_backup.json`; link.click(); URL.revokeObjectURL(link.href); showToast('Бекап', '💾'); });
 $('importJsonBtn')?.addEventListener('click', () => $('importFileInput')?.click());
 $('importFileInput')?.addEventListener('change', (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { try { const data = JSON.parse(ev.target.result); if (data.addresses && Array.isArray(data.addresses)) { if (confirm(`Імпорт ${data.addresses.length} об'єктів?`)) { addresses = data.addresses; currentAddressId = data.currentAddressId || addresses[0].id; loadCurrentAddress(); syncToCloud(); showToast('Імпортовано!', '✅'); } } else showToast('Невірний формат', '❌'); } catch (err) { showToast('Помилка', '❌'); } }; reader.readAsText(file); e.target.value = ''; });
 
@@ -1063,7 +1160,7 @@ async function shareYearReport() {
     const total = yr.reduce((s, r) => s + r.total, 0);
     const avg = total / yr.length;
     const streak = getStreak(records);
-    let t = `📊 Річний звіт ${year}\n📍 ${$('currentAddressDisplay')?.innerText || ''}\n═══════════════\n💰 Всього: ${fmt.format(total)} ₴\n📈 Середній: ${fmt.format(avg)} ₴/міс\n📅 Записів: ${yr.length}\n🔥 Серія: ${streak} міс.\n═══════════════\nКомуналка PWA • by Антон Миколенко`;
+    let t = `📊 Річний звіт ${year}\n📍 ${$('currentAddressDisplay')?.innerText || ''}\n═══════════════\n💰 Всього: ${fmt.format(total)} ₴\n📈 Середній: ${fmt.format(avg)} ₴/міс\n📅 Записів: ${yr.length}\n🔥 Серія: ${streak} міс.\n═══════════════\nКомуналка PWA`;
     if (navigator.share) { try { await navigator.share({ text: t }); return; } catch (e) {} }
     try { await navigator.clipboard.writeText(t); showToast("Скопійовано!", "📋"); } catch (e) { prompt(":", t); }
 }
@@ -1135,10 +1232,9 @@ $('mode-dark')?.addEventListener('click', () => setThemeMode('dark'));
 
 // =================== RESIZE HANDLER FOR CHARTS ===================
 let resizeTimeout;
-window.addEventListener('resize', () => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(() => { if (dashChart && dashChart.canvas) { dashChart.setupCanvas(); if (dashChart.width) dashChart.render(); } if (historyChart && historyChart.canvas) { historyChart.setupCanvas(); if (historyChart.width) historyChart.render(); } if (serviceChart && serviceChart.canvas) { serviceChart.setupCanvas(); if (serviceChart.width) serviceChart.render(); } if (donutChart && donutChart.canvas) { donutChart.setupCanvas(); if (donutChart.width) donutChart.render(); } }, 250); });
+window.addEventListener('resize', () => { clearTimeout(resizeTimeout); resizeTimeout = setTimeout(() => { [dashChart, historyChart, serviceChart, donutChart].forEach(chart => { if (chart && chart.canvas) { chart.setupCanvas(); if (chart.width) chart.render(); } }); }, 250); });
 
-// =================== PERFORMANCE: LAZY RENDER ===================
-// Intersection Observer for lazy chart rendering
+// =================== LAZY CHART RENDERING ===================
 const chartObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -1151,35 +1247,9 @@ const chartObserver = new IntersectionObserver((entries) => {
     });
 }, { threshold: 0.1 });
 
-// Observe canvases when they exist
 ['dashChartCanvas', 'donutCanvas', 'historyChartCanvas', 'serviceChartCanvas'].forEach(id => {
     const el = $(id);
     if (el) chartObserver.observe(el);
 });
-
-// =================== PERFORMANCE: DEBOUNCED SEARCH ===================
-let searchDebounce;
-$('searchRecords')?.removeEventListener('input', () => renderRecords());
-$('searchRecords')?.addEventListener('input', () => {
-    clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(renderRecords, 200);
-});
-
-// =================== PERFORMANCE: PRELOAD CRITICAL DATA ===================
-if ('connection' in navigator) {
-    // Save-Data mode detection
-    if (navigator.connection.saveData) {
-        document.documentElement.style.setProperty('--premium-shadow', 'none');
-    }
-}
-
-// =================== VIRTUAL SCROLL FOR LARGE LISTS ===================
-function shouldUseVirtualScroll() { return records.length > 50; }
-
-// Preconnect to worker
-const preconnect = document.createElement('link');
-preconnect.rel = 'preconnect';
-preconnect.href = WORKER_URL;
-document.head.appendChild(preconnect);
 
 // EOF
