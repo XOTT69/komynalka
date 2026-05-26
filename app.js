@@ -1251,5 +1251,49 @@ const chartObserver = new IntersectionObserver((entries) => {
     const el = $(id);
     if (el) chartObserver.observe(el);
 });
+// =================== SHARE ADDRESS (GUEST LINK) ===================
+$('shareAddressBtn')?.addEventListener('click', shareAddress);
+
+async function shareAddress() {
+    if (!sessionLogin && !localStorage.getItem('k_uid')) {
+        showToast('Спочатку увійдіть', '⚠️');
+        return;
+    }
+    
+    try {
+        const res = await secureFetch('POST', {}, { 
+            action: 'generate_share', 
+            addressId: currentAddressId 
+        });
+        const data = await res.json();
+        
+        if (!data.success || !data.shareToken) {
+            showToast('Помилка генерації', '❌');
+            return;
+        }
+        
+        const shareUrl = `${window.location.origin}${window.location.pathname}?share=${data.shareToken}`;
+        
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Комуналка — гостьовий доступ',
+                    text: `Перегляд/редагування комунальних за адресою "${addresses.find(a => a.id === currentAddressId)?.name || 'Мій дім'}"`,
+                    url: shareUrl
+                });
+                return;
+            } catch (e) {}
+        }
+        
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            showToast('Посилання скопійовано!', '📋');
+        } catch (e) {
+            prompt('Скопіюйте посилання:', shareUrl);
+        }
+    } catch (e) {
+        showToast('Помилка мережі', '❌');
+    }
+}
 
 // EOF
