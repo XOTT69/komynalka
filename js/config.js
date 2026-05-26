@@ -1,6 +1,3 @@
-// ============================================================
-// CONFIG
-// ============================================================
 export const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
 export const APP_VERSION = '4.0.0';
 export const MAX_ADDRESSES = 3;
@@ -15,31 +12,20 @@ export const FIREBASE_CONFIG = {
 };
 
 export const DEFAULT_TARIFFS = {
-    water: 30.38,
-    hotWater: 100.00,
-    electroBase: 4.32,
-    electroWinter: 2.64,
-    winterLimit: 2000,
-    nightCoef: 0.5,
-    gas: 7.96,
-    heating: 1654.76,
-    drainage: 19.02
+    water: 30.38, hotWater: 100.00,
+    electroBase: 4.32, electroWinter: 2.64,
+    winterLimit: 2000, nightCoef: 0.5,
+    gas: 7.96, heating: 1654.76, drainage: 19.02
 };
 
 export const DEFAULT_PREFS = {
-    showWater: true,
-    showHotWater: false,
-    showElectro: true,
-    showGas: true,
-    showHeating: false,
-    showDrainage: false,
-    electroTwoZone: true,
-    electroWinter: true,
+    showWater: true, showHotWater: false,
+    showElectro: true, showGas: true,
+    showHeating: false, showDrainage: false,
+    electroTwoZone: true, electroWinter: true,
     remindersEnabled: false,
-    remWaterStart: 1,
-    remWaterEnd: 5,
-    remElectroStart: 28,
-    remElectroEnd: 3
+    remWaterStart: 1, remWaterEnd: 5,
+    remElectroStart: 28, remElectroEnd: 3
 };
 
 export const DEFAULT_SERVICES = [
