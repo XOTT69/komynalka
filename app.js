@@ -4,7 +4,7 @@
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
-const APP_VERSION = '3.2.0';
+const APP_VERSION = '3.2.1';
 const MAX_ADDRESSES_FREE = 3;
 
 const firebaseConfig = { apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80", authDomain: "pwakomun.firebaseapp.com", projectId: "pwakomun", storageBucket: "pwakomun.firebasestorage.app", messagingSenderId: "4437974770", appId: "1:4437974770:web:bf7d2f7bac35eff5707a6b" };
