@@ -1,6 +1,3 @@
-// ============================================================
-// STATE MANAGEMENT
-// ============================================================
 import { DEFAULT_TARIFFS, DEFAULT_PREFS, DEFAULT_SERVICES } from './config.js';
 
 class AppState {
@@ -22,58 +19,38 @@ class AppState {
     }
 
     get(key) { return this._data[key]; }
-
     set(key, value) {
         const old = this._data[key];
         this._data[key] = value;
         if (old !== value) this._notify(key, value, old);
     }
-
     _notify(key, value, old) {
         const listeners = this._listeners.get(key);
         if (listeners) listeners.forEach(fn => fn(value, old));
     }
-
     on(key, fn) {
         if (!this._listeners.has(key)) this._listeners.set(key, new Set());
         this._listeners.get(key).add(fn);
         return () => this._listeners.get(key).delete(fn);
     }
 
-    // Persistence
     saveLocal() {
-        try {
-            localStorage.setItem('komynalka_backup', JSON.stringify({
-                addresses: this._data.addresses,
-                currentAddressId: this._data.currentAddressId,
-                timestamp: Date.now()
-            }));
-        } catch (e) {}
+        try { localStorage.setItem('komynalka_backup', JSON.stringify({ addresses: this._data.addresses, currentAddressId: this._data.currentAddressId, timestamp: Date.now() })); } catch (e) {}
     }
-
     loadLocal() {
-        try {
-            const raw = localStorage.getItem('komynalka_backup');
-            return raw ? JSON.parse(raw) : null;
-        } catch (e) { return null; }
+        try { const b = localStorage.getItem('komynalka_backup'); return b ? JSON.parse(b) : null; } catch (e) { return null; }
     }
-
-    // Session
     saveSession() {
         if (this._data.sessionLogin) localStorage.setItem('k_login', this._data.sessionLogin);
         if (this._data.sessionPass) localStorage.setItem('k_passHash', this._data.sessionPass);
     }
-
     loadSession() {
         this._data.sessionLogin = localStorage.getItem('k_login');
         this._data.sessionPass = localStorage.getItem('k_passHash');
     }
-
-    // Current address helpers
     getCurrentAddress() {
         return this._data.addresses.find(a => a.id === this._data.currentAddressId) || this._data.addresses[0];
     }
-
     syncFromAddress() {
         const addr = this.getCurrentAddress();
         if (!addr) return;
@@ -82,7 +59,6 @@ class AppState {
         this._data.records = addr.records || [];
         this._data.customServices = addr.customServices || [...DEFAULT_SERVICES];
     }
-
     syncToAddress() {
         const idx = this._data.addresses.findIndex(a => a.id === this._data.currentAddressId);
         if (idx >= 0) {
