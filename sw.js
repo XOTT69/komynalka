@@ -1,53 +1,71 @@
-const CACHE_NAME = 'komunalka-v4';
-const PRECACHE = ['./', './index.html', './styles.css', './js/app.js', './js/config.js', './js/state.js', './js/auth.js', './js/ui.js', './js/sync.js', './js/tabs.js', './js/pwa.js', './js/dashboard.js', './js/calc.js', './js/charts.js', './manifest.json', './icon.png'];
+const CACHE_NAME = 'komunalka-v3.2';
+const PRECACHE_URLS = ['./', './index.html', './app.js', './year-report-image.js', './manifest.json', './icon.png'];
 
-self.addEventListener('install', (e) => {
+self.addEventListener('install', event => {
     self.skipWaiting();
-    e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE)));
+    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS)));
 });
 
-self.addEventListener('activate', (e) => {
-    e.waitUntil(
+self.addEventListener('activate', event => {
+    event.waitUntil(
         caches.keys().then(names => Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n))))
             .then(() => self.clients.claim())
     );
 });
 
-self.addEventListener('fetch', (e) => {
-    const url = new URL(e.request.url);
+self.addEventListener('fetch', event => {
+    const url = new URL(event.request.url);
 
-    // Skip API and external
-    if (url.hostname.includes('workers.dev') || url.hostname.includes('googleapis.com') || url.hostname.includes('gstatic.com') || url.hostname.includes('google-analytics.com') || url.hostname.includes('googletagmanager.com')) return;
+    // API & external — network only, don't cache
+    if (url.hostname.includes('workers.dev') || url.hostname.includes('googleapis.com') || url.hostname.includes('gstatic.com') || url.hostname.includes('firebaseapp.com') || url.hostname.includes('google-analytics.com') || url.hostname.includes('googletagmanager.com')) {
+        return;
+    }
 
-    // CDN — cache first
-    if (url.hostname.includes('cdnjs.cloudflare.com') || url.hostname.includes('cdn.jsdelivr.net')) {
-        e.respondWith(caches.match(e.request).then(cached => {
-            if (cached) return cached;
-            return fetch(e.request).then(res => {
-                if (res.ok) { const clone = res.clone(); caches.open(CACHE_NAME).then(c => c.put(e.request, clone)); }
-                return res;
-            }).catch(() => cached);
-        }));
+    // CDN resources — cache first, then network
+    if (url.hostname.includes('cdnjs.cloudflare.com') || url.hostname.includes('cdn.tailwindcss.com') || url.hostname.includes('cdn.jsdelivr.net')) {
+        event.respondWith(
+            caches.match(event.request).then(cached => {
+                if (cached) return cached;
+                return fetch(event.request).then(response => {
+                    if (response.ok) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                    }
+                    return response;
+                }).catch(() => cached);
+            })
+        );
         return;
     }
 
     // App files — stale-while-revalidate
-    e.respondWith(caches.match(e.request).then(cached => {
-        const fetching = fetch(e.request).then(res => {
-            if (res && res.status === 200 && res.type === 'basic') {
-                const clone = res.clone();
-                caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-            }
-            return res;
-        }).catch(() => cached);
-        return cached || fetching;
+    event.respondWith(
+        caches.match(event.request).then(cached => {
+            const fetchPromise = fetch(event.request).then(response => {
+                if (response && response.status === 200 && response.type === 'basic') {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                }
+                return response;
+            }).catch(() => cached);
+
+            return cached || fetchPromise;
+        })
+    );
+});
+
+// Push notification handler
+self.addEventListener('push', event => {
+    const data = event.data ? event.data.json() : { title: 'Комуналка 🏠', body: 'Час передати показники!' };
+    event.waitUntil(self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: 'icon.png',
+        badge: 'icon.png',
+        vibrate: [100, 50, 100]
     }));
 });
 
-// Push
-self.addEventListener('push', (e) => {
-    const data = e.data ? e.data.json() : { title: 'Комуналка 🏠', body: 'Час передати показники!' };
-    e.waitUntil(self.registration.showNotification(data.title, { body: data.body, icon: 'icon.png', badge: 'icon.png', vibrate: [100, 50, 100] }));
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    event.waitUntil(clients.openWindow('/'));
 });
-
-self.addEventListener('notificationclick', (e) => { e.notification.close(); e.waitUntil(clients.openWindow('/')); });
