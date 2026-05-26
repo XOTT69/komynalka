@@ -1,5 +1,6 @@
 /* ============================================================
-   КОМУНАЛКА — Design System
+   КОМУНАЛКА — Design System v4.0
+   Complete Stylesheet
    ============================================================ */
 
 /* === VARIABLES === */
@@ -59,7 +60,9 @@ input[type="number"] { -moz-appearance: textfield; }
 button { cursor: pointer; border: none; background: none; }
 a { text-decoration: none; color: inherit; }
 
-/* === SPLASH === */
+/* ============================================================
+   SPLASH
+   ============================================================ */
 .splash {
     position: fixed; inset: 0; z-index: 2000;
     background: var(--bg);
@@ -78,7 +81,9 @@ a { text-decoration: none; color: inherit; }
 }
 @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 
-/* === TOAST === */
+/* ============================================================
+   TOAST
+   ============================================================ */
 .toast {
     position: fixed; top: env(safe-area-inset-top, 20px); left: 50%; z-index: 1000;
     transform: translate(-50%, -120%);
@@ -94,7 +99,9 @@ a { text-decoration: none; color: inherit; }
 html.dark .toast { background: rgba(255,255,255,0.9); color: #1c1c1e; }
 .toast.visible { transform: translate(-50%, 0); opacity: 1; }
 
-/* === AUTH SCREEN === */
+/* ============================================================
+   AUTH SCREEN
+   ============================================================ */
 .auth-screen {
     position: fixed; inset: 0; z-index: 100;
     display: flex; align-items: center; justify-content: center;
@@ -232,7 +239,9 @@ html.dark .toast { background: rgba(255,255,255,0.9); color: #1c1c1e; }
 .auth-feature span { font-size: 1.25rem; display: block; margin-bottom: 4px; }
 .auth-feature p { font-size: 9px; font-weight: 700; color: var(--text-tertiary); }
 
-/* === APP SCREEN === */
+/* ============================================================
+   APP SCREEN
+   ============================================================ */
 .app-screen { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg); }
 .app-screen.hidden { display: none; }
 
@@ -284,7 +293,9 @@ html.dark .toast { background: rgba(255,255,255,0.9); color: #1c1c1e; }
 .tab-hidden { display: none !important; }
 .tab-active { display: block !important; }
 
-/* === BOTTOM NAV === */
+/* ============================================================
+   BOTTOM NAV
+   ============================================================ */
 .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: rgba(255,255,255,0.72);
@@ -318,7 +329,9 @@ html.dark .bottom-nav { background: rgba(0,0,0,0.72); }
 .badge.hidden { display: none; }
 @keyframes badgePulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
 
-/* === CARDS === */
+/* ============================================================
+   CARDS
+   ============================================================ */
 .card {
     background: var(--card);
     border-radius: var(--radius);
@@ -329,7 +342,9 @@ html.dark .bottom-nav { background: rgba(0,0,0,0.72); }
 .card:active { transform: scale(0.98); }
 .card-flat { box-shadow: none; border: 1px solid var(--border); }
 
-/* === SYNC DOT === */
+/* ============================================================
+   SYNC DOT
+   ============================================================ */
 .sync-dot {
     width: 8px; height: 8px; border-radius: 50%;
     display: inline-block; transition: background 0.3s;
@@ -339,7 +354,9 @@ html.dark .bottom-nav { background: rgba(0,0,0,0.72); }
 .sync-dot.offline { background: var(--danger); }
 @keyframes syncPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-/* === MODALS === */
+/* ============================================================
+   MODALS
+   ============================================================ */
 .modal-overlay {
     position: fixed; inset: 0; z-index: 1200;
     background: rgba(0,0,0,0.5);
@@ -403,7 +420,9 @@ html.dark .bottom-nav { background: rgba(0,0,0,0.72); }
 .modal-btn-confirm { background: var(--brand); color: white; }
 .modal-btn-danger { background: var(--danger); color: white; }
 
-/* === BOTTOM SHEET === */
+/* ============================================================
+   BOTTOM SHEET
+   ============================================================ */
 .sheet-overlay {
     position: fixed; inset: 0; z-index: 1100;
     background: rgba(0,0,0,0.4);
@@ -441,7 +460,9 @@ html.dark .bottom-nav { background: rgba(0,0,0,0.72); }
 }
 .sheet-close-btn:active { transform: scale(0.98); }
 
-/* === DASHBOARD === */
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
 .hero-card {
     background: linear-gradient(135deg, var(--brand), #2563eb);
     padding: 28px; border-radius: var(--radius);
@@ -506,7 +527,9 @@ html.dark .bottom-nav { background: rgba(0,0,0,0.72); }
 .empty-title { font-size: 1rem; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; }
 .empty-text { font-size: 0.875rem; color: var(--text-tertiary); }
 
-/* === DETAILS / COLLAPSIBLE === */
+/* ============================================================
+   DETAILS / COLLAPSIBLE
+   ============================================================ */
 .details-card { overflow: hidden; }
 .details-summary {
     padding: 20px; display: flex; align-items: center; gap: 12px;
@@ -527,16 +550,22 @@ details[open] .details-chevron { transform: rotate(180deg); }
 .details-icon.red { background: rgba(255,59,48,0.08); color: var(--danger); }
 .details-body { padding: 0 20px 20px; }
 
-/* === STATS === */
+/* ============================================================
+   STATS
+   ============================================================ */
 .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
 .stat-item { background: var(--input-bg); padding: 12px; border-radius: var(--radius-xs); text-align: center; }
 .stat-label { font-size: 8px; font-weight: 700; text-transform: uppercase; color: var(--text-quaternary); margin-bottom: 4px; }
 .stat-value { font-size: 14px; font-weight: 900; color: var(--text-primary); }
 
-/* === CHARTS === */
+/* ============================================================
+   CHARTS
+   ============================================================ */
 .chart-canvas { width: 100%; height: 128px; }
 
-/* === CALCULATOR === */
+/* ============================================================
+   CALCULATOR
+   ============================================================ */
 .calc-hero {
     background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
     padding: 28px; border-radius: var(--radius);
@@ -563,13 +592,12 @@ html.dark .calc-hero { background: linear-gradient(135deg, #000, #0a1628, #0f346
     width: 44px; height: 44px; border-radius: 1rem;
     display: flex; align-items: center; justify-content: center;
     color: white; font-size: 1.1rem;
-    box-shadow: 0 8px 20px -5px;
 }
-.service-icon.water { background: linear-gradient(135deg, #60a5fa, #2563eb); box-shadow-color: rgba(37,99,235,0.3); }
-.service-icon.hot-water { background: linear-gradient(135deg, #f87171, #dc2626); box-shadow-color: rgba(220,38,38,0.3); }
-.service-icon.electro { background: linear-gradient(135deg, #fbbf24, #d97706); box-shadow-color: rgba(217,119,6,0.3); }
-.service-icon.gas { background: linear-gradient(135deg, #fb923c, #ea580c); box-shadow-color: rgba(234,88,12,0.3); }
-.service-icon.custom { background: linear-gradient(135deg, #a78bfa, #7c3aed); box-shadow-color: rgba(124,58,237,0.3); }
+.service-icon.water { background: linear-gradient(135deg, #60a5fa, #2563eb); box-shadow: 0 8px 20px -5px rgba(37,99,235,0.3); }
+.service-icon.hot-water { background: linear-gradient(135deg, #f87171, #dc2626); box-shadow: 0 8px 20px -5px rgba(220,38,38,0.3); }
+.service-icon.electro { background: linear-gradient(135deg, #fbbf24, #d97706); box-shadow: 0 8px 20px -5px rgba(217,119,6,0.3); }
+.service-icon.gas { background: linear-gradient(135deg, #fb923c, #ea580c); box-shadow: 0 8px 20px -5px rgba(234,88,12,0.3); }
+.service-icon.custom { background: linear-gradient(135deg, #a78bfa, #7c3aed); box-shadow: 0 8px 20px -5px rgba(124,58,237,0.3); }
 .service-name { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
 .service-cost { font-size: 1.25rem; font-weight: 900; color: var(--text-primary); }
 
@@ -609,7 +637,9 @@ html.dark .calc-hero { background: linear-gradient(135deg, #000, #0a1628, #0f346
 }
 .diff-badge.active { background: var(--brand-light); color: var(--brand); border-color: var(--brand-border); }
 
-/* === HISTORY === */
+/* ============================================================
+   HISTORY / RECORDS
+   ============================================================ */
 .record-card {
     background: var(--card); border-radius: var(--radius);
     border: 1px solid var(--card-border);
@@ -671,7 +701,9 @@ html.dark .calc-hero { background: linear-gradient(135deg, #000, #0a1628, #0f346
 .swipe-bg-left { background: var(--danger); color: white; justify-content: flex-end; }
 .swipe-bg-right { background: var(--success); color: white; justify-content: flex-start; }
 
-/* === SETTINGS === */
+/* ============================================================
+   SETTINGS
+   ============================================================ */
 .settings-section { margin-bottom: 12px; }
 .settings-card {
     background: var(--card); border-radius: var(--radius);
@@ -735,7 +767,9 @@ html.dark .calc-hero { background: linear-gradient(135deg, #000, #0a1628, #0f346
 }
 .tariff-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-light); }
 
-/* === BUTTONS === */
+/* ============================================================
+   BUTTONS
+   ============================================================ */
 .btn-primary {
     width: 100%; padding: 18px;
     background: linear-gradient(135deg, var(--brand), #2563eb);
@@ -780,7 +814,9 @@ html.dark .calc-hero { background: linear-gradient(135deg, #000, #0a1628, #0f346
 }
 .btn-ghost:active { transform: scale(0.95); background: var(--brand-light); }
 
-/* === FILTER / SEARCH === */
+/* ============================================================
+   FILTER / SEARCH
+   ============================================================ */
 .search-wrap { position: relative; }
 .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-quaternary); font-size: 14px; }
 .search-input {
@@ -802,12 +838,16 @@ html.dark .calc-hero { background: linear-gradient(135deg, #000, #0a1628, #0f346
 .filter-btn:active { transform: scale(0.95); }
 .filter-btn.active { background: var(--brand); color: white; border-color: var(--brand); }
 
-/* === YEAR SEPARATOR === */
+/* ============================================================
+   YEAR SEPARATOR
+   ============================================================ */
 .year-separator { display: flex; align-items: center; gap: 16px; margin: 24px 0 12px; }
 .year-label { font-size: 1.1rem; font-weight: 900; color: var(--text-quaternary); }
 .year-line { flex: 1; height: 1px; background: var(--border); }
 
-/* === BATCH BAR === */
+/* ============================================================
+   BATCH BAR
+   ============================================================ */
 .batch-bar {
     background: linear-gradient(135deg, #22c55e, #059669);
     padding: 16px 20px; border-radius: var(--radius-sm);
@@ -824,7 +864,9 @@ html.dark .calc-hero { background: linear-gradient(135deg, #000, #0a1628, #0f346
 }
 .batch-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.3); }
 
-/* === EXPORT === */
+/* ============================================================
+   EXPORT
+   ============================================================ */
 .export-row { display: flex; gap: 12px; }
 .export-btn {
     flex: 1; padding: 16px;
@@ -836,7 +878,83 @@ html.dark .calc-hero { background: linear-gradient(135deg, #000, #0a1628, #0f346
 }
 .export-btn:active { transform: scale(0.98); }
 
-/* === UTILITIES === */
+/* ============================================================
+   ACHIEVEMENTS
+   ============================================================ */
+.achievement-item {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; width: 56px; text-align: center;
+    cursor: pointer; transition: transform 0.3s cubic-bezier(.68,-.55,.265,1.55);
+}
+.achievement-item:hover { transform: scale(1.15) rotate(-3deg); }
+.achievement-item.locked { opacity: 0.3; filter: grayscale(1) blur(0.5px); }
+
+.achievement-toast {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 1500; transition: transform 0.4s cubic-bezier(.68,-.55,.265,1.55), opacity 0.3s;
+    opacity: 0;
+}
+.achievement-toast.visible { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.achievement-toast-inner {
+    background: var(--card); padding: 32px;
+    border-radius: var(--radius); box-shadow: 0 24px 80px rgba(0,0,0,0.2);
+    border: 1px solid var(--card-border); text-align: center;
+}
+
+/* ============================================================
+   THEME BUTTONS
+   ============================================================ */
+.theme-btn {
+    flex: 1; padding: 8px; font-size: 11px; font-weight: 700;
+    border-radius: 8px; text-align: center;
+    color: var(--text-tertiary); transition: all 0.2s;
+}
+.theme-btn.active {
+    background: var(--card); color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ============================================================
+   PARTIAL DOTS (Calculator)
+   ============================================================ */
+.partial-indicator { display: flex; gap: 4px; align-items: center; }
+.partial-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    transition: all 0.3s cubic-bezier(.68,-.55,.265,1.55);
+}
+.partial-dot.filled { background: var(--success); box-shadow: 0 2px 6px rgba(52,199,89,0.4); }
+
+/* ============================================================
+   WINTER TOGGLE
+   ============================================================ */
+.winter-toggle {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700;
+    background: rgba(255,255,255,0.1); color: white;
+    padding: 10px 14px; border-radius: 10px;
+    cursor: pointer; border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.2s;
+}
+.winter-toggle:hover { background: rgba(255,255,255,0.15); }
+.winter-toggle input { width: 14px; height: 14px; accent-color: var(--brand); }
+
+/* ============================================================
+   MONTH INPUT
+   ============================================================ */
+.month-input {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1);
+    outline: none; font-weight: 700; color: white;
+    font-size: 14px; padding: 10px 16px; border-radius: 10px;
+    cursor: pointer; backdrop-filter: blur(8px);
+    transition: all 0.2s;
+}
+.month-input:focus { border-color: rgba(255,255,255,0.3); box-shadow: 0 0 0 2px rgba(255,255,255,0.1); }
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
 .hidden { display: none !important; }
 .text-brand { color: var(--brand); }
 .font-black { font-weight: 900; }
@@ -846,17 +964,30 @@ html.dark .calc-hero { background: linear-gradient(135deg, #000, #0a1628, #0f346
 .space-y-3 > * + * { margin-top: 12px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-/* === FOCUS === */
+/* ============================================================
+   FOCUS
+   ============================================================ */
 :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
-/* === SCROLLBAR === */
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* === RESPONSIVE === */
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
 @media (max-height: 700px) {
     .hero-card { padding: 20px; }
     .hero-amount { font-size: 2.25rem; }
     .service-card { padding: 16px; }
     .calc-hero { padding: 20px; }
+    .calc-total { font-size: 2.5rem; }
+}
+
+@media (max-width: 360px) {
+    .auth-card { padding: 24px; }
+    .auth-features { grid-template-columns: repeat(2, 1fr); }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
