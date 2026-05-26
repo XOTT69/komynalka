@@ -974,6 +974,66 @@ html.dark .calc-hero { background: linear-gradient(135deg, #000, #0a1628, #0f346
    ============================================================ */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+/* === ADDRESS SHEET === */
+.addr-list { margin-bottom: 12px; }
+.addr-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--input-bg);
+    margin-bottom: 8px; cursor: pointer;
+    transition: all var(--transition);
+}
+.addr-row:active { transform: scale(0.98); }
+.addr-row.active { border-color: var(--brand); background: var(--brand-light); }
+.addr-name {
+    font-weight: 800; font-size: 1rem; color: var(--text-primary);
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.addr-row.active .addr-name { color: var(--brand); }
+.addr-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.addr-btn {
+    width: 32px; height: 32px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    color: var(--text-tertiary); font-size: 11px;
+    transition: all var(--transition);
+}
+.addr-btn:active { transform: scale(0.9); }
+.addr-add-btn {
+    width: 100%; padding: 16px;
+    background: var(--brand-light); border: 1px solid var(--brand-border);
+    border-radius: var(--radius-sm); color: var(--brand);
+    font-weight: 800; font-size: 14px;
+    transition: all var(--transition);
+}
+.addr-add-btn:active { transform: scale(0.98); }
+
+/* === QUICK ACTIONS === */
+.qa-overlay {
+    align-items: flex-start !important;
+    justify-content: flex-end !important;
+    padding: 76px 20px 0 0 !important;
+}
+.qa-menu {
+    background: var(--card); border-radius: var(--radius-sm);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    border: 1px solid var(--card-border);
+    overflow: hidden; width: 220px;
+    animation: scaleIn 0.2s cubic-bezier(.32,.72,0,1);
+    transform-origin: top right;
+}
+.qa-item {
+    width: 100%; padding: 14px 20px;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 14px; font-weight: 700;
+    color: var(--text-primary); text-align: left;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+}
+.qa-item:last-child { border-bottom: none; }
+.qa-item:hover { background: var(--input-bg); }
+.qa-item:active { background: var(--border); }
+.qa-item i { width: 20px; text-align: center; }
 
 /* ============================================================
    RESPONSIVE
