@@ -1,4 +1,4 @@
-const CACHE_NAME = 'komunalka-v3.2';
+const CACHE_NAME = 'komunalka-v3.2.1';
 const PRECACHE_URLS = ['./', './index.html', './app.js', './year-report-image.js', './manifest.json', './icon.png'];
 
 self.addEventListener('install', event => {
@@ -16,12 +16,12 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // API & external — network only, don't cache
+    // API & external — network only
     if (url.hostname.includes('workers.dev') || url.hostname.includes('googleapis.com') || url.hostname.includes('gstatic.com') || url.hostname.includes('firebaseapp.com') || url.hostname.includes('google-analytics.com') || url.hostname.includes('googletagmanager.com')) {
         return;
     }
 
-    // CDN resources — cache first, then network
+    // CDN resources — cache first
     if (url.hostname.includes('cdnjs.cloudflare.com') || url.hostname.includes('cdn.tailwindcss.com') || url.hostname.includes('cdn.jsdelivr.net')) {
         event.respondWith(
             caches.match(event.request).then(cached => {
@@ -61,11 +61,23 @@ self.addEventListener('push', event => {
         body: data.body,
         icon: 'icon.png',
         badge: 'icon.png',
-        vibrate: [100, 50, 100]
+        vibrate: [100, 50, 100],
+        actions: [
+            { action: 'open', title: 'Відкрити' }
+        ]
     }));
 });
 
 self.addEventListener('notificationclick', event => {
     event.notification.close();
-    event.waitUntil(clients.openWindow('/'));
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+            for (const client of clientList) {
+                if (client.url.includes(self.location.origin) && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            return clients.openWindow('/');
+        })
+    );
 });
