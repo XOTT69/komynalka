@@ -10,7 +10,12 @@ const MAX_ADDRESSES_FREE = 3;
 const firebaseConfig = { apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80", authDomain: "pwakomun.firebaseapp.com", projectId: "pwakomun", storageBucket: "pwakomun.firebasestorage.app", messagingSenderId: "4437974770", appId: "1:4437974770:web:bf7d2f7bac35eff5707a6b" };
 firebase.initializeApp(firebaseConfig);
 
-window.addEventListener('load', () => { setTimeout(() => { const s = $('splashScreen'); if (s) { s.style.opacity = '0'; setTimeout(() => s.remove(), 500); } }, 600); });
+// Instant open if cached data exists
+const hasCachedData = localStorage.getItem('komynalka_backup') && (localStorage.getItem('k_login') || localStorage.getItem('k_uid'));
+window.addEventListener('load', () => {
+    const delay = hasCachedData ? 100 : 600;
+    setTimeout(() => { const s = $('splashScreen'); if (s) { s.style.opacity = '0'; setTimeout(() => s.remove(), 300); } }, delay);
+});
 
 // =================== STATE ===================
 let googleUser = null, sessionLogin = localStorage.getItem('k_login'), sessionPass = localStorage.getItem('k_passHash'), currentFilter = 'all', syncState = 'synced';
@@ -462,7 +467,6 @@ $('btnTabDashboard')?.addEventListener('click', () => switchTab('tabDashboard', 
 $('btnTabCalc')?.addEventListener('click', () => switchTab('tabCalc', 1));
 $('btnTabHistory')?.addEventListener('click', () => switchTab('tabHistory', 2));
 $('btnTabSettings')?.addEventListener('click', () => switchTab('tabSettings', 3));
-$('dashAddBtn')?.addEventListener('click', () => switchTab('tabCalc', 1));
 $('dashHistoryBtn')?.addEventListener('click', () => switchTab('tabHistory', 2));
 
 let touchStartX = 0, touchStartY = 0;
@@ -1290,38 +1294,40 @@ const chartObserver = new IntersectionObserver((entries) => {
     const el = $(id);
     if (el) chartObserver.observe(el);
 });
-// =================== SHARE ADDRESS (GUEST LINK) ===================
-$('shareAddressBtn')?.addEventListener('click', shareAddress);
-
-async function shareAddress() {
+// =================== SHARE ADDRESS (GUEST LINK) — FIXED ===================
+$('shareAddressBtn')?.addEventListener('click', async function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!sessionLogin && !localStorage.getItem('k_uid')) {
         showToast('Спочатку увійдіть', '⚠️');
         return;
     }
 
-    // Show loading state
-    const btn = $('shareAddressBtn');
-    if (btn) btn.style.opacity = '0.6';
-    showToast('Генерую посилання...', '⏳');
+    const btn = this;
+    btn.style.opacity = '0.6';
+    btn.style.pointerEvents = 'none';
 
     try {
         const res = await secureFetch('POST', {}, {
             action: 'generate_share',
             addressId: currentAddressId
         });
+        
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `HTTP ${res.status}`);
+        }
+        
         const data = await res.json();
 
-        if (btn) btn.style.opacity = '1';
-
         if (!data.success || !data.shareToken) {
-            showToast(data.error || 'Помилка генерації', '❌');
-            return;
+            throw new Error(data.error || 'No token');
         }
 
         const shareUrl = `${window.location.origin}${window.location.pathname}?share=${data.shareToken}`;
         const addrName = addresses.find(a => a.id === currentAddressId)?.name || 'Мій дім';
 
-        // Try native share first (mobile)
         if (navigator.share) {
             try {
                 await navigator.share({
@@ -1332,23 +1338,102 @@ async function shareAddress() {
                 showToast('Надіслано!', '✅');
                 return;
             } catch (e) {
-                // User cancelled — fall through to clipboard
                 if (e.name === 'AbortError') return;
             }
         }
 
-        // Fallback: clipboard
-        try {
-            await navigator.clipboard.writeText(shareUrl);
-            showToast('Посилання скопійовано!', '📋');
-        } catch (e) {
+        await navigator.clipboard.writeText(shareUrl).catch(() => {
             prompt('Скопіюйте посилання:', shareUrl);
-        }
+        });
+        showToast('Посилання скопійовано!', '📋');
+        haptic('success');
     } catch (e) {
-        if (btn) btn.style.opacity = '1';
-        showToast('Помилка мережі', '❌');
+        console.error('Share error:', e);
+        showToast('Помилка: ' + e.message, '❌');
+    } finally {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = '';
     }
+});
+
+// =================== QUICK ENTRY MODAL ===================
+$('dashAddBtn')?.removeEventListener('click', () => {});
+$('dashAddBtn')?.addEventListener('click', (e) => {
+    // If user has records (not first time), show quick entry
+    if (records.length >= 1) {
+        showQuickEntry();
+    } else {
+        switchTab('tabCalc', 1);
+    }
+});
+
+function showQuickEntry() {
+    const existing = $('quickEntryModal');
+    if (existing) { existing.classList.remove('hidden'); return; }
+    
+    const modal = document.createElement('div');
+    modal.id = 'quickEntryModal';
+    modal.className = 'fixed inset-0 z-[600] bg-black/50 backdrop-blur-sm flex items-end justify-center';
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
+    
+    const now = new Date();
+    const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    let fieldsHtml = '';
+    if (prefs.showWater) fieldsHtml += `<div class="flex items-center gap-3"><span class="text-2xl w-8">💧</span><input type="number" id="qeWater" inputmode="decimal" placeholder="Нові показники води" class="flex-1 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 font-bold outline-none focus:border-brand text-base"></div>`;
+    if (prefs.showElectro) fieldsHtml += `<div class="flex items-center gap-3"><span class="text-2xl w-8">⚡</span><input type="number" id="qeElectro" inputmode="decimal" placeholder="Нові показники світла (день)" class="flex-1 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 font-bold outline-none focus:border-brand text-base"></div>`;
+    if (prefs.showElectro && prefs.electroTwoZone) fieldsHtml += `<div class="flex items-center gap-3"><span class="text-2xl w-8">🌙</span><input type="number" id="qeElectroNight" inputmode="decimal" placeholder="Нові показники (ніч)" class="flex-1 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 font-bold outline-none focus:border-brand text-base"></div>`;
+    if (prefs.showGas) fieldsHtml += `<div class="flex items-center gap-3"><span class="text-2xl w-8">🔥</span><input type="number" id="qeGas" inputmode="decimal" placeholder="Нові показники газу" class="flex-1 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-3 font-bold outline-none focus:border-brand text-base"></div>`;
+    
+    modal.innerHTML = `<div class="bg-white dark:bg-[#1c1c1e] w-full max-w-md rounded-t-[2.5rem] p-6 pb-8 shadow-2xl spring-modal"><div class="w-12 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-5"></div><h3 class="font-black text-xl text-slate-900 dark:text-white mb-1">⚡ Швидкий ввід</h3><p class="text-xs text-slate-400 mb-5">Тільки нові показники за ${new Date(curMonth + '-01').toLocaleString('uk-UA', { month: 'long' })}</p><div class="space-y-3 mb-5">${fieldsHtml}</div><div class="flex gap-3"><button id="qeSave" class="flex-1 py-4 bg-gradient-to-r from-brand to-blue-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 text-sm">Зберегти</button><button id="qeFull" class="py-4 px-5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-95 text-sm">Повна форма</button></div></div>`;
+    
+    document.body.appendChild(modal);
+    
+    // Focus first input
+    setTimeout(() => modal.querySelector('input')?.focus(), 300);
+    
+    modal.querySelector('#qeFull')?.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        switchTab('tabCalc', 1);
+    });
+    
+    modal.querySelector('#qeSave')?.addEventListener('click', () => {
+        // Fill main form with quick entry data and submit
+        if ($('monthInput')) $('monthInput').value = curMonth;
+        fillPreviousReadings();
+        
+        const qeW = $('qeWater')?.value;
+        const qeE = $('qeElectro')?.value;
+        const qeEN = $('qeElectroNight')?.value;
+        const qeG = $('qeGas')?.value;
+        
+        if (qeW && $('wCur')) $('wCur').value = qeW;
+        if (qeE && $('dCur')) $('dCur').value = qeE;
+        if (qeEN && $('nCur')) $('nCur').value = qeEN;
+        if (qeG && $('gCur')) $('gCur').value = qeG;
+        
+        if (!qeW && !qeE && !qeEN && !qeG) {
+            showToast('Введіть хоча б одне значення', '⚠️');
+            return;
+        }
+        
+        calculatePreview();
+        // Trigger form submit
+        $('utilityForm')?.dispatchEvent(new Event('submit', { cancelable: true }));
+        modal.classList.add('hidden');
+        haptic('success');
+    });
 }
+
+// =================== ENHANCED HAPTIC ON SAVE ===================
+const origSubmitHandler = $('utilityForm');
+if (origSubmitHandler) {
+    origSubmitHandler.addEventListener('submit', () => {
+        // Extra strong haptic on successful save
+        setTimeout(() => vibe([10, 30, 10, 30, 10]), 100);
+    }, { capture: true });
+}
+
 // =================== SW UPDATE NOTIFICATION ===================
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
