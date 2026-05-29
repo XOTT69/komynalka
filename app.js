@@ -311,6 +311,37 @@ function updateGoogleButton() {
         $('btnLinkGoogle').className = 'w-9 h-9 bg-green-50 dark:bg-green-500/10 rounded-xl flex items-center justify-center text-green-500 text-xs pointer-events-none';
     }
 }
+// =================== PASSWORD STRENGTH INDICATOR ===================
+$('authPass')?.addEventListener('input', function() {
+    const val = this.value;
+    const container = $('passStrength');
+    if (!container) return;
+    
+    if (val.length === 0) { container.classList.add('hidden'); return; }
+    container.classList.remove('hidden');
+    
+    let score = 0;
+    if (val.length >= 4) score++;
+    if (val.length >= 8 && /[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
+    if (val.length >= 10 && /[^A-Za-z0-9]/.test(val)) score++;
+    
+    const colors = ['bg-red-500', 'bg-yellow-500', 'bg-green-500'];
+    const texts = ['Слабкий', 'Нормальний', 'Сильний'];
+    const color = colors[score - 1] || 'bg-slate-300';
+    
+    for (let i = 1; i <= 3; i++) {
+        const bar = $(`passStr${i}`);
+        if (bar) {
+            bar.style.width = i <= score ? '100%' : '0%';
+            bar.className = `h-full w-0 rounded-full transition-all duration-300 ${i <= score ? color : ''}`;
+        }
+    }
+    const text = $('passStrText');
+    if (text) { text.textContent = texts[score - 1] || ''; text.style.color = score === 1 ? '#ef4444' : score === 2 ? '#eab308' : '#22c55e'; }
+});
+
+// Auto-focus login on page load
+setTimeout(() => { if ($('authScreen') && !$('authScreen').classList.contains('hidden')) $('authLogin')?.focus(); }, 800);
 
 // =================== ADDRESS ===================
 function loadCurrentAddress() {
@@ -624,6 +655,14 @@ function renderDashboard() {
     const hour = new Date().getHours();
     let greeting = 'Доброго дня!'; if (hour < 6) greeting = 'Доброї ночі!'; else if (hour < 12) greeting = 'Доброго ранку!'; else if (hour >= 18) greeting = 'Доброго вечора!';
     if ($('dashGreeting')) $('dashGreeting').textContent = greeting;
+    // В renderDashboard(), після рядку з greeting, додай:
+if (records.length === 0) {
+    const emptyEl = $('dashEmptyState');
+    if (emptyEl) emptyEl.classList.remove('hidden');
+} else {
+    const emptyEl = $('dashEmptyState');
+    if (emptyEl) emptyEl.classList.add('hidden');
+}
     const now = new Date(); const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     if ($('dashMonthLabel')) $('dashMonthLabel').textContent = new Date(curMonth + '-01').toLocaleString('uk-UA', { month: 'long', year: 'numeric' });
     const streak = getStreak(records); if ($('streakValue')) $('streakValue').textContent = streak; renderStreakDots(streak);
