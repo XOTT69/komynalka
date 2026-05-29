@@ -1310,5 +1310,28 @@ async function shareAddress() {
         showToast('Помилка мережі', '❌');
     }
 }
+// =================== SW UPDATE NOTIFICATION ===================
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        showUpdateBanner();
+    });
+    
+    // Check for updates every 30 min
+    setInterval(() => {
+        navigator.serviceWorker.getRegistration().then(reg => {
+            if (reg) reg.update();
+        });
+    }, 1800000);
+}
+
+function showUpdateBanner() {
+    const existing = $('updateBanner');
+    if (existing) return;
+    const banner = document.createElement('div');
+    banner.id = 'updateBanner';
+    banner.className = 'fixed bottom-24 left-4 right-4 z-[900] bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-4 rounded-2xl flex items-center justify-between shadow-2xl max-w-md mx-auto';
+    banner.innerHTML = `<div class="flex items-center gap-3"><span class="text-lg">🆕</span><div><p class="text-sm font-bold">Оновлення доступне</p><p class="text-[10px] opacity-60">Натисніть щоб оновити</p></div></div><button onclick="location.reload()" class="px-4 py-2 bg-brand text-white rounded-xl text-xs font-bold active:scale-95">Оновити</button>`;
+    document.body.appendChild(banner);
+}
 
 // EOF
