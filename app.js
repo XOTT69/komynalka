@@ -1259,32 +1259,46 @@ async function shareAddress() {
         showToast('Спочатку увійдіть', '⚠️');
         return;
     }
-    
+
+    // Show loading state
+    const btn = $('shareAddressBtn');
+    if (btn) btn.style.opacity = '0.6';
+    showToast('Генерую посилання...', '⏳');
+
     try {
-        const res = await secureFetch('POST', {}, { 
-            action: 'generate_share', 
-            addressId: currentAddressId 
+        const res = await secureFetch('POST', {}, {
+            action: 'generate_share',
+            addressId: currentAddressId
         });
         const data = await res.json();
-        
+
+        if (btn) btn.style.opacity = '1';
+
         if (!data.success || !data.shareToken) {
-            showToast('Помилка генерації', '❌');
+            showToast(data.error || 'Помилка генерації', '❌');
             return;
         }
-        
+
         const shareUrl = `${window.location.origin}${window.location.pathname}?share=${data.shareToken}`;
-        
+        const addrName = addresses.find(a => a.id === currentAddressId)?.name || 'Мій дім';
+
+        // Try native share first (mobile)
         if (navigator.share) {
             try {
                 await navigator.share({
                     title: 'Комуналка — гостьовий доступ',
-                    text: `Перегляд/редагування комунальних за адресою "${addresses.find(a => a.id === currentAddressId)?.name || 'Мій дім'}"`,
+                    text: `Перегляд комунальних за "${addrName}"`,
                     url: shareUrl
                 });
+                showToast('Надіслано!', '✅');
                 return;
-            } catch (e) {}
+            } catch (e) {
+                // User cancelled — fall through to clipboard
+                if (e.name === 'AbortError') return;
+            }
         }
-        
+
+        // Fallback: clipboard
         try {
             await navigator.clipboard.writeText(shareUrl);
             showToast('Посилання скопійовано!', '📋');
@@ -1292,6 +1306,7 @@ async function shareAddress() {
             prompt('Скопіюйте посилання:', shareUrl);
         }
     } catch (e) {
+        if (btn) btn.style.opacity = '1';
         showToast('Помилка мережі', '❌');
     }
 }
