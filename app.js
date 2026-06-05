@@ -185,8 +185,6 @@ function showWelcome() { if (localStorage.getItem('welcome_done')) return; $('we
 function dismissWelcome() { localStorage.setItem('welcome_done', '1'); $('welcomeTooltip')?.classList.add('hidden'); }
 window.dismissWelcome = dismissWelcome;
 
-if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(e => console.error('SW:', e)); }); }
-
 // =================== AUTH ===================
 $('authForm')?.addEventListener('submit', async (e) => { e.preventDefault(); await performLogin($('authLogin').value.trim(), $('authPass').value, false); });
 $('togglePassBtn')?.addEventListener('click', () => { const p = $('authPass'); p.type = p.type === 'password' ? 'text' : 'password'; $('passEyeIcon').className = p.type === 'password' ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash'; });
@@ -1136,7 +1134,44 @@ $('searchRecords')?.addEventListener('input', () => { clearTimeout(searchDebounc
 $('sortSelect')?.addEventListener('change', () => renderRecords());
 
 // =================== EXPORT ===================
-function exportCSV() { if (!records.length) return showToast('Немає', '⚠️'); let h = ['Місяць']; if (prefs.showWater) h.push('Вода(м3)', 'Вода(₴)'); if (prefs.showHotWater) h.push('Гар(м3)', 'Гар(₴)'); if (prefs.showElectro) h.push('Світло(кВт)', 'Світло(₴)'); if (prefs.showGas) h.push('Газ(м3)', 'Газ(₴)'); h.push('Інше(₴)', 'Всього(₴)', 'Статус'); let csv = '\uFEFF' + h.join(',') + '\n'; [...records].sort((a, b) => new Date(b.month) - new Date(a.month)).forEach(r => { let row = [r.month]; if (prefs.showWater) row.push(Math.max(0, (r.wCur || 0) - (r.wPrev || 0)), (r.waterCost || 0).toFixed(2)); if (prefs.showHotWater) row.push(Math.max(0, (r.hwCur || 0) - (r.hwPrev || 0)), (r.hotWaterCost || 0).toFixed(2)); if (prefs.showElectro) row.push(Math.max(0, (r.dCur || 0) - (r.dPrev || 0)) + Math.max(0, (r.nCur || 0) - (r.nPrev || 0)), (r.electroCost || 0).toFixed(2)); if (prefs.showGas) row.push(Math.max(0, (r.gCur || 0) - (r.gPrev || 0)), (r.gasCost || 0).toFixed(2)); row.push((r.customCost || 0).toFixed(2), (r.total || 0).toFixed(2), r.paid ? 'Оплачено' : 'Борг'); csv += row.join(',') + '\n'; }); const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `komunalka.csv`; link.click(); URL.revokeObjectURL(link.href); showToast('Експортовано', '📊'); }
+function csvCell(value) {
+    const text = String(value ?? '');
+    return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function downloadBlob(content, filename, type) {
+    const blob = new Blob([content], { type });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+function exportCSV() {
+    if (!records.length) return showToast('Немає', '⚠️');
+    const header = ['Місяць'];
+    if (prefs.showWater) header.push('Вода(м3)', 'Вода(₴)');
+    if (prefs.showHotWater) header.push('Гар(м3)', 'Гар(₴)');
+    if (prefs.showElectro) header.push('Світло(кВт)', 'Світло(₴)');
+    if (prefs.showGas) header.push('Газ(м3)', 'Газ(₴)');
+    header.push('Інше(₴)', 'Всього(₴)', 'Статус', 'Нотатка');
+
+    const rows = [[...header]];
+    [...records].sort((a, b) => new Date(b.month) - new Date(a.month)).forEach(r => {
+        const row = [r.month];
+        if (prefs.showWater) row.push(Math.max(0, (r.wCur || 0) - (r.wPrev || 0)), (r.waterCost || 0).toFixed(2));
+        if (prefs.showHotWater) row.push(Math.max(0, (r.hwCur || 0) - (r.hwPrev || 0)), (r.hotWaterCost || 0).toFixed(2));
+        if (prefs.showElectro) row.push(Math.max(0, (r.dCur || 0) - (r.dPrev || 0)) + Math.max(0, (r.nCur || 0) - (r.nPrev || 0)), (r.electroCost || 0).toFixed(2));
+        if (prefs.showGas) row.push(Math.max(0, (r.gCur || 0) - (r.gPrev || 0)), (r.gasCost || 0).toFixed(2));
+        row.push((r.customCost || 0).toFixed(2), (r.total || 0).toFixed(2), r.paid ? 'Оплачено' : 'Борг', r.note || '');
+        rows.push(row);
+    });
+
+    const csv = '\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\n') + '\n';
+    downloadBlob(csv, 'komunalka.csv', 'text/csv;charset=utf-8;');
+    showToast('Експортовано', '📊');
+}
 
 async function generatePDF() { if (!records.length) return showToast('Немає', '⚠️'); const { jsPDF } = window.jspdf; const doc = new jsPDF(); let hasFont = false; try { const fontUrl = 'https://cdn.jsdelivr.net/gh/nicksib/jspdf-fonts@main/Roboto-Regular.ttf'; const resp = await fetch(fontUrl); if (resp.ok) { const buf = await resp.arrayBuffer(); const bytes = new Uint8Array(buf); let binary = ''; for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]); doc.addFileToVFS('Roboto.ttf', btoa(binary)); doc.addFont('Roboto.ttf', 'Roboto', 'normal'); doc.setFont('Roboto', 'normal'); hasFont = true; } } catch (e) {} const t = hasFont ? (s) => s : transliterate; doc.setFillColor(0, 122, 255); doc.rect(0, 0, 210, 35, 'F'); doc.setTextColor(255, 255, 255); doc.setFontSize(18); doc.text(t('Комунальні платежі'), 15, 15); doc.setFontSize(10); doc.text(t($('currentAddressDisplay')?.innerText || ''), 15, 24); doc.setTextColor(60, 60, 60); const tH = [t('Міс.')]; if (prefs.showWater) tH.push(t('Вода'), t('₴')); if (prefs.showElectro) tH.push(t('Світло'), t('₴')); if (prefs.showGas) tH.push(t('Газ'), t('₴')); tH.push(t('Інше'), t('Всього'), t('Статус')); const tR = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)).map(r => { const row = [r.month]; if (prefs.showWater) row.push(Math.max(0, (r.wCur || 0) - (r.wPrev || 0)), (r.waterCost || 0).toFixed(0)); if (prefs.showElectro) row.push(Math.max(0, (r.dCur || 0) - (r.dPrev || 0)) + Math.max(0, (r.nCur || 0) - (r.nPrev || 0)), (r.electroCost || 0).toFixed(0)); if (prefs.showGas) row.push(Math.max(0, (r.gCur || 0) - (r.gPrev || 0)), (r.gasCost || 0).toFixed(0)); row.push((r.customCost || 0).toFixed(0), (r.total || 0).toFixed(0), r.paid ? 'OK' : t('Борг')); return row; }); doc.autoTable({ startY: 40, head: [tH], body: tR, theme: 'striped', styles: { font: hasFont ? 'Roboto' : 'helvetica' }, headStyles: { fillColor: [0, 122, 255], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold', halign: 'center' }, bodyStyles: { fontSize: 7, halign: 'center' }, margin: { left: 10, right: 10 } }); doc.save(`komunalka_${new Date().toISOString().slice(0, 10)}.pdf`); showToast('PDF!', '📄'); }
 function transliterate(text) { const map = { 'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g', 'д': 'd', 'е': 'e', 'є': 'ye', 'ж': 'zh', 'з': 'z', 'и': 'y', 'і': 'i', 'ї': 'yi', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ь': '', 'ю': 'yu', 'я': 'ya', 'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'H', 'Ґ': 'G', 'Д': 'D', 'Е': 'E', 'Є': 'Ye', 'Ж': 'Zh', 'З': 'Z', 'И': 'Y', 'І': 'I', 'Ї': 'Yi', 'Й': 'Y', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'Kh', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shch', 'Ь': '', 'Ю': 'Yu', 'Я': 'Ya' }; return text.split('').map(c => map[c] || c).join(''); }
@@ -1146,9 +1181,75 @@ async function shareAllRecords() { if (!records.length) return showToast('Нем
 $('exportCsvBtn')?.addEventListener('click', exportCSV);
 $('exportPdfBtn')?.addEventListener('click', generatePDF);
 $('shareAllBtn')?.addEventListener('click', shareAllRecords);
-$('exportJsonBtn')?.addEventListener('click', () => { syncCurrentAddress(); const data = { version: APP_VERSION, exportDate: new Date().toISOString(), addresses, currentAddressId }; const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `komunalka_backup.json`; link.click(); URL.revokeObjectURL(link.href); showToast('Бекап', '💾'); });
+$('exportJsonBtn')?.addEventListener('click', () => { syncCurrentAddress(); const data = { version: APP_VERSION, exportDate: new Date().toISOString(), addresses, currentAddressId }; downloadBlob(JSON.stringify(data, null, 2), 'komunalka_backup.json', 'application/json;charset=utf-8;'); showToast('Бекап', '💾'); });
 $('importJsonBtn')?.addEventListener('click', () => $('importFileInput')?.click());
-$('importFileInput')?.addEventListener('change', (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { try { const data = JSON.parse(ev.target.result); if (data.addresses && Array.isArray(data.addresses)) { if (confirm(`Імпорт ${data.addresses.length} об'єктів?`)) { addresses = data.addresses; currentAddressId = data.currentAddressId || addresses[0].id; loadCurrentAddress(); syncToCloud(); showToast('Імпортовано!', '✅'); } } else showToast('Невірний формат', '❌'); } catch (err) { showToast('Помилка', '❌'); } }; reader.readAsText(file); e.target.value = ''; });
+
+function isPlainObject(value) { return value && typeof value === 'object' && !Array.isArray(value); }
+function normalizeNumber(value, fallback = 0) { const num = Number(value); return Number.isFinite(num) ? num : fallback; }
+function normalizeImportedRecord(rec) {
+    if (!isPlainObject(rec) || !/^\d{4}-\d{2}$/.test(String(rec.month || ''))) return null;
+    return {
+        ...rec,
+        id: rec.id || Date.now() + Math.random(),
+        month: String(rec.month),
+        total: normalizeNumber(rec.total),
+        waterCost: normalizeNumber(rec.waterCost),
+        hotWaterCost: normalizeNumber(rec.hotWaterCost),
+        electroCost: normalizeNumber(rec.electroCost),
+        gasCost: normalizeNumber(rec.gasCost),
+        customCost: normalizeNumber(rec.customCost),
+        paid: Boolean(rec.paid),
+        note: String(rec.note || '')
+    };
+}
+function normalizeImportedAddress(addr, index) {
+    if (!isPlainObject(addr)) return null;
+    const normalizedRecords = Array.isArray(addr.records) ? addr.records.map(normalizeImportedRecord).filter(Boolean) : [];
+    return {
+        id: String(addr.id || `addr_${Date.now()}_${index}`),
+        name: String(addr.name || `Об'єкт ${index + 1}`).slice(0, 80),
+        tariffs: { ...defaultTariffs, ...(isPlainObject(addr.tariffs) ? addr.tariffs : {}) },
+        prefs: { ...defaultPrefs, ...(isPlainObject(addr.prefs) ? addr.prefs : {}) },
+        records: normalizedRecords,
+        customServices: Array.isArray(addr.customServices) ? addr.customServices.filter(isPlainObject).map((srv, srvIndex) => ({
+            id: String(srv.id || `srv_${Date.now()}_${srvIndex}`),
+            name: String(srv.name || '').slice(0, 60),
+            defaultSum: srv.defaultSum == null ? '' : String(srv.defaultSum).slice(0, 20)
+        })) : []
+    };
+}
+function normalizeImportData(data) {
+    if (!isPlainObject(data) || !Array.isArray(data.addresses)) return null;
+    const normalizedAddresses = data.addresses.map(normalizeImportedAddress).filter(Boolean);
+    if (!normalizedAddresses.length) return null;
+    const importedCurrentId = String(data.currentAddressId || '');
+    return {
+        addresses: normalizedAddresses,
+        currentAddressId: normalizedAddresses.some(addr => addr.id === importedCurrentId) ? importedCurrentId : normalizedAddresses[0].id
+    };
+}
+$('importFileInput')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const normalized = normalizeImportData(JSON.parse(ev.target.result));
+            if (!normalized) { showToast('Невірний формат', '❌'); return; }
+            if (confirm(`Імпорт ${normalized.addresses.length} об'єктів? Поточні дані буде замінено.`)) {
+                addresses = normalized.addresses;
+                currentAddressId = normalized.currentAddressId;
+                loadCurrentAddress();
+                syncToCloud();
+                showToast('Імпортовано!', '✅');
+            }
+        } catch (err) {
+            showToast('Помилка', '❌');
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+});
 
 // =================== TIPS ENGINE ===================
 function getConsumptionTrend(type, months = 6) { const sorted = [...records].sort((a, b) => new Date(b.month) - new Date(a.month)).slice(0, months); if (sorted.length < 2) return null; const values = sorted.map(r => { switch (type) { case 'water': return Math.max(0, (r.wCur || 0) - (r.wPrev || 0)); case 'electro': return Math.max(0, (r.dCur || 0) - (r.dPrev || 0)) + Math.max(0, (r.nCur || 0) - (r.nPrev || 0)); case 'gas': return Math.max(0, (r.gCur || 0) - (r.gPrev || 0)); default: return r.total; } }).reverse(); const first = values.slice(0, Math.ceil(values.length / 2)); const second = values.slice(Math.ceil(values.length / 2)); const avgFirst = first.reduce((a, b) => a + b, 0) / first.length; const avgSecond = second.reduce((a, b) => a + b, 0) / second.length; if (avgFirst === 0) return 0; return Math.round(((avgSecond - avgFirst) / avgFirst) * 100); }
@@ -1207,6 +1308,8 @@ window.shareYearReport = shareYearReport;
 
 // =================== PWA ===================
 let deferredPrompt;
+let pendingServiceWorker = null;
+let isRefreshingAfterUpdate = false;
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; $('pwaInstallBlock')?.classList.remove('hidden'); });
 $('installPwaBtn')?.addEventListener('click', async () => { if (!deferredPrompt) return; deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') $('pwaInstallBlock')?.classList.add('hidden'); deferredPrompt = null; });
 
@@ -1220,7 +1323,17 @@ setTimeout(initPush, 1000); setTimeout(scheduleLocalReminder, 3000);
 $('shareAppBtn')?.addEventListener('click', async () => { const text = '🏠 Комуналка — розумний облік комунальних платежів.\nВода, світло, газ — все в одному додатку. Безкоштовно!\n\nhttps://komynalka.vercel.app'; if (navigator.share) { try { await navigator.share({ text, url: 'https://komynalka.vercel.app' }); return; } catch (e) {} } try { await navigator.clipboard.writeText(text); showToast('Посилання скопійовано!', '📋'); } catch (e) { prompt('Скопіюйте:', text); } });
 
 // =================== LOGOUT ===================
-function logout() { if (isGuest) { window.location.href = window.location.pathname; return; } if (confirm('Вийти?')) { localStorage.clear(); if (googleUser) firebase.auth().signOut(); location.reload(); } }
+function clearAuthStorage() {
+    ['k_login', 'k_passHash', 'k_uid'].forEach(key => localStorage.removeItem(key));
+}
+function logout() {
+    if (isGuest) { window.location.href = window.location.pathname; return; }
+    if (confirm('Вийти? Локальний бекап і налаштування залишаться на пристрої.')) {
+        clearAuthStorage();
+        if (googleUser) firebase.auth().signOut();
+        location.reload();
+    }
+}
 $('logoutBtn')?.addEventListener('click', logout);
 
 // =================== INIT ===================
@@ -1350,18 +1463,38 @@ async function shareAddress() {
     }
 }
 // =================== SW UPDATE NOTIFICATION ===================
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-        showUpdateBanner();
-    });
-    
-    // Check for updates every 30 min
-    setInterval(() => {
-        navigator.serviceWorker.getRegistration().then(reg => {
-            if (reg) reg.update();
+async function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+        const registration = await navigator.serviceWorker.register('./sw.js');
+
+        registration.addEventListener('updatefound', () => {
+            const nextWorker = registration.installing;
+            if (!nextWorker) return;
+            nextWorker.addEventListener('statechange', () => {
+                if (nextWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    pendingServiceWorker = nextWorker;
+                    showUpdateBanner();
+                }
+            });
         });
-    }, 1800000);
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (isRefreshingAfterUpdate) return;
+            isRefreshingAfterUpdate = true;
+            window.location.reload();
+        });
+
+        setInterval(() => {
+            navigator.serviceWorker.getRegistration().then(reg => {
+                if (reg) reg.update();
+            });
+        }, 1800000);
+    } catch (e) {
+        console.error('SW:', e);
+    }
 }
+window.addEventListener('load', registerServiceWorker);
 
 function showUpdateBanner() {
     const existing = $('updateBanner');
@@ -1369,8 +1502,12 @@ function showUpdateBanner() {
     const banner = document.createElement('div');
     banner.id = 'updateBanner';
     banner.className = 'fixed bottom-24 left-4 right-4 z-[900] bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-4 rounded-2xl flex items-center justify-between shadow-2xl max-w-md mx-auto';
-    banner.innerHTML = `<div class="flex items-center gap-3"><span class="text-lg">🆕</span><div><p class="text-sm font-bold">Оновлення доступне</p><p class="text-[10px] opacity-60">Натисніть щоб оновити</p></div></div><button onclick="location.reload()" class="px-4 py-2 bg-brand text-white rounded-xl text-xs font-bold active:scale-95">Оновити</button>`;
+    banner.innerHTML = `<div class="flex items-center gap-3"><span class="text-lg">🆕</span><div><p class="text-sm font-bold">Оновлення доступне</p><p class="text-[10px] opacity-60">Натисніть щоб оновити</p></div></div><button id="applyUpdateBtn" type="button" class="px-4 py-2 bg-brand text-white rounded-xl text-xs font-bold active:scale-95">Оновити</button>`;
     document.body.appendChild(banner);
+    $('applyUpdateBtn')?.addEventListener('click', () => {
+        if (pendingServiceWorker) pendingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
+        else window.location.reload();
+    });
 }
 
 // EOF
