@@ -1,8 +1,7 @@
-const CACHE_NAME = 'komunalka-v3.2.1';
-const PRECACHE_URLS = ['./', './index.html', './app.js', './year-report-image.js', './manifest.json', './icon.png'];
+const CACHE_NAME = 'komunalka-v3.2.2';
+const PRECACHE_URLS = ['./', './index.html', './app.js', './year-report-image.js', './manifest.json', './icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
-    self.skipWaiting();
     event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS)));
 });
 
@@ -52,6 +51,12 @@ self.addEventListener('fetch', event => {
             return cached || fetchPromise;
         })
     );
+});
+
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
 
 // Push notification handler
