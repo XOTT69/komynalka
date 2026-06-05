@@ -320,6 +320,10 @@
             return div.innerHTML;
         }
 
+        function escAttr(str) {
+            return escHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
         function startSessionTimer() {
             const el = document.getElementById('sessionTimer');
             const tokenEl = document.getElementById('tokenInfo');
@@ -437,12 +441,13 @@
             document.getElementById('pageInfo').textContent = `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} з ${filtered.length}`;
 
             document.getElementById('usersTableBody').innerHTML = pageUsers.map(u => {
+                const loginAttr = escAttr(u.login);
                 const authBadge = u.hasGoogle ? '<span class="badge bg-blue-50 text-blue-600">G</span>' : '<span class="badge bg-slate-100 text-slate-500">L</span>';
-                const proBadge = u.isPro ? '<span class="text-yellow-500">⭐</span>' : `<button class="give-pro badge bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 cursor-pointer" data-login="${escHtml(u.login)}">+Pro</button>`;
+                const proBadge = u.isPro ? '<span class="text-yellow-500">⭐</span>' : `<button class="give-pro badge bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 cursor-pointer" data-login="${loginAttr}">+Pro</button>`;
                 const suspBadge = u.suspicious > 0 ? `<span class="badge bg-red-50 text-red-500 ml-1">⚠${u.suspicious}</span>` : '';
                 return `<tr class="border-b user-row text-xs">
-                    <td class="p-3"><input type="checkbox" class="user-checkbox" data-login="${escHtml(u.login)}" onchange="updateSelection()"></td>
-                    <td class="p-3 font-bold text-slate-900 max-w-[180px] truncate" title="${escHtml(u.login)}">${escHtml(u.login)}${suspBadge}</td>
+                    <td class="p-3"><input type="checkbox" class="user-checkbox" data-login="${loginAttr}" onchange="updateSelection()"></td>
+                    <td class="p-3 font-bold text-slate-900 max-w-[180px] truncate" title="${loginAttr}">${escHtml(u.login)}${suspBadge}</td>
                     <td class="p-3 text-center">${authBadge}</td>
                     <td class="p-3 text-center font-bold">${u.records || 0}</td>
                     <td class="p-3 text-center">${u.addresses || 1}</td>
@@ -452,14 +457,20 @@
                     <td class="p-3 text-center">${u.activeThisMonth ? '<span class="text-green-500">●</span>' : '<span class="text-slate-300">○</span>'}</td>
                     <td class="p-3 text-center">
                         <div class="flex gap-1 justify-center">
-                            <button onclick="viewUser('${escHtml(u.login)}')" class="p-1.5 bg-slate-100 rounded hover:bg-slate-200 active:scale-90" title="Деталі">👁</button>
-                            <button onclick="resetPassword('${escHtml(u.login)}')" class="p-1.5 bg-yellow-50 rounded hover:bg-yellow-100 active:scale-90" title="Пароль">🔑</button>
-                            <button onclick="deleteUser('${escHtml(u.login)}')" class="p-1.5 bg-red-50 rounded hover:bg-red-100 active:scale-90" title="Видалити">🗑</button>
+                            <button data-action="view" data-login="${loginAttr}" class="admin-user-action p-1.5 bg-slate-100 rounded hover:bg-slate-200 active:scale-90" title="Деталі">👁</button>
+                            <button data-action="reset" data-login="${loginAttr}" class="admin-user-action p-1.5 bg-yellow-50 rounded hover:bg-yellow-100 active:scale-90" title="Пароль">🔑</button>
+                            <button data-action="delete" data-login="${loginAttr}" class="admin-user-action p-1.5 bg-red-50 rounded hover:bg-red-100 active:scale-90" title="Видалити">🗑</button>
                         </div>
                     </td>
                 </tr>`;
             }).join('');
             document.querySelectorAll('.give-pro').forEach(btn => btn.addEventListener('click', () => givePro(btn.dataset.login)));
+            document.querySelectorAll('.admin-user-action').forEach(btn => btn.addEventListener('click', () => {
+                const login = btn.dataset.login;
+                if (btn.dataset.action === 'view') viewUser(login);
+                if (btn.dataset.action === 'reset') resetPassword(login);
+                if (btn.dataset.action === 'delete') deleteUser(login);
+            }));
         }
 
         function filterUsers() { currentPage = 0; renderUsers(); }
@@ -502,6 +513,7 @@
                 if (!data.success) { document.getElementById('modalUserContent').innerHTML = '<p class="text-red-500 font-bold">Помилка завантаження</p>'; return; }
                 const ud = data.data;
                 const totalRecords = (ud.addresses || []).reduce((s, a) => (a.records?.length || 0) + s, 0);
+                const loginAttr = escAttr(login);
                 let html = `<div class="space-y-4">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Тип</p><p class="font-bold">${ud.hasGoogle ? '🔵 Google' : '🔐 Login'}</p></div>
@@ -515,10 +527,10 @@
                     </div>
                     ${ud.lastIP ? `<div class="bg-slate-50 p-3 rounded-xl text-xs"><strong>Last IP:</strong> ${escHtml(ud.lastIP)} | <strong>Last Device:</strong> ${(ud.lastDevice || '—').slice(0, 12)}...</div>` : ''}
                     <div class="flex gap-2 flex-wrap">
-                        <button onclick="givePro('${escHtml(login)}')" class="px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs font-bold active:scale-95">⭐ Дати Pro</button>
-                        <button onclick="revokePro('${escHtml(login)}')" class="px-3 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold active:scale-95">Забрати Pro</button>
-                        <button onclick="resetPassword('${escHtml(login)}')" class="px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold active:scale-95">🔑 Скинути пароль</button>
-                        <button onclick="deleteUser('${escHtml(login)}')" class="px-3 py-2 bg-red-500 text-white rounded-lg text-xs font-bold active:scale-95">🗑 Видалити</button>
+                        <button data-modal-action="pro" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs font-bold active:scale-95">⭐ Дати Pro</button>
+                        <button data-modal-action="revoke" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold active:scale-95">Забрати Pro</button>
+                        <button data-modal-action="reset" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold active:scale-95">🔑 Скинути пароль</button>
+                        <button data-modal-action="delete" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-red-500 text-white rounded-lg text-xs font-bold active:scale-95">🗑 Видалити</button>
                     </div>`;
                 if (ud.addresses) {
                     ud.addresses.forEach(addr => {
@@ -533,6 +545,13 @@
                 }
                 html += `</div>`;
                 document.getElementById('modalUserContent').innerHTML = html;
+                document.querySelectorAll('.admin-modal-action').forEach(btn => btn.addEventListener('click', () => {
+                    const modalLogin = btn.dataset.login;
+                    if (btn.dataset.modalAction === 'pro') givePro(modalLogin);
+                    if (btn.dataset.modalAction === 'revoke') revokePro(modalLogin);
+                    if (btn.dataset.modalAction === 'reset') resetPassword(modalLogin);
+                    if (btn.dataset.modalAction === 'delete') deleteUser(modalLogin);
+                }));
             } catch (e) { document.getElementById('modalUserContent').innerHTML = '<p class="text-red-500 font-bold">Помилка мережі</p>'; }
         }
 
@@ -598,7 +617,8 @@
         // =================== SECURITY ===================
         function renderSecurity() {
             const suspicious = allUsers.filter(u => u.suspicious > 0).sort((a, b) => b.suspicious - a.suspicious);
-            document.getElementById('suspiciousUsers').innerHTML = suspicious.length ? suspicious.map(u => `<div class="flex justify-between items-center p-3 bg-red-50 rounded-xl border border-red-100"><div><span class="font-bold text-sm">${escHtml(u.login)}</span><span class="ml-2 badge bg-red-100 text-red-600">⚠️ ${u.suspicious} подій</span></div><button onclick="viewUser('${escHtml(u.login)}')" class="px-3 py-1 bg-white rounded-lg text-xs font-bold border hover:bg-slate-50 active:scale-95">👁</button></div>`).join('') : '<p class="text-slate-400">Все чисто! Підозрілих немає.</p>';
+            document.getElementById('suspiciousUsers').innerHTML = suspicious.length ? suspicious.map(u => `<div class="flex justify-between items-center p-3 bg-red-50 rounded-xl border border-red-100"><div><span class="font-bold text-sm">${escHtml(u.login)}</span><span class="ml-2 badge bg-red-100 text-red-600">⚠️ ${u.suspicious} подій</span></div><button data-login="${escAttr(u.login)}" class="security-view-user px-3 py-1 bg-white rounded-lg text-xs font-bold border hover:bg-slate-50 active:scale-95">👁</button></div>`).join('') : '<p class="text-slate-400">Все чисто! Підозрілих немає.</p>';
+            document.querySelectorAll('.security-view-user').forEach(btn => btn.addEventListener('click', () => viewUser(btn.dataset.login)));
 
             // Encryption status
             const encEl = document.getElementById('encryptionStatus');
@@ -607,8 +627,17 @@
         }
 
         // =================== EXPORT ===================
+        function csvCell(value) {
+            const text = String(value ?? '');
+            return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+        }
+
         function exportAllData() {
-            const csv = 'Login,Type,Pro,Records,Addresses,LastMonth,Active,Devices,Suspicious\n' + allUsers.map(u => `"${u.login}",${u.hasGoogle ? 'Google' : 'Login'},${u.isPro ? 'Pro' : 'Free'},${u.records},${u.addresses},"${u.lastMonth}",${u.activeThisMonth ? 'Yes' : 'No'},${u.devices || 0},${u.suspicious || 0}`).join('\n');
+            const rows = [
+                ['Login', 'Type', 'Pro', 'Records', 'Addresses', 'LastMonth', 'Active', 'Devices', 'Suspicious'],
+                ...allUsers.map(u => [u.login, u.hasGoogle ? 'Google' : 'Login', u.isPro ? 'Pro' : 'Free', u.records, u.addresses, u.lastMonth, u.activeThisMonth ? 'Yes' : 'No', u.devices || 0, u.suspicious || 0])
+            ];
+            const csv = rows.map(row => row.map(csvCell).join(',')).join('\n') + '\n';
             downloadFile('\uFEFF' + csv, 'komunalka_users.csv', 'text/csv');
             showAdminToast('CSV експортовано');
         }
