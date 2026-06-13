@@ -38,6 +38,9 @@
         .save-btn-success{animation:saveSuccess .6s cubic-bezier(.68,-.55,.265,1.55)}@keyframes saveSuccess{0%{transform:scale(1)}30%{transform:scale(0.95)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
         .badge-pulse{animation:badgePulse 2s ease-in-out infinite}@keyframes badgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
         .swipe-card{transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .3s;touch-action:pan-y}.swipe-card.swiping{transition:none}.swipe-card .swipe-bg-left,.swipe-card .swipe-bg-right{position:absolute;inset:0;border-radius:var(--card-radius);display:flex;align-items:center;padding:0 1.5rem;font-weight:800;font-size:.75rem;opacity:0;transition:opacity .2s;z-index:-1}.swipe-card .swipe-bg-left{background:#ff3b30;color:white;justify-content:flex-end}.swipe-card .swipe-bg-right{background:#34c759;color:white;justify-content:flex-start}
+        .details-panel{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.32,.72,0,1),opacity .3s ease,transform .3s ease;opacity:0;transform:translateY(-8px)}.details-panel.open{max-height:2000px;opacity:1;transform:translateY(0)}
+        .record-header{cursor:pointer;transition:background .2s;border-radius:1.5rem;padding:0.5rem;margin:-0.5rem}.record-header:active{background:rgba(0,0,0,0.03)}.dark .record-header:active{background:rgba(255,255,255,0.03)}
+        .record-header .chevron-icon{transition:transform .35s cubic-bezier(.32,.72,0,1)}.record-header .chevron-icon.rotated{transform:rotate(180deg)}
         .welcome-tooltip{animation:tooltipIn .5s cubic-bezier(.32,.72,0,1)}@keyframes tooltipIn{from{opacity:0;transform:translateY(10px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
         @keyframes ai-fade-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}.ai-msg-in{animation:ai-fade-in .25s ease-out}
         #aiPanelInner{transition:transform .4s cubic-bezier(.32,.72,0,1)}

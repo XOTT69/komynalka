@@ -47,6 +47,9 @@ self.addEventListener('fetch', event => {
   }
   event.respondWith(
     caches.match(event.request).then(cached => {
+      if (event.request.mode === 'navigate' && !cached) {
+        return caches.match('./index.html').then(fallback => fallback || fetch(event.request));
+      }
       const fetchPromise = fetch(event.request).then(response => {
         if (response && response.status === 200 && response.type === 'basic') {
           const clone = response.clone();
