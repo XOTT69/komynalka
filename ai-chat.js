@@ -1,7 +1,3 @@
-// ============================================================
-// КОМУНАЛКА AI v1.0 — Smart Assistant Module
-// Завантажується ПІСЛЯ app.js
-// ============================================================
 'use strict';
 
 const AI_MAX_HISTORY    = 10;
@@ -40,6 +36,7 @@ class KomunalkaAI {
     const recs  = (typeof records   !== 'undefined' && Array.isArray(records))   ? records   : [];
     const addrs = (typeof addresses !== 'undefined' && Array.isArray(addresses)) ? addresses : [];
     const t     = (typeof tariffs   !== 'undefined') ? tariffs : {};
+    const dName = (typeof displayName !== 'undefined' && displayName) ? displayName : null;
     const addr  = addrs.find(a => a.id === (typeof currentAddressId !== 'undefined' ? currentAddressId : null));
     const sorted = [...recs].sort((a, b) => b.month.localeCompare(a.month)).slice(0, AI_CONTEXT_MONTHS);
     const avg    = sorted.length ? Math.round(sorted.reduce((s, r) => s + (r.total || 0), 0) / sorted.length) : 0;
@@ -54,7 +51,7 @@ class KomunalkaAI {
           if (r.electroCost  > 0) p.push(`світло ${Math.round(r.electroCost)}₴`);
           if (r.gasCost      > 0) p.push(`газ ${Math.round(r.gasCost)}₴`);
           if (r.customCost   > 0) p.push(`інше ${Math.round(r.customCost)}₴`);
-          const wU = Math.max(0, (r.wCur||0)-(r.wPrev||0));
+          const wU = Math.max(0,(r.wCur||0)-(r.wPrev||0));
           const eU = Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0));
           const gU = Math.max(0,(r.gCur||0)-(r.gPrev||0));
           const u  = [wU>0&&`${wU}м³вод`,eU>0&&`${eU}кВт`,gU>0&&`${gU}м³газ`].filter(Boolean).join(' ');
@@ -63,13 +60,12 @@ class KomunalkaAI {
       : '• Записів поки немає';
 
     return `Ти — AI-помічник додатку "Комуналка". Відповідай ТІЛЬКИ українською. Максимум 2-3 речення.
-
+${dName ? `Користувача звати: ${dName}` : ''}
 АДРЕСА: "${addr?.name || 'Мій дім'}"
 ТАРИФИ: вода ${t.water||30.38}₴/м³ | електрика ${t.electroBase||4.32}₴/кВт (ніч ×${t.nightCoef||0.5}) | газ ${t.gas||7.96}₴/м³
 СТАТИСТИКА: середній ${avg}₴/міс | серія ${streak}міс | борг ${unpaid.length}міс
 ОСТАННІ ${sorted.length} МІС:
 ${recLines}
-
 ПРАВИЛА: оперуй конкретними числами. Якщо питання не про комуналку — поверни до теми.`;
   }
 
@@ -79,36 +75,32 @@ ${recLines}
     this.abort = new AbortController();
     this._addMsg('user', userText);
     this._setLoading(true);
-
     try {
       const apiMessages = [
         { role: 'system', content: this._buildSystemPrompt() },
         ...this.history.slice(-(AI_MAX_HISTORY - 1)).map(m => ({ role: m.role, content: m.content })),
       ];
-
-      const headers = { 'Content-Type': 'application/json', 'X-Device-FP': typeof DEVICE_FP !== 'undefined' ? DEVICE_FP : 'unknown' };
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-Device-FP': typeof DEVICE_FP !== 'undefined' ? DEVICE_FP : 'unknown',
+      };
       const uid = localStorage.getItem('k_uid');
       if (uid) {
         headers['Authorization'] = `Bearer uid:${uid}`;
       } else if (typeof sessionLogin !== 'undefined' && sessionLogin && typeof sessionPass !== 'undefined' && sessionPass) {
         headers['Authorization'] = `Bearer login:${btoa(unescape(encodeURIComponent(sessionLogin)))}:${sessionPass}`;
       }
-
       const res = await fetch(WORKER_URL, {
         method: 'POST', headers,
         body: JSON.stringify({ action: 'ai_chat', messages: apiMessages, max_tokens: AI_MAX_TOKENS, temperature: 0.4 }),
         signal: this.abort.signal,
       });
-
       if (res.status === 429) throw new Error('Забагато запитів. Зачекайте хвилину. ⏳');
       if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error || `HTTP ${res.status}`); }
-
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Помилка AI');
-
       const reply = data.choices?.[0]?.message?.content?.trim();
       if (!reply) throw new Error('Порожня відповідь');
-
       this._addMsg('assistant', reply);
     } catch (e) {
       if (e.name === 'AbortError') return;
@@ -174,14 +166,24 @@ ${recLines}
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/`([^`]+)`/g, '<code class="bg-black/10 dark:bg-white/10 px-1 rounded text-[11px]">$1</code>')
       .replace(/\n/g, '<br>');
-
-    if (isUser) return `<div class="flex justify-end mb-3 ai-msg-in"><div class="max-w-[82%]"><div class="bg-brand text-white px-4 py-2.5 rounded-2xl rounded-br-md text-sm leading-relaxed">${formatted}</div><p class="text-[9px] text-slate-400 text-right mt-1">${time}</p></div></div>`;
-
+    if (isUser) {
+      return `<div class="flex justify-end mb-3 ai-msg-in">
+        <div class="max-w-[82%]">
+          <div class="bg-brand text-white px-4 py-2.5 rounded-2xl rounded-br-md text-sm leading-relaxed">${formatted}</div>
+          <p class="text-[9px] text-slate-400 text-right mt-1">${time}</p>
+        </div>
+      </div>`;
+    }
     const cls = isError
       ? 'bg-red-50 dark:bg-red-500/10 text-red-600 border-red-200'
       : 'bg-white dark:bg-[#2c2c2e] text-slate-700 dark:text-slate-200 border-slate-100 dark:border-white/10';
-
-    return `<div class="flex gap-2 mb-3 ai-msg-in"><div class="w-7 h-7 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl flex items-center justify-center text-[13px] shrink-0 mt-0.5">🤖</div><div class="max-w-[82%]"><div class="${cls} px-4 py-2.5 rounded-2xl rounded-bl-md text-sm leading-relaxed border">${formatted}</div><p class="text-[9px] text-slate-400 mt-1">${time}</p></div></div>`;
+    return `<div class="flex gap-2 mb-3 ai-msg-in">
+      <div class="w-7 h-7 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl flex items-center justify-center text-[13px] shrink-0 mt-0.5">🤖</div>
+      <div class="max-w-[82%]">
+        <div class="${cls} px-4 py-2.5 rounded-2xl rounded-bl-md text-sm leading-relaxed border">${formatted}</div>
+        <p class="text-[9px] text-slate-400 mt-1">${time}</p>
+      </div>
+    </div>`;
   }
 
   _emptyHTML() {
@@ -244,7 +246,6 @@ ${recLines}
       e.target.style.height = 'auto';
       e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px';
     });
-    // БАГ ВИПРАВЛЕНО: один делегований listener
     document.getElementById('aiMessagesList')?.addEventListener('click', e => {
       const btn = e.target.closest('.ai-suggestion');
       if (btn?.dataset.text) this.sendMessage(btn.dataset.text);
