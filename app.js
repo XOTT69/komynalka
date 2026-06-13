@@ -936,3 +936,318 @@ function renderRecords(){
   renderHistoryChart([...records].sort((a,b)=>new Date(a.month)-new Date(b.month)));
   renderServiceChart();
   list.innerHTML='';
+    if(!sorted.length){list.innerHTML=`<div class="text-center py-8"><p class="text-slate-400 font-medium">Нічого не знайдено</p></div>`;return;}
+  const unpaidCount=sorted.filter(r=>!r.paid).length;
+  if(unpaidCount>0&&currentFilter!=='paid'){
+    const batchBar=document.createElement('div');
+    batchBar.className='bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-2xl flex justify-between items-center text-white mb-4';
+    batchBar.innerHTML=`<div><p class="text-xs font-bold opacity-80">${unpaidCount} неоплачених</p><p class="text-sm font-black">${fmt.format(sorted.filter(r=>!r.paid).reduce((s,r)=>s+r.total,0))} ₴</p></div><button class="batch-pay-btn px-4 py-2 bg-white/20 rounded-xl text-xs font-bold active:scale-95 transition-transform border border-white/20">✓ Оплатити всі</button>`;
+    list.appendChild(batchBar);
+    batchBar.querySelector('.batch-pay-btn')?.addEventListener('click',()=>{if(confirm(`Позначити ${unpaidCount} записів як оплачені?`)){records.forEach(r=>{if(!r.paid)r.paid=true;});renderRecords();renderDashboard();syncToCloud();checkNewAchievements();showToast(`${unpaidCount} записів оплачено!`,'✅');}});
+  }
+  let lastYear=null;
+  sorted.forEach(rec=>{
+    const yr=rec.month.split('-')[0];
+    if(yr!==lastYear){lastYear=yr;const h=document.createElement('div');h.className="flex items-center gap-4 mt-6 mb-3";h.innerHTML=`<h2 class="text-lg font-black text-slate-300 dark:text-slate-600">${yr}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-white/5"></div>`;list.appendChild(h);}
+    list.appendChild(createRecordCard(rec));
+  });
+}
+
+function renderHistoryChart(sortedRecords,retryCount=0){if(!$('historyChartCanvas'))return;if(!historyChart)historyChart=new ChartEngine('historyChartCanvas',{padding:30,barRadius:5});if(!historyChart.width)historyChart.setupCanvas();if(!historyChart.width){if(retryCount<5)setTimeout(()=>renderHistoryChart(sortedRecords,retryCount+1),200);return;}historyChart.setData(sortedRecords.slice(-10).map(r=>({value:r.total,label:new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color:r.paid?'#007aff':'#ff9500'})));}
+
+function renderServiceChart(retryCount=0){if(!$('serviceChartCanvas')||records.length===0){if($('serviceChartSummary'))$('serviceChartSummary').innerHTML='';return;}const type=$('serviceChartSelect')?.value||'water',unit=type==='electro'?'кВт':'м³';if(!serviceChart)serviceChart=new ChartEngine('serviceChartCanvas',{padding:24,barRadius:4,unit});else serviceChart.options.unit=unit;if(!serviceChart.width)serviceChart.setupCanvas();if(!serviceChart.width){if(retryCount<5)setTimeout(()=>renderServiceChart(retryCount+1),200);return;}const sorted=[...records].sort((a,b)=>new Date(a.month)-new Date(b.month)).slice(-8);const getValue=rec=>{switch(type){case 'water':return Math.max(0,(rec.wCur||0)-(rec.wPrev||0));case 'hotWater':return Math.max(0,(rec.hwCur||0)-(rec.hwPrev||0));case 'electro':return Math.max(0,(rec.dCur||0)-(rec.dPrev||0))+Math.max(0,(rec.nCur||0)-(rec.nPrev||0));case 'gas':return Math.max(0,(rec.gCur||0)-(rec.gPrev||0));default:return 0;}};const getColor=()=>{switch(type){case 'water':return'#3b82f6';case 'hotWater':return'#ef4444';case 'electro':return'#eab308';case 'gas':return'#f97316';default:return'#6b7280';}};const color=getColor(),data=sorted.map(rec=>({value:getValue(rec),label:new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color}));serviceChart.setData(data);const values=data.map(d=>d.value),avg=values.length?values.reduce((a,b)=>a+b,0)/values.length:0,last=values[values.length-1]||0,prevLast=values.length>1?values[values.length-2]:last,trendPct=prevLast>0?Math.round(((last-prevLast)/prevLast)*100):0;const summary=$('serviceChartSummary');if(summary)summary.innerHTML=`<span>Сер.: <span style="color:${color}" class="font-black">${Math.round(avg)} ${unit}/міс</span></span><span>Ост.: <span class="${trendPct<0?'text-green-600':trendPct>0?'text-red-500':'text-slate-500'} font-black">${last} ${unit} (${trendPct>0?'+':''}${trendPct}%)</span></span>`;}
+$('serviceChartSelect')?.addEventListener('change',renderServiceChart);
+
+function createRecordCard(rec){
+  const card=document.createElement('div');
+  card.className=`premium-card swipe-card p-5 relative overflow-hidden cursor-pointer select-none ${rec.paid?'':'ring-1 ring-orange-400/20'}`;
+  const dStr=new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'long'});
+  const[rY,rM]=rec.month.split('-');
+  const filledServices=[];
+  if(rec._filled?.water   ||rec.waterCost>0)   filledServices.push('💧');
+  if(rec._filled?.hotWater||rec.hotWaterCost>0) filledServices.push('🌡️');
+  if(rec._filled?.electro ||rec.electroCost>0)  filledServices.push('⚡');
+  if(rec._filled?.gas     ||rec.gasCost>0)      filledServices.push('🔥');
+  if(rec._filled?.custom  ||rec.customCost>0)   filledServices.push('📦');
+  const totalExp=(prefs.showWater?1:0)+(prefs.showHotWater?1:0)+(prefs.showElectro?1:0)+(prefs.showGas?1:0)+(customServices.length>0?1:0);
+  const isPartial=filledServices.length<totalExp&&filledServices.length>0;
+  const partialBadge=isPartial?`<span class="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-md ml-2">Частково</span>`:'';
+  const prevYR=records.find(r=>r.month===(parseInt(rY)-1)+'-'+rM);let yoy='';
+  if(prevYR&&prevYR.total>0&&rec.total>0){const p=Math.round(((rec.total-prevYR.total)/prevYR.total)*100);if(p<0)yoy=`<span class="text-[9px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-0.5 rounded-md ml-2">↓${Math.abs(p)}%</span>`;else if(p>0)yoy=`<span class="text-[9px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-md ml-2">↑+${p}%</span>`;}
+  const pW=rec.total>0?((rec.waterCost||0)/rec.total)*100:0,pHW=rec.total>0?((rec.hotWaterCost||0)/rec.total)*100:0,pE=rec.total>0?((rec.electroCost||0)/rec.total)*100:0,pG=rec.total>0?((rec.gasCost||0)/rec.total)*100:0;
+  const conic=`conic-gradient(#3b82f6 0% ${pW}%,#ef4444 ${pW}% ${pW+pHW}%,#eab308 ${pW+pHW}% ${pW+pHW+pE}%,#f97316 ${pW+pHW+pE}% ${pW+pHW+pE+pG}%,#a855f7 ${pW+pHW+pE+pG}% 100%)`;
+  const recId=rec.id;
+
+  card.innerHTML=`
+    ${!rec.paid?'<div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-400/15 to-transparent rounded-bl-[4rem]"></div>':''}
+    <div class="flex justify-between items-center relative z-10" data-toggle-details="${recId}">
+      <div>
+        <h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${escapeHtml(dStr)}</h4>
+        <div class="flex items-center flex-wrap gap-1">
+          <span class="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid?'bg-brand-light text-brand':'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid?'Оплачено':'Борг'}</span>
+          ${partialBadge}${yoy}
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span>
+        <div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-full text-slate-400"><i class="chevron-icon fa-solid fa-chevron-down transition-transform duration-300"></i></div>
+      </div>
+    </div>
+    <div class="details-panel hidden">
+      <div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5">
+        ${rec.total>0?`<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background:${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span>💧 Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span>🌡️ Гар.</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span>⚡ Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span>🔥 Газ</span><span>${Math.round(pG)}%</span></div>`:''}${(100-pW-pHW-pE-pG)>1?`<div class="flex justify-between"><span>📦 Інше</span><span>${Math.round(100-pW-pHW-pE-pG)}%</span></div>`:''}</div></div>`:''}
+        <div class="space-y-3">
+          ${rec.waterCost>0?`<div class="flex justify-between"><span class="font-bold">💧 Вода</span><span class="font-black">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.wPrev}→${rec.wCur}</span><span class="text-blue-500">+${rec.wCur-rec.wPrev} м³</span></div>`:''}
+          ${rec.hotWaterCost>0?`<div class="flex justify-between"><span class="font-bold">🌡️ Гар.</span><span class="font-black">${fmt.format(rec.hotWaterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.hwPrev}→${rec.hwCur}</span><span class="text-red-500">+${rec.hwCur-rec.hwPrev} м³</span></div>`:''}
+          ${rec.electroCost>0?`<div class="flex justify-between"><span class="font-bold">⚡ Світло</span><span class="font-black">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>Д:${rec.dPrev}→${rec.dCur}</span><span class="text-yellow-600">+${rec.dCur-rec.dPrev}</span></div>${(rec.nCur||rec.nPrev)?`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl mt-1"><span>Н:${rec.nPrev}→${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur-rec.nPrev}</span></div>`:''}`:''}
+          ${rec.gasCost>0?`<div class="flex justify-between"><span class="font-bold">🔥 Газ</span><span class="font-black">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.gPrev}→${rec.gCur}</span><span class="text-orange-500">+${rec.gCur-rec.gPrev} м³</span></div>`:''}
+          ${rec.customCost>0?`<div class="flex justify-between"><span class="font-bold">📦 Інше</span><span class="font-black">${fmt.format(rec.customCost)} ₴</span></div>${rec.customData?Object.values(rec.customData).filter(s=>s.val>0).map(s=>`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${escapeHtml(s.name)}</span><span class="text-purple-500">${fmt.format(s.val)} ₴</span></div>`).join(''):''}`:'' }
+          ${rec.note?`<div class="mt-3 p-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs text-slate-500 italic"><i class="fa-solid fa-sticky-note mr-1"></i>${escapeHtml(rec.note)}</div>`:''}
+        </div>
+      </div>
+      <div class="flex gap-2.5 mt-4 pt-3 border-t border-slate-100 dark:border-white/5">
+        <button type="button" class="rec-pay flex-1 py-3.5 rounded-2xl font-bold text-xs border active:scale-[0.96] transition-all ${rec.paid?'bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 border-slate-200 dark:border-white/10':'bg-gradient-to-r from-brand to-blue-600 text-white shadow-lg border-brand'}" data-rec-id="${recId}">${rec.paid?'↩ Скасувати':'✓ Оплачено'}</button>
+        <button type="button" class="rec-share w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 active:scale-[0.90] transition-transform" data-rec-id="${recId}"><i class="fa-solid fa-share-nodes"></i></button>
+        <button type="button" class="rec-edit w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 active:scale-[0.90] transition-transform" data-rec-id="${recId}"><i class="fa-solid fa-pen"></i></button>
+        <button type="button" class="rec-del w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 active:scale-[0.90] transition-transform" data-rec-id="${recId}"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>`;
+
+  const swL=document.createElement('div');swL.className='swipe-bg-left';swL.innerHTML='<i class="fa-solid fa-trash mr-2"></i>Видалити';
+  const swR=document.createElement('div');swR.className='swipe-bg-right';swR.innerHTML=`<i class="fa-solid fa-${rec.paid?'rotate-left':'check'} mr-2"></i>${rec.paid?'Скасувати':'Оплачено'}`;
+  card.insertBefore(swL,card.firstChild);card.insertBefore(swR,card.firstChild);
+  initSwipe(card,recId);
+
+  card.addEventListener('click',(e)=>{
+    const toggleTarget=e.target.closest('[data-toggle-details]');
+    if(toggleTarget){const panel=card.querySelector('.details-panel'),chevron=card.querySelector('.chevron-icon');if(panel){panel.classList.toggle('hidden');if(chevron)chevron.style.transform=panel.classList.contains('hidden')?'rotate(0deg)':'rotate(180deg)';}return;}
+    const payBtn=e.target.closest('.rec-pay');  if(payBtn)  {e.stopPropagation();togglePaidById(recId);  return;}
+    const shareBtn=e.target.closest('.rec-share');if(shareBtn){e.stopPropagation();shareRecordById(recId);return;}
+    const editBtn=e.target.closest('.rec-edit'); if(editBtn) {e.stopPropagation();editRecordById(recId); return;}
+    const delBtn=e.target.closest('.rec-del');   if(delBtn)  {e.stopPropagation();if(confirm('Видалити?'))deleteRecordById(recId);return;}
+  });
+  return card;
+}
+
+async function shareRecordById(id){const rec=records.find(r=>r.id===id);if(!rec)return;const d=new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'});let t=`🧾 Комуналка за ${d}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n──────────\n`;if(rec.waterCost>0)t+=`💧 Вода: ${fmt.format(rec.waterCost)} ₴\n`;if(rec.hotWaterCost>0)t+=`🌡️ Гар.: ${fmt.format(rec.hotWaterCost)} ₴\n`;if(rec.electroCost>0)t+=`⚡ Світло: ${fmt.format(rec.electroCost)} ₴\n`;if(rec.gasCost>0)t+=`🔥 Газ: ${fmt.format(rec.gasCost)} ₴\n`;if(rec.customCost>0)t+=`📦 Інше: ${fmt.format(rec.customCost)} ₴\n`;t+=`──────────\n💰 Всього: ${fmt.format(rec.total)} ₴\n${rec.paid?'✅ Оплачено':'⏳ Очікує'}`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
+
+function editRecordById(id){const rec=records.find(r=>r.id===id);if(!rec)return;if($('monthInput'))$('monthInput').value=rec.month;if(prefs.showWater){if($('wPrev'))$('wPrev').value=rec.wPrev||'';if($('wCur'))$('wCur').value=rec.wCur||'';}if(prefs.showHotWater){if($('hwPrev'))$('hwPrev').value=rec.hwPrev||'';if($('hwCur'))$('hwCur').value=rec.hwCur||'';}if(prefs.showElectro){if($('dPrev'))$('dPrev').value=rec.dPrev||'';if($('dCur'))$('dCur').value=rec.dCur||'';if($('nPrev'))$('nPrev').value=rec.nPrev||'';if($('nCur'))$('nCur').value=rec.nCur||'';}if(prefs.showGas){if($('gPrev'))$('gPrev').value=rec.gPrev||'';if($('gCur'))$('gCur').value=rec.gCur||'';}if(rec.customData)Object.keys(rec.customData).forEach(srvId=>{const el=$(`custom_${srvId}`);if(el)el.value=rec.customData[srvId].val;});if($('recordNote'))$('recordNote').value=rec.note||'';autoSetWinter(rec.month);switchTab('tabCalc',1);calculatePreview();updateSmartBadges();}
+
+// =================== FILTER & SEARCH ===================
+let searchDebounceTimer;
+$('filterToggleBtn')?.addEventListener('click',()=>$('filterPanel')?.classList.toggle('hidden'));
+$('filterButtons')?.addEventListener('click',(e)=>{const btn=e.target.closest('.filter-btn');if(!btn)return;currentFilter=btn.dataset.filter;document.querySelectorAll('.filter-btn').forEach(b=>{b.classList.remove('bg-brand','text-white');b.classList.add('bg-slate-100','dark:bg-[#2c2c2e]','text-slate-600','dark:text-slate-400');});btn.classList.remove('bg-slate-100','dark:bg-[#2c2c2e]','text-slate-600','dark:text-slate-400');btn.classList.add('bg-brand','text-white');renderRecords();});
+$('searchRecords')?.addEventListener('input',()=>{clearTimeout(searchDebounceTimer);searchDebounceTimer=setTimeout(renderRecords,200);});
+$('sortSelect')?.addEventListener('change',()=>renderRecords());
+
+// =================== EXPORT ===================
+function csvCell(value){const text=String(value??'');return /[",\n\r]/.test(text)?`"${text.replace(/"/g,'""')}"`:text;}
+function downloadBlob(content,filename,type){const blob=new Blob([content],{type}),link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=filename;link.click();URL.revokeObjectURL(link.href);}
+
+function exportCSV(){
+  if(!records.length)return showToast('Немає','⚠️');
+  const header=['Місяць'];
+  if(prefs.showWater)    header.push('Вода(м3)','Вода(₴)');
+  if(prefs.showHotWater) header.push('Гар(м3)','Гар(₴)');
+  if(prefs.showElectro)  header.push('Світло(кВт)','Світло(₴)');
+  if(prefs.showGas)      header.push('Газ(м3)','Газ(₴)');
+  header.push('Інше(₴)','Всього(₴)','Статус','Нотатка');
+  const rows=[[...header]];
+  [...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).forEach(r=>{
+    const row=[r.month];
+    if(prefs.showWater)    row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(2));
+    if(prefs.showHotWater) row.push(Math.max(0,(r.hwCur||0)-(r.hwPrev||0)),(r.hotWaterCost||0).toFixed(2));
+    if(prefs.showElectro)  row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(2));
+    if(prefs.showGas)      row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(2));
+    row.push((r.customCost||0).toFixed(2),(r.total||0).toFixed(2),r.paid?'Оплачено':'Борг',r.note||'');
+    rows.push(row);
+  });
+  downloadBlob('\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\n')+'\n','komunalka.csv','text/csv;charset=utf-8;');
+  showToast('Експортовано','📊');
+}
+
+async function generatePDF(){
+  if(!records.length)return showToast('Немає','⚠️');
+  const{jsPDF}=window.jspdf,doc=new jsPDF();
+  let hasFont=false;
+  try{const resp=await fetch('https://cdn.jsdelivr.net/gh/nicksib/jspdf-fonts@main/Roboto-Regular.ttf');if(resp.ok){const buf=await resp.arrayBuffer(),bytes=new Uint8Array(buf);let binary='';for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);doc.addFileToVFS('Roboto.ttf',btoa(binary));doc.addFont('Roboto.ttf','Roboto','normal');doc.setFont('Roboto','normal');hasFont=true;}}catch(e){}
+  const t=hasFont?s=>s:transliterate;
+  doc.setFillColor(0,122,255);doc.rect(0,0,210,35,'F');doc.setTextColor(255,255,255);doc.setFontSize(18);doc.text(t('Комунальні платежі'),15,15);doc.setFontSize(10);doc.text(t($('currentAddressDisplay')?.innerText||''),15,24);doc.setTextColor(60,60,60);
+  const tH=[t('Міс.')];if(prefs.showWater)tH.push(t('Вода'),t('₴'));if(prefs.showElectro)tH.push(t('Світло'),t('₴'));if(prefs.showGas)tH.push(t('Газ'),t('₴'));tH.push(t('Інше'),t('Всього'),t('Статус'));
+  const tR=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).map(r=>{const row=[r.month];if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(0));if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(0));if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(0));row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),r.paid?'OK':t('Борг'));return row;});
+  doc.autoTable({startY:40,head:[tH],body:tR,theme:'striped',styles:{font:hasFont?'Roboto':'helvetica'},headStyles:{fillColor:[0,122,255],textColor:[255,255,255],fontSize:7,fontStyle:'bold',halign:'center'},bodyStyles:{fontSize:7,halign:'center'},margin:{left:10,right:10}});
+  doc.save(`komunalka_${new Date().toISOString().slice(0,10)}.pdf`);showToast('PDF!','📄');
+}
+
+function transliterate(text){const map={'а':'a','б':'b','в':'v','г':'h','ґ':'g','д':'d','е':'e','є':'ye','ж':'zh','з':'z','и':'y','і':'i','ї':'yi','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ь':'','ю':'yu','я':'ya','А':'A','Б':'B','В':'V','Г':'H','Ґ':'G','Д':'D','Е':'E','Є':'Ye','Ж':'Zh','З':'Z','И':'Y','І':'I','Ї':'Yi','Й':'Y','К':'K','Л':'L','М':'M','Н':'N','О':'O','П':'P','Р':'R','С':'S','Т':'T','У':'U','Ф':'F','Х':'Kh','Ц':'Ts','Ч':'Ch','Ш':'Sh','Щ':'Shch','Ь':'','Ю':'Yu','Я':'Ya'};return text.split('').map(c=>map[c]||c).join('');}
+
+async function shareAllRecords(){if(!records.length)return showToast('Немає','⚠️');const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,6);let t=`📊 Комунальні\n📍 ${$('currentAddressDisplay')?.innerText||''}\n───────\n`;sorted.forEach(r=>{t+=`${new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'numeric'})}: ${fmt.format(r.total)} ₴ ${r.paid?'✅':'⏳'}\n`;});t+=`───────\nСередній: ${fmt.format(sorted.reduce((s,r)=>s+r.total,0)/sorted.length)} ₴/міс`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
+
+$('exportCsvBtn')?.addEventListener('click',exportCSV);
+$('exportPdfBtn')?.addEventListener('click',generatePDF);
+$('shareAllBtn')?.addEventListener('click',shareAllRecords);
+$('exportJsonBtn')?.addEventListener('click',()=>{syncCurrentAddress();downloadBlob(JSON.stringify({version:APP_VERSION,exportDate:new Date().toISOString(),addresses,currentAddressId},null,2),'komunalka_backup.json','application/json;charset=utf-8;');showToast('Бекап','💾');});
+$('importJsonBtn')?.addEventListener('click',()=>$('importFileInput')?.click());
+
+// =================== IMPORT ===================
+function isPlainObject(value){return value&&typeof value==='object'&&!Array.isArray(value);}
+function normalizeNumber(value,fallback=0){const num=Number(value);return Number.isFinite(num)?num:fallback;}
+function normalizeImportedRecord(rec){if(!isPlainObject(rec)||!/^\d{4}-\d{2}$/.test(String(rec.month||'')))return null;return{...rec,id:rec.id||Date.now()+Math.random(),month:String(rec.month),total:normalizeNumber(rec.total),waterCost:normalizeNumber(rec.waterCost),hotWaterCost:normalizeNumber(rec.hotWaterCost),electroCost:normalizeNumber(rec.electroCost),gasCost:normalizeNumber(rec.gasCost),customCost:normalizeNumber(rec.customCost),paid:Boolean(rec.paid),note:String(rec.note||'')};}
+function normalizeImportedAddress(addr,index){if(!isPlainObject(addr))return null;return{id:String(addr.id||`addr_${Date.now()}_${index}`),name:String(addr.name||`Об'єкт ${index+1}`).slice(0,80),tariffs:{...defaultTariffs,...(isPlainObject(addr.tariffs)?addr.tariffs:{})},prefs:{...defaultPrefs,...(isPlainObject(addr.prefs)?addr.prefs:{})},records:Array.isArray(addr.records)?addr.records.map(normalizeImportedRecord).filter(Boolean):[],customServices:Array.isArray(addr.customServices)?addr.customServices.filter(isPlainObject).map((srv,i)=>({id:String(srv.id||`srv_${Date.now()}_${i}`),name:String(srv.name||'').slice(0,60),defaultSum:srv.defaultSum==null?'':String(srv.defaultSum).slice(0,20)})):[]};}
+function normalizeImportData(data){if(!isPlainObject(data)||!Array.isArray(data.addresses))return null;const addrs=data.addresses.map(normalizeImportedAddress).filter(Boolean);if(!addrs.length)return null;const cid=String(data.currentAddressId||'');return{addresses:addrs,currentAddressId:addrs.some(a=>a.id===cid)?cid:addrs[0].id};}
+$('importFileInput')?.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const normalized=normalizeImportData(JSON.parse(ev.target.result));if(!normalized){showToast('Невірний формат','❌');return;}if(confirm(`Імпорт ${normalized.addresses.length} об'єктів? Поточні дані буде замінено.`)){addresses=normalized.addresses;currentAddressId=normalized.currentAddressId;loadCurrentAddress();syncToCloud();showToast('Імпортовано!','✅');}}catch(err){showToast('Помилка','❌');}};reader.readAsText(file);e.target.value='';});
+
+// =================== TIPS ===================
+function getConsumptionTrend(type,months=6){const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,months);if(sorted.length<2)return null;const values=sorted.map(r=>{switch(type){case 'water':return Math.max(0,(r.wCur||0)-(r.wPrev||0));case 'electro':return Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0));case 'gas':return Math.max(0,(r.gCur||0)-(r.gPrev||0));default:return r.total;}}).reverse();const first=values.slice(0,Math.ceil(values.length/2)),second=values.slice(Math.ceil(values.length/2));const avgF=first.reduce((a,b)=>a+b,0)/first.length,avgS=second.reduce((a,b)=>a+b,0)/second.length;if(avgF===0)return 0;return Math.round(((avgS-avgF)/avgF)*100);}
+function getSmartTips(){const tips=[];if(records.length>=3){const wT=getConsumptionTrend('water');if(wT&&wT>20)tips.push({emoji:'💧',text:`Споживання води зросло на ${wT}%. Перевірте крани.`});const eT=getConsumptionTrend('electro');if(eT&&eT>20)tips.push({emoji:'⚡',text:`Електрика +${eT}%. Перевірте прилади.`});if(eT&&eT<-10)tips.push({emoji:'🎉',text:`Електрика -${Math.abs(eT)}%! Чудова економія!`});}const budget=parseFloat(localStorage.getItem('k_budget'))||0;if(budget&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];if(last.total>budget*1.2)tips.push({emoji:'⚠️',text:`Перевищили бюджет на ${Math.round(((last.total-budget)/budget)*100)}%`});}const unpaid=records.filter(r=>!r.paid);if(unpaid.length>=3)tips.push({emoji:'💳',text:`${unpaid.length} неоплачених місяців. Оплатіть борг.`});if(prefs.showElectro&&prefs.electroTwoZone&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];const n=Math.max(0,(last.nCur||0)-(last.nPrev||0)),d=Math.max(0,(last.dCur||0)-(last.dPrev||0)),tot=n+d;if(tot>0&&n/tot<0.3)tips.push({emoji:'🌙',text:'Спробуйте більше електрики вночі — дешевше.'});}return tips.slice(0,3);}
+function renderTips(){const container=$('tipsContainer');if(!container)return;const tips=getSmartTips();if(!tips.length){container.classList.add('hidden');return;}container.classList.remove('hidden');const listEl=$('tipsList');if(listEl)listEl.innerHTML=tips.map(t=>`<div class="flex items-start gap-3 bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5"><span class="text-lg shrink-0">${t.emoji}</span><p class="text-xs font-medium text-slate-600 dark:text-slate-300">${escapeHtml(t.text)}</p></div>`).join('');}
+
+// =================== YEAR REPORT ===================
+$('yearReportBtn')?.addEventListener('click',()=>generateYearReport());
+function generateYearReport(){
+  const year=new Date().getFullYear(),yr=records.filter(r=>r.month.startsWith(String(year)));
+  if(!yr.length){showToast('Немає даних за рік','⚠️');return;}
+  if($('yearReportYear'))$('yearReportYear').textContent=year;
+  const total=yr.reduce((s,r)=>s+r.total,0),avg=total/yr.length;
+  const maxR=yr.reduce((a,b)=>a.total>b.total?a:b),minR=yr.reduce((a,b)=>a.total<b.total?a:b);
+  const paid=yr.filter(r=>r.paid).length;
+  const wT=yr.reduce((s,r)=>s+(r.waterCost||0),0),hwT=yr.reduce((s,r)=>s+(r.hotWaterCost||0),0),eT=yr.reduce((s,r)=>s+(r.electroCost||0),0),gT=yr.reduce((s,r)=>s+(r.gasCost||0),0),cT=yr.reduce((s,r)=>s+(r.customCost||0),0);
+  const maxM=new Date(maxR.month+'-01').toLocaleString('uk-UA',{month:'long'}),minM=new Date(minR.month+'-01').toLocaleString('uk-UA',{month:'long'});
+  const streak=getStreak(records);
+  const html=`<div class="text-center mb-2"><p class="text-3xl font-black text-slate-900 dark:text-white">${fmt.format(total)} ₴</p><p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Загальні витрати</p></div><div class="grid grid-cols-2 gap-3"><div class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl text-center"><p class="text-[9px] font-bold text-slate-400 uppercase">Середній</p><p class="text-lg font-black text-slate-900 dark:text-white">${fmt.format(avg)} ₴</p></div><div class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl text-center"><p class="text-[9px] font-bold text-slate-400 uppercase">Місяців</p><p class="text-lg font-black text-slate-900 dark:text-white">${yr.length}</p></div></div><div class="bg-green-50 dark:bg-green-500/10 p-4 rounded-2xl"><div class="flex justify-between"><span class="text-sm font-bold text-green-700 dark:text-green-400">📉 Найдешевший</span><span class="font-black text-green-700 dark:text-green-400">${fmt.format(minR.total)} ₴</span></div><p class="text-[10px] text-green-600/70 mt-0.5">${minM}</p></div><div class="bg-red-50 dark:bg-red-500/10 p-4 rounded-2xl"><div class="flex justify-between"><span class="text-sm font-bold text-red-700 dark:text-red-400">📈 Найдорожчий</span><span class="font-black text-red-700 dark:text-red-400">${fmt.format(maxR.total)} ₴</span></div><p class="text-[10px] text-red-600/70 mt-0.5">${maxM}</p></div><div class="bg-slate-50 dark:bg-black/40 p-4 rounded-2xl"><p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-3">Розподіл</p><div class="space-y-2">${wT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">💧 Вода</span><span class="font-black">${fmt.format(wT)} ₴ (${Math.round(wT/total*100)}%)</span></div>`:''}${hwT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">🌡️ Гар.</span><span class="font-black">${fmt.format(hwT)} ₴ (${Math.round(hwT/total*100)}%)</span></div>`:''}${eT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">⚡ Світло</span><span class="font-black">${fmt.format(eT)} ₴ (${Math.round(eT/total*100)}%)</span></div>`:''}${gT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">🔥 Газ</span><span class="font-black">${fmt.format(gT)} ₴ (${Math.round(gT/total*100)}%)</span></div>`:''}${cT>0?`<div class="flex justify-between text-xs"><span class="font-bold text-slate-600 dark:text-slate-300">📦 Інше</span><span class="font-black">${fmt.format(cT)} ₴ (${Math.round(cT/total*100)}%)</span></div>`:''}</div></div><div class="grid grid-cols-2 gap-3"><div class="bg-brand-light p-3 rounded-xl text-center border border-brand-border"><p class="text-[9px] font-bold text-brand uppercase">Оплачено</p><p class="text-lg font-black text-brand">${paid}/${yr.length}</p></div><div class="bg-orange-50 dark:bg-orange-500/10 p-3 rounded-xl text-center border border-orange-100 dark:border-orange-500/20"><p class="text-[9px] font-bold text-orange-500 uppercase">Серія</p><p class="text-lg font-black text-orange-500">${streak} 🔥</p></div></div>`;
+  if($('yearReportContent'))$('yearReportContent').innerHTML=html;
+  $('yearReportModal')?.classList.remove('hidden');
+  haptic('success');
+}
+async function shareYearReport(){const year=new Date().getFullYear(),yr=records.filter(r=>r.month.startsWith(String(year)));if(!yr.length)return;const total=yr.reduce((s,r)=>s+r.total,0),avg=total/yr.length,streak=getStreak(records);let t=`📊 Річний звіт ${year}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n═══════════════\n💰 Всього: ${fmt.format(total)} ₴\n📈 Середній: ${fmt.format(avg)} ₴/міс\n📅 Записів: ${yr.length}\n🔥 Серія: ${streak} міс.\n═══════════════\nКомуналка PWA`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
+window.shareYearReport=shareYearReport;
+
+// =================== PWA ===================
+let deferredPrompt;
+let pendingServiceWorker=null;
+let isRefreshingAfterUpdate=false;
+window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;$('pwaInstallBlock')?.classList.remove('hidden');});
+$('installPwaBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;if(outcome==='accepted')$('pwaInstallBlock')?.classList.add('hidden');deferredPrompt=null;});
+
+// =================== PUSH ===================
+async function initPush(){if(!('Notification' in window))return;const btn=$('enablePushBtn'),st=$('pushStatus');if(Notification.permission==='granted'){if(btn)btn.classList.add('hidden');if(st){st.classList.remove('hidden');st.textContent='✓ Push увімкнено';st.className='text-[10px] text-green-500 text-center font-bold';}}else if(Notification.permission!=='denied'){if(btn)btn.classList.remove('hidden');}}
+$('enablePushBtn')?.addEventListener('click',async()=>{try{const p=await Notification.requestPermission();if(p==='granted'){showToast('Push увімкнено!','🔔');initPush();scheduleLocalReminder();}else showToast('Відмовлено','⚠️');}catch(e){showToast('Помилка','❌');}});
+function scheduleLocalReminder(){if(!('Notification' in window)||Notification.permission!=='granted')return;const d=new Date().getDate(),wS=prefs.remWaterStart||1,wE=prefs.remWaterEnd||5,eS=prefs.remElectroStart||28,eE=prefs.remElectroEnd||3;const isW=wS<=wE?(d>=wS&&d<=wE):(d>=wS||d<=wE),isE=eS<=eE?(d>=eS&&d<=eE):(d>=eS||d<=eE);const monthKey=new Date().getFullYear()+'-'+new Date().getMonth();if((isW||isE)&&localStorage.getItem('lastSubmittedMonth')!==monthKey&&localStorage.getItem('lastPushShown')!==new Date().toDateString()){localStorage.setItem('lastPushShown',new Date().toDateString());new Notification('Комуналка 🏠',{body:'Час передати показники!',icon:'icon.png'});}}
+setTimeout(initPush,1000);setTimeout(scheduleLocalReminder,3000);
+
+// =================== SHARE APP ===================
+$('shareAppBtn')?.addEventListener('click',async()=>{const text='🏠 Комуналка — розумний облік комунальних платежів.\nВода, світло, газ — все в одному додатку. Безкоштовно!\n\nhttps://komynalka.vercel.app';if(navigator.share){try{await navigator.share({text,url:'https://komynalka.vercel.app'});return;}catch(e){}}try{await navigator.clipboard.writeText(text);showToast('Посилання скопійовано!','📋');}catch(e){prompt('Скопіюйте:',text);}});
+
+// =================== LOGOUT ===================
+async function logout(){
+  if(isGuest){window.location.href=window.location.pathname;return;}
+  if(confirm('Вийти? Локальний бекап і налаштування залишаться на пристрої.')){
+    ['k_login','k_passHash','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));
+    if(googleUser){try{await firebase.auth().signOut();}catch(e){}}
+    location.reload();
+  }
+}
+$('logoutBtn')?.addEventListener('click',logout);
+
+// =================== SHARE ADDRESS ===================
+$('shareAddressBtn')?.addEventListener('click',shareAddress);
+async function shareAddress(){
+  if(!sessionLogin&&!localStorage.getItem('k_uid')){showToast('Спочатку увійдіть','⚠️');return;}
+  const btn=$('shareAddressBtn');if(btn)btn.style.opacity='0.6';
+  showToast('Генерую посилання...','⏳');
+  try{
+    const res=await secureFetch('POST',{},{action:'generate_share',addressId:currentAddressId}),data=await res.json();
+    if(btn)btn.style.opacity='1';
+    if(!data.success||!data.shareToken){showToast(data.error||'Помилка','❌');return;}
+    const shareUrl=`${window.location.origin}${window.location.pathname}?share=${data.shareToken}`,addrName=addresses.find(a=>a.id===currentAddressId)?.name||'Мій дім';
+    if(navigator.share){try{await navigator.share({title:'Комуналка',text:`Перегляд за "${addrName}"`,url:shareUrl});showToast('Надіслано!','✅');return;}catch(e){if(e.name==='AbortError')return;}}
+    try{await navigator.clipboard.writeText(shareUrl);showToast('Посилання скопійовано!','📋');}catch(e){prompt('Скопіюйте:',shareUrl);}
+  }catch(e){if(btn)btn.style.opacity='1';showToast('Помилка мережі','❌');}
+}
+
+// =================== INIT APP UI ===================
+function initAppUI(){
+  $('authScreen')?.classList.add('hidden');
+  $('appScreen')?.classList.remove('hidden');
+  $('appScreen')?.classList.add('flex');
+  if($('tWater'))         $('tWater').value        =tariffs.water;
+  if($('tHotWater'))      $('tHotWater').value      =tariffs.hotWater;
+  if($('tElectroBase'))   $('tElectroBase').value   =tariffs.electroBase;
+  if($('tElectroWinter')) $('tElectroWinter').value =tariffs.electroWinter;
+  if($('tGas'))           $('tGas').value           =tariffs.gas;
+  if($('budgetInput'))    $('budgetInput').value    =localStorage.getItem('k_budget')||'';
+  if($('accountLoginDisplay'))$('accountLoginDisplay').textContent=sessionLogin||'—';
+  updateGoogleButton();
+  updateDisplayName();
+  applyPreferences();
+  renderCalcCustomServices();
+  fillPreviousReadings();
+  switchTab('tabDashboard',0);
+  calculatePreview();
+  updateSmartBadges();
+  renderDashboard();
+
+  const vis=readingInputIds.map(id=>$(id)).filter(el=>el&&el.offsetParent!==null);
+  vis.forEach((input,idx,arr)=>{input.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();const next=arr[idx+1];if(next)next.focus();else $('submitFormBtn')?.focus();}});});
+
+  // Init AI
+  requestAnimationFrame(()=>{
+    if(typeof initAI==='function'){
+      initAI();
+    } else {
+      const checkAI=setInterval(()=>{if(typeof initAI==='function'){clearInterval(checkAI);initAI();}},100);
+      setTimeout(()=>clearInterval(checkAI),5000);
+    }
+  });
+}
+
+// =================== GUEST / AUTO-LOGIN ===================
+if(urlShareToken){
+  isGuest=true;
+  $('authScreen')?.classList.add('hidden');
+  $('appScreen')?.classList.remove('hidden');
+  $('appScreen')?.classList.add('flex');
+  if($('btnTabSettings'))      $('btnTabSettings').style.display      ='none';
+  if($('addressHeaderTrigger'))$('addressHeaderTrigger').style.pointerEvents='none';
+  if($('addressArrowIcon'))    $('addressArrowIcon').style.display    ='none';
+  if($('aiFabBtn'))            $('aiFabBtn').style.display            ='none';
+  fetch(`${WORKER_URL}?share=${urlShareToken}`,{cache:"no-store"}).then(r=>r.json()).then(data=>{if(data.success){addresses=data.data.addresses;currentAddressId=data.data.currentAddressId;loadCurrentAddress();}else alert("Посилання недійсне.");});
+} else if(localStorage.getItem('k_uid')){
+  performLogin(null,null,false,localStorage.getItem('k_uid'));
+} else if(sessionLogin&&sessionPass){
+  performLogin(sessionLogin,sessionPass,true);
+}
+
+$('mode-light')?.addEventListener('click',()=>setThemeMode('light'));
+$('mode-auto')?.addEventListener('click', ()=>setThemeMode('auto'));
+$('mode-dark')?.addEventListener('click', ()=>setThemeMode('dark'));
+
+// =================== RESIZE ===================
+let resizeTimeout;
+window.addEventListener('resize',()=>{clearTimeout(resizeTimeout);resizeTimeout=setTimeout(()=>{[dashChart,historyChart,serviceChart,donutChart].forEach(chart=>{if(chart&&chart.canvas){chart.setupCanvas();if(chart.width)chart.render();}});},250);});
+
+// =================== LAZY CHARTS ===================
+const chartObserver=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(!entry.isIntersecting)return;const id=entry.target.id;if(id==='dashChartCanvas'   &&dashChart)   {dashChart.setupCanvas();   dashChart.render();}if(id==='donutCanvas'       &&donutChart)  {donutChart.setupCanvas();  donutChart.render();}if(id==='historyChartCanvas'&&historyChart){historyChart.setupCanvas();historyChart.render();}if(id==='serviceChartCanvas'&&serviceChart){serviceChart.setupCanvas();serviceChart.render();}});},{threshold:0.1});
+['dashChartCanvas','donutCanvas','historyChartCanvas','serviceChartCanvas'].forEach(id=>{const el=$(id);if(el)chartObserver.observe(el);});
+
+// =================== SW UPDATE ===================
+async function registerServiceWorker(){
+  if(!('serviceWorker' in navigator))return;
+  try{
+    const registration=await navigator.serviceWorker.register('./sw.js');
+    registration.addEventListener('updatefound',()=>{const nextWorker=registration.installing;if(!nextWorker)return;nextWorker.addEventListener('statechange',()=>{if(nextWorker.state==='installed'&&navigator.serviceWorker.controller){pendingServiceWorker=nextWorker;showUpdateBanner();}});});
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{if(isRefreshingAfterUpdate)return;isRefreshingAfterUpdate=true;window.location.reload();});
+    setInterval(()=>{navigator.serviceWorker.getRegistration().then(reg=>{if(reg)reg.update();});},1800000);
+  }catch(e){console.error('SW:',e);}
+}
+window.addEventListener('load',registerServiceWorker);
+
+function showUpdateBanner(){
+  if($('updateBanner'))return;
+  const banner=document.createElement('div');
+  banner.id='updateBanner';
+  banner.className='fixed bottom-24 left-4 right-4 z-[900] bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-4 rounded-2xl flex items-center justify-between shadow-2xl max-w-md mx-auto';
+  banner.innerHTML=`<div class="flex items-center gap-3"><span class="text-lg">🆕</span><div><p class="text-sm font-bold">Оновлення доступне</p><p class="text-[10px] opacity-60">Натисніть щоб оновити</p></div></div><button id="applyUpdateBtn" type="button" class="px-4 py-2 bg-brand text-white rounded-xl text-xs font-bold active:scale-95">Оновити</button>`;
+  document.body.appendChild(banner);
+  $('applyUpdateBtn')?.addEventListener('click',()=>{if(pendingServiceWorker)pendingServiceWorker.postMessage({type:'SKIP_WAITING'});else window.location.reload();});
+}
