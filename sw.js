@@ -37,6 +37,19 @@ self.addEventListener('fetch', event => {
         return;
     }
 
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request).then(response => {
+                if (response && response.status === 200 && response.type === 'basic') {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                }
+                return response;
+            }).catch(() => caches.match('./index.html').then(cached => cached || Response.error()))
+        );
+        return;
+    }
+
     // App files — stale-while-revalidate
     event.respondWith(
         caches.match(event.request).then(cached => {

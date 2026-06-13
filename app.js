@@ -4,7 +4,7 @@
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
-const APP_VERSION = '3.2.1';
+const APP_VERSION = '3.2.2';
 const MAX_ADDRESSES_FREE = 3;
 
 const firebaseConfig = { apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80", authDomain: "pwakomun.firebaseapp.com", projectId: "pwakomun", storageBucket: "pwakomun.firebasestorage.app", messagingSenderId: "4437974770", appId: "1:4437974770:web:bf7d2f7bac35eff5707a6b" };
@@ -59,8 +59,20 @@ function haptic(type) { vibe(hapticPatterns[type] || hapticPatterns.light); }
 async function getHash(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
 
 function setSyncState(state) { syncState = state; const dot = $('syncDotHeader'); if (dot) dot.className = `sync-dot ${state}`; }
-function saveToLocal() { try { localStorage.setItem('komynalka_backup', JSON.stringify({ addresses, currentAddressId, timestamp: Date.now() })); } catch (e) {} }
+function getLocalOwnerKey() { return localStorage.getItem('k_uid') ? `uid:${localStorage.getItem('k_uid')}` : (sessionLogin ? `login:${sessionLogin}` : 'guest'); }
+function saveToLocal() { try { localStorage.setItem('komynalka_backup', JSON.stringify({ addresses, currentAddressId, owner: getLocalOwnerKey(), timestamp: Date.now() })); } catch (e) {} }
 function loadFromLocal() { try { const b = localStorage.getItem('komynalka_backup'); return b ? JSON.parse(b) : null; } catch (e) { return null; } }
+function restoreFromLocalBackup(expectedOwner = null) {
+    const backup = loadFromLocal();
+    if (!backup || !Array.isArray(backup.addresses) || backup.addresses.length === 0) return false;
+    if (backup.owner && expectedOwner && backup.owner !== expectedOwner) return false;
+    addresses = backup.addresses;
+    currentAddressId = backup.currentAddressId || addresses[0].id;
+    setSyncState('offline');
+    loadCurrentAddress();
+    showToast('Відкрито локальний бекап', '📦');
+    return true;
+}
 
 function escapeHtml(str) {
     const div = document.createElement('div');
@@ -201,6 +213,9 @@ async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) {
     const errEl = $('authError');
     const spinner = $('authSpinner');
     const btnText = $('authBtnText');
+    const storedLoginBeforeAuth = localStorage.getItem('k_login');
+    const storedUidBeforeAuth = localStorage.getItem('k_uid');
+    const expectedBackupOwner = uid ? `uid:${uid}` : (rawLogin ? `login:${rawLogin}` : (storedUidBeforeAuth ? `uid:${storedUidBeforeAuth}` : (storedLoginBeforeAuth ? `login:${storedLoginBeforeAuth}` : null)));
     if (errEl) errEl.classList.add('hidden');
     if (btnText) btnText.textContent = "Завантаження...";
     if (spinner) spinner.classList.remove('hidden');
@@ -264,6 +279,15 @@ async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) {
     } catch (err) {
         if (btnText) btnText.textContent = "Увійти";
         if (spinner) spinner.classList.add('hidden');
+        const canUseOfflineBackup = err.message !== "WRONG_PASSWORD" && (
+            (uid && storedUidBeforeAuth === uid) ||
+            (!uid && rawLogin && storedLoginBeforeAuth === rawLogin) ||
+            (!rawLogin && storedLoginBeforeAuth && isAlreadyHashed)
+        );
+        if (canUseOfflineBackup && restoreFromLocalBackup(expectedBackupOwner)) {
+            if (errEl) errEl.classList.add('hidden');
+            return;
+        }
         if (errEl) {
             errEl.innerText = err.message === "WRONG_PASSWORD" ? "Неправильний пароль!" : "Помилка: " + err.message;
             errEl.classList.remove('hidden');
@@ -856,6 +880,20 @@ readingInputIds.forEach(id => { $(id)?.addEventListener('input', debouncedDraft)
 document.addEventListener('input', (e) => { if (e.target.classList.contains('custom-srv-input') || e.target.id === 'recordNote') debouncedDraft(); });
 
 // =================== FORM SUBMIT ===================
+function getTariffSnapshot() {
+    return {
+        water: normalizeNumber(tariffs.water, defaultTariffs.water),
+        hotWater: normalizeNumber(tariffs.hotWater, defaultTariffs.hotWater),
+        electroBase: normalizeNumber(tariffs.electroBase, defaultTariffs.electroBase),
+        electroWinter: normalizeNumber(tariffs.electroWinter, defaultTariffs.electroWinter),
+        winterLimit: normalizeNumber(tariffs.winterLimit, defaultTariffs.winterLimit),
+        nightCoef: normalizeNumber(tariffs.nightCoef, defaultTariffs.nightCoef),
+        gas: normalizeNumber(tariffs.gas, defaultTariffs.gas),
+        isWinter: Boolean($('isWinterInput')?.checked),
+        savedAt: new Date().toISOString()
+    };
+}
+
 $('utilityForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!validateReadingsUI()) { showToast('Перевірте показники', '⚠️'); return; }
@@ -871,7 +909,7 @@ $('utilityForm')?.addEventListener('submit', (e) => {
     const month = $('monthInput').value;
     const existingIdx = records.findIndex(r => r.month === month);
 
-    const newData = { id: Date.now(), month, wPrev: hasWater ? getV('wPrev') : 0, wCur: hasWater ? getV('wCur') : 0, hwPrev: hasHotWater ? getV('hwPrev') : 0, hwCur: hasHotWater ? getV('hwCur') : 0, dPrev: hasElectro ? getV('dPrev') : 0, dCur: hasElectro ? getV('dCur') : 0, nPrev: (hasElectro && prefs.electroTwoZone) ? getV('nPrev') : 0, nCur: (hasElectro && prefs.electroTwoZone) ? getV('nCur') : 0, gPrev: hasGas ? getV('gPrev') : 0, gCur: hasGas ? getV('gCur') : 0, customData: cData, note: $('recordNote')?.value?.trim() || '', waterCost: hasWater ? currentCalc.waterCost : 0, hotWaterCost: hasHotWater ? currentCalc.hotWaterCost : 0, electroCost: hasElectro ? currentCalc.electroCost : 0, gasCost: hasGas ? currentCalc.gasCost : 0, customCost: currentCalc.customCost, total: currentCalc.total, paid: false, _filled: { water: hasWater, hotWater: hasHotWater, electro: hasElectro, gas: hasGas, custom: hasCustom } };
+    const newData = { id: Date.now(), month, wPrev: hasWater ? getV('wPrev') : 0, wCur: hasWater ? getV('wCur') : 0, hwPrev: hasHotWater ? getV('hwPrev') : 0, hwCur: hasHotWater ? getV('hwCur') : 0, dPrev: hasElectro ? getV('dPrev') : 0, dCur: hasElectro ? getV('dCur') : 0, nPrev: (hasElectro && prefs.electroTwoZone) ? getV('nPrev') : 0, nCur: (hasElectro && prefs.electroTwoZone) ? getV('nCur') : 0, gPrev: hasGas ? getV('gPrev') : 0, gCur: hasGas ? getV('gCur') : 0, customData: cData, note: $('recordNote')?.value?.trim() || '', waterCost: hasWater ? currentCalc.waterCost : 0, hotWaterCost: hasHotWater ? currentCalc.hotWaterCost : 0, electroCost: hasElectro ? currentCalc.electroCost : 0, gasCost: hasGas ? currentCalc.gasCost : 0, customCost: currentCalc.customCost, total: currentCalc.total, paid: false, tariffSnapshot: getTariffSnapshot(), _filled: { water: hasWater, hotWater: hasHotWater, electro: hasElectro, gas: hasGas, custom: hasCustom } };
 
     if (existingIdx >= 0) {
         const existing = records[existingIdx];
@@ -1188,6 +1226,17 @@ function isPlainObject(value) { return value && typeof value === 'object' && !Ar
 function normalizeNumber(value, fallback = 0) { const num = Number(value); return Number.isFinite(num) ? num : fallback; }
 function normalizeImportedRecord(rec) {
     if (!isPlainObject(rec) || !/^\d{4}-\d{2}$/.test(String(rec.month || ''))) return null;
+    const importedSnapshot = isPlainObject(rec.tariffSnapshot) ? {
+        water: normalizeNumber(rec.tariffSnapshot.water, defaultTariffs.water),
+        hotWater: normalizeNumber(rec.tariffSnapshot.hotWater, defaultTariffs.hotWater),
+        electroBase: normalizeNumber(rec.tariffSnapshot.electroBase, defaultTariffs.electroBase),
+        electroWinter: normalizeNumber(rec.tariffSnapshot.electroWinter, defaultTariffs.electroWinter),
+        winterLimit: normalizeNumber(rec.tariffSnapshot.winterLimit, defaultTariffs.winterLimit),
+        nightCoef: normalizeNumber(rec.tariffSnapshot.nightCoef, defaultTariffs.nightCoef),
+        gas: normalizeNumber(rec.tariffSnapshot.gas, defaultTariffs.gas),
+        isWinter: Boolean(rec.tariffSnapshot.isWinter),
+        savedAt: String(rec.tariffSnapshot.savedAt || '')
+    } : null;
     return {
         ...rec,
         id: rec.id || Date.now() + Math.random(),
@@ -1199,7 +1248,8 @@ function normalizeImportedRecord(rec) {
         gasCost: normalizeNumber(rec.gasCost),
         customCost: normalizeNumber(rec.customCost),
         paid: Boolean(rec.paid),
-        note: String(rec.note || '')
+        note: String(rec.note || ''),
+        tariffSnapshot: importedSnapshot
     };
 }
 function normalizeImportedAddress(addr, index) {
@@ -1237,6 +1287,10 @@ $('importFileInput')?.addEventListener('change', (e) => {
             const normalized = normalizeImportData(JSON.parse(ev.target.result));
             if (!normalized) { showToast('Невірний формат', '❌'); return; }
             if (confirm(`Імпорт ${normalized.addresses.length} об'єктів? Поточні дані буде замінено.`)) {
+                syncCurrentAddress();
+                try {
+                    localStorage.setItem('komynalka_pre_import_backup', JSON.stringify({ addresses, currentAddressId, owner: getLocalOwnerKey(), timestamp: Date.now() }));
+                } catch (backupErr) {}
                 addresses = normalized.addresses;
                 currentAddressId = normalized.currentAddressId;
                 loadCurrentAddress();
