@@ -1,88 +1,98 @@
-const CACHE_NAME = 'komunalka-v3.2.2';
-const PRECACHE_URLS = ['./', './index.html', './app.js', './year-report-image.js', './manifest.json', './icon.png', './icon-192.png', './icon-512.png'];
+const CACHE_NAME = 'komunalka-v3.2.3';
+const PRECACHE_URLS = ['./', './index.html', './app.js', './year-report-image.js', './ai-chat.js', './manifest.json', './icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
-    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS)));
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS).catch(() => {}))
+  );
 });
 
 self.addEventListener('activate', event => {
-    event.waitUntil(
-        caches.keys().then(names => Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n))))
-            .then(() => self.clients.claim())
-    );
+  event.waitUntil(
+    caches.keys()
+      .then(names => Promise.all(names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n))))
+      .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', event => {
-    const url = new URL(event.request.url);
+  const url = new URL(event.request.url);
 
-    // API & external — network only
-    if (url.hostname.includes('workers.dev') || url.hostname.includes('googleapis.com') || url.hostname.includes('gstatic.com') || url.hostname.includes('firebaseapp.com') || url.hostname.includes('google-analytics.com') || url.hostname.includes('googletagmanager.com')) {
-        return;
-    }
+  // ── ВИПРАВЛЕННЯ: пропускаємо не-HTTP(S) схеми (chrome-extension тощо) ──
+  if (!url.protocol.startsWith('http')) return;
 
-    // CDN resources — cache first
-    if (url.hostname.includes('cdnjs.cloudflare.com') || url.hostname.includes('cdn.tailwindcss.com') || url.hostname.includes('cdn.jsdelivr.net')) {
-        event.respondWith(
-            caches.match(event.request).then(cached => {
-                if (cached) return cached;
-                return fetch(event.request).then(response => {
-                    if (response.ok) {
-                        const clone = response.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-                    }
-                    return response;
-                }).catch(() => cached);
-            })
-        );
-        return;
-    }
+  // API & external — network only
+  if (
+    url.hostname.includes('workers.dev') ||
+    url.hostname.includes('googleapis.com') ||
+    url.hostname.includes('gstatic.com') ||
+    url.hostname.includes('firebaseapp.com') ||
+    url.hostname.includes('google-analytics.com') ||
+    url.hostname.includes('googletagmanager.com')
+  ) {
+    return;
+  }
 
-    // App files — stale-while-revalidate
+  // CDN resources — cache first
+  if (
+    url.hostname.includes('cdnjs.cloudflare.com') ||
+    url.hostname.includes('cdn.tailwindcss.com') ||
+    url.hostname.includes('cdn.jsdelivr.net')
+  ) {
     event.respondWith(
-        caches.match(event.request).then(cached => {
-            const fetchPromise = fetch(event.request).then(response => {
-                if (response && response.status === 200 && response.type === 'basic') {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-                }
-                return response;
-            }).catch(() => cached);
-
-            return cached || fetchPromise;
-        })
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return fetch(event.request).then(response => {
+          if (response && response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              try { cache.put(event.request, clone); } catch (e) {}
+            });
+          }
+          return response;
+        }).catch(() => cached);
+      })
     );
+    return;
+  }
+
+  // App files — stale-while-revalidate
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      const fetchPromise = fetch(event.request).then(response => {
+        if (response && response.status === 200 && response.type === 'basic') {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            try { cache.put(event.request, clone); } catch (e) {}
+          });
+        }
+        return response;
+      }).catch(() => cached);
+      return cached || fetchPromise;
+    })
+  );
 });
 
 self.addEventListener('message', event => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-// Push notification handler
 self.addEventListener('push', event => {
-    const data = event.data ? event.data.json() : { title: 'Комуналка 🏠', body: 'Час передати показники!' };
-    event.waitUntil(self.registration.showNotification(data.title, {
-        body: data.body,
-        icon: 'icon.png',
-        badge: 'icon.png',
-        vibrate: [100, 50, 100],
-        actions: [
-            { action: 'open', title: 'Відкрити' }
-        ]
-    }));
+  const data = event.data ? event.data.json() : { title: 'Комуналка 🏠', body: 'Час передати показники!' };
+  event.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body, icon: 'icon.png', badge: 'icon.png', vibrate: [100, 50, 100],
+    actions: [{ action: 'open', title: 'Відкрити' }]
+  }));
 });
 
 self.addEventListener('notificationclick', event => {
-    event.notification.close();
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-            for (const client of clientList) {
-                if (client.url.includes(self.location.origin) && 'focus' in client) {
-                    return client.focus();
-                }
-            }
-            return clients.openWindow('/');
-        })
-    );
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) return client.focus();
+      }
+      return clients.openWindow('/');
+    })
+  );
 });
