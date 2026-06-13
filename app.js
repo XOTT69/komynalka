@@ -429,7 +429,7 @@ function syncCurrentAddress() {
   if (idx >= 0) { addresses[idx].tariffs = tariffs; addresses[idx].prefs = prefs; addresses[idx].records = records; addresses[idx].customServices = customServices; }
 }
 
-function openAddressModal()  { $('addressModal')?.classList.remove('hidden'); setTimeout(() => $('addressModalContent')?.classList.remove('translate-y-full'), 10); renderAddressModal(); }
+function openAddressModal()  { $('addressModal')?.classList.remove('hidden'); setTimeout(() => $('addressModalContent')?.classList.remove('translate-y-full'), 10); renderAddressModal(); haptic('medium'); }
 function closeAddressModal() { $('addressModalContent')?.classList.add('translate-y-full'); setTimeout(() => $('addressModal')?.classList.add('hidden'), 400); }
 $('addressHeaderTrigger')?.addEventListener('click', openAddressModal);
 $('closeAddressModalBtn')?.addEventListener('click', closeAddressModal);
@@ -505,7 +505,7 @@ function switchTab(tabId, index) {
     targetTab.classList.remove('tab-hidden'); targetTab.classList.add('tab-active');
     requestAnimationFrame(() => requestAnimationFrame(() => {
       if (tabId==='tabDashboard') renderDashboard();
-      if (tabId==='tabCalc')      { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); }
+      if (tabId==='tabCalc')      { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); setTimeout(()=>{const firstInput=readingInputIds.map(id=>$(id)).find(el=>el&&el.offsetParent!==null);if(firstInput)firstInput.focus();},200); }
       if (tabId==='tabHistory')   renderRecords();
       if (tabId==='tabSettings')  { renderSettingsCustomServices(); updateDisplayName(); }
     }));
@@ -533,7 +533,7 @@ $('swipeContainer')?.addEventListener('touchend',e=>{
   else if(distX<-80&&curIdx>0) switchTab(tabIds[curIdx-1],curIdx-1);
 },{passive:true});
 
-$('quickActionsBtn')?.addEventListener('click',()=>$('quickActionsModal')?.classList.remove('hidden'));
+$('quickActionsBtn')?.addEventListener('click',()=>{$('quickActionsModal')?.classList.remove('hidden');haptic('light');});
 $('qaExport')?.addEventListener('click',()=>{exportCSV();$('quickActionsModal')?.classList.add('hidden');});
 $('qaPdf')?.addEventListener('click',()=>{generatePDF();$('quickActionsModal')?.classList.add('hidden');});
 $('qaShare')?.addEventListener('click',()=>{shareAllRecords();$('quickActionsModal')?.classList.add('hidden');});
@@ -1039,7 +1039,7 @@ function editRecordById(id){const rec=records.find(r=>r.id===id);if(!rec)return;
 
 // =================== FILTER & SEARCH ===================
 let searchDebounceTimer;
-$('filterToggleBtn')?.addEventListener('click',()=>$('filterPanel')?.classList.toggle('hidden'));
+$('filterToggleBtn')?.addEventListener('click',()=>{$('filterPanel')?.classList.toggle('hidden');haptic('light');});
 $('filterButtons')?.addEventListener('click',(e)=>{const btn=e.target.closest('.filter-btn');if(!btn)return;currentFilter=btn.dataset.filter;document.querySelectorAll('.filter-btn').forEach(b=>{b.classList.remove('bg-brand','text-white');b.classList.add('bg-slate-100','dark:bg-[#2c2c2e]','text-slate-600','dark:text-slate-400');});btn.classList.remove('bg-slate-100','dark:bg-[#2c2c2e]','text-slate-600','dark:text-slate-400');btn.classList.add('bg-brand','text-white');renderRecords();});
 $('searchRecords')?.addEventListener('input',()=>{clearTimeout(searchDebounceTimer);searchDebounceTimer=setTimeout(renderRecords,200);});
 $('sortSelect')?.addEventListener('change',()=>renderRecords());
@@ -1107,10 +1107,13 @@ function getSmartTips(){const tips=[];if(records.length>=3){const wT=getConsumpt
 function renderTips(){const container=$('tipsContainer');if(!container)return;const tips=getSmartTips();if(!tips.length){container.classList.add('hidden');return;}container.classList.remove('hidden');const listEl=$('tipsList');if(listEl)listEl.innerHTML=tips.map(t=>`<div class="flex items-start gap-3 bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5"><span class="text-lg shrink-0">${t.emoji}</span><p class="text-xs font-medium text-slate-600 dark:text-slate-300">${escapeHtml(t.text)}</p></div>`).join('');}
 
 // =================== YEAR REPORT ===================
-$('yearReportBtn')?.addEventListener('click',()=>generateYearReport());
+let currentReportYear=new Date().getFullYear();
+$('yearReportBtn')?.addEventListener('click',()=>{currentReportYear=new Date().getFullYear();generateYearReport();});
+$('yearPrevBtn')?.addEventListener('click',()=>{currentReportYear--;generateYearReport();haptic('light');});
+$('yearNextBtn')?.addEventListener('click',()=>{currentReportYear++;generateYearReport();haptic('light');});
 function generateYearReport(){
-  const year=new Date().getFullYear(),yr=records.filter(r=>r.month.startsWith(String(year)));
-  if(!yr.length){showToast('Немає даних за рік','⚠️');return;}
+  const year=currentReportYear,yr=records.filter(r=>r.month.startsWith(String(year)));
+  if(!yr.length){showToast(`Немає даних за ${year} рік`,'⚠️');return;}
   if($('yearReportYear'))$('yearReportYear').textContent=year;
   const total=yr.reduce((s,r)=>s+r.total,0),avg=total/yr.length;
   const maxR=yr.reduce((a,b)=>a.total>b.total?a:b),minR=yr.reduce((a,b)=>a.total<b.total?a:b);
@@ -1123,7 +1126,7 @@ function generateYearReport(){
   $('yearReportModal')?.classList.remove('hidden');
   haptic('success');
 }
-async function shareYearReport(){const year=new Date().getFullYear(),yr=records.filter(r=>r.month.startsWith(String(year)));if(!yr.length)return;const total=yr.reduce((s,r)=>s+r.total,0),avg=total/yr.length,streak=getStreak(records);let t=`📊 Річний звіт ${year}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n═══════════════\n💰 Всього: ${fmt.format(total)} ₴\n📈 Середній: ${fmt.format(avg)} ₴/міс\n📅 Записів: ${yr.length}\n🔥 Серія: ${streak} міс.\n═══════════════\nКомуналка PWA`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
+async function shareYearReport(){const year=currentReportYear,yr=records.filter(r=>r.month.startsWith(String(year)));if(!yr.length)return;const total=yr.reduce((s,r)=>s+r.total,0),avg=total/yr.length,streak=getStreak(records);let t=`📊 Річний звіт ${year}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n═══════════════\n💰 Всього: ${fmt.format(total)} ₴\n📈 Середній: ${fmt.format(avg)} ₴/міс\n📅 Записів: ${yr.length}\n🔥 Серія: ${streak} міс.\n═══════════════\nКомуналка PWA`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
 window.shareYearReport=shareYearReport;
 
 // =================== PWA ===================

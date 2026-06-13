@@ -192,6 +192,8 @@ ${recLines}
       { e:'📈', t:'Порівняй з минулим місяцем' },
       { e:'💡', t:'Як зекономити на електриці?' },
       { e:'⚠️', t:'Є аномалії в моїх даних?' },
+      { e:'🎯', t:'Який місяць найдешевший?' },
+      { e:'🔮', t:'Прогноз на наступний місяць' },
     ];
     return `<div class="ai-empty-state flex flex-col items-center py-6 px-4">
       <div class="w-16 h-16 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-xl">🤖</div>

@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -444,7 +444,7 @@
 <!-- AI FAB -->
 <button id="aiFabBtn"
   class="hidden fixed z-[450] w-14 h-14 bg-gradient-to-br from-violet-500 to-indigo-600 text-white rounded-2xl shadow-2xl shadow-violet-500/40 flex items-center justify-center text-2xl active:scale-[0.92] transition-all border border-white/20"
-  style="bottom: calc(env(safe-area-inset-bottom, 0px) + 88px); right: 20px;"
+  style="bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); right: 16px;"
   aria-label="AI помічник">🤖</button>
 
 <!-- AI Chat Panel -->
@@ -547,7 +547,11 @@
   <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm max-h-[85vh] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden flex flex-col">
     <div class="bg-gradient-to-br from-brand to-blue-600 p-6 text-white text-center shrink-0">
       <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest">Річний звіт</p>
-      <h2 class="text-3xl font-black mt-1" id="yearReportYear">2025</h2>
+      <div class="flex items-center justify-center gap-2 mt-1">
+        <button id="yearPrevBtn" class="w-8 h-8 bg-white/15 rounded-lg flex items-center justify-center text-white text-sm active:scale-90 transition-transform">‹</button>
+        <h2 class="text-3xl font-black" id="yearReportYear">2025</h2>
+        <button id="yearNextBtn" class="w-8 h-8 bg-white/15 rounded-lg flex items-center justify-center text-white text-sm active:scale-90 transition-transform">›</button>
+      </div>
     </div>
     <div class="overflow-y-auto no-scrollbar p-6 space-y-4 flex-1" id="yearReportContent"></div>
     <div class="p-4 border-t border-slate-100 dark:border-white/5 shrink-0 flex gap-3">
