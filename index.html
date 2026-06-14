@@ -44,6 +44,8 @@
         .welcome-tooltip{animation:tooltipIn .5s cubic-bezier(.32,.72,0,1)}@keyframes tooltipIn{from{opacity:0;transform:translateY(10px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
         @keyframes ai-fade-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}.ai-msg-in{animation:ai-fade-in .25s ease-out}
         #aiPanelInner{transition:transform .4s cubic-bezier(.32,.72,0,1)}
+        #aiInput{touch-action:manipulation;-webkit-touch-callout:none}
+        #aiChatPanel{touch-action:manipulation}
     </style>
     <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{DEFAULT:'var(--brand)',hover:'var(--brand-hover)',light:'var(--brand-light)',border:'var(--brand-border)'},apple:{dark:'#1c1c1e',darker:'#000000',light:'#f2f2f7'}},boxShadow:{'soft':'0 8px 32px -8px rgba(0,0,0,.08)','premium':'0 20px 60px -15px rgba(0,0,0,.12)'}}}}</script>
     <meta name="theme-color" content="#f2f2f7" id="metaThemeColor">

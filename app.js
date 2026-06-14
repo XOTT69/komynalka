@@ -1231,22 +1231,38 @@ $('monoSyncBtn')?.addEventListener('click', async () => {
     const clientData = await clientRes.json();
     if (!clientData.accounts || !clientData.accounts.length) throw new Error('Немає рахунків');
     const jarId = clientData.accounts[0].id;
+    // Затримка для rate limit (1 запит/сек)
+    await new Promise(r => setTimeout(r, 600));
     // Отримуємо транзакції
     const now = Math.floor(Date.now() / 1000);
-    const from = now - 30 * 24 * 3600; // 30 днів
+    const from = now - 90 * 24 * 3600; // 90 днів (3 місяці)
     const res = await fetch(`https://api.monobank.ua/personal/statement/${jarId}/${from}/${now}`, {
       headers: { 'X-Token': token }
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const txs = await res.json();
+    // Розширений фільтр комунальних транзакцій
+    const UTILITY_KEYWORDS_UA = ['комунал', 'вода', 'світло', 'газ', 'жкг', 'опалення', 'квартплата', 'обленерго', 'облгаз', 'водоканал', 'водовідведення', 'кварт'];
+    const UTILITY_KEYWORDS_EN = ['water', 'electric', 'electricity', 'gas', 'utility', 'utilities', 'heat', 'sewage'];
+    const UTILITY_MCC = [4900, 4941, 4900]; // MCC codes for utilities
     const utilityTxs = txs.filter(tx => {
       const desc = (tx.description || '').toLowerCase();
-      return desc.includes('комунал') || desc.includes('вода') || desc.includes('світло') || desc.includes('газ') || desc.includes('жкг') || desc.includes('опалення') || desc.includes('квартплата') || desc.includes('обленерго') || desc.includes('облгаз') || desc.includes('водоканал');
+      const mcc = tx.mcc || 0;
+      // Перевірка MCC коду
+      if (UTILITY_MCC.includes(mcc)) return true;
+      // Перевірка українських ключових слів
+      if (UTILITY_KEYWORDS_UA.some(kw => desc.includes(kw))) return true;
+      // Перевірка англійських ключових слів
+      if (UTILITY_KEYWORDS_EN.some(kw => desc.includes(kw))) return true;
+      // Перевірка на онлайн-оплату комунальних (monobank bankpay)
+      if (desc.includes('bankpay') || desc.includes('fbankpay')) return true;
+      return false;
     });
     localStorage.setItem('k_mono_txs', JSON.stringify(utilityTxs));
     localStorage.setItem('k_mono_last_sync', new Date().toLocaleString('uk-UA'));
+    localStorage.setItem('k_mono_all_txs', JSON.stringify(txs)); // Зберігаємо всі для діагностики
     renderMonoTransactions(utilityTxs);
-    showToast(`Знайдено ${utilityTxs.length} транзакцій`, '💳');
+    showToast(`Знайдено ${utilityTxs.length} з ${txs.length} транзакцій`, '💳');
   } catch (e) {
     showToast('Помилка: ' + e.message, '❌');
   } finally {

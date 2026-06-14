@@ -378,9 +378,20 @@ let komunalkaAI = null;
 function initAI() {
   if (komunalkaAI) return;
   komunalkaAI = new KomunalkaAI();
-  komunalkaAI.init();
-  document.getElementById('aiFabBtn')?.classList.remove('hidden');
+  window.komunalkaAI = komunalkaAI;
+  // Чекаємо поки DOM буде готовий
+  const tryInit = () => {
+    const closeBtn = document.getElementById('aiCloseBtn');
+    const clearBtn = document.getElementById('aiClearBtn');
+    const fabBtn   = document.getElementById('aiFabBtn');
+    if (closeBtn && clearBtn && fabBtn) {
+      komunalkaAI.init();
+      fabBtn.classList.remove('hidden');
+    } else {
+      requestAnimationFrame(tryInit);
+    }
+  };
+  tryInit();
 }
 
-window.initAI      = initAI;
-window.komunalkaAI = komunalkaAI;
+window.initAI = initAI;
