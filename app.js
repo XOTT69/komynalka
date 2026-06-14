@@ -1221,48 +1221,70 @@ $('monoSyncBtn')?.addEventListener('click', async () => {
   const token = localStorage.getItem('k_mono_token');
   if (!token) { showToast('Спочатку введіть токен', '⚠️'); return; }
   const btn = $('monoSyncBtn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>Синхронізація...'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>Завантаження...'; }
   try {
-    // Спочатку отримуємо ID рахунку (картки)
-    const clientRes = await fetch('https://api.monobank.ua/personal/client-info', {
-      headers: { 'X-Token': token }
-    });
-    if (!clientRes.ok) throw new Error(`Помилка авторизації: HTTP ${clientRes.status}`);
-    const clientData = await clientRes.json();
-    if (!clientData.accounts || !clientData.accounts.length) throw new Error('Немає рахунків');
-    const jarId = clientData.accounts[0].id;
-    // Затримка для rate limit (1 запит/сек)
-    await new Promise(r => setTimeout(r, 600));
-    // Отримуємо транзакції
-    const now = Math.floor(Date.now() / 1000);
-    const from = now - 90 * 24 * 3600; // 90 днів (3 місяці)
-    const res = await fetch(`https://api.monobank.ua/personal/statement/${jarId}/${from}/${now}`, {
-      headers: { 'X-Token': token }
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const txs = await res.json();
-    // Розширений фільтр комунальних транзакцій
+    // Ключові слова для фільтрації комунальних
     const UTILITY_KEYWORDS_UA = ['комунал', 'вода', 'світло', 'газ', 'жкг', 'опалення', 'квартплата', 'обленерго', 'облгаз', 'водоканал', 'водовідведення', 'кварт'];
     const UTILITY_KEYWORDS_EN = ['water', 'electric', 'electricity', 'gas', 'utility', 'utilities', 'heat', 'sewage'];
-    const UTILITY_MCC = [4900, 4941, 4900]; // MCC codes for utilities
-    const utilityTxs = txs.filter(tx => {
+    const UTILITY_MCC = [4900, 4941]; // MCC codes for utilities
+
+    function isUtilityTx(tx) {
       const desc = (tx.description || '').toLowerCase();
       const mcc = tx.mcc || 0;
-      // Перевірка MCC коду
       if (UTILITY_MCC.includes(mcc)) return true;
-      // Перевірка українських ключових слів
       if (UTILITY_KEYWORDS_UA.some(kw => desc.includes(kw))) return true;
-      // Перевірка англійських ключових слів
       if (UTILITY_KEYWORDS_EN.some(kw => desc.includes(kw))) return true;
-      // Перевірка на онлайн-оплату комунальних (monobank bankpay)
       if (desc.includes('bankpay') || desc.includes('fbankpay')) return true;
       return false;
-    });
+    }
+
+    // Завантажуємо транзакції за останні 90 днів (3 запити по 30 днів)
+    const now = Math.floor(Date.now() / 1000);
+    const SECONDS_PER_DAY = 86400;
+    const DAYS_PER_BATCH = 30;
+    const RATE_LIMIT_MS = 62000; // 62 секунди між запитами (API ліміт 60с)
+    const batches = [
+      { from: now - 30 * SECONDS_PER_DAY, to: now },
+      { from: now - 60 * SECONDS_PER_DAY, to: now - 30 * SECONDS_PER_DAY - 1 },
+      { from: now - 90 * SECONDS_PER_DAY, to: now - 60 * SECONDS_PER_DAY - 1 },
+    ];
+
+    let allTxs = [];
+    for (let i = 0; i < batches.length; i++) {
+      const { from, to } = batches[i];
+      if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>Завантаження ${i + 1}/${batches.length}...`;
+      try {
+        const res = await fetch(`https://api.monobank.ua/personal/statement/0/${from}/${to}`, {
+          headers: { 'X-Token': token }
+        });
+        if (res.status === 429) {
+          showToast(`Rate limit! Зачекайте 60с і спробуйте знову`, '⏳');
+          break;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const txs = await res.json();
+        if (Array.isArray(txs)) {
+          allTxs = allTxs.concat(txs);
+        }
+      } catch (e) {
+        if (i === 0) throw e; // Якщо перший запит не вдався — кидаємо помилку
+        // Інші помилки — просто зупиняємо завантаження
+        break;
+      }
+      // Затримка між запитами (крім останнього)
+      if (i < batches.length - 1) {
+        if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>Зачекайте ${RATE_LIMIT_MS / 1000}с...`;
+        await new Promise(r => setTimeout(r, RATE_LIMIT_MS));
+      }
+    }
+
+    // Фільтруємо комунальні транзакції
+    const utilityTxs = allTxs.filter(isUtilityTx);
     localStorage.setItem('k_mono_txs', JSON.stringify(utilityTxs));
     localStorage.setItem('k_mono_last_sync', new Date().toLocaleString('uk-UA'));
-    localStorage.setItem('k_mono_all_txs', JSON.stringify(txs)); // Зберігаємо всі для діагностики
+    localStorage.setItem('k_mono_all_txs', JSON.stringify(allTxs));
     renderMonoTransactions(utilityTxs);
-    showToast(`Знайдено ${utilityTxs.length} з ${txs.length} транзакцій`, '💳');
+    showToast(`Знайдено ${utilityTxs.length} з ${allTxs.length} транзакцій`, '💳');
   } catch (e) {
     showToast('Помилка: ' + e.message, '❌');
   } finally {
