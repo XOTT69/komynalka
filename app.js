@@ -4,7 +4,7 @@
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
-const APP_VERSION = '4.0.0';
+const APP_VERSION = '5.0.0';
 const MAX_ADDRESSES_FREE = 3;
 
 const firebaseConfig = { apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80", authDomain: "pwakomun.firebaseapp.com", projectId: "pwakomun", storageBucket: "pwakomun.firebasestorage.app", messagingSenderId: "4437974770", appId: "1:4437974770:web:bf7d2f7bac35eff5707a6b" };
@@ -1155,6 +1155,160 @@ async function logout(){
   }
 }
 $('logoutBtn')?.addEventListener('click',logout);
+
+// =================== MONOBANK ===================
+function initMonobank() {
+  const token = localStorage.getItem('k_mono_token');
+  const monoTokenSection = $('monoTokenSection');
+  const monoConnectedSection = $('monoConnectedSection');
+  const monoTokenInput = $('monoTokenInput');
+  const monoDeleteToken = $('monoDeleteToken');
+  const monoLastSync = $('monoLastSync');
+
+  if (token) {
+    if (monoTokenSection) monoTokenSection.classList.add('hidden');
+    if (monoConnectedSection) monoConnectedSection.classList.remove('hidden');
+    if (monoLastSync) monoLastSync.textContent = 'Остання синхронізація: ' + (localStorage.getItem('k_mono_last_sync') || '—');
+  } else {
+    if (monoTokenSection) monoTokenSection.classList.remove('hidden');
+    if (monoConnectedSection) monoConnectedSection.classList.add('hidden');
+  }
+}
+
+$('monobankBtn')?.addEventListener('click', () => {
+  $('monobankModal')?.classList.remove('hidden');
+  initMonobank();
+  haptic('light');
+});
+
+$('monoToggleVis')?.addEventListener('click', () => {
+  const inp = $('monoTokenInput');
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  const icon = $('monoToggleVis')?.querySelector('i');
+  if (icon) icon.className = inp.type === 'password' ? 'fa-solid fa-eye text-xs' : 'fa-solid fa-eye-slash text-xs';
+});
+
+$('monoSaveToken')?.addEventListener('click', () => {
+  const token = $('monoTokenInput')?.value?.trim();
+  if (!token) { showToast('Введіть токен', '⚠️'); return; }
+  localStorage.setItem('k_mono_token', token);
+  showToast('Токен збережено! ✓', '💳');
+  initMonobank();
+});
+
+$('monoDeleteToken')?.addEventListener('click', () => {
+  if (!confirm('Видалити токен Monobank?')) return;
+  localStorage.removeItem('k_mono_token');
+  localStorage.removeItem('k_mono_last_sync');
+  localStorage.removeItem('k_mono_txs');
+  showToast('Токен видалено', '🗑');
+  initMonobank();
+});
+
+$('monoDisconnect')?.addEventListener('click', () => {
+  if (!confirm('Відключити Monobank?')) return;
+  localStorage.removeItem('k_mono_token');
+  localStorage.removeItem('k_mono_last_sync');
+  localStorage.removeItem('k_mono_txs');
+  showToast('Відключено', '💳');
+  initMonobank();
+});
+
+$('monoSyncBtn')?.addEventListener('click', async () => {
+  const token = localStorage.getItem('k_mono_token');
+  if (!token) { showToast('Спочатку введіть токен', '⚠️'); return; }
+  const btn = $('monoSyncBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>Синхронізація...'; }
+  try {
+    // Спочатку отримуємо ID рахунку (картки)
+    const clientRes = await fetch('https://api.monobank.ua/personal/client-info', {
+      headers: { 'X-Token': token }
+    });
+    if (!clientRes.ok) throw new Error(`Помилка авторизації: HTTP ${clientRes.status}`);
+    const clientData = await clientRes.json();
+    if (!clientData.accounts || !clientData.accounts.length) throw new Error('Немає рахунків');
+    const jarId = clientData.accounts[0].id;
+    // Отримуємо транзакції
+    const now = Math.floor(Date.now() / 1000);
+    const from = now - 30 * 24 * 3600; // 30 днів
+    const res = await fetch(`https://api.monobank.ua/personal/statement/${jarId}/${from}/${now}`, {
+      headers: { 'X-Token': token }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const txs = await res.json();
+    const utilityTxs = txs.filter(tx => {
+      const desc = (tx.description || '').toLowerCase();
+      return desc.includes('комунал') || desc.includes('вода') || desc.includes('світло') || desc.includes('газ') || desc.includes('жкг') || desc.includes('опалення') || desc.includes('квартплата') || desc.includes('обленерго') || desc.includes('облгаз') || desc.includes('водоканал');
+    });
+    localStorage.setItem('k_mono_txs', JSON.stringify(utilityTxs));
+    localStorage.setItem('k_mono_last_sync', new Date().toLocaleString('uk-UA'));
+    renderMonoTransactions(utilityTxs);
+    showToast(`Знайдено ${utilityTxs.length} транзакцій`, '💳');
+  } catch (e) {
+    showToast('Помилка: ' + e.message, '❌');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-sync"></i>Синхронізувати транзакції'; }
+  }
+});
+
+function renderMonoTransactions(txs) {
+  const container = $('monoTransactions');
+  const list = $('monoTxList');
+  if (!container || !list) return;
+  if (!txs || !txs.length) { container.classList.add('hidden'); return; }
+  container.classList.remove('hidden');
+  list.innerHTML = txs.slice(0, 10).map(tx => {
+    const date = new Date(tx.time * 1000).toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' });
+    const amount = Math.abs(tx.amount / 100);
+    const desc = tx.description || 'Транзакція';
+    return `<div class="flex items-center justify-between bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-black/5 dark:bg-white/5 rounded-lg flex items-center justify-center text-sm">💳</div>
+        <div><p class="text-xs font-bold text-slate-700 dark:text-slate-200">${escapeHtml(desc)}</p><p class="text-[9px] text-slate-400">${date}</p></div>
+      </div>
+      <span class="text-sm font-black text-red-500">-${fmt.format(amount)} ₴</span>
+    </div>`;
+  }).join('');
+}
+
+// =================== FAMILY ACCESS ===================
+$('familyAccessBtn')?.addEventListener('click', () => {
+  $('familyModal')?.classList.remove('hidden');
+  haptic('light');
+});
+
+$('familyGenLink')?.addEventListener('click', async () => {
+  if (!sessionLogin && !localStorage.getItem('k_uid')) { showToast('Спочатку увійдіть', '⚠️'); return; }
+  const btn = $('familyGenLink');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>Створення...'; }
+  try {
+    const res = await secureFetch('POST', {}, { action: 'generate_share', addressId: currentAddressId });
+    const data = await res.json();
+    if (!data.success || !data.shareToken) { showToast(data.error || 'Помилка', '❌'); return; }
+    const shareUrl = `${window.location.origin}${window.location.pathname}?share=${data.shareToken}`;
+    const resultEl = $('familyLinkResult');
+    const urlInput = $('familyLinkUrl');
+    if (resultEl) resultEl.classList.remove('hidden');
+    if (urlInput) urlInput.value = shareUrl;
+    showToast('Посилання створено!', '👨‍👩‍👧‍👦');
+  } catch (e) {
+    showToast('Помилка мережі', '❌');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-link"></i>Створити посилання'; }
+  }
+});
+
+$('familyCopyLink')?.addEventListener('click', async () => {
+  const url = $('familyLinkUrl')?.value;
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('Скопійовано!', '📋');
+  } catch (e) {
+    prompt('Скопіюйте:', url);
+  }
+});
 
 // =================== SHARE ADDRESS ===================
 $('shareAddressBtn')?.addEventListener('click',shareAddress);

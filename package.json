@@ -1,0 +1,12 @@
+{
+  "name": "komunalka",
+  "version": "5.0.0",
+  "description": "Розумний облік комунальних платежів PWA",
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'Static site - no build needed'"
+  },
+  "keywords": ["pwa", "utilities", "komunalka", "finance"],
+  "author": "Антон Миколенко",
+  "license": "MIT"
+}

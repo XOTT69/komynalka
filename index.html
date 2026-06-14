@@ -216,6 +216,16 @@
     <i class="fa-solid fa-chevron-right text-slate-300"></i>
   </button>
 
+  <button id="familyAccessBtn" class="w-full premium-card p-4 flex items-center justify-between active:scale-[0.98] transition-transform">
+    <div class="flex items-center gap-3"><div class="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center text-white text-lg shadow-lg shadow-green-500/20">👨‍👩‍👧‍👦</div><div><p class="font-black text-sm text-slate-900 dark:text-white">Сімейний доступ</p><p class="text-[10px] text-slate-400">Спільний облік з родиною</p></div></div>
+    <i class="fa-solid fa-chevron-right text-slate-300"></i>
+  </button>
+
+  <button id="monobankBtn" class="w-full premium-card p-4 flex items-center justify-between active:scale-[0.98] transition-transform">
+    <div class="flex items-center gap-3"><div class="w-10 h-10 bg-gradient-to-br from-black to-gray-700 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">💳</div><div><p class="font-black text-sm text-slate-900 dark:text-white">Monobank</p><p class="text-[10px] text-slate-400">Автоматичний імпорт транзакцій</p></div></div>
+    <i class="fa-solid fa-chevron-right text-slate-300"></i>
+  </button>
+
   <div id="reminderBanner" class="hidden bg-gradient-to-r from-brand via-indigo-500 to-purple-600 p-5 rounded-[2rem] shadow-2xl shadow-brand/20 text-white relative overflow-hidden">
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)]"></div>
     <div class="flex gap-3 items-center mb-3 relative z-10"><div class="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center text-lg">🔔</div><div><h4 class="font-black text-sm">Час подавати показники!</h4><p class="text-[10px] opacity-80" id="reminderText"></p></div></div>
@@ -421,7 +431,7 @@
   </details>
 
   <div class="text-center pt-2 space-y-3">
-    <p class="text-[9px] text-slate-400">by <span class="font-bold text-slate-500">Антон Миколенко</span> • v4.0</p>
+    <p class="text-[9px] text-slate-400">by <span class="font-bold text-slate-500">Антон Миколенко</span> • v5.0</p>
     <button type="button" id="logoutBtn" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-2xl py-3.5 border border-red-100 dark:border-red-500/20 active:scale-[0.98] text-sm transition-transform"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Вийти з акаунту</button>
   </div>
 </div>
@@ -539,6 +549,81 @@
       <p class="text-sm font-bold text-slate-700 dark:text-slate-200" id="achDetailHow">—</p>
     </div>
     <div class="mt-4"><span id="achDetailStatus" class="text-xs font-bold px-3 py-1.5 rounded-lg">—</span></div>
+  </div>
+</div>
+
+<!-- Monobank Modal -->
+<div id="monobankModal" class="hidden fixed inset-0 z-[1050] bg-black/60 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm max-h-[85vh] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden flex flex-col">
+    <div class="bg-gradient-to-br from-black to-gray-700 p-6 text-white text-center shrink-0">
+      <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest">💳 Monobank</p>
+      <h2 class="text-2xl font-black mt-1">Автоматичний імпорт</h2>
+      <p class="text-white/50 text-xs mt-1">Транзакції з вашої картки</p>
+    </div>
+    <div class="overflow-y-auto no-scrollbar p-6 space-y-4 flex-1">
+      <div id="monoTokenSection">
+        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-wider">API Токен</label>
+        <p class="text-[10px] text-slate-400 mb-3">Отримайте токен в <a href="https://api.monobank.ua/" target="_blank" class="text-brand underline">api.monobank.ua</a> (Меню → API → Створити токен)</p>
+        <div class="flex gap-2">
+          <input type="password" id="monoTokenInput" placeholder="uk_xxxxxxxxxxxxxxxxxxxx" class="premium-input flex-1 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold outline-none text-slate-900 dark:text-white">
+          <button id="monoToggleVis" class="px-3 bg-slate-100 dark:bg-white/5 rounded-xl text-slate-400"><i class="fa-solid fa-eye text-xs"></i></button>
+        </div>
+        <button id="monoSaveToken" class="w-full mt-3 py-3 bg-brand text-white font-bold rounded-xl text-sm active:scale-[0.98]">Зберегти токен</button>
+        <button id="monoDeleteToken" class="w-full mt-2 py-3 bg-red-50 dark:bg-red-500/10 text-red-500 font-bold rounded-xl text-sm active:scale-[0.98] hidden">Видалити токен</button>
+      </div>
+      <div id="monoConnectedSection" class="hidden">
+        <div class="bg-green-50 dark:bg-green-500/10 p-4 rounded-2xl border border-green-200 dark:border-green-500/20">
+          <div class="flex items-center gap-2 mb-2"><span class="text-green-500 text-lg">✓</span><span class="font-bold text-green-700 dark:text-green-400 text-sm">Monobank підключено</span></div>
+          <p class="text-[10px] text-green-600/70" id="monoLastSync">Остання синхронізація: —</p>
+        </div>
+        <button id="monoSyncBtn" class="w-full mt-3 py-3 bg-gradient-to-r from-brand to-blue-600 text-white font-bold rounded-xl text-sm active:scale-[0.98] shadow-lg shadow-brand/20 flex items-center justify-center gap-2"><i class="fa-solid fa-sync"></i>Синхронізувати транзакції</button>
+        <button id="monoDisconnect" class="w-full mt-2 py-3 bg-slate-100 dark:bg-white/5 text-slate-500 font-bold rounded-xl text-sm active:scale-[0.98]">Відключити Monobank</button>
+      </div>
+      <div id="monoTransactions" class="space-y-2 hidden">
+        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Останні транзакції комунальних</p>
+        <div id="monoTxList" class="space-y-2"></div>
+      </div>
+    </div>
+    <div class="p-4 border-t border-slate-100 dark:border-white/5 shrink-0">
+      <button onclick="document.getElementById('monobankModal').classList.add('hidden')" class="w-full py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-sm active:scale-[0.98]">Закрити</button>
+    </div>
+  </div>
+</div>
+
+<!-- Family Modal -->
+<div id="familyModal" class="hidden fixed inset-0 z-[1050] bg-black/60 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm max-h-[85vh] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden flex flex-col">
+    <div class="bg-gradient-to-br from-green-400 to-emerald-600 p-6 text-white text-center shrink-0">
+      <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest">👨‍👩‍👧‍👦 Сімейний доступ</p>
+      <h2 class="text-2xl font-black mt-1">Спільний облік</h2>
+      <p class="text-white/50 text-xs mt-1">Запросіть рідних для спільного ведення</p>
+    </div>
+    <div class="overflow-y-auto no-scrollbar p-6 space-y-4 flex-1">
+      <div class="bg-green-50 dark:bg-green-500/10 p-4 rounded-2xl border border-green-200 dark:border-green-500/20">
+        <p class="text-xs font-bold text-green-700 dark:text-green-400 mb-2">Як це працює:</p>
+        <ul class="space-y-1.5 text-[10px] text-green-600/80">
+          <li class="flex items-start gap-2"><span class="text-green-500">•</span>Поділіться посиланням з рідними</li>
+          <li class="flex items-start gap-2"><span class="text-green-500">•</span>Вони зможуть переглядати та редагувати ваші дані</li>
+          <li class="flex items-start gap-2"><span class="text-green-500">•</span>Всі бачать одні й ті ж показники</li>
+        </ul>
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-wider">Посилання для члена сім'ї</label>
+        <p class="text-[10px] text-slate-400 mb-3">Натисніть "Створити посилання" — отримаєте унікальний URL для спільного доступу до поточної адреси</p>
+        <button id="familyGenLink" class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl text-sm active:scale-[0.98] shadow-lg shadow-green-500/20 flex items-center justify-center gap-2"><i class="fa-solid fa-link"></i>Створити посилання</button>
+      </div>
+      <div id="familyLinkResult" class="hidden">
+        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-wider">Ваше посилання</label>
+        <div class="flex gap-2">
+          <input type="text" id="familyLinkUrl" readonly class="flex-1 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs font-mono text-slate-600 dark:text-slate-300 outline-none">
+          <button id="familyCopyLink" class="px-4 py-2.5 bg-brand text-white rounded-xl text-xs font-bold active:scale-95">Копіювати</button>
+        </div>
+        <p class="text-[9px] text-slate-400 mt-2">⚠️ Посилання дійсне 30 днів. Той хто має посилання може переглядати та змінювати дані.</p>
+      </div>
+    </div>
+    <div class="p-4 border-t border-slate-100 dark:border-white/5 shrink-0">
+      <button onclick="document.getElementById('familyModal').classList.add('hidden')" class="w-full py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-sm active:scale-[0.98]">Закрити</button>
+    </div>
   </div>
 </div>
 
