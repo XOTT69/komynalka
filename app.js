@@ -1189,12 +1189,14 @@ $('monoToggleVis')?.addEventListener('click', () => {
   if (icon) icon.className = inp.type === 'password' ? 'fa-solid fa-eye text-xs' : 'fa-solid fa-eye-slash text-xs';
 });
 
-$('monoSaveToken')?.addEventListener('click', () => {
+$('monoSaveToken')?.addEventListener('click', async () => {
   const token = $('monoTokenInput')?.value?.trim();
   if (!token) { showToast('Введіть токен', '⚠️'); return; }
   localStorage.setItem('k_mono_token', token);
   showToast('Токен збережено! ✓', '💳');
   initMonobank();
+  // Автоматична синхронізація після збереження токена
+  $('monoSyncBtn')?.click();
 });
 
 $('monoDeleteToken')?.addEventListener('click', () => {
