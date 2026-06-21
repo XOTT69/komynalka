@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -25,7 +25,7 @@
         .premium-card{background:white;border-radius:var(--card-radius);border:1px solid rgba(0,0,0,0.04);box-shadow:var(--premium-shadow);transition:transform .2s cubic-bezier(.32,.72,0,1),box-shadow .2s}.dark .premium-card{background:#1c1c1e;border-color:rgba(255,255,255,0.06)}@media(hover:hover){.premium-card:hover{transform:translateY(-2px);}}.premium-card:active{transform:scale(0.98)}
         .glass{background:var(--glass-bg);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-color:var(--glass-border)}
         .spring-modal{transition:transform .4s cubic-bezier(.32,.72,0,1)}.tab-hidden{display:none!important;opacity:0}.tab-active{display:block!important;opacity:1;animation:slideIn .35s cubic-bezier(.25,.46,.45,.94)}@keyframes slideIn{from{opacity:0;transform:translateY(12px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}.tab-exit{animation:slideOut .15s ease-out}@keyframes slideOut{from{opacity:1}to{opacity:0}}
-        .input-invalid{box-shadow:0 0 0 2px rgba(239,68,68,.2);border-color:rgb(248 113 113/60%)}.premium-input{transition:all .2s cubic-bezier(.32,.72,0,1);font-variant-numeric:tabular-nums}.premium-input:focus{box-shadow:0 0 0 3px rgba(0,122,255,.12);border-color:var(--brand)!important}
+        .input-invalid{box-shadow:0 0 0 2px rgba(239,68,68,.2);border-color:rgb(248 113 113/60%)}.premium-input{transition:all .2s cubic-bezier(.32,.72,0,1);font-variant-numeric:tabular-nums}.premium-input:focus{box-shadow:0 0 0 3px rgba(0,122,255,.12);border-color:var(--brand)!important;transform:scale(1.02)}
         button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
         .sync-dot{width:8px;height:8px;border-radius:50%;transition:background .3s}.sync-dot.synced{background:var(--success)}.sync-dot.syncing{background:var(--warning);animation:syncPulse 1s infinite}.sync-dot.offline{background:var(--danger)}@keyframes syncPulse{0%,100%{opacity:1}50%{opacity:.4}}
         .count-up{transition:all .6s cubic-bezier(.4,0,.2,1);font-variant-numeric:tabular-nums}
@@ -38,14 +38,9 @@
         .save-btn-success{animation:saveSuccess .6s cubic-bezier(.68,-.55,.265,1.55)}@keyframes saveSuccess{0%{transform:scale(1)}30%{transform:scale(0.95)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
         .badge-pulse{animation:badgePulse 2s ease-in-out infinite}@keyframes badgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
         .swipe-card{transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .3s;touch-action:pan-y}.swipe-card.swiping{transition:none}.swipe-card .swipe-bg-left,.swipe-card .swipe-bg-right{position:absolute;inset:0;border-radius:var(--card-radius);display:flex;align-items:center;padding:0 1.5rem;font-weight:800;font-size:.75rem;opacity:0;transition:opacity .2s;z-index:-1}.swipe-card .swipe-bg-left{background:#ff3b30;color:white;justify-content:flex-end}.swipe-card .swipe-bg-right{background:#34c759;color:white;justify-content:flex-start}
-        .details-panel{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.32,.72,0,1),opacity .3s ease,transform .3s ease;opacity:0;transform:translateY(-8px)}.details-panel.open{max-height:2000px;opacity:1;transform:translateY(0)}
-        .record-header{cursor:pointer;transition:background .2s;border-radius:1.5rem;padding:0.5rem;margin:-0.5rem}.record-header:active{background:rgba(0,0,0,0.03)}.dark .record-header:active{background:rgba(255,255,255,0.03)}
-        .record-header .chevron-icon{transition:transform .35s cubic-bezier(.32,.72,0,1)}.record-header .chevron-icon.rotated{transform:rotate(180deg)}
         .welcome-tooltip{animation:tooltipIn .5s cubic-bezier(.32,.72,0,1)}@keyframes tooltipIn{from{opacity:0;transform:translateY(10px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
         @keyframes ai-fade-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}.ai-msg-in{animation:ai-fade-in .25s ease-out}
         #aiPanelInner{transition:transform .4s cubic-bezier(.32,.72,0,1)}
-        #aiInput{touch-action:manipulation;-webkit-touch-callout:none}
-        #aiChatPanel{touch-action:manipulation}
     </style>
     <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{DEFAULT:'var(--brand)',hover:'var(--brand-hover)',light:'var(--brand-light)',border:'var(--brand-border)'},apple:{dark:'#1c1c1e',darker:'#000000',light:'#f2f2f7'}},boxShadow:{'soft':'0 8px 32px -8px rgba(0,0,0,.08)','premium':'0 20px 60px -15px rgba(0,0,0,.12)'}}}}</script>
     <meta name="theme-color" content="#f2f2f7" id="metaThemeColor">
@@ -215,16 +210,6 @@
 
   <button id="shareAddressBtn" class="w-full premium-card p-4 flex items-center justify-between active:scale-[0.98] transition-transform">
     <div class="flex items-center gap-3"><div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center text-white text-lg shadow-lg shadow-blue-500/20">🔗</div><div><p class="font-black text-sm text-slate-900 dark:text-white">Гостьовий доступ</p><p class="text-[10px] text-slate-400">Поділитися адресою</p></div></div>
-    <i class="fa-solid fa-chevron-right text-slate-300"></i>
-  </button>
-
-  <button id="familyAccessBtn" class="w-full premium-card p-4 flex items-center justify-between active:scale-[0.98] transition-transform">
-    <div class="flex items-center gap-3"><div class="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center text-white text-lg shadow-lg shadow-green-500/20">👨‍👩‍👧‍👦</div><div><p class="font-black text-sm text-slate-900 dark:text-white">Сімейний доступ</p><p class="text-[10px] text-slate-400">Спільний облік з родиною</p></div></div>
-    <i class="fa-solid fa-chevron-right text-slate-300"></i>
-  </button>
-
-  <button id="monobankBtn" class="w-full premium-card p-4 flex items-center justify-between active:scale-[0.98] transition-transform">
-    <div class="flex items-center gap-3"><div class="w-10 h-10 bg-gradient-to-br from-black to-gray-700 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">💳</div><div><p class="font-black text-sm text-slate-900 dark:text-white">Monobank</p><p class="text-[10px] text-slate-400">Автоматичний імпорт транзакцій</p></div></div>
     <i class="fa-solid fa-chevron-right text-slate-300"></i>
   </button>
 
@@ -433,8 +418,52 @@
   </details>
 
   <div class="text-center pt-2 space-y-3">
-    <p class="text-[9px] text-slate-400">by <span class="font-bold text-slate-500">Антон Миколенко</span> • v5.0</p>
+    <p class="text-[9px] text-slate-400">by <span class="font-bold text-slate-500">Антон Миколенко</span> • v4.0</p>
     <button type="button" id="logoutBtn" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-2xl py-3.5 border border-red-100 dark:border-red-500/20 active:scale-[0.98] text-sm transition-transform"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Вийти з акаунту</button>
+  </div>
+</div>
+
+<!-- ═══ TAB: Analytics ═══ -->
+<div id="tabAnalytics" class="tab-hidden space-y-4 pt-2">
+  <div id="analyticsCard">
+  <div class="bg-gradient-to-br from-violet-500 to-indigo-700 p-6 rounded-[2.5rem] text-white relative overflow-hidden shadow-xl shadow-violet-500/20">
+    <div class="absolute inset-0 opacity-30 pointer-events-none"><div class="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl"></div><div class="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/3 blur-xl"></div></div>
+    <div class="relative z-10">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center text-lg">🤖</div>
+        <div>
+          <p class="text-white/60 text-[9px] font-bold uppercase tracking-[0.2em]">Розумний прогноз</p>
+          <p class="text-white/80 text-[10px] font-medium">ML на основі ваших даних</p>
+        </div>
+      </div>
+      <div id="forecastValue" class="text-3xl font-black tracking-tight">—</div>
+      <div id="forecastConfidence" class="mt-2 flex items-center gap-2 text-xs text-white/70"></div>
+    </div>
+  </div>
+
+  <div class="premium-card p-5">
+    <div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-chart-line text-brand text-lg"></i><p class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em]">Графік витрат + лінія тренду</p></div>
+    <canvas id="analyticsChartCanvas" class="w-full h-44"></canvas>
+  </div>
+
+  <div id="yoyCard" class="hidden premium-card p-5">
+    <div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-calendar text-brand text-lg"></i><p class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em]">Рік до року (YoY)</p></div>
+    <div id="yoyContent"></div>
+  </div>
+
+  <div id="anomaliesCard" class="hidden premium-card p-5">
+    <div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-exclamation-triangle text-red-400 text-lg"></i><p class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em]">Аномалії</p></div>
+    <div id="anomaliesList" class="space-y-2"></div>
+  </div>
+
+  <div class="premium-card p-5">
+    <div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-wave-square text-brand text-lg"></i><p class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em]">Ковзне середнє</p></div>
+    <div id="movingAvgContent"></div>
+  </div>
+
+  <div class="premium-card p-5" id="seasonalProfile">
+    <div class="flex items-center gap-2 mb-3"><i class="fa-solid fa-calendar-alt text-brand text-lg"></i><p class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em]">Сезонний профіль</p></div>
+    <div id="seasonalContent" class="text-xs text-slate-400">Доступно після 12 місяців даних</div>
   </div>
 </div>
 
@@ -447,6 +476,7 @@
       <button id="btnTabDashboard" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-brand active:scale-[0.92] transition-transform"><i class="fa-solid fa-house text-[20px]"></i><span class="text-[9px] font-bold">Головна</span></button>
       <button id="btnTabCalc"      class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-calculator text-[20px]"></i><span class="text-[9px] font-bold">Рахунок</span></button>
       <button id="btnTabHistory"   class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform relative"><i class="fa-solid fa-clock-rotate-left text-[20px]"></i><span class="text-[9px] font-bold">Історія</span><span id="debtBadge" class="hidden absolute -top-1 right-1/4 w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-lg badge-pulse">0</span></button>
+      <button id="btnTabAnalytics" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-chart-line text-[20px]"></i><span class="text-[9px] font-bold">Аналітика</span></button>
       <button id="btnTabSettings"  class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-gear text-[20px]"></i><span class="text-[9px] font-bold">Ще</span></button>
     </div>
   </nav>
@@ -456,7 +486,7 @@
 <!-- AI FAB -->
 <button id="aiFabBtn"
   class="hidden fixed z-[450] w-14 h-14 bg-gradient-to-br from-violet-500 to-indigo-600 text-white rounded-2xl shadow-2xl shadow-violet-500/40 flex items-center justify-center text-2xl active:scale-[0.92] transition-all border border-white/20"
-  style="bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); right: 16px;"
+  style="bottom: calc(env(safe-area-inset-bottom, 0px) + 88px); right: 20px;"
   aria-label="AI помічник">🤖</button>
 
 <!-- AI Chat Panel -->
@@ -554,91 +584,12 @@
   </div>
 </div>
 
-<!-- Monobank Modal -->
-<div id="monobankModal" class="hidden fixed inset-0 z-[1050] bg-black/60 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
-  <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm max-h-[85vh] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden flex flex-col">
-    <div class="bg-gradient-to-br from-black to-gray-700 p-6 text-white text-center shrink-0">
-      <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest">💳 Monobank</p>
-      <h2 class="text-2xl font-black mt-1">Автоматичний імпорт</h2>
-      <p class="text-white/50 text-xs mt-1">Транзакції з вашої картки</p>
-    </div>
-    <div class="overflow-y-auto no-scrollbar p-6 space-y-4 flex-1">
-      <div id="monoTokenSection">
-        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-wider">API Токен</label>
-        <p class="text-[10px] text-slate-400 mb-3">Отримайте токен в <a href="https://api.monobank.ua/" target="_blank" class="text-brand underline">api.monobank.ua</a> (Меню → API → Створити токен)</p>
-        <div class="flex gap-2">
-          <input type="password" id="monoTokenInput" placeholder="uk_xxxxxxxxxxxxxxxxxxxx" class="premium-input flex-1 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold outline-none text-slate-900 dark:text-white">
-          <button id="monoToggleVis" class="px-3 bg-slate-100 dark:bg-white/5 rounded-xl text-slate-400"><i class="fa-solid fa-eye text-xs"></i></button>
-        </div>
-        <button id="monoSaveToken" class="w-full mt-3 py-3 bg-brand text-white font-bold rounded-xl text-sm active:scale-[0.98]">Зберегти токен</button>
-        <button id="monoDeleteToken" class="w-full mt-2 py-3 bg-red-50 dark:bg-red-500/10 text-red-500 font-bold rounded-xl text-sm active:scale-[0.98] hidden">Видалити токен</button>
-      </div>
-      <div id="monoConnectedSection" class="hidden">
-        <div class="bg-green-50 dark:bg-green-500/10 p-4 rounded-2xl border border-green-200 dark:border-green-500/20">
-          <div class="flex items-center gap-2 mb-2"><span class="text-green-500 text-lg">✓</span><span class="font-bold text-green-700 dark:text-green-400 text-sm">Monobank підключено</span></div>
-          <p class="text-[10px] text-green-600/70" id="monoLastSync">Остання синхронізація: —</p>
-        </div>
-        <button id="monoSyncBtn" class="w-full mt-3 py-3 bg-gradient-to-r from-brand to-blue-600 text-white font-bold rounded-xl text-sm active:scale-[0.98] shadow-lg shadow-brand/20 flex items-center justify-center gap-2"><i class="fa-solid fa-sync"></i>Синхронізувати транзакції</button>
-        <button id="monoDisconnect" class="w-full mt-2 py-3 bg-slate-100 dark:bg-white/5 text-slate-500 font-bold rounded-xl text-sm active:scale-[0.98]">Відключити Monobank</button>
-      </div>
-      <div id="monoTransactions" class="space-y-2 hidden">
-        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Останні транзакції комунальних</p>
-        <div id="monoTxList" class="space-y-2"></div>
-      </div>
-    </div>
-    <div class="p-4 border-t border-slate-100 dark:border-white/5 shrink-0">
-      <button onclick="document.getElementById('monobankModal').classList.add('hidden')" class="w-full py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-sm active:scale-[0.98]">Закрити</button>
-    </div>
-  </div>
-</div>
-
-<!-- Family Modal -->
-<div id="familyModal" class="hidden fixed inset-0 z-[1050] bg-black/60 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
-  <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm max-h-[85vh] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden flex flex-col">
-    <div class="bg-gradient-to-br from-green-400 to-emerald-600 p-6 text-white text-center shrink-0">
-      <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest">👨‍👩‍👧‍👦 Сімейний доступ</p>
-      <h2 class="text-2xl font-black mt-1">Спільний облік</h2>
-      <p class="text-white/50 text-xs mt-1">Запросіть рідних для спільного ведення</p>
-    </div>
-    <div class="overflow-y-auto no-scrollbar p-6 space-y-4 flex-1">
-      <div class="bg-green-50 dark:bg-green-500/10 p-4 rounded-2xl border border-green-200 dark:border-green-500/20">
-        <p class="text-xs font-bold text-green-700 dark:text-green-400 mb-2">Як це працює:</p>
-        <ul class="space-y-1.5 text-[10px] text-green-600/80">
-          <li class="flex items-start gap-2"><span class="text-green-500">•</span>Поділіться посиланням з рідними</li>
-          <li class="flex items-start gap-2"><span class="text-green-500">•</span>Вони зможуть переглядати та редагувати ваші дані</li>
-          <li class="flex items-start gap-2"><span class="text-green-500">•</span>Всі бачать одні й ті ж показники</li>
-        </ul>
-      </div>
-      <div>
-        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-wider">Посилання для члена сім'ї</label>
-        <p class="text-[10px] text-slate-400 mb-3">Натисніть "Створити посилання" — отримаєте унікальний URL для спільного доступу до поточної адреси</p>
-        <button id="familyGenLink" class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl text-sm active:scale-[0.98] shadow-lg shadow-green-500/20 flex items-center justify-center gap-2"><i class="fa-solid fa-link"></i>Створити посилання</button>
-      </div>
-      <div id="familyLinkResult" class="hidden">
-        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-2 tracking-wider">Ваше посилання</label>
-        <div class="flex gap-2">
-          <input type="text" id="familyLinkUrl" readonly class="flex-1 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 text-xs font-mono text-slate-600 dark:text-slate-300 outline-none">
-          <button id="familyCopyLink" class="px-4 py-2.5 bg-brand text-white rounded-xl text-xs font-bold active:scale-95">Копіювати</button>
-        </div>
-        <p class="text-[9px] text-slate-400 mt-2">⚠️ Посилання дійсне 30 днів. Той хто має посилання може переглядати та змінювати дані.</p>
-      </div>
-    </div>
-    <div class="p-4 border-t border-slate-100 dark:border-white/5 shrink-0">
-      <button onclick="document.getElementById('familyModal').classList.add('hidden')" class="w-full py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-sm active:scale-[0.98]">Закрити</button>
-    </div>
-  </div>
-</div>
-
 <!-- Year Report Modal -->
 <div id="yearReportModal" class="hidden fixed inset-0 z-[1050] bg-black/60 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
   <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm max-h-[85vh] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden flex flex-col">
     <div class="bg-gradient-to-br from-brand to-blue-600 p-6 text-white text-center shrink-0">
       <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest">Річний звіт</p>
-      <div class="flex items-center justify-center gap-2 mt-1">
-        <button id="yearPrevBtn" class="w-8 h-8 bg-white/15 rounded-lg flex items-center justify-center text-white text-sm active:scale-90 transition-transform">‹</button>
-        <h2 class="text-3xl font-black" id="yearReportYear">2025</h2>
-        <button id="yearNextBtn" class="w-8 h-8 bg-white/15 rounded-lg flex items-center justify-center text-white text-sm active:scale-90 transition-transform">›</button>
-      </div>
+      <h2 class="text-3xl font-black mt-1" id="yearReportYear">2025</h2>
     </div>
     <div class="overflow-y-auto no-scrollbar p-6 space-y-4 flex-1" id="yearReportContent"></div>
     <div class="p-4 border-t border-slate-100 dark:border-white/5 shrink-0 flex gap-3">

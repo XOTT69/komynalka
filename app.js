@@ -4,7 +4,7 @@
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
-const APP_VERSION = '5.0.0';
+const APP_VERSION = '4.0.0';
 const MAX_ADDRESSES_FREE = 3;
 
 const firebaseConfig = { apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80", authDomain: "pwakomun.firebaseapp.com", projectId: "pwakomun", storageBucket: "pwakomun.firebasestorage.app", messagingSenderId: "4437974770", appId: "1:4437974770:web:bf7d2f7bac35eff5707a6b" };
@@ -67,8 +67,6 @@ async function getHash(t) {
 function setSyncState(state) { syncState = state; const dot = $('syncDotHeader'); if (dot) dot.className = `sync-dot ${state}`; }
 function saveToLocal() { try { localStorage.setItem('komynalka_backup', JSON.stringify({ addresses, currentAddressId, timestamp: Date.now() })); } catch(e) {} }
 function loadFromLocal() { try { const b = localStorage.getItem('komynalka_backup'); return b ? JSON.parse(b) : null; } catch(e) { return null; } }
-function restoreFromLocalBackup() { const backup = loadFromLocal(); if (!backup) return false; const addrs = backup.addresses || []; if (!addrs.length) return false; addresses = addrs; currentAddressId = backup.currentAddressId || addrs[0]?.id || 'default'; loadCurrentAddress(); return true; }
-function tariffSnapshot() { return { water: tariffs.water, hotWater: tariffs.hotWater, electroBase: tariffs.electroBase, electroWinter: tariffs.electroWinter, gas: tariffs.gas, winterLimit: tariffs.winterLimit, nightCoef: tariffs.nightCoef }; }
 
 function escapeHtml(str) {
   const div = document.createElement('div');
@@ -128,7 +126,11 @@ async function secureFetch(method, params = {}, body = null) {
   if (qs) url += '?' + qs;
   const options = { method, headers, cache: 'no-store' };
   if (body && method === 'POST') options.body = JSON.stringify(body);
-  return fetch(url, options);
+  const res = await fetch(url, options);
+  if (res.status === 429) {
+    showToast('Забагато запитів. Зачекайте хвилину.', '⏳');
+  }
+  return res;
 }
 
 // =================== BROADCAST ===================
@@ -429,7 +431,7 @@ function syncCurrentAddress() {
   if (idx >= 0) { addresses[idx].tariffs = tariffs; addresses[idx].prefs = prefs; addresses[idx].records = records; addresses[idx].customServices = customServices; }
 }
 
-function openAddressModal()  { $('addressModal')?.classList.remove('hidden'); setTimeout(() => $('addressModalContent')?.classList.remove('translate-y-full'), 10); renderAddressModal(); haptic('medium'); }
+function openAddressModal()  { $('addressModal')?.classList.remove('hidden'); setTimeout(() => $('addressModalContent')?.classList.remove('translate-y-full'), 10); renderAddressModal(); }
 function closeAddressModal() { $('addressModalContent')?.classList.add('translate-y-full'); setTimeout(() => $('addressModal')?.classList.add('hidden'), 400); }
 $('addressHeaderTrigger')?.addEventListener('click', openAddressModal);
 $('closeAddressModalBtn')?.addEventListener('click', closeAddressModal);
@@ -491,8 +493,8 @@ function renderAchievements() { const container=$('achievementsList'); if(!conta
 function showAchievementDetail(achId) { const ach=ACHIEVEMENTS.find(a=>a.id===achId); if(!ach) return; const isUnlocked=ach.check(records); $('achDetailEmoji').textContent=ach.emoji; $('achDetailTitle').textContent=ach.title; $('achDetailDesc').textContent=ach.desc; $('achDetailHow').textContent=ACHIEVEMENT_HINTS[achId]||'—'; const s=$('achDetailStatus'); if(isUnlocked){s.textContent='✓ Отримано';s.className='text-xs font-bold px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-500/10 text-green-600';}else{s.textContent='🔒 Заблоковано';s.className='text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-400';} $('achievementDetailModal').classList.remove('hidden'); haptic('light'); }
 
 // =================== TABS ===================
-const tabIds = ['tabDashboard','tabCalc','tabHistory','tabSettings'];
-const btnIds = ['btnTabDashboard','btnTabCalc','btnTabHistory','btnTabSettings'];
+const tabIds = ['tabDashboard','tabCalc','tabHistory','tabAnalytics','tabSettings'];
+const btnIds = ['btnTabDashboard','btnTabCalc','btnTabHistory','btnTabAnalytics','btnTabSettings'];
 
 function switchTab(tabId, index) {
   const activeTab = document.querySelector('.tab-active'), targetTab = $(tabId);
@@ -504,10 +506,11 @@ function switchTab(tabId, index) {
   setTimeout(() => {
     targetTab.classList.remove('tab-hidden'); targetTab.classList.add('tab-active');
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      if (tabId==='tabDashboard') renderDashboard();
-      if (tabId==='tabCalc')      { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); setTimeout(()=>{const firstInput=readingInputIds.map(id=>$(id)).find(el=>el&&el.offsetParent!==null);if(firstInput)firstInput.focus();},200); }
-      if (tabId==='tabHistory')   renderRecords();
-      if (tabId==='tabSettings')  { renderSettingsCustomServices(); updateDisplayName(); }
+      if (tabId==='tabDashboard')   renderDashboard();
+      if (tabId==='tabCalc')        { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); }
+      if (tabId==='tabHistory')     renderRecords();
+      if (tabId==='tabAnalytics')   renderAnalytics();
+      if (tabId==='tabSettings')    { renderSettingsCustomServices(); updateDisplayName(); }
     }));
   }, activeTab && activeTab !== targetTab ? 80 : 0);
   btnIds.forEach((id,i) => { const btn=$(id); if(!btn) return; btn.classList.toggle('text-brand',i===index); btn.classList.toggle('text-slate-400',i!==index); btn.classList.toggle('dark:text-slate-500',i!==index); });
@@ -518,7 +521,8 @@ function switchTab(tabId, index) {
 $('btnTabDashboard')?.addEventListener('click', ()=>switchTab('tabDashboard',0));
 $('btnTabCalc')?.addEventListener('click',      ()=>switchTab('tabCalc',1));
 $('btnTabHistory')?.addEventListener('click',   ()=>switchTab('tabHistory',2));
-$('btnTabSettings')?.addEventListener('click',  ()=>switchTab('tabSettings',3));
+$('btnTabAnalytics')?.addEventListener('click', ()=>switchTab('tabAnalytics',3));
+$('btnTabSettings')?.addEventListener('click',  ()=>switchTab('tabSettings',4));
 $('dashAddBtn')?.addEventListener('click',     ()=>switchTab('tabCalc',1));
 $('dashHistoryBtn')?.addEventListener('click', ()=>switchTab('tabHistory',2));
 
@@ -533,7 +537,7 @@ $('swipeContainer')?.addEventListener('touchend',e=>{
   else if(distX<-80&&curIdx>0) switchTab(tabIds[curIdx-1],curIdx-1);
 },{passive:true});
 
-$('quickActionsBtn')?.addEventListener('click',()=>{$('quickActionsModal')?.classList.remove('hidden');haptic('light');});
+$('quickActionsBtn')?.addEventListener('click',()=>$('quickActionsModal')?.classList.remove('hidden'));
 $('qaExport')?.addEventListener('click',()=>{exportCSV();$('quickActionsModal')?.classList.add('hidden');});
 $('qaPdf')?.addEventListener('click',()=>{generatePDF();$('quickActionsModal')?.classList.add('hidden');});
 $('qaShare')?.addEventListener('click',()=>{shareAllRecords();$('quickActionsModal')?.classList.add('hidden');});
@@ -621,7 +625,83 @@ class DonutChart {
   }
 }
 
-let dashChart, historyChart, serviceChart, donutChart;
+class SmartForecast {
+  constructor(records) {
+    this.records = records || [];
+    this.sorted = [...this.records].sort((a,b) => a.month.localeCompare(b.month));
+  }
+
+  calcTrend() {
+    const n = this.sorted.length;
+    if (n < 3) return null;
+    const x = Array.from({length: n}, (_, i) => i);
+    const y = this.sorted.map(r => r.total);
+    const sumX = x.reduce((a,b) => a+b, 0);
+    const sumY = y.reduce((a,b) => a+b, 0);
+    const sumXY = x.reduce((s, xi, i) => s + xi * y[i], 0);
+    const sumXX = x.reduce((s, xi) => s + xi * xi, 0);
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    return { slope, intercept, nextValue: slope * n + intercept };
+  }
+
+  calcSeasonalFactors() {
+    const months = Array(12).fill(0).map(() => ({ sum: 0, count: 0 }));
+    this.sorted.forEach(r => {
+      const m = parseInt(r.month.split('-')[1]) - 1;
+      if (m >= 0 && m < 12) { months[m].sum += r.total; months[m].count++; }
+    });
+    const avg = this.sorted.length ? this.sorted.reduce((s, r) => s + r.total, 0) / this.sorted.length : 0;
+    return months.map(m => m.count > 0 ? (m.sum / m.count) / (avg || 1) : 1);
+  }
+
+  predict(month) {
+    const trend = this.calcTrend();
+    const factors = this.calcSeasonalFactors();
+    if (!trend) return null;
+    const m = parseInt(month.split('-')[1]) - 1;
+    const basePrediction = trend.nextValue;
+    const seasonalFactor = (factors[m] || 1);
+    return {
+      predicted: Math.round(basePrediction * seasonalFactor),
+      trend: Math.round(trend.slope * 100) / 100,
+      confidence: this.sorted.length >= 6 ? 'high' : this.sorted.length >= 3 ? 'medium' : 'low',
+      seasonalFactor: Math.round(seasonalFactor * 100) / 100,
+    };
+  }
+
+  detectAnomalies() {
+    if (this.sorted.length < 4) return [];
+    const values = this.sorted.map(r => r.total);
+    const mean = values.reduce((a,b) => a+b, 0) / values.length;
+    const std = Math.sqrt(values.reduce((s, v) => s + (v - mean)**2, 0) / values.length) || 1;
+    return this.sorted
+      .map((r, i) => ({ ...r, zScore: Math.abs((r.total - mean) / std) }))
+      .filter(r => r.zScore > 2)
+      .map(r => ({ month: r.month, total: r.total, reason: r.zScore > 3 ? 'Критична' : 'Помірна' }));
+  }
+
+  compareYearOverYear(month) {
+    const [y, m] = month.split('-').map(Number);
+    const lastYear = `${y-1}-${String(m).padStart(2,'0')}`;
+    const current = this.sorted.find(r => r.month === month);
+    const previous = this.sorted.find(r => r.month === lastYear);
+    if (!current || !previous || previous.total === 0) return null;
+    return {
+      current: current.total,
+      previous: previous.total,
+      change: Math.round(((current.total - previous.total) / previous.total) * 100),
+    };
+  }
+
+  getMovingAverage(months = 12) {
+    const recent = this.sorted.slice(-months);
+    if (!recent.length) return 0;
+    return Math.round(recent.reduce((s, r) => s + r.total, 0) / recent.length);
+  }
+}
+
+let dashChart, historyChart, serviceChart, donutChart, analyticsChart;
 
 // =================== DASHBOARD ===================
 function renderDashboard() {
@@ -810,6 +890,7 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
   clearDraft();
   $('submitFormBtn')?.classList.add('save-btn-success');
   setTimeout(()=>$('submitFormBtn')?.classList.remove('save-btn-success'),600);
+  localStorage.setItem('lastSubmittedMonth', getMonthKey());
   syncToCloud();
   const[y,m]=$('monthInput').value.split('-').map(Number),nD=new Date(y,m);
   $('monthInput').value=`${nD.getFullYear()}-${String(nD.getMonth()+1).padStart(2,'0')}`;
@@ -882,7 +963,10 @@ function applyPreferences() {
 }
 
 ['prefWater','prefHotWater','prefElectro','prefGas','prefElectroTwoZone','prefElectroWinter'].forEach(id=>{$(id)?.addEventListener('change',()=>{prefs.showWater=$('prefWater')?.checked??prefs.showWater;prefs.showHotWater=$('prefHotWater')?.checked??prefs.showHotWater;prefs.showElectro=$('prefElectro')?.checked??prefs.showElectro;prefs.showGas=$('prefGas')?.checked??prefs.showGas;prefs.electroTwoZone=$('prefElectroTwoZone')?.checked??prefs.electroTwoZone;prefs.electroWinter=$('prefElectroWinter')?.checked??prefs.electroWinter;applyPreferences();renderCalcCustomServices();calculatePreview();updateSmartBadges();});});
-$('prefReminders')?.addEventListener('change',function(){if($('remindersSettings'))$('remindersSettings').style.display=this.checked?'block':'none';});
+$('prefReminders')?.addEventListener('change',function(){
+  prefs.remindersEnabled = this.checked;
+  if($('remindersSettings'))$('remindersSettings').style.display=this.checked?'block':'none';
+});
 
 $('saveSettingsBtn')?.addEventListener('click',()=>{
   tariffs={water:parseFloat($('tWater')?.value)||defaultTariffs.water,hotWater:parseFloat($('tHotWater')?.value)||defaultTariffs.hotWater,electroBase:parseFloat($('tElectroBase')?.value)||defaultTariffs.electroBase,electroWinter:parseFloat($('tElectroWinter')?.value)||defaultTariffs.electroWinter,winterLimit:2000,nightCoef:0.5,gas:parseFloat($('tGas')?.value)||defaultTariffs.gas};
@@ -901,25 +985,41 @@ $('addCustomServiceBtn')?.addEventListener('click',()=>{customServices.push({id:
 
 function renderCalcCustomServices(){const c=$('customServicesContainer');if(!c)return;if(customServices.length===0){c.innerHTML='';return;}c.innerHTML=customServices.map(srv=>`<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-1.5 text-center">${escapeHtml(srv.name)||'Послуга'}</span><input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input premium-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-white/10" placeholder="${srv.defaultSum||'0.00'}"></div>`).join('');document.querySelectorAll('.custom-srv-input').forEach(input=>input.addEventListener('input',()=>{calculatePreview();debouncedDraft();}));}
 
-function checkReminders(){const monthKey=new Date().getFullYear()+'-'+new Date().getMonth();if(!prefs.remindersEnabled||localStorage.getItem('lastSubmittedMonth')===monthKey){$('reminderBanner')?.classList.add('hidden');return;}const d=new Date().getDate();let msgs=[];const wS=prefs.remWaterStart||1,wE=prefs.remWaterEnd||5,eS=prefs.remElectroStart||28,eE=prefs.remElectroEnd||3;const isW=wS<=wE?(d>=wS&&d<=wE):(d>=wS||d<=wE),isE=eS<=eE?(d>=eS&&d<=eE):(d>=eS||d<=eE);if(isW&&(prefs.showWater||prefs.showHotWater))msgs.push("💧 Воду");if(isE&&prefs.showElectro)msgs.push("⚡️ Світло");if(msgs.length>0){$('reminderBanner')?.classList.remove('hidden');if($('reminderText'))$('reminderText').innerText="Передайте: "+msgs.join(" та ");}else $('reminderBanner')?.classList.add('hidden');}
-$('reminderDismissBtn')?.addEventListener('click',()=>{localStorage.setItem('lastSubmittedMonth',new Date().getFullYear()+'-'+new Date().getMonth());$('reminderBanner')?.classList.add('hidden');showToast("Нагадаємо наступного місяця","🔔");});
+function getMonthKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+function checkReminders(){
+  const monthKey = getMonthKey();
+  if(!prefs.remindersEnabled||localStorage.getItem('lastSubmittedMonth')===monthKey){$('reminderBanner')?.classList.add('hidden');return;}
+  const d=new Date().getDate();let msgs=[];
+  const wS=prefs.remWaterStart||1,wE=prefs.remWaterEnd||5,eS=prefs.remElectroStart||28,eE=prefs.remElectroEnd||3;
+  const isW=wS<=wE?(d>=wS&&d<=wE):(d>=wS||d<=wE),isE=eS<=eE?(d>=eS&&d<=eE):(d>=eS||d<=eE);
+  if(isW&&(prefs.showWater||prefs.showHotWater))msgs.push("💧 Воду");
+  if(isE&&prefs.showElectro)msgs.push("⚡️ Світло");
+  if(msgs.length>0){$('reminderBanner')?.classList.remove('hidden');if($('reminderText'))$('reminderText').innerText="Передайте: "+msgs.join(" та ");}
+  else $('reminderBanner')?.classList.add('hidden');
+}
+$('reminderDismissBtn')?.addEventListener('click',()=>{
+  localStorage.setItem('lastSubmittedMonth', getMonthKey());
+  $('reminderBanner')?.classList.add('hidden');
+  showToast("Нагадаємо наступного місяця","🔔");
+});
 
 $('changePassBtn')?.addEventListener('click',async()=>{const oldPass=prompt("Поточний:");if(!oldPass)return;const newPass=prompt("Новий (мін 4):");if(!newPass||newPass.length<4)return showToast("Мін 4","⚠️");if(newPass!==prompt("Підтвердіть:"))return showToast("Не збігаються","❌");try{const oldHash=await getHash(oldPass),newHash=await getHash(newPass);const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:"change_password",login:sessionLogin,oldPass:oldHash,newPass:newHash})});if((await res.json()).success){sessionPass=newHash;localStorage.setItem('k_passHash',newHash);showToast("Змінено!","✅");}else showToast("Неправильний пароль","❌");}catch(e){showToast("Помилка","❌");}});
 
 // =================== SWIPE ===================
 function initSwipe(card,recordId){
-  let startX=0,startY=0,currentX=0,isSwiping=false,didSwipe=false;const threshold=80;
-  card.addEventListener('touchstart',e=>{startX=e.touches[0].clientX;startY=e.touches[0].clientY;isSwiping=true;didSwipe=false;card.classList.add('swiping');},{passive:true});
-  card.addEventListener('touchmove',e=>{if(!isSwiping)return;const dx=e.touches[0].clientX-startX;const dy=Math.abs(e.touches[0].clientY-startY);if(dy>Math.abs(dx)&&Math.abs(dx)<10){isSwiping=false;card.classList.remove('swiping');return;}currentX=dx;if(Math.abs(currentX)>15)didSwipe=true;const limited=Math.sign(currentX)*Math.min(Math.abs(currentX),120);card.style.transform=`translateX(${limited}px)`;const l=card.querySelector('.swipe-bg-left'),r=card.querySelector('.swipe-bg-right');if(l)l.style.opacity=currentX<-30?'1':'0';if(r)r.style.opacity=currentX>30?'1':'0';},{passive:true});
+  let startX=0,currentX=0,isSwiping=false;const threshold=80;
+  card.addEventListener('touchstart',e=>{startX=e.touches[0].clientX;isSwiping=true;card.classList.add('swiping');},{passive:true});
+  card.addEventListener('touchmove',e=>{if(!isSwiping)return;currentX=e.touches[0].clientX-startX;const limited=Math.sign(currentX)*Math.min(Math.abs(currentX),120);card.style.transform=`translateX(${limited}px)`;const l=card.querySelector('.swipe-bg-left'),r=card.querySelector('.swipe-bg-right');if(l)l.style.opacity=currentX<-30?'1':'0';if(r)r.style.opacity=currentX>30?'1':'0';},{passive:true});
   card.addEventListener('touchend',()=>{isSwiping=false;card.classList.remove('swiping');card.style.transform='';const l=card.querySelector('.swipe-bg-left'),r=card.querySelector('.swipe-bg-right');if(l)l.style.opacity='0';if(r)r.style.opacity='0';if(currentX<-threshold){card.style.transform='translateX(-100%)';card.style.opacity='0';setTimeout(()=>deleteRecordById(recordId),300);}else if(currentX>threshold){card.style.transform='translateX(100%)';card.style.opacity='0';setTimeout(()=>togglePaidById(recordId),300);}currentX=0;},{passive:true});
-  // Block click after swipe to prevent accidental actions
-  card.addEventListener('click',(e)=>{if(didSwipe){e.stopPropagation();e.preventDefault();didSwipe=false;}},true);
 }
 
 // =================== RECORDS ===================
 function findRecordIndex(id){return records.findIndex(r=>r.id===id);}
-function togglePaidById(id){const idx=findRecordIndex(id);if(idx<0)return;records[idx].paid=!records[idx].paid;renderRecords();renderDashboard();syncToCloud();checkNewAchievements();}
-function deleteRecordById(id){records=records.filter(r=>r.id!==id);renderRecords();renderDashboard();syncToCloud();showToast('Видалено','🗑');}
+function togglePaidById(id){const idx=findRecordIndex(id);if(idx<0)return;records[idx].paid=!records[idx].paid;renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();}
+function deleteRecordById(id){records=records.filter(r=>r.id!==id);renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();showToast('Видалено','🗑');}
 
 function renderRecords(){
   const list=$('recordsList');if(!list) return;
@@ -1024,8 +1124,8 @@ function createRecordCard(rec){
 
   card.addEventListener('click',(e)=>{
     const toggleTarget=e.target.closest('[data-toggle-details]');
-    if(toggleTarget){const panel=card.querySelector('.details-panel'),chevron=card.querySelector('.chevron-icon');if(panel){panel.classList.toggle('hidden');panel.classList.toggle('open');if(chevron)chevron.classList.toggle('rotated');}return;}
-    const payBtn=e.target.closest('.rec-pay');  if(payBtn)  {e.stopPropagation();togglePaidById(recId);haptic('success');showToast(rec.paid?'Скасовано':'Оплачено! ✅','✅');return;}
+    if(toggleTarget){const panel=card.querySelector('.details-panel'),chevron=card.querySelector('.chevron-icon');if(panel){panel.classList.toggle('hidden');if(chevron)chevron.style.transform=panel.classList.contains('hidden')?'rotate(0deg)':'rotate(180deg)';}return;}
+    const payBtn=e.target.closest('.rec-pay');  if(payBtn)  {e.stopPropagation();togglePaidById(recId);  return;}
     const shareBtn=e.target.closest('.rec-share');if(shareBtn){e.stopPropagation();shareRecordById(recId);return;}
     const editBtn=e.target.closest('.rec-edit'); if(editBtn) {e.stopPropagation();editRecordById(recId); return;}
     const delBtn=e.target.closest('.rec-del');   if(delBtn)  {e.stopPropagation();if(confirm('Видалити?'))deleteRecordById(recId);return;}
@@ -1039,7 +1139,7 @@ function editRecordById(id){const rec=records.find(r=>r.id===id);if(!rec)return;
 
 // =================== FILTER & SEARCH ===================
 let searchDebounceTimer;
-$('filterToggleBtn')?.addEventListener('click',()=>{$('filterPanel')?.classList.toggle('hidden');haptic('light');});
+$('filterToggleBtn')?.addEventListener('click',()=>$('filterPanel')?.classList.toggle('hidden'));
 $('filterButtons')?.addEventListener('click',(e)=>{const btn=e.target.closest('.filter-btn');if(!btn)return;currentFilter=btn.dataset.filter;document.querySelectorAll('.filter-btn').forEach(b=>{b.classList.remove('bg-brand','text-white');b.classList.add('bg-slate-100','dark:bg-[#2c2c2e]','text-slate-600','dark:text-slate-400');});btn.classList.remove('bg-slate-100','dark:bg-[#2c2c2e]','text-slate-600','dark:text-slate-400');btn.classList.add('bg-brand','text-white');renderRecords();});
 $('searchRecords')?.addEventListener('input',()=>{clearTimeout(searchDebounceTimer);searchDebounceTimer=setTimeout(renderRecords,200);});
 $('sortSelect')?.addEventListener('change',()=>renderRecords());
@@ -1077,8 +1177,8 @@ async function generatePDF(){
   try{const resp=await fetch('https://cdn.jsdelivr.net/gh/nicksib/jspdf-fonts@main/Roboto-Regular.ttf');if(resp.ok){const buf=await resp.arrayBuffer(),bytes=new Uint8Array(buf);let binary='';for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);doc.addFileToVFS('Roboto.ttf',btoa(binary));doc.addFont('Roboto.ttf','Roboto','normal');doc.setFont('Roboto','normal');hasFont=true;}}catch(e){}
   const t=hasFont?s=>s:transliterate;
   doc.setFillColor(0,122,255);doc.rect(0,0,210,35,'F');doc.setTextColor(255,255,255);doc.setFontSize(18);doc.text(t('Комунальні платежі'),15,15);doc.setFontSize(10);doc.text(t($('currentAddressDisplay')?.innerText||''),15,24);doc.setTextColor(60,60,60);
-  const tH=[t('Міс.')];if(prefs.showWater)tH.push(t('Вода'),t('₴'));if(prefs.showHotWater)tH.push(t('Гар.'),t('₴'));if(prefs.showElectro)tH.push(t('Світло'),t('₴'));if(prefs.showGas)tH.push(t('Газ'),t('₴'));tH.push(t('Інше'),t('Всього'),t('Статус'));
-  const tR=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).map(r=>{const row=[r.month];if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(0));if(prefs.showHotWater)row.push(Math.max(0,(r.hwCur||0)-(r.hwPrev||0)),(r.hotWaterCost||0).toFixed(0));if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(0));if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(0));row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),r.paid?'OK':t('Борг'));return row;});
+  const tH=[t('Міс.')];if(prefs.showWater)tH.push(t('Вода'),t('₴'));if(prefs.showElectro)tH.push(t('Світло'),t('₴'));if(prefs.showGas)tH.push(t('Газ'),t('₴'));tH.push(t('Інше'),t('Всього'),t('Статус'));
+  const tR=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).map(r=>{const row=[r.month];if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(0));if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(0));if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(0));row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),r.paid?'OK':t('Борг'));return row;});
   doc.autoTable({startY:40,head:[tH],body:tR,theme:'striped',styles:{font:hasFont?'Roboto':'helvetica'},headStyles:{fillColor:[0,122,255],textColor:[255,255,255],fontSize:7,fontStyle:'bold',halign:'center'},bodyStyles:{fontSize:7,halign:'center'},margin:{left:10,right:10}});
   doc.save(`komunalka_${new Date().toISOString().slice(0,10)}.pdf`);showToast('PDF!','📄');
 }
@@ -1099,7 +1199,7 @@ function normalizeNumber(value,fallback=0){const num=Number(value);return Number
 function normalizeImportedRecord(rec){if(!isPlainObject(rec)||!/^\d{4}-\d{2}$/.test(String(rec.month||'')))return null;return{...rec,id:rec.id||Date.now()+Math.random(),month:String(rec.month),total:normalizeNumber(rec.total),waterCost:normalizeNumber(rec.waterCost),hotWaterCost:normalizeNumber(rec.hotWaterCost),electroCost:normalizeNumber(rec.electroCost),gasCost:normalizeNumber(rec.gasCost),customCost:normalizeNumber(rec.customCost),paid:Boolean(rec.paid),note:String(rec.note||'')};}
 function normalizeImportedAddress(addr,index){if(!isPlainObject(addr))return null;return{id:String(addr.id||`addr_${Date.now()}_${index}`),name:String(addr.name||`Об'єкт ${index+1}`).slice(0,80),tariffs:{...defaultTariffs,...(isPlainObject(addr.tariffs)?addr.tariffs:{})},prefs:{...defaultPrefs,...(isPlainObject(addr.prefs)?addr.prefs:{})},records:Array.isArray(addr.records)?addr.records.map(normalizeImportedRecord).filter(Boolean):[],customServices:Array.isArray(addr.customServices)?addr.customServices.filter(isPlainObject).map((srv,i)=>({id:String(srv.id||`srv_${Date.now()}_${i}`),name:String(srv.name||'').slice(0,60),defaultSum:srv.defaultSum==null?'':String(srv.defaultSum).slice(0,20)})):[]};}
 function normalizeImportData(data){if(!isPlainObject(data)||!Array.isArray(data.addresses))return null;const addrs=data.addresses.map(normalizeImportedAddress).filter(Boolean);if(!addrs.length)return null;const cid=String(data.currentAddressId||'');return{addresses:addrs,currentAddressId:addrs.some(a=>a.id===cid)?cid:addrs[0].id};}
-$('importFileInput')?.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const normalized=normalizeImportData(JSON.parse(ev.target.result));if(!normalized){showToast('Невірний формат','❌');return;}if(confirm(`Імпорт ${normalized.addresses.length} об'єктів? Поточні дані буде замінено.`)){localStorage.setItem('komynalka_pre_import_backup',JSON.stringify({addresses,currentAddressId,timestamp:Date.now()}));addresses=normalized.addresses;currentAddressId=normalized.currentAddressId;loadCurrentAddress();syncToCloud();showToast('Імпортовано!','✅');}}catch(err){showToast('Помилка','❌');}};reader.readAsText(file);e.target.value='';});
+$('importFileInput')?.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const normalized=normalizeImportData(JSON.parse(ev.target.result));if(!normalized){showToast('Невірний формат','❌');return;}if(confirm(`Імпорт ${normalized.addresses.length} об'єктів? Поточні дані буде замінено.`)){addresses=normalized.addresses;currentAddressId=normalized.currentAddressId;loadCurrentAddress();syncToCloud();showToast('Імпортовано!','✅');}}catch(err){showToast('Помилка','❌');}};reader.readAsText(file);e.target.value='';});
 
 // =================== TIPS ===================
 function getConsumptionTrend(type,months=6){const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,months);if(sorted.length<2)return null;const values=sorted.map(r=>{switch(type){case 'water':return Math.max(0,(r.wCur||0)-(r.wPrev||0));case 'electro':return Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0));case 'gas':return Math.max(0,(r.gCur||0)-(r.gPrev||0));default:return r.total;}}).reverse();const first=values.slice(0,Math.ceil(values.length/2)),second=values.slice(Math.ceil(values.length/2));const avgF=first.reduce((a,b)=>a+b,0)/first.length,avgS=second.reduce((a,b)=>a+b,0)/second.length;if(avgF===0)return 0;return Math.round(((avgS-avgF)/avgF)*100);}
@@ -1107,13 +1207,10 @@ function getSmartTips(){const tips=[];if(records.length>=3){const wT=getConsumpt
 function renderTips(){const container=$('tipsContainer');if(!container)return;const tips=getSmartTips();if(!tips.length){container.classList.add('hidden');return;}container.classList.remove('hidden');const listEl=$('tipsList');if(listEl)listEl.innerHTML=tips.map(t=>`<div class="flex items-start gap-3 bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5"><span class="text-lg shrink-0">${t.emoji}</span><p class="text-xs font-medium text-slate-600 dark:text-slate-300">${escapeHtml(t.text)}</p></div>`).join('');}
 
 // =================== YEAR REPORT ===================
-let currentReportYear=new Date().getFullYear();
-$('yearReportBtn')?.addEventListener('click',()=>{currentReportYear=new Date().getFullYear();generateYearReport();});
-$('yearPrevBtn')?.addEventListener('click',()=>{currentReportYear--;generateYearReport();haptic('light');});
-$('yearNextBtn')?.addEventListener('click',()=>{currentReportYear++;generateYearReport();haptic('light');});
+$('yearReportBtn')?.addEventListener('click',()=>generateYearReport());
 function generateYearReport(){
-  const year=currentReportYear,yr=records.filter(r=>r.month.startsWith(String(year)));
-  if(!yr.length){showToast(`Немає даних за ${year} рік`,'⚠️');return;}
+  const year=new Date().getFullYear(),yr=records.filter(r=>r.month.startsWith(String(year)));
+  if(!yr.length){showToast('Немає даних за рік','⚠️');return;}
   if($('yearReportYear'))$('yearReportYear').textContent=year;
   const total=yr.reduce((s,r)=>s+r.total,0),avg=total/yr.length;
   const maxR=yr.reduce((a,b)=>a.total>b.total?a:b),minR=yr.reduce((a,b)=>a.total<b.total?a:b);
@@ -1126,7 +1223,7 @@ function generateYearReport(){
   $('yearReportModal')?.classList.remove('hidden');
   haptic('success');
 }
-async function shareYearReport(){const year=currentReportYear,yr=records.filter(r=>r.month.startsWith(String(year)));if(!yr.length)return;const total=yr.reduce((s,r)=>s+r.total,0),avg=total/yr.length,streak=getStreak(records);let t=`📊 Річний звіт ${year}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n═══════════════\n💰 Всього: ${fmt.format(total)} ₴\n📈 Середній: ${fmt.format(avg)} ₴/міс\n📅 Записів: ${yr.length}\n🔥 Серія: ${streak} міс.\n═══════════════\nКомуналка PWA`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
+async function shareYearReport(){const year=new Date().getFullYear(),yr=records.filter(r=>r.month.startsWith(String(year)));if(!yr.length)return;const total=yr.reduce((s,r)=>s+r.total,0),avg=total/yr.length,streak=getStreak(records);let t=`📊 Річний звіт ${year}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n═══════════════\n💰 Всього: ${fmt.format(total)} ₴\n📈 Середній: ${fmt.format(avg)} ₴/міс\n📅 Записів: ${yr.length}\n🔥 Серія: ${streak} міс.\n═══════════════\nКомуналка PWA`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
 window.shareYearReport=shareYearReport;
 
 // =================== PWA ===================
@@ -1139,7 +1236,7 @@ $('installPwaBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return
 // =================== PUSH ===================
 async function initPush(){if(!('Notification' in window))return;const btn=$('enablePushBtn'),st=$('pushStatus');if(Notification.permission==='granted'){if(btn)btn.classList.add('hidden');if(st){st.classList.remove('hidden');st.textContent='✓ Push увімкнено';st.className='text-[10px] text-green-500 text-center font-bold';}}else if(Notification.permission!=='denied'){if(btn)btn.classList.remove('hidden');}}
 $('enablePushBtn')?.addEventListener('click',async()=>{try{const p=await Notification.requestPermission();if(p==='granted'){showToast('Push увімкнено!','🔔');initPush();scheduleLocalReminder();}else showToast('Відмовлено','⚠️');}catch(e){showToast('Помилка','❌');}});
-function scheduleLocalReminder(){if(!('Notification' in window)||Notification.permission!=='granted')return;const d=new Date().getDate(),wS=prefs.remWaterStart||1,wE=prefs.remWaterEnd||5,eS=prefs.remElectroStart||28,eE=prefs.remElectroEnd||3;const isW=wS<=wE?(d>=wS&&d<=wE):(d>=wS||d<=wE),isE=eS<=eE?(d>=eS&&d<=eE):(d>=eS||d<=eE);const monthKey=new Date().getFullYear()+'-'+new Date().getMonth();if((isW||isE)&&localStorage.getItem('lastSubmittedMonth')!==monthKey&&localStorage.getItem('lastPushShown')!==new Date().toDateString()){localStorage.setItem('lastPushShown',new Date().toDateString());new Notification('Комуналка 🏠',{body:'Час передати показники!',icon:'icon.png'});}}
+function scheduleLocalReminder(){if(!('Notification' in window)||Notification.permission!=='granted')return;const d=new Date().getDate(),wS=prefs.remWaterStart||1,wE=prefs.remWaterEnd||5,eS=prefs.remElectroStart||28,eE=prefs.remElectroEnd||3;const isW=wS<=wE?(d>=wS&&d<=wE):(d>=wS||d<=wE),isE=eS<=eE?(d>=eS&&d<=eE):(d>=eS||d<=eE);const monthKey=getMonthKey();if((isW||isE)&&localStorage.getItem('lastSubmittedMonth')!==monthKey&&localStorage.getItem('lastPushShown')!==new Date().toDateString()){localStorage.setItem('lastPushShown',new Date().toDateString());new Notification('Комуналка 🏠',{body:'Час передати показники!',icon:'icon.png'});}}
 setTimeout(initPush,1000);setTimeout(scheduleLocalReminder,3000);
 
 // =================== SHARE APP ===================
@@ -1156,200 +1253,6 @@ async function logout(){
 }
 $('logoutBtn')?.addEventListener('click',logout);
 
-// =================== MONOBANK ===================
-function initMonobank() {
-  const token = localStorage.getItem('k_mono_token');
-  const monoTokenSection = $('monoTokenSection');
-  const monoConnectedSection = $('monoConnectedSection');
-  const monoTokenInput = $('monoTokenInput');
-  const monoDeleteToken = $('monoDeleteToken');
-  const monoLastSync = $('monoLastSync');
-
-  if (token) {
-    if (monoTokenSection) monoTokenSection.classList.add('hidden');
-    if (monoConnectedSection) monoConnectedSection.classList.remove('hidden');
-    if (monoLastSync) monoLastSync.textContent = 'Остання синхронізація: ' + (localStorage.getItem('k_mono_last_sync') || '—');
-  } else {
-    if (monoTokenSection) monoTokenSection.classList.remove('hidden');
-    if (monoConnectedSection) monoConnectedSection.classList.add('hidden');
-  }
-}
-
-$('monobankBtn')?.addEventListener('click', () => {
-  $('monobankModal')?.classList.remove('hidden');
-  initMonobank();
-  haptic('light');
-});
-
-$('monoToggleVis')?.addEventListener('click', () => {
-  const inp = $('monoTokenInput');
-  if (!inp) return;
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-  const icon = $('monoToggleVis')?.querySelector('i');
-  if (icon) icon.className = inp.type === 'password' ? 'fa-solid fa-eye text-xs' : 'fa-solid fa-eye-slash text-xs';
-});
-
-$('monoSaveToken')?.addEventListener('click', async () => {
-  const token = $('monoTokenInput')?.value?.trim();
-  if (!token) { showToast('Введіть токен', '⚠️'); return; }
-  localStorage.setItem('k_mono_token', token);
-  showToast('Токен збережено! ✓', '💳');
-  initMonobank();
-  // Автоматична синхронізація після збереження токена
-  $('monoSyncBtn')?.click();
-});
-
-$('monoDeleteToken')?.addEventListener('click', () => {
-  if (!confirm('Видалити токен Monobank?')) return;
-  localStorage.removeItem('k_mono_token');
-  localStorage.removeItem('k_mono_last_sync');
-  localStorage.removeItem('k_mono_txs');
-  showToast('Токен видалено', '🗑');
-  initMonobank();
-});
-
-$('monoDisconnect')?.addEventListener('click', () => {
-  if (!confirm('Відключити Monobank?')) return;
-  localStorage.removeItem('k_mono_token');
-  localStorage.removeItem('k_mono_last_sync');
-  localStorage.removeItem('k_mono_txs');
-  showToast('Відключено', '💳');
-  initMonobank();
-});
-
-$('monoSyncBtn')?.addEventListener('click', async () => {
-  const token = localStorage.getItem('k_mono_token');
-  if (!token) { showToast('Спочатку введіть токен', '⚠️'); return; }
-  const btn = $('monoSyncBtn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>Завантаження...'; }
-  try {
-    // Ключові слова для фільтрації комунальних
-    const UTILITY_KEYWORDS_UA = ['комунал', 'вода', 'світло', 'газ', 'жкг', 'опалення', 'квартплата', 'обленерго', 'облгаз', 'водоканал', 'водовідведення', 'кварт'];
-    const UTILITY_KEYWORDS_EN = ['water', 'electric', 'electricity', 'gas', 'utility', 'utilities', 'heat', 'sewage'];
-    const UTILITY_MCC = [4900, 4941]; // MCC codes for utilities
-
-    function isUtilityTx(tx) {
-      const desc = (tx.description || '').toLowerCase();
-      const mcc = tx.mcc || 0;
-      if (UTILITY_MCC.includes(mcc)) return true;
-      if (UTILITY_KEYWORDS_UA.some(kw => desc.includes(kw))) return true;
-      if (UTILITY_KEYWORDS_EN.some(kw => desc.includes(kw))) return true;
-      if (desc.includes('bankpay') || desc.includes('fbankpay')) return true;
-      return false;
-    }
-
-    // Завантажуємо транзакції за останні 90 днів (3 запити по 30 днів)
-    const now = Math.floor(Date.now() / 1000);
-    const SECONDS_PER_DAY = 86400;
-    const DAYS_PER_BATCH = 30;
-    const RATE_LIMIT_MS = 62000; // 62 секунди між запитами (API ліміт 60с)
-    const batches = [
-      { from: now - 30 * SECONDS_PER_DAY, to: now },
-      { from: now - 60 * SECONDS_PER_DAY, to: now - 30 * SECONDS_PER_DAY - 1 },
-      { from: now - 90 * SECONDS_PER_DAY, to: now - 60 * SECONDS_PER_DAY - 1 },
-    ];
-
-    let allTxs = [];
-    for (let i = 0; i < batches.length; i++) {
-      const { from, to } = batches[i];
-      if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>Завантаження ${i + 1}/${batches.length}...`;
-      try {
-        const res = await fetch(`https://api.monobank.ua/personal/statement/0/${from}/${to}`, {
-          headers: { 'X-Token': token }
-        });
-        if (res.status === 429) {
-          showToast(`Rate limit! Зачекайте 60с і спробуйте знову`, '⏳');
-          break;
-        }
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const txs = await res.json();
-        if (Array.isArray(txs)) {
-          allTxs = allTxs.concat(txs);
-        }
-      } catch (e) {
-        if (i === 0) throw e; // Якщо перший запит не вдався — кидаємо помилку
-        // Інші помилки — просто зупиняємо завантаження
-        break;
-      }
-      // Затримка між запитами (крім останнього)
-      if (i < batches.length - 1) {
-        if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>Зачекайте ${RATE_LIMIT_MS / 1000}с...`;
-        await new Promise(r => setTimeout(r, RATE_LIMIT_MS));
-      }
-    }
-
-    // Фільтруємо комунальні транзакції
-    const utilityTxs = allTxs.filter(isUtilityTx);
-    localStorage.setItem('k_mono_txs', JSON.stringify(utilityTxs));
-    localStorage.setItem('k_mono_last_sync', new Date().toLocaleString('uk-UA'));
-    localStorage.setItem('k_mono_all_txs', JSON.stringify(allTxs));
-    renderMonoTransactions(utilityTxs);
-    showToast(`Знайдено ${utilityTxs.length} з ${allTxs.length} транзакцій`, '💳');
-  } catch (e) {
-    showToast('Помилка: ' + e.message, '❌');
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-sync"></i>Синхронізувати транзакції'; }
-  }
-});
-
-function renderMonoTransactions(txs) {
-  const container = $('monoTransactions');
-  const list = $('monoTxList');
-  if (!container || !list) return;
-  if (!txs || !txs.length) { container.classList.add('hidden'); return; }
-  container.classList.remove('hidden');
-  list.innerHTML = txs.slice(0, 10).map(tx => {
-    const date = new Date(tx.time * 1000).toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' });
-    const amount = Math.abs(tx.amount / 100);
-    const desc = tx.description || 'Транзакція';
-    return `<div class="flex items-center justify-between bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 bg-black/5 dark:bg-white/5 rounded-lg flex items-center justify-center text-sm">💳</div>
-        <div><p class="text-xs font-bold text-slate-700 dark:text-slate-200">${escapeHtml(desc)}</p><p class="text-[9px] text-slate-400">${date}</p></div>
-      </div>
-      <span class="text-sm font-black text-red-500">-${fmt.format(amount)} ₴</span>
-    </div>`;
-  }).join('');
-}
-
-// =================== FAMILY ACCESS ===================
-$('familyAccessBtn')?.addEventListener('click', () => {
-  $('familyModal')?.classList.remove('hidden');
-  haptic('light');
-});
-
-$('familyGenLink')?.addEventListener('click', async () => {
-  if (!sessionLogin && !localStorage.getItem('k_uid')) { showToast('Спочатку увійдіть', '⚠️'); return; }
-  const btn = $('familyGenLink');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>Створення...'; }
-  try {
-    const res = await secureFetch('POST', {}, { action: 'generate_share', addressId: currentAddressId });
-    const data = await res.json();
-    if (!data.success || !data.shareToken) { showToast(data.error || 'Помилка', '❌'); return; }
-    const shareUrl = `${window.location.origin}${window.location.pathname}?share=${data.shareToken}`;
-    const resultEl = $('familyLinkResult');
-    const urlInput = $('familyLinkUrl');
-    if (resultEl) resultEl.classList.remove('hidden');
-    if (urlInput) urlInput.value = shareUrl;
-    showToast('Посилання створено!', '👨‍👩‍👧‍👦');
-  } catch (e) {
-    showToast('Помилка мережі', '❌');
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-link"></i>Створити посилання'; }
-  }
-});
-
-$('familyCopyLink')?.addEventListener('click', async () => {
-  const url = $('familyLinkUrl')?.value;
-  if (!url) return;
-  try {
-    await navigator.clipboard.writeText(url);
-    showToast('Скопійовано!', '📋');
-  } catch (e) {
-    prompt('Скопіюйте:', url);
-  }
-});
-
 // =================== SHARE ADDRESS ===================
 $('shareAddressBtn')?.addEventListener('click',shareAddress);
 async function shareAddress(){
@@ -1364,6 +1267,173 @@ async function shareAddress(){
     if(navigator.share){try{await navigator.share({title:'Комуналка',text:`Перегляд за "${addrName}"`,url:shareUrl});showToast('Надіслано!','✅');return;}catch(e){if(e.name==='AbortError')return;}}
     try{await navigator.clipboard.writeText(shareUrl);showToast('Посилання скопійовано!','📋');}catch(e){prompt('Скопіюйте:',shareUrl);}
   }catch(e){if(btn)btn.style.opacity='1';showToast('Помилка мережі','❌');}
+}
+
+// =================== ANALYTICS ===================
+function renderAnalytics() {
+  if (records.length < 3) {
+    $('analyticsCard')?.classList.add('hidden');
+    return;
+  }
+  $('analyticsCard')?.classList.remove('hidden');
+  const sf = new SmartForecast(records);
+  const now = new Date();
+  const nextMonth = `${now.getFullYear()}-${String(now.getMonth() + 2 > 12 ? 1 : now.getMonth() + 2).padStart(2,'0')}`;
+  const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`;
+
+  // Прогноз
+  const pred = sf.predict(curMonth);
+  if (pred && $('forecastValue')) {
+    const confLabels = { high: '🟢 Висока', medium: '🟡 Середня', low: '🔴 Низька' };
+    $('forecastValue').innerHTML = `<span class="text-3xl font-black">${fmt.format(pred.predicted)} ₴</span>`;
+    $('forecastConfidence').innerHTML = `
+      <span class="text-[9px] font-bold ${pred.confidence === 'high' ? 'text-green-500' : pred.confidence === 'medium' ? 'text-yellow-500' : 'text-red-400'}">${confLabels[pred.confidence]}</span>
+      <span class="text-[9px] text-slate-400 ml-2">Сезонний коеф.: ${pred.seasonalFactor}x</span>
+    `;
+    if (pred.confidence === 'high') $('forecastCard')?.classList.remove('hidden');
+    else $('forecastCard')?.classList.remove('hidden');
+  } else {
+    if (records.length >= 3) {
+      const avg = Math.round(records.reduce((s,r) => s + r.total, 0) / records.length);
+      if ($('forecastValue')) $('forecastValue').innerHTML = `<span class="text-3xl font-black">~ ${fmt.format(avg)} ₴</span>`;
+      if ($('forecastConfidence')) $('forecastConfidence').innerHTML = `<span class="text-[9px] text-slate-400">Середнє за всі місяці (недостатньо даних для ML)</span>`;
+    }
+  }
+
+  // YoY порівняння
+  const yoy = sf.compareYearOverYear(curMonth);
+  if (yoy && $('yoyCard')) {
+    $('yoyCard')?.classList.remove('hidden');
+    const icon = yoy.change < 0 ? '📉' : '📈';
+    const color = yoy.change < 0 ? 'text-green-500' : yoy.change > 5 ? 'text-red-500' : 'text-slate-500';
+    if ($('yoyContent')) $('yoyContent').innerHTML = `
+      <div class="flex justify-between items-center">
+        <span class="text-xs font-bold text-slate-500">${icon} ${new Date(curMonth+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'})}</span>
+        <span class="text-lg font-black">${fmt.format(yoy.current)} ₴</span>
+      </div>
+      <div class="flex justify-between items-center mt-2">
+        <span class="text-xs font-bold text-slate-500">vs ${new Date((parseInt(curMonth.split('-')[0])-1)+'-'+curMonth.split('-')[1]+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'})}</span>
+        <span class="text-lg font-black ${color}">${yoy.change > 0 ? '+' : ''}${yoy.change}%</span>
+      </div>
+    `;
+  } else {
+    $('yoyCard')?.classList.add('hidden');
+  }
+
+  // Аномалії
+  const anomalies = sf.detectAnomalies();
+  if (anomalies.length > 0 && $('anomaliesCard')) {
+    $('anomaliesCard')?.classList.remove('hidden');
+    if ($('anomaliesList')) $('anomaliesList').innerHTML = anomalies.map(a => `
+      <div class="flex justify-between items-center p-2 bg-red-50 dark:bg-red-500/10 rounded-xl">
+        <span class="text-xs font-bold text-slate-600">${new Date(a.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'})}</span>
+        <span class="text-xs font-black text-red-500">${fmt.format(a.total)} ₴ (${a.reason})</span>
+      </div>
+    `).join('');
+  } else {
+    $('anomaliesCard')?.classList.add('hidden');
+  }
+
+  // Ковзне середнє
+  const ma12 = sf.getMovingAverage(12);
+  const ma3 = sf.getMovingAverage(3);
+  if ($('movingAvgContent')) $('movingAvgContent').innerHTML = `
+    <div class="flex justify-between"><span class="text-xs font-bold text-slate-500">За 12 міс</span><span class="text-sm font-black">${fmt.format(ma12)} ₴</span></div>
+    <div class="flex justify-between mt-2"><span class="text-xs font-bold text-slate-500">За 3 міс</span><span class="text-sm font-black">${fmt.format(ma3)} ₴</span></div>
+  `;
+
+  // Графік з прогнозом
+  renderAnalyticsChart(sf, curMonth);
+}
+
+function renderAnalyticsChart(sf, curMonth) {
+  if (!$('analyticsChartCanvas')) return;
+  const canvas = $('analyticsChartCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const width = rect.width, height = rect.height;
+
+  ctx.clearRect(0, 0, width, height);
+  const sorted = [...records].sort((a,b) => a.month.localeCompare(b.month));
+  const last12 = sorted.slice(-12);
+
+  if (!last12.length) {
+    ctx.fillStyle = '#8e8e93';
+    ctx.font = '12px -apple-system';
+    ctx.textAlign = 'center';
+    ctx.fillText('Немає даних', width/2, height/2);
+    return;
+  }
+
+  const padding = { top: 20, bottom: 25, left: 40, right: 20 };
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+
+  const values = last12.map(r => r.total);
+  const maxVal = Math.max(...values, 1);
+  const barWidth = chartW / last12.length;
+  const barPad = barWidth * 0.15;
+
+  // Сітка
+  ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 3; i++) {
+    const y = padding.top + (chartH / 3) * i;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(width - padding.right, y);
+    ctx.stroke();
+  }
+
+  // Стовпчики
+  last12.forEach((r, i) => {
+    const barH = Math.max(2, (r.total / maxVal) * chartH);
+    const x = padding.left + i * barWidth + barPad;
+    const y = padding.top + chartH - barH;
+    const w = barWidth - barPad * 2;
+    const color = r.month === curMonth ? '#007aff' : r.paid ? '#34c759' : '#ff9500';
+
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x, y, w, barH, 4) : ctx.rect(x, y, w, barH);
+    ctx.fillStyle = color + '80';
+    ctx.fill();
+
+    // Мітка місяця
+    ctx.fillStyle = '#8e8e93';
+    ctx.font = 'bold 8px -apple-system';
+    ctx.textAlign = 'center';
+    ctx.fillText(new Date(r.month + '-01').toLocaleString('uk-UA', { month: 'short' }).slice(0, 3), x + w / 2, height - 8);
+  });
+
+  // Пунктирна лінія прогнозу
+  if (last12.length >= 3) {
+    const trend = sf.calcTrend();
+    if (trend) {
+      ctx.strokeStyle = '#007aff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 3]);
+      const startX = padding.left;
+      const endX = padding.left + chartW;
+      const startY = padding.top + chartH - ((trend.intercept) / maxVal) * chartH;
+      const endY = padding.top + chartH - ((trend.slope * (last12.length) + trend.intercept) / maxVal) * chartH;
+      ctx.beginPath();
+      ctx.moveTo(startX, Math.max(padding.top, Math.min(padding.top + chartH, startY)));
+      ctx.lineTo(endX, Math.max(padding.top, Math.min(padding.top + chartH, endY)));
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Мітка "Прогноз"
+      ctx.fillStyle = '#007aff';
+      ctx.font = 'bold 9px -apple-system';
+      ctx.textAlign = 'left';
+      ctx.fillText('📈 Тренд', width - padding.right - 50, padding.top + 10);
+    }
+  }
 }
 
 // =================== INIT APP UI ===================

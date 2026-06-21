@@ -32,24 +32,18 @@ self.addEventListener('fetch', event => {
     url.hostname.includes('cdn.jsdelivr.net')
   ) {
     event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        return fetch(event.request).then(response => {
-          if (response && response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => { try { cache.put(event.request, clone); } catch(e) {} });
-          }
-          return response;
-        }).catch(() => cached);
-      })
+      fetch(event.request).then(response => {
+        if (response && response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => { try { cache.put(event.request, clone); } catch(e) {} });
+        }
+        return response;
+      }).catch(() => caches.match(event.request))
     );
     return;
   }
   event.respondWith(
     caches.match(event.request).then(cached => {
-      if (event.request.mode === 'navigate' && !cached) {
-        return caches.match('./index.html').then(fallback => fallback || fetch(event.request));
-      }
       const fetchPromise = fetch(event.request).then(response => {
         if (response && response.status === 200 && response.type === 'basic') {
           const clone = response.clone();
