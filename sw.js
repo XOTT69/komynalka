@@ -18,6 +18,12 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (!url.protocol.startsWith('http')) return;
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('./index.html').then(cached => cached || caches.match('./')))
+    );
+    return;
+  }
   if (
     url.hostname.includes('workers.dev') ||
     url.hostname.includes('googleapis.com') ||

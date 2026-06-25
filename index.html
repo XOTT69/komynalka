@@ -41,6 +41,23 @@
         .welcome-tooltip{animation:tooltipIn .5s cubic-bezier(.32,.72,0,1)}@keyframes tooltipIn{from{opacity:0;transform:translateY(10px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
         @keyframes ai-fade-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}.ai-msg-in{animation:ai-fade-in .25s ease-out}
         #aiPanelInner{transition:transform .4s cubic-bezier(.32,.72,0,1)}
+        :root{--liquid-level:.68;--liquid-rgb:255 255 255;--liquid-ink-rgb:15 23 42;--liquid-stroke-rgb:255 255 255;--liquid-shadow-rgb:15 23 42;--liquid-card-alpha:.72;--liquid-bar-alpha:.76;--liquid-control-alpha:.64;--liquid-stroke-alpha:.46;--liquid-blur:30px;--liquid-edge:rgba(255,255,255,.72);--liquid-edge-soft:rgba(255,255,255,.24);--liquid-tint:rgba(0,122,255,.08);--card-radius:1.75rem;--premium-shadow:0 18px 52px -24px rgb(var(--liquid-shadow-rgb)/.32),0 8px 22px -16px rgb(var(--liquid-shadow-rgb)/.18),inset 0 1px 0 var(--liquid-edge)}
+        html.dark{--liquid-rgb:28 28 30;--liquid-ink-rgb:255 255 255;--liquid-stroke-rgb:255 255 255;--liquid-shadow-rgb:0 0 0;--liquid-card-alpha:.62;--liquid-bar-alpha:.70;--liquid-control-alpha:.46;--liquid-stroke-alpha:.12;--liquid-edge:rgba(255,255,255,.16);--liquid-edge-soft:rgba(255,255,255,.08);--liquid-tint:rgba(10,132,255,.11)}
+        html{background:linear-gradient(145deg,#f7f9ff 0%,#edf4fb 44%,#f8f3f7 100%)}html.dark{background:linear-gradient(145deg,#020308 0%,#10131a 48%,#06070a 100%)}body{background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0));}html.dark body{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0))}
+        body::before{content:"";position:fixed;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(0,122,255,.10),transparent 38%),linear-gradient(245deg,rgba(52,199,89,.08),transparent 42%),linear-gradient(0deg,rgba(255,255,255,.38),transparent 70%);opacity:.9}html.dark body::before{background:linear-gradient(115deg,rgba(10,132,255,.10),transparent 40%),linear-gradient(245deg,rgba(94,92,230,.10),transparent 46%);opacity:.75}
+        #appScreen,#authScreen,#splashScreen{background:transparent!important}.premium-card,.glass,.shadow-premium,#welcomeTooltip>div,#aiPanelInner,#addressModalContent,#quickActionsModal>div,#linkModal>div,#achievementToast,#achievementDetailModal>div,#yearReportModal>div{background:linear-gradient(180deg,rgb(var(--liquid-rgb)/calc(var(--liquid-card-alpha) + .06)),rgb(var(--liquid-rgb)/var(--liquid-card-alpha)))!important;-webkit-backdrop-filter:blur(var(--liquid-blur)) saturate(185%);backdrop-filter:blur(var(--liquid-blur)) saturate(185%);border:1px solid rgb(var(--liquid-stroke-rgb)/var(--liquid-stroke-alpha))!important;box-shadow:var(--premium-shadow);position:relative}.glass,#bottomNav{background:linear-gradient(180deg,rgb(var(--liquid-rgb)/calc(var(--liquid-bar-alpha) + .08)),rgb(var(--liquid-rgb)/var(--liquid-bar-alpha)))!important}
+        .premium-card::before,.shadow-premium::before,#welcomeTooltip>div::before,#aiPanelInner::before,#addressModalContent::before,#quickActionsModal>div::before,#yearReportModal>div::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,var(--liquid-edge-soft),transparent 32%),linear-gradient(115deg,rgba(255,255,255,.20),transparent 42%);mix-blend-mode:screen}.premium-card>*,.shadow-premium>*{position:relative}.dark .premium-card::before,.dark .shadow-premium::before,.dark #welcomeTooltip>div::before,.dark #aiPanelInner::before,.dark #addressModalContent::before,.dark #quickActionsModal>div::before,.dark #yearReportModal>div::before{background:linear-gradient(180deg,rgba(255,255,255,.10),transparent 34%)}
+        .premium-input,input[type="number"],input[type="text"],input[type="password"],textarea,select{background:rgb(var(--liquid-rgb)/var(--liquid-control-alpha))!important;border-color:rgb(var(--liquid-stroke-rgb)/calc(var(--liquid-stroke-alpha) + .06))!important;-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);box-shadow:inset 0 1px 0 var(--liquid-edge-soft)}
+        .hero-gradient{background:linear-gradient(145deg,rgba(0,122,255,.86),rgba(52,120,246,.70) 54%,rgba(88,86,214,.72))!important;-webkit-backdrop-filter:blur(34px) saturate(190%);backdrop-filter:blur(34px) saturate(190%);border:1px solid rgba(255,255,255,.34)!important;box-shadow:0 28px 70px -34px rgba(0,73,180,.62),inset 0 1px 0 rgba(255,255,255,.45)}
+        #bottomNav{padding-bottom:max(env(safe-area-inset-bottom),1rem);box-shadow:0 -18px 44px -28px rgb(var(--liquid-shadow-rgb)/.42),inset 0 1px 0 var(--liquid-edge-soft)}.nav-btn{border-radius:1.1rem;min-height:48px}.nav-btn.text-brand{background:var(--liquid-tint);box-shadow:inset 0 1px 0 var(--liquid-edge-soft)}
+        #toast{background:linear-gradient(180deg,rgba(20,20,24,.80),rgba(20,20,24,.70))!important;color:#fff!important;-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);border:1px solid rgba(255,255,255,.22)}html.dark #toast{background:linear-gradient(180deg,rgba(245,245,247,.86),rgba(245,245,247,.74))!important;color:#111!important}
+        .liquid-slider{appearance:none;width:100%;height:8px;border-radius:999px;background:linear-gradient(90deg,rgba(0,122,255,.35),rgba(0,122,255,.82));outline:none}.liquid-slider::-webkit-slider-thumb{appearance:none;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.86);border:1px solid rgba(255,255,255,.8);box-shadow:0 8px 22px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.9);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}.liquid-slider::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.86);border:1px solid rgba(255,255,255,.8);box-shadow:0 8px 22px rgba(0,0,0,.20)}
+        button.bg-brand,button[class*="from-brand"],#submitFormBtn,#saveSettingsBtn,#installPwaBtn{box-shadow:0 16px 38px -22px rgba(0,73,180,.78),inset 0 1px 0 rgba(255,255,255,.34);border:1px solid rgba(255,255,255,.22)}button:active,.nav-btn:active{filter:saturate(1.08) brightness(.98)}
+        #tabDashboard>.bg-gradient-to-br,#dashAddBtn,#reminderBanner,#yearReportModal .bg-gradient-to-br{background:linear-gradient(145deg,rgba(0,122,255,.82),rgba(52,120,246,.66) 52%,rgba(94,92,230,.62))!important;-webkit-backdrop-filter:blur(34px) saturate(190%);backdrop-filter:blur(34px) saturate(190%);border:1px solid rgba(255,255,255,.34)!important;box-shadow:0 26px 64px -34px rgba(0,73,180,.62),inset 0 1px 0 rgba(255,255,255,.46)}
+        #aiFabBtn{background:linear-gradient(145deg,rgba(120,92,255,.86),rgba(54,91,240,.72))!important;-webkit-backdrop-filter:blur(24px) saturate(190%);backdrop-filter:blur(24px) saturate(190%);border-color:rgba(255,255,255,.36)!important;box-shadow:0 22px 54px -26px rgba(54,91,240,.85),inset 0 1px 0 rgba(255,255,255,.46)}
+        #swipeContainer{scroll-padding-bottom:120px}.sync-dot{box-shadow:0 0 0 3px rgb(var(--liquid-rgb)/.22)}.dark .sync-dot{box-shadow:0 0 0 3px rgba(255,255,255,.08)}
+        @media (prefers-reduced-transparency:reduce){:root{--liquid-card-alpha:.94!important;--liquid-bar-alpha:.94!important;--liquid-control-alpha:.86!important;--liquid-blur:12px!important}.premium-card,.glass,#aiPanelInner,#addressModalContent{background:rgb(var(--liquid-rgb)/.96)!important}}
+        @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.premium-card,.glass,#aiPanelInner,#addressModalContent,#quickActionsModal>div{background:rgb(var(--liquid-rgb)/.96)!important}}
     </style>
     <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{DEFAULT:'var(--brand)',hover:'var(--brand-hover)',light:'var(--brand-light)',border:'var(--brand-border)'},apple:{dark:'#1c1c1e',darker:'#000000',light:'#f2f2f7'}},boxShadow:{'soft':'0 8px 32px -8px rgba(0,0,0,.08)','premium':'0 20px 60px -15px rgba(0,0,0,.12)'}}}}</script>
     <meta name="theme-color" content="#f2f2f7" id="metaThemeColor">
@@ -68,7 +85,7 @@
 
 <!-- Welcome -->
 <div id="welcomeTooltip" class="hidden fixed inset-0 z-[900] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6" onclick="dismissWelcome()">
-  <div class="welcome-tooltip bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-slate-100 dark:border-white/10" onclick="event.stopPropagation()">
+  <div class="welcome-tooltip premium-card bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-slate-100 dark:border-white/10" onclick="event.stopPropagation()">
     <div class="text-6xl mb-4">🏠</div>
     <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-3">Вітаємо в Комуналці!</h2>
     <p class="text-slate-500 text-sm leading-relaxed mb-6">Вносьте показники води, світла та газу — отримуйте миттєвий розрахунок, графіки та прогнози.</p>
@@ -89,7 +106,7 @@
       <h1 class="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Комуналка<span class="text-brand">.</span></h1>
       <p class="text-slate-500 font-medium text-sm">Розумний облік комунальних</p>
     </div>
-    <div class="bg-white dark:bg-apple-dark p-8 rounded-[2.5rem] shadow-premium border border-slate-100 dark:border-white/5 relative overflow-hidden">
+    <div class="premium-card bg-white dark:bg-apple-dark p-8 rounded-[2.5rem] shadow-premium border border-slate-100 dark:border-white/5 relative overflow-hidden">
       <div class="absolute -top-20 -right-20 w-40 h-40 bg-brand/5 rounded-full blur-3xl pointer-events-none"></div>
       <form id="authForm" class="space-y-4 relative z-10">
         <div>
@@ -335,6 +352,21 @@
     </div>
   </div>
 
+  <div class="premium-card p-4">
+    <div class="flex items-center justify-between gap-3 mb-3">
+      <div>
+        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Liquid Glass</p>
+        <p class="text-xs font-bold text-slate-700 dark:text-slate-200 mt-0.5">Прозорість і читабельність</p>
+      </div>
+      <span id="liquidGlassValue" class="text-[10px] font-black text-brand bg-brand-light border border-brand-border px-2.5 py-1 rounded-lg">68%</span>
+    </div>
+    <input type="range" id="liquidGlassRange" min="0" max="100" step="1" value="68" class="liquid-slider" aria-label="Інтенсивність Liquid Glass">
+    <div class="flex justify-between text-[9px] font-bold text-slate-400 mt-2">
+      <span>Чіткіше</span>
+      <span>Прозоріше</span>
+    </div>
+  </div>
+
   <div class="premium-card overflow-hidden">
     <div class="p-4 border-b border-slate-100 dark:border-white/5"><p class="text-sm font-black text-slate-900 dark:text-white"><i class="fa-solid fa-sliders text-brand mr-2"></i>Налаштування послуг</p></div>
     <div class="p-4 space-y-3">
@@ -358,6 +390,11 @@
         <div class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl"><p class="text-[8px] font-bold text-slate-400 uppercase mb-1">⚡ Світло</p><input type="number" id="tElectroBase" step="0.01" class="premium-input w-full bg-white dark:bg-[#2c2c2e] px-2 py-1.5 rounded-lg font-bold outline-none text-center text-sm border border-slate-200 dark:border-transparent"></div>
         <div id="settingElectroWinterWrap" class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl"><p class="text-[8px] font-bold text-slate-400 uppercase mb-1">❄️ Зимовий</p><input type="number" id="tElectroWinter" step="0.01" class="premium-input w-full bg-white dark:bg-[#2c2c2e] px-2 py-1.5 rounded-lg font-bold outline-none text-center text-sm border border-slate-200 dark:border-transparent"></div>
         <div class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl"><p class="text-[8px] font-bold text-slate-400 uppercase mb-1">🔥 Газ</p><input type="number" id="tGas" step="0.01" class="premium-input w-full bg-white dark:bg-[#2c2c2e] px-2 py-1.5 rounded-lg font-bold outline-none text-center text-sm border border-slate-200 dark:border-transparent"></div>
+      </div>
+      <div class="px-4 pb-4 grid grid-cols-3 gap-2">
+        <button id="saveTariffTemplateBtn" type="button" class="py-2.5 bg-brand-light text-brand font-bold rounded-xl text-[10px] border border-brand-border active:scale-[0.98]">Зберегти шаблон</button>
+        <button id="loadTariffTemplateBtn" type="button" class="py-2.5 bg-slate-50 dark:bg-black/40 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-[10px] border border-slate-200 dark:border-white/5 active:scale-[0.98]">Мій шаблон</button>
+        <button id="resetTariffsBtn" type="button" class="py-2.5 bg-slate-50 dark:bg-black/40 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-[10px] border border-slate-200 dark:border-white/5 active:scale-[0.98]">Базові</button>
       </div>
     </details>
     <details class="border-t border-slate-100 dark:border-white/5">
@@ -386,9 +423,17 @@
     <div class="grid grid-cols-2 gap-2">
       <button id="exportJsonBtn" class="py-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-download text-brand"></i>Бекап</button>
       <button id="importJsonBtn" class="py-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-upload text-brand"></i>Імпорт</button>
+      <button id="restoreBackupBtn" class="py-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-clock-rotate-left text-brand"></i>Відновити</button>
+      <button id="restorePreImportBtn" class="py-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-rotate-left text-orange-500"></i>До імпорту</button>
+      <button id="forgetDeviceBtn" class="col-span-2 py-3 bg-red-50 dark:bg-red-500/10 rounded-xl text-xs font-bold text-red-500 border border-red-100 dark:border-red-500/20 active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-user-lock"></i>Забути цей пристрій</button>
     </div>
     <input type="file" id="importFileInput" accept=".json" class="hidden">
   </div>
+
+  <details class="premium-card overflow-hidden">
+    <summary class="p-4 flex items-center justify-between cursor-pointer select-none"><span class="text-sm font-bold text-slate-900 dark:text-white"><i class="fa-solid fa-timeline text-brand mr-2"></i>Останні зміни</span><i class="fa-solid fa-chevron-down text-slate-400 text-[10px]"></i></summary>
+    <div id="changeLogList" class="px-4 pb-4 space-y-2 text-xs text-slate-500"></div>
+  </details>
 
   <div id="pwaInstallBlock" class="hidden">
     <button id="installPwaBtn" class="w-full bg-gradient-to-r from-brand to-blue-600 text-white rounded-2xl py-4 font-bold shadow-lg shadow-brand/20 active:scale-[0.98] text-sm"><i class="fa-solid fa-download mr-2"></i>Встановити на екран</button>

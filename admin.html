@@ -451,8 +451,8 @@
                     <td class="p-3 text-center">${authBadge}</td>
                     <td class="p-3 text-center font-bold">${u.records || 0}</td>
                     <td class="p-3 text-center">${u.addresses || 1}</td>
-                    <td class="p-3 text-center text-slate-400">${u.lastMonth || '—'}</td>
-                    <td class="p-3 text-center">${u.devices || '?'}</td>
+                    <td class="p-3 text-center text-slate-400">${escHtml(u.lastMonth || '—')}</td>
+                    <td class="p-3 text-center">${Number.isFinite(Number(u.devices)) ? Number(u.devices) : '?'}</td>
                     <td class="p-3 text-center">${proBadge}</td>
                     <td class="p-3 text-center">${u.activeThisMonth ? '<span class="text-green-500">●</span>' : '<span class="text-slate-300">○</span>'}</td>
                     <td class="p-3 text-center">
@@ -525,7 +525,7 @@
                         <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Пристрої</p><p class="font-bold">${ud.knownDevices?.length || '—'}</p></div>
                         <div class="bg-slate-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-slate-400 uppercase">Підозріло</p><p class="font-bold ${ud.suspiciousActivity > 0 ? 'text-red-500' : ''}">${ud.suspiciousActivity || 0}</p></div>
                     </div>
-                    ${ud.lastIP ? `<div class="bg-slate-50 p-3 rounded-xl text-xs"><strong>Last IP:</strong> ${escHtml(ud.lastIP)} | <strong>Last Device:</strong> ${(ud.lastDevice || '—').slice(0, 12)}...</div>` : ''}
+                    ${ud.lastIP ? `<div class="bg-slate-50 p-3 rounded-xl text-xs"><strong>Last IP:</strong> ${escHtml(ud.lastIP)} | <strong>Last Device:</strong> ${escHtml((ud.lastDevice || '—').slice(0, 12))}...</div>` : ''}
                     <div class="flex gap-2 flex-wrap">
                         <button data-modal-action="pro" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs font-bold active:scale-95">⭐ Дати Pro</button>
                         <button data-modal-action="revoke" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold active:scale-95">Забрати Pro</button>
@@ -538,7 +538,7 @@
                         html += `<p class="text-xs text-slate-500 mb-2">Записів: ${addr.records?.length || 0}</p>`;
                         if (addr.records?.length) {
                             const last5 = [...addr.records].sort((a, b) => b.month.localeCompare(a.month)).slice(0, 5);
-                            html += `<div class="space-y-1">${last5.map(r => `<div class="flex justify-between text-xs bg-white p-2 rounded-lg"><span>${r.month}</span><span class="font-bold">${r.total?.toFixed(0) || 0} ₴</span><span class="${r.paid ? 'text-green-500' : 'text-orange-500'}">${r.paid ? '✅' : '⏳'}</span></div>`).join('')}</div>`;
+                            html += `<div class="space-y-1">${last5.map(r => `<div class="flex justify-between text-xs bg-white p-2 rounded-lg"><span>${escHtml(r.month)}</span><span class="font-bold">${Number(r.total || 0).toFixed(0)} ₴</span><span class="${r.paid ? 'text-green-500' : 'text-orange-500'}">${r.paid ? '✅' : '⏳'}</span></div>`).join('')}</div>`;
                         }
                         html += `</div>`;
                     });
@@ -602,7 +602,7 @@
             const months = {};
             allUsers.forEach(u => { if (u.lastMonth && u.lastMonth !== '—') { months[u.lastMonth] = (months[u.lastMonth] || 0) + 1; } });
             const sortedMonths = Object.entries(months).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 12);
-            document.getElementById('monthlyActivity').innerHTML = sortedMonths.map(([m, c]) => `<div class="flex justify-between items-center py-1 text-sm"><span class="text-slate-600">${m}</span><div class="flex items-center gap-2"><div class="h-2 bg-blue-500 rounded-full" style="width:${Math.max(4, c * 3)}px"></div><span class="font-bold text-xs">${c}</span></div></div>`).join('') || '<p class="text-slate-400">Немає даних</p>';
+            document.getElementById('monthlyActivity').innerHTML = sortedMonths.map(([m, c]) => `<div class="flex justify-between items-center py-1 text-sm"><span class="text-slate-600">${escHtml(m)}</span><div class="flex items-center gap-2"><div class="h-2 bg-blue-500 rounded-full" style="width:${Math.max(4, c * 3)}px"></div><span class="font-bold text-xs">${c}</span></div></div>`).join('') || '<p class="text-slate-400">Немає даних</p>';
 
             // Device stats
             const deviceCounts = allUsers.map(u => u.devices || 0);

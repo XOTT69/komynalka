@@ -6,6 +6,10 @@ const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFr
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
 const APP_VERSION = '4.0.0';
 const MAX_ADDRESSES_FREE = 3;
+const LOCAL_BACKUP_KEY = 'komynalka_backup';
+const PRE_IMPORT_BACKUP_KEY = 'komynalka_pre_import_backup';
+const CHANGE_LOG_KEY = 'komynalka_change_log';
+const CUSTOM_TARIFF_TEMPLATE_KEY = 'komynalka_tariff_template';
 
 const firebaseConfig = { apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80", authDomain: "pwakomun.firebaseapp.com", projectId: "pwakomun", storageBucket: "pwakomun.firebasestorage.app", messagingSenderId: "4437974770", appId: "1:4437974770:web:bf7d2f7bac35eff5707a6b" };
 firebase.initializeApp(firebaseConfig);
@@ -49,10 +53,30 @@ function showToast(msg, icon = '✅') {
   const t = $('toast'); if (!t) return;
   $('toastMsg').innerText = msg;
   $('toastIcon').innerText = icon;
+  t.style.pointerEvents = 'none';
   t.classList.remove('-translate-y-24', 'opacity-0');
   try { haptic(icon === '✅' ? 'success' : icon === '❌' || icon === '⚠️' ? 'error' : 'notification'); } catch(e) {}
   clearTimeout(toastTimeout);
   toastTimeout = setTimeout(() => t.classList.add('-translate-y-24', 'opacity-0'), 2500);
+}
+
+function showActionToast(msg, actionText, onAction, icon = '✅') {
+  const t = $('toast'); if (!t) return showToast(msg, icon);
+  const msgEl = $('toastMsg'), iconEl = $('toastIcon');
+  if (!msgEl || !iconEl) return showToast(msg, icon);
+  iconEl.innerText = icon;
+  msgEl.innerHTML = `${escapeHtml(msg)} <button type="button" id="toastActionBtn" class="ml-2 underline underline-offset-2 font-black">${escapeHtml(actionText)}</button>`;
+  t.style.pointerEvents = 'auto';
+  t.classList.remove('-translate-y-24', 'opacity-0');
+  try { haptic('notification'); } catch(e) {}
+  $('toastActionBtn')?.addEventListener('click', () => {
+    clearTimeout(toastTimeout);
+    t.classList.add('-translate-y-24', 'opacity-0');
+    t.style.pointerEvents = 'none';
+    onAction();
+  });
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => { t.classList.add('-translate-y-24', 'opacity-0'); t.style.pointerEvents = 'none'; }, 6000);
 }
 
 function vibe(pattern = 10) { try { if (navigator.vibrate) navigator.vibrate(Array.isArray(pattern) ? pattern : [pattern]); } catch(e) {} }
@@ -65,13 +89,69 @@ async function getHash(t) {
 }
 
 function setSyncState(state) { syncState = state; const dot = $('syncDotHeader'); if (dot) dot.className = `sync-dot ${state}`; }
-function saveToLocal() { try { localStorage.setItem('komynalka_backup', JSON.stringify({ addresses, currentAddressId, timestamp: Date.now() })); } catch(e) {} }
-function loadFromLocal() { try { const b = localStorage.getItem('komynalka_backup'); return b ? JSON.parse(b) : null; } catch(e) { return null; } }
+function saveToLocal() { try { localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify({ addresses, currentAddressId, timestamp: Date.now(), version: APP_VERSION })); } catch(e) {} }
+function loadFromLocal(key = LOCAL_BACKUP_KEY) { try { const b = localStorage.getItem(key); return b ? JSON.parse(b) : null; } catch(e) { return null; } }
+
+function backupCurrentState(key = LOCAL_BACKUP_KEY) {
+  try {
+    if (typeof syncCurrentAddress === 'function') syncCurrentAddress();
+    localStorage.setItem(key, JSON.stringify({ addresses, currentAddressId, timestamp: Date.now(), version: APP_VERSION }));
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+function restoreFromLocalBackup(key = LOCAL_BACKUP_KEY) {
+  try {
+    const backup = loadFromLocal(key);
+    const normalized = typeof normalizeImportData === 'function' ? normalizeImportData(backup) : backup;
+    if (!normalized || !Array.isArray(normalized.addresses) || !normalized.addresses.length) return false;
+    addresses = normalized.addresses;
+    currentAddressId = normalized.currentAddressId || addresses[0].id;
+    loadCurrentAddress();
+    syncToCloud();
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
 
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str || '';
   return div.innerHTML;
+}
+
+function escapeAttr(str) {
+  return escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function sanitizeDomId(value, fallback = 'item') {
+  const raw = String(value || '').trim();
+  const safe = raw.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 48);
+  return safe || `${fallback}_${Date.now().toString(36)}`;
+}
+
+function createTariffSnapshot() {
+  return { ...tariffs, savedAt: new Date().toISOString() };
+}
+
+function getChangeLog() {
+  try {
+    const log = JSON.parse(localStorage.getItem(CHANGE_LOG_KEY) || '[]');
+    return Array.isArray(log) ? log : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function addChangeLog(type, details = {}) {
+  const entry = { id: Date.now() + Math.random(), ts: new Date().toISOString(), type, details };
+  try {
+    const log = [entry, ...getChangeLog()].slice(0, 80);
+    localStorage.setItem(CHANGE_LOG_KEY, JSON.stringify(log));
+  } catch(e) {}
 }
 
 // =================== DISPLAY NAME ===================
@@ -205,6 +285,7 @@ window.addEventListener('offline', () => { setSyncState('offline'); showToast('�
 
 // =================== THEME ===================
 let currentMode = localStorage.getItem('themeMode') || 'auto';
+let currentLiquidGlass = parseInt(localStorage.getItem('liquidGlassLevel') || '68', 10);
 function setThemeMode(mode) {
   currentMode = mode; localStorage.setItem('themeMode', mode); applyThemeMode();
   ['light','auto','dark'].forEach(m => {
@@ -216,10 +297,32 @@ function setThemeMode(mode) {
 function applyThemeMode() {
   const isDark = currentMode === 'dark' || (currentMode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.classList.toggle('dark', isDark);
-  $('metaThemeColor')?.setAttribute("content", isDark ? "#000000" : "#f2f2f7");
+  $('metaThemeColor')?.setAttribute("content", isDark ? "#05060a" : "#f7f9ff");
+  applyLiquidGlassLevel(currentLiquidGlass);
 }
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (currentMode === 'auto') applyThemeMode(); });
 setThemeMode(currentMode);
+
+function applyLiquidGlassLevel(value) {
+  const level = Math.max(0, Math.min(100, Number.isFinite(Number(value)) ? Number(value) : 68));
+  currentLiquidGlass = level;
+  const strength = level / 100;
+  const root = document.documentElement;
+  const isDark = root.classList.contains('dark');
+  const cardAlpha = isDark ? 0.78 - strength * 0.28 : 0.88 - strength * 0.30;
+  const barAlpha = isDark ? 0.82 - strength * 0.25 : 0.92 - strength * 0.28;
+  const controlAlpha = isDark ? 0.66 - strength * 0.22 : 0.78 - strength * 0.20;
+  const blur = 18 + Math.round(strength * 22);
+  root.style.setProperty('--liquid-level', strength.toFixed(2));
+  root.style.setProperty('--liquid-card-alpha', cardAlpha.toFixed(2));
+  root.style.setProperty('--liquid-bar-alpha', barAlpha.toFixed(2));
+  root.style.setProperty('--liquid-control-alpha', controlAlpha.toFixed(2));
+  root.style.setProperty('--liquid-blur', `${blur}px`);
+  const range = $('liquidGlassRange');
+  const label = $('liquidGlassValue');
+  if (range) range.value = String(level);
+  if (label) label.textContent = `${level}%`;
+}
 
 // =================== WELCOME ===================
 function showWelcome() { if (localStorage.getItem('welcome_done')) return; $('welcomeTooltip')?.classList.remove('hidden'); }
@@ -294,12 +397,13 @@ async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) {
       currentAddressId = 'default';
       await syncToCloud();
     } else if (res.status === 200 && data.success) {
-      const cloudAddresses = data.data.addresses || [];
+      const normalizedCloud = normalizeImportData({ addresses: data.data.addresses || [], currentAddressId: data.data.currentAddressId });
+      const cloudAddresses = normalizedCloud?.addresses || data.data.addresses || [];
       const cloudRecords   = cloudAddresses.flatMap(a => a.records || []).length;
 
       if (cloudRecords > 0) {
         addresses        = cloudAddresses;
-        currentAddressId = data.data.currentAddressId || cloudAddresses[0]?.id || 'default';
+        currentAddressId = normalizedCloud?.currentAddressId || data.data.currentAddressId || cloudAddresses[0]?.id || 'default';
       } else {
         const localBackup  = loadFromLocal();
         const localAddrs   = localBackup?.addresses || [];
@@ -313,7 +417,7 @@ async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) {
           addresses = cloudAddresses.length
             ? cloudAddresses
             : [{ id:'default', name:'Мій дім', tariffs:{...defaultTariffs}, prefs:{...defaultPrefs}, records:[], customServices:[...defaultCustomServices] }];
-          currentAddressId = data.data.currentAddressId || addresses[0]?.id || 'default';
+          currentAddressId = normalizedCloud?.currentAddressId || data.data.currentAddressId || addresses[0]?.id || 'default';
         }
       }
 
@@ -451,7 +555,7 @@ $('addAddressBtn')?.addEventListener('click', () => {
 
 function renderAddressModal() {
   const list = $('addressListModal'); if (!list) return;
-  list.innerHTML = addresses.map(a => `<div class="flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95 cursor-pointer ${a.id===currentAddressId?'bg-brand border-brand text-white shadow-lg shadow-brand/20':'bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200'}" data-addr-id="${a.id}"><span class="font-bold text-lg truncate pr-2 flex-1">${escapeHtml(a.name)}</span><div class="flex gap-1.5 shrink-0"><button class="addr-edit p-2 rounded-xl shadow-sm ${a.id===currentAddressId?'bg-white/20 text-white':'bg-white dark:bg-[#2c2c2e] text-slate-400'}" data-id="${a.id}"><i class="fa-solid fa-pen"></i></button>${a.id!==currentAddressId&&addresses.length>1?`<button class="addr-del p-2 text-slate-400 bg-white dark:bg-[#2c2c2e] rounded-xl shadow-sm" data-id="${a.id}"><i class="fa-solid fa-trash"></i></button>`:''}</div></div>`).join('');
+  list.innerHTML = addresses.map(a => `<div class="flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95 cursor-pointer ${a.id===currentAddressId?'bg-brand border-brand text-white shadow-lg shadow-brand/20':'bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200'}" data-addr-id="${escapeAttr(a.id)}"><span class="font-bold text-lg truncate pr-2 flex-1">${escapeHtml(a.name)}</span><div class="flex gap-1.5 shrink-0"><button class="addr-edit p-2 rounded-xl shadow-sm ${a.id===currentAddressId?'bg-white/20 text-white':'bg-white dark:bg-[#2c2c2e] text-slate-400'}" data-id="${escapeAttr(a.id)}"><i class="fa-solid fa-pen"></i></button>${a.id!==currentAddressId&&addresses.length>1?`<button class="addr-del p-2 text-slate-400 bg-white dark:bg-[#2c2c2e] rounded-xl shadow-sm" data-id="${escapeAttr(a.id)}"><i class="fa-solid fa-trash"></i></button>`:''}</div></div>`).join('');
   list.querySelectorAll('[data-addr-id]').forEach(el => {
     el.addEventListener('click', (e) => {
       if (e.target.closest('.addr-edit') || e.target.closest('.addr-del')) return;
@@ -510,7 +614,7 @@ function switchTab(tabId, index) {
       if (tabId==='tabCalc')        { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); }
       if (tabId==='tabHistory')     renderRecords();
       if (tabId==='tabAnalytics')   renderAnalytics();
-      if (tabId==='tabSettings')    { renderSettingsCustomServices(); updateDisplayName(); }
+      if (tabId==='tabSettings')    { renderSettingsCustomServices(); updateDisplayName(); renderChangeLog(); }
     }));
   }, activeTab && activeTab !== targetTab ? 80 : 0);
   btnIds.forEach((id,i) => { const btn=$(id); if(!btn) return; btn.classList.toggle('text-brand',i===index); btn.classList.toggle('text-slate-400',i!==index); btn.classList.toggle('dark:text-slate-500',i!==index); });
@@ -845,6 +949,16 @@ function updateMonthComparison(){const comp=$('monthComparison');if(!comp)return
 
 function updateSmartForecast(){const el=$('smartForecast');if(!el) return;if(!records||records.length===0){el.innerText='—';return;}const selectedMonth=$('monthInput')?.value;if(!selectedMonth){el.innerText='—';return;}const[,sm]=selectedMonth.split('-').map(Number);const sameMonth=records.filter(r=>{const[,rm]=r.month.split('-').map(Number);return rm===sm;});if(sameMonth.length>0){el.innerText=`~ ${fmt.format(sameMonth.reduce((s,r)=>s+r.total,0)/sameMonth.length)} ₴`;return;}const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month));el.innerText=`~ ${fmt.format(sorted.slice(0,3).reduce((s,r)=>s+r.total,0)/Math.min(3,sorted.length))} ₴`;}
 
+function getSaveAnomalyWarning(total, month) {
+  const previous = records.filter(r => r.month !== month && r.total > 0);
+  if (previous.length < 3 || total <= 0) return '';
+  const recent = [...previous].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,6);
+  const avg = recent.reduce((s,r)=>s+r.total,0) / recent.length;
+  if (avg > 0 && total > avg * 1.7) return `Сума ${fmt.format(total)} ₴ значно вища за середні ${fmt.format(avg)} ₴. Все одно зберегти?`;
+  if (avg > 0 && total < avg * 0.35) return `Сума ${fmt.format(total)} ₴ значно нижча за середні ${fmt.format(avg)} ₴. Все одно зберегти?`;
+  return '';
+}
+
 readingInputIds.forEach(id=>{const el=$(id);if(el) el.addEventListener('input',debouncedCalculate);});
 $('isWinterInput')?.addEventListener('change',calculatePreview);
 $('monthInput')?.addEventListener('change',()=>{fillPreviousReadings();calculatePreview();updateSmartBadges();});
@@ -870,10 +984,13 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
   const hasGas     =prefs.showGas     &&(getV('gCur')>0||getV('gPrev')>0);
   const hasCustom  =customServices.some(srv=>{const v=parseFloat($(`custom_${srv.id}`)?.value);return !isNaN(v)&&v>0;});
   if(!hasWater&&!hasHotWater&&!hasElectro&&!hasGas&&!hasCustom){showToast('Заповніть хоча б одну послугу','⚠️');return;}
+  const month=$('monthInput').value;
+  const warning=getSaveAnomalyWarning(currentCalc.total,month);
+  if(warning&&!confirm(warning)){showToast('Перевірте дані','⚠️');return;}
   let cData={};
   customServices.forEach(srv=>{let v=parseFloat($(`custom_${srv.id}`)?.value);if(isNaN(v)&&srv.defaultSum)v=parseFloat(srv.defaultSum);if(!isNaN(v)&&v>0)cData[srv.id]={name:srv.name,val:v};});
-  const month=$('monthInput').value,existingIdx=records.findIndex(r=>r.month===month);
-  const newData={id:Date.now(),month,wPrev:hasWater?getV('wPrev'):0,wCur:hasWater?getV('wCur'):0,hwPrev:hasHotWater?getV('hwPrev'):0,hwCur:hasHotWater?getV('hwCur'):0,dPrev:hasElectro?getV('dPrev'):0,dCur:hasElectro?getV('dCur'):0,nPrev:(hasElectro&&prefs.electroTwoZone)?getV('nPrev'):0,nCur:(hasElectro&&prefs.electroTwoZone)?getV('nCur'):0,gPrev:hasGas?getV('gPrev'):0,gCur:hasGas?getV('gCur'):0,customData:cData,note:$('recordNote')?.value?.trim()||'',waterCost:hasWater?currentCalc.waterCost:0,hotWaterCost:hasHotWater?currentCalc.hotWaterCost:0,electroCost:hasElectro?currentCalc.electroCost:0,gasCost:hasGas?currentCalc.gasCost:0,customCost:currentCalc.customCost,total:currentCalc.total,paid:false,_filled:{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas,custom:hasCustom}};
+  const existingIdx=records.findIndex(r=>r.month===month);
+  const newData={id:Date.now(),month,wPrev:hasWater?getV('wPrev'):0,wCur:hasWater?getV('wCur'):0,hwPrev:hasHotWater?getV('hwPrev'):0,hwCur:hasHotWater?getV('hwCur'):0,dPrev:hasElectro?getV('dPrev'):0,dCur:hasElectro?getV('dCur'):0,nPrev:(hasElectro&&prefs.electroTwoZone)?getV('nPrev'):0,nCur:(hasElectro&&prefs.electroTwoZone)?getV('nCur'):0,gPrev:hasGas?getV('gPrev'):0,gCur:hasGas?getV('gCur'):0,customData:cData,note:$('recordNote')?.value?.trim()||'',waterCost:hasWater?currentCalc.waterCost:0,hotWaterCost:hasHotWater?currentCalc.hotWaterCost:0,electroCost:hasElectro?currentCalc.electroCost:0,gasCost:hasGas?currentCalc.gasCost:0,customCost:currentCalc.customCost,total:currentCalc.total,paid:false,tariffSnapshot:createTariffSnapshot(),_filled:{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas,custom:hasCustom}};
   if(existingIdx>=0){
     const existing=records[existingIdx];
     const merged={...existing,...newData,id:existing.id,paid:existing.paid};
@@ -885,8 +1002,8 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
     else if(hasCustom){merged.customData={...(existing.customData||{}),...cData};}
     merged.total=(merged.waterCost||0)+(merged.hotWaterCost||0)+(merged.electroCost||0)+(merged.gasCost||0)+(merged.customCost||0);
     merged.note=newData.note||existing.note;
-    records[existingIdx]=merged; showToast("Оновлено! 🔄");
-  } else { records.push(newData); showToast("Збережено! ✨"); }
+    records[existingIdx]=merged; addChangeLog('record_updated', { month, total: merged.total }); showToast("Оновлено! 🔄");
+  } else { records.push(newData); addChangeLog('record_created', { month, total: newData.total }); showToast("Збережено! ✨"); }
   clearDraft();
   $('submitFormBtn')?.classList.add('save-btn-success');
   setTimeout(()=>$('submitFormBtn')?.classList.remove('save-btn-success'),600);
@@ -937,6 +1054,14 @@ function autoSetWinter(month){if(!month||!$('isWinterInput'))return;const mo=new
 // =================== SETTINGS ===================
 function updateServiceChartOptions(){const select=$('serviceChartSelect');if(!select)return;const cur=select.value;select.innerHTML='';if(prefs.showWater)select.innerHTML+='<option value="water">💧 Вода</option>';if(prefs.showHotWater)select.innerHTML+='<option value="hotWater">🌡️ Гар. Вода</option>';if(prefs.showElectro)select.innerHTML+='<option value="electro">⚡ Світло</option>';if(prefs.showGas)select.innerHTML+='<option value="gas">🔥 Газ</option>';if(select.querySelector(`option[value="${cur}"]`))select.value=cur;}
 
+function fillTariffInputs(nextTariffs) {
+  if($('tWater'))         $('tWater').value        =nextTariffs.water;
+  if($('tHotWater'))      $('tHotWater').value      =nextTariffs.hotWater;
+  if($('tElectroBase'))   $('tElectroBase').value   =nextTariffs.electroBase;
+  if($('tElectroWinter')) $('tElectroWinter').value =nextTariffs.electroWinter;
+  if($('tGas'))           $('tGas').value           =nextTariffs.gas;
+}
+
 function applyPreferences() {
   if($('prefWater'))         $('prefWater').checked         =prefs.showWater;
   if($('prefHotWater'))      $('prefHotWater').checked      =prefs.showHotWater;
@@ -962,6 +1087,28 @@ function applyPreferences() {
   updateServiceChartOptions();
 }
 
+function renderChangeLog() {
+  const list = $('changeLogList');
+  if (!list) return;
+  const labels = { record_created:'Додано запис', record_updated:'Оновлено запис', record_deleted:'Видалено запис', record_restored:'Відновлено запис', record_paid_toggled:'Змінено оплату', visible_records_paid:'Оплачено видимі', json_imported:'Імпортовано JSON', import_rolled_back:'Скасовано імпорт', local_backup_restored:'Відновлено бекап', pre_import_backup_restored:'Відновлено до імпорту', tariffs_saved:'Збережено тарифи', tariff_template_saved:'Збережено шаблон тарифів', tariff_template_loaded:'Застосовано шаблон тарифів', tariffs_reset:'Повернено базові тарифи', device_credentials_forgotten:'Пристрій забуто' };
+  const log = getChangeLog().slice(0, 8);
+  if (!log.length) { list.innerHTML = '<p class="text-slate-400">Поки немає змін</p>'; return; }
+  list.innerHTML = log.map(item => { const d = new Date(item.ts).toLocaleString('uk-UA', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }); const month = item.details?.month ? ` · ${escapeHtml(item.details.month)}` : ''; return `<div class="flex justify-between gap-3 bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5"><span class="font-bold text-slate-700 dark:text-slate-200">${escapeHtml(labels[item.type]||item.type)}${month}</span><span class="text-slate-400 shrink-0">${d}</span></div>`; }).join('');
+}
+
+$('saveTariffTemplateBtn')?.addEventListener('click',()=>{
+  const tpl={water:parseFloat($('tWater')?.value)||defaultTariffs.water,hotWater:parseFloat($('tHotWater')?.value)||defaultTariffs.hotWater,electroBase:parseFloat($('tElectroBase')?.value)||defaultTariffs.electroBase,electroWinter:parseFloat($('tElectroWinter')?.value)||defaultTariffs.electroWinter,gas:parseFloat($('tGas')?.value)||defaultTariffs.gas};
+  localStorage.setItem(CUSTOM_TARIFF_TEMPLATE_KEY,JSON.stringify(tpl));
+  addChangeLog('tariff_template_saved');
+  renderChangeLog();
+  showToast('Шаблон тарифів збережено','💾');
+});
+$('loadTariffTemplateBtn')?.addEventListener('click',()=>{
+  try{const tpl=JSON.parse(localStorage.getItem(CUSTOM_TARIFF_TEMPLATE_KEY)||'null');if(!tpl)return showToast('Шаблон не знайдено','⚠️');fillTariffInputs({...defaultTariffs,...tpl});addChangeLog('tariff_template_loaded');renderChangeLog();showToast('Шаблон застосовано','✅');}
+  catch(e){showToast('Шаблон пошкоджено','❌');}
+});
+$('resetTariffsBtn')?.addEventListener('click',()=>{fillTariffInputs(defaultTariffs);addChangeLog('tariffs_reset');renderChangeLog();showToast('Базові тарифи','✅');});
+
 ['prefWater','prefHotWater','prefElectro','prefGas','prefElectroTwoZone','prefElectroWinter'].forEach(id=>{$(id)?.addEventListener('change',()=>{prefs.showWater=$('prefWater')?.checked??prefs.showWater;prefs.showHotWater=$('prefHotWater')?.checked??prefs.showHotWater;prefs.showElectro=$('prefElectro')?.checked??prefs.showElectro;prefs.showGas=$('prefGas')?.checked??prefs.showGas;prefs.electroTwoZone=$('prefElectroTwoZone')?.checked??prefs.electroTwoZone;prefs.electroWinter=$('prefElectroWinter')?.checked??prefs.electroWinter;applyPreferences();renderCalcCustomServices();calculatePreview();updateSmartBadges();});});
 $('prefReminders')?.addEventListener('change',function(){
   prefs.remindersEnabled = this.checked;
@@ -973,17 +1120,19 @@ $('saveSettingsBtn')?.addEventListener('click',()=>{
   prefs={showWater:$('prefWater')?.checked,showHotWater:$('prefHotWater')?.checked,showElectro:$('prefElectro')?.checked,showGas:$('prefGas')?.checked,electroTwoZone:$('prefElectroTwoZone')?.checked,electroWinter:$('prefElectroWinter')?.checked,remindersEnabled:$('prefReminders')?.checked,remWaterStart:parseInt($('remWaterStart')?.value)||1,remWaterEnd:parseInt($('remWaterEnd')?.value)||5,remElectroStart:parseInt($('remElectroStart')?.value)||28,remElectroEnd:parseInt($('remElectroEnd')?.value)||3};
   customServices=customServices.filter(s=>s.name.trim()!=="");
   localStorage.setItem('k_budget',$('budgetInput')?.value||'0');
+  addChangeLog('tariffs_saved');
   syncToCloud();applyPreferences();renderCalcCustomServices();calculatePreview();updateSmartBadges();checkReminders();
+  renderChangeLog();
   showToast("Збережено ✓");
 });
 
 $('saveDisplayNameBtn')?.addEventListener('click', saveDisplayName);
 $('displayNameInput')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveDisplayName(); });
 
-function renderSettingsCustomServices(){const list=$('customServicesSettingsList');if(!list)return;list.innerHTML=customServices.map((srv,i)=>`<div class="flex gap-2 items-center bg-slate-50 dark:bg-black/50 p-2 rounded-xl border border-slate-100 dark:border-white/5"><input type="text" value="${escapeHtml(srv.name)}" data-idx="${i}" data-field="name" placeholder="Назва" class="cs-setting-input flex-1 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2.5 py-2.5 border border-transparent focus:border-brand transition-colors"><input type="number" step="0.01" value="${srv.defaultSum}" data-idx="${i}" data-field="sum" placeholder="₴" class="cs-setting-input w-16 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2 py-2.5 text-center border border-transparent focus:border-brand transition-colors"><button type="button" class="cs-del p-2 text-slate-400 hover:text-red-500 bg-white dark:bg-[#2c2c2e] rounded-lg transition-colors" data-idx="${i}"><i class="fa-solid fa-trash text-[10px]"></i></button></div>`).join('');list.querySelectorAll('.cs-setting-input').forEach(input=>{input.addEventListener('change',()=>{const idx=parseInt(input.dataset.idx);if(input.dataset.field==='name')customServices[idx].name=input.value;else customServices[idx].defaultSum=input.value;});});list.querySelectorAll('.cs-del').forEach(btn=>{btn.addEventListener('click',()=>{customServices.splice(parseInt(btn.dataset.idx),1);renderSettingsCustomServices();});});}
+function renderSettingsCustomServices(){const list=$('customServicesSettingsList');if(!list)return;list.innerHTML=customServices.map((srv,i)=>`<div class="flex gap-2 items-center bg-slate-50 dark:bg-black/50 p-2 rounded-xl border border-slate-100 dark:border-white/5"><input type="text" value="${escapeAttr(srv.name)}" data-idx="${i}" data-field="name" placeholder="Назва" class="cs-setting-input flex-1 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2.5 py-2.5 border border-transparent focus:border-brand transition-colors"><input type="number" step="0.01" value="${escapeAttr(srv.defaultSum)}" data-idx="${i}" data-field="sum" placeholder="₴" class="cs-setting-input w-16 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2 py-2.5 text-center border border-transparent focus:border-brand transition-colors"><button type="button" class="cs-del p-2 text-slate-400 hover:text-red-500 bg-white dark:bg-[#2c2c2e] rounded-lg transition-colors" data-idx="${i}"><i class="fa-solid fa-trash text-[10px]"></i></button></div>`).join('');list.querySelectorAll('.cs-setting-input').forEach(input=>{input.addEventListener('change',()=>{const idx=parseInt(input.dataset.idx);if(input.dataset.field==='name')customServices[idx].name=input.value;else customServices[idx].defaultSum=input.value;});});list.querySelectorAll('.cs-del').forEach(btn=>{btn.addEventListener('click',()=>{customServices.splice(parseInt(btn.dataset.idx),1);renderSettingsCustomServices();});});}
 $('addCustomServiceBtn')?.addEventListener('click',()=>{customServices.push({id:'s'+Date.now(),name:"",defaultSum:""});renderSettingsCustomServices();});
 
-function renderCalcCustomServices(){const c=$('customServicesContainer');if(!c)return;if(customServices.length===0){c.innerHTML='';return;}c.innerHTML=customServices.map(srv=>`<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-1.5 text-center">${escapeHtml(srv.name)||'Послуга'}</span><input type="number" step="0.01" id="custom_${srv.id}" class="custom-srv-input premium-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-white/10" placeholder="${srv.defaultSum||'0.00'}"></div>`).join('');document.querySelectorAll('.custom-srv-input').forEach(input=>input.addEventListener('input',()=>{calculatePreview();debouncedDraft();}));}
+function renderCalcCustomServices(){const c=$('customServicesContainer');if(!c)return;if(customServices.length===0){c.innerHTML='';return;}c.innerHTML=customServices.map(srv=>`<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-1.5 text-center">${escapeHtml(srv.name)||'Послуга'}</span><input type="number" step="0.01" id="custom_${escapeAttr(srv.id)}" class="custom-srv-input premium-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-white/10" placeholder="${escapeAttr(srv.defaultSum||'0.00')}"></div>`).join('');document.querySelectorAll('.custom-srv-input').forEach(input=>input.addEventListener('input',()=>{calculatePreview();debouncedDraft();}));}
 
 function getMonthKey() {
   const now = new Date();
@@ -1018,8 +1167,20 @@ function initSwipe(card,recordId){
 
 // =================== RECORDS ===================
 function findRecordIndex(id){return records.findIndex(r=>r.id===id);}
-function togglePaidById(id){const idx=findRecordIndex(id);if(idx<0)return;records[idx].paid=!records[idx].paid;renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();}
-function deleteRecordById(id){records=records.filter(r=>r.id!==id);renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();showToast('Видалено','🗑');}
+function togglePaidById(id){const idx=findRecordIndex(id);if(idx<0)return;records[idx].paid=!records[idx].paid;addChangeLog('record_paid_toggled',{month:records[idx].month,paid:records[idx].paid});renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();}
+function deleteRecordById(id){
+  const idx=findRecordIndex(id);
+  if(idx<0)return;
+  const deleted=records[idx];
+  records=records.filter(r=>r.id!==id);
+  addChangeLog('record_deleted',{month:deleted.month,total:deleted.total});
+  renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();
+  showActionToast('Запис видалено','Відновити',()=>{
+    records.splice(Math.min(idx,records.length),0,deleted);
+    addChangeLog('record_restored',{month:deleted.month,total:deleted.total});
+    renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();showToast('Відновлено','✅');
+  },'🗑');
+}
 
 function renderRecords(){
   const list=$('recordsList');if(!list) return;
@@ -1045,9 +1206,9 @@ function renderRecords(){
   if(unpaidCount>0&&currentFilter!=='paid'){
     const batchBar=document.createElement('div');
     batchBar.className='bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-2xl flex justify-between items-center text-white mb-4';
-    batchBar.innerHTML=`<div><p class="text-xs font-bold opacity-80">${unpaidCount} неоплачених</p><p class="text-sm font-black">${fmt.format(sorted.filter(r=>!r.paid).reduce((s,r)=>s+r.total,0))} ₴</p></div><button class="batch-pay-btn px-4 py-2 bg-white/20 rounded-xl text-xs font-bold active:scale-95 transition-transform border border-white/20">✓ Оплатити всі</button>`;
+    batchBar.innerHTML=`<div><p class="text-xs font-bold opacity-80">${unpaidCount} неоплачених у списку</p><p class="text-sm font-black">${fmt.format(sorted.filter(r=>!r.paid).reduce((s,r)=>s+r.total,0))} ₴</p></div><button class="batch-pay-btn px-4 py-2 bg-white/20 rounded-xl text-xs font-bold active:scale-95 transition-transform border border-white/20">✓ Оплатити видимі</button>`;
     list.appendChild(batchBar);
-    batchBar.querySelector('.batch-pay-btn')?.addEventListener('click',()=>{if(confirm(`Позначити ${unpaidCount} записів як оплачені?`)){records.forEach(r=>{if(!r.paid)r.paid=true;});renderRecords();renderDashboard();syncToCloud();checkNewAchievements();showToast(`${unpaidCount} записів оплачено!`,'✅');}});
+    batchBar.querySelector('.batch-pay-btn')?.addEventListener('click',()=>{if(confirm(`Позначити ${unpaidCount} видимих записів як оплачені?`)){const payableIds=new Set(sorted.filter(r=>!r.paid).map(r=>r.id));records.forEach(r=>{if(payableIds.has(r.id))r.paid=true;});addChangeLog('visible_records_paid',{count:payableIds.size});renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();showToast(`${unpaidCount} записів оплачено!`,'✅');}});
   }
   let lastYear=null;
   sorted.forEach(rec=>{
@@ -1196,10 +1357,13 @@ $('importJsonBtn')?.addEventListener('click',()=>$('importFileInput')?.click());
 // =================== IMPORT ===================
 function isPlainObject(value){return value&&typeof value==='object'&&!Array.isArray(value);}
 function normalizeNumber(value,fallback=0){const num=Number(value);return Number.isFinite(num)?num:fallback;}
-function normalizeImportedRecord(rec){if(!isPlainObject(rec)||!/^\d{4}-\d{2}$/.test(String(rec.month||'')))return null;return{...rec,id:rec.id||Date.now()+Math.random(),month:String(rec.month),total:normalizeNumber(rec.total),waterCost:normalizeNumber(rec.waterCost),hotWaterCost:normalizeNumber(rec.hotWaterCost),electroCost:normalizeNumber(rec.electroCost),gasCost:normalizeNumber(rec.gasCost),customCost:normalizeNumber(rec.customCost),paid:Boolean(rec.paid),note:String(rec.note||'')};}
-function normalizeImportedAddress(addr,index){if(!isPlainObject(addr))return null;return{id:String(addr.id||`addr_${Date.now()}_${index}`),name:String(addr.name||`Об'єкт ${index+1}`).slice(0,80),tariffs:{...defaultTariffs,...(isPlainObject(addr.tariffs)?addr.tariffs:{})},prefs:{...defaultPrefs,...(isPlainObject(addr.prefs)?addr.prefs:{})},records:Array.isArray(addr.records)?addr.records.map(normalizeImportedRecord).filter(Boolean):[],customServices:Array.isArray(addr.customServices)?addr.customServices.filter(isPlainObject).map((srv,i)=>({id:String(srv.id||`srv_${Date.now()}_${i}`),name:String(srv.name||'').slice(0,60),defaultSum:srv.defaultSum==null?'':String(srv.defaultSum).slice(0,20)})):[]};}
+function normalizeImportedRecord(rec){if(!isPlainObject(rec)||!/^\d{4}-\d{2}$/.test(String(rec.month||'')))return null;const tariffSnapshot=isPlainObject(rec.tariffSnapshot)?{...defaultTariffs,...rec.tariffSnapshot}:null;return{...rec,id:rec.id||Date.now()+Math.random(),month:String(rec.month),total:normalizeNumber(rec.total),waterCost:normalizeNumber(rec.waterCost),hotWaterCost:normalizeNumber(rec.hotWaterCost),electroCost:normalizeNumber(rec.electroCost),gasCost:normalizeNumber(rec.gasCost),customCost:normalizeNumber(rec.customCost),paid:Boolean(rec.paid),note:String(rec.note||'').slice(0,500),tariffSnapshot};}
+function normalizeImportedAddress(addr,index){if(!isPlainObject(addr))return null;return{id:sanitizeDomId(addr.id||`addr_${Date.now()}_${index}`,'addr'),name:String(addr.name||`Об'єкт ${index+1}`).slice(0,80),tariffs:{...defaultTariffs,...(isPlainObject(addr.tariffs)?addr.tariffs:{})},prefs:{...defaultPrefs,...(isPlainObject(addr.prefs)?addr.prefs:{})},records:Array.isArray(addr.records)?addr.records.map(normalizeImportedRecord).filter(Boolean):[],customServices:Array.isArray(addr.customServices)?addr.customServices.filter(isPlainObject).map((srv,i)=>({id:sanitizeDomId(srv.id||`srv_${Date.now()}_${i}`,'srv'),name:String(srv.name||'').slice(0,60),defaultSum:srv.defaultSum==null?'':String(srv.defaultSum).slice(0,20)})):[]};}
 function normalizeImportData(data){if(!isPlainObject(data)||!Array.isArray(data.addresses))return null;const addrs=data.addresses.map(normalizeImportedAddress).filter(Boolean);if(!addrs.length)return null;const cid=String(data.currentAddressId||'');return{addresses:addrs,currentAddressId:addrs.some(a=>a.id===cid)?cid:addrs[0].id};}
-$('importFileInput')?.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const normalized=normalizeImportData(JSON.parse(ev.target.result));if(!normalized){showToast('Невірний формат','❌');return;}if(confirm(`Імпорт ${normalized.addresses.length} об'єктів? Поточні дані буде замінено.`)){addresses=normalized.addresses;currentAddressId=normalized.currentAddressId;loadCurrentAddress();syncToCloud();showToast('Імпортовано!','✅');}}catch(err){showToast('Помилка','❌');}};reader.readAsText(file);e.target.value='';});
+$('importFileInput')?.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const normalized=normalizeImportData(JSON.parse(ev.target.result));if(!normalized){showToast('Невірний формат','❌');return;}const recordCount=normalized.addresses.reduce((s,a)=>s+(a.records?.length||0),0);if(confirm(`Імпорт ${normalized.addresses.length} об'єктів і ${recordCount} записів? Поточні дані буде замінено, але перед цим створиться аварійний бекап.`)){backupCurrentState(PRE_IMPORT_BACKUP_KEY);addresses=normalized.addresses;currentAddressId=normalized.currentAddressId;addChangeLog('json_imported',{addresses:normalized.addresses.length,records:recordCount});loadCurrentAddress();syncToCloud();showActionToast('Імпортовано','Скасувати',()=>{if(restoreFromLocalBackup(PRE_IMPORT_BACKUP_KEY)){addChangeLog('import_rolled_back');showToast('Імпорт скасовано','✅');}else showToast('Немає бекапу','⚠️');},'✅');}}catch(err){showToast('Помилка','❌');}};reader.readAsText(file);e.target.value='';});
+$('restoreBackupBtn')?.addEventListener('click',()=>{if(confirm('Відновити останній локальний бекап? Поточні дані буде замінено.')){backupCurrentState(PRE_IMPORT_BACKUP_KEY);if(restoreFromLocalBackup(LOCAL_BACKUP_KEY)){addChangeLog('local_backup_restored');showToast('Бекап відновлено','✅');}else showToast('Бекап не знайдено','⚠️');}});
+$('restorePreImportBtn')?.addEventListener('click',()=>{if(confirm('Відновити стан перед останнім імпортом?')){if(restoreFromLocalBackup(PRE_IMPORT_BACKUP_KEY)){addChangeLog('pre_import_backup_restored');showToast('Відновлено','✅');}else showToast('Бекап не знайдено','⚠️');}});
+$('forgetDeviceBtn')?.addEventListener('click',()=>{if(confirm('Прибрати дані входу з цього пристрою? Локальні бекапи й налаштування залишаться.')){['k_login','k_passHash','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));addChangeLog('device_credentials_forgotten');location.reload();}});
 
 // =================== TIPS ===================
 function getConsumptionTrend(type,months=6){const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,months);if(sorted.length<2)return null;const values=sorted.map(r=>{switch(type){case 'water':return Math.max(0,(r.wCur||0)-(r.wPrev||0));case 'electro':return Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0));case 'gas':return Math.max(0,(r.gCur||0)-(r.gPrev||0));default:return r.total;}}).reverse();const first=values.slice(0,Math.ceil(values.length/2)),second=values.slice(Math.ceil(values.length/2));const avgF=first.reduce((a,b)=>a+b,0)/first.length,avgS=second.reduce((a,b)=>a+b,0)/second.length;if(avgF===0)return 0;return Math.round(((avgS-avgF)/avgF)*100);}
@@ -1278,17 +1442,18 @@ function renderAnalytics() {
   $('analyticsCard')?.classList.remove('hidden');
   const sf = new SmartForecast(records);
   const now = new Date();
-  const nextMonth = `${now.getFullYear()}-${String(now.getMonth() + 2 > 12 ? 1 : now.getMonth() + 2).padStart(2,'0')}`;
+  const nextDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const nextMonth = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2,'0')}`;
   const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`;
 
   // Прогноз
-  const pred = sf.predict(curMonth);
+  const pred = sf.predict(nextMonth);
   if (pred && $('forecastValue')) {
     const confLabels = { high: '🟢 Висока', medium: '🟡 Середня', low: '🔴 Низька' };
     $('forecastValue').innerHTML = `<span class="text-3xl font-black">${fmt.format(pred.predicted)} ₴</span>`;
     $('forecastConfidence').innerHTML = `
       <span class="text-[9px] font-bold ${pred.confidence === 'high' ? 'text-green-500' : pred.confidence === 'medium' ? 'text-yellow-500' : 'text-red-400'}">${confLabels[pred.confidence]}</span>
-      <span class="text-[9px] text-slate-400 ml-2">Сезонний коеф.: ${pred.seasonalFactor}x</span>
+      <span class="text-[9px] text-slate-400 ml-2">${new Date(nextMonth+'-01').toLocaleString('uk-UA',{month:'long'})} · сезонний коеф.: ${pred.seasonalFactor}x</span>
     `;
     if (pred.confidence === 'high') $('forecastCard')?.classList.remove('hidden');
     else $('forecastCard')?.classList.remove('hidden');
@@ -1441,6 +1606,7 @@ function initAppUI(){
   $('authScreen')?.classList.add('hidden');
   $('appScreen')?.classList.remove('hidden');
   $('appScreen')?.classList.add('flex');
+  applyLiquidGlassLevel(currentLiquidGlass);
   if($('tWater'))         $('tWater').value        =tariffs.water;
   if($('tHotWater'))      $('tHotWater').value      =tariffs.hotWater;
   if($('tElectroBase'))   $('tElectroBase').value   =tariffs.electroBase;
@@ -1482,7 +1648,11 @@ if(urlShareToken){
   if($('addressHeaderTrigger'))$('addressHeaderTrigger').style.pointerEvents='none';
   if($('addressArrowIcon'))    $('addressArrowIcon').style.display    ='none';
   if($('aiFabBtn'))            $('aiFabBtn').style.display            ='none';
-  fetch(`${WORKER_URL}?share=${urlShareToken}`,{cache:"no-store"}).then(r=>r.json()).then(data=>{if(data.success){addresses=data.data.addresses;currentAddressId=data.data.currentAddressId;loadCurrentAddress();}else alert("Посилання недійсне.");});
+  showToast('Завантажую доступ...','⏳');
+  fetch(`${WORKER_URL}?share=${urlShareToken}`,{cache:"no-store"})
+    .then(r=>r.json())
+    .then(data=>{if(data.success){const normalized=normalizeImportData(data.data);addresses=normalized?.addresses||data.data.addresses;currentAddressId=normalized?.currentAddressId||data.data.currentAddressId;loadCurrentAddress();showToast('Гостьовий доступ відкрито','✅');}else showActionToast('Посилання недійсне','На вхід',()=>{window.location.href=window.location.pathname;},'⚠️');})
+    .catch(()=>showActionToast('Не вдалося завантажити','Повторити',()=>window.location.reload(),'❌'));
 } else if(localStorage.getItem('k_uid')){
   performLogin(null,null,false,localStorage.getItem('k_uid'));
 } else if(sessionLogin&&sessionPass){
@@ -1492,6 +1662,8 @@ if(urlShareToken){
 $('mode-light')?.addEventListener('click',()=>setThemeMode('light'));
 $('mode-auto')?.addEventListener('click', ()=>setThemeMode('auto'));
 $('mode-dark')?.addEventListener('click', ()=>setThemeMode('dark'));
+$('liquidGlassRange')?.addEventListener('input',(e)=>applyLiquidGlassLevel(e.target.value));
+$('liquidGlassRange')?.addEventListener('change',(e)=>{localStorage.setItem('liquidGlassLevel',String(currentLiquidGlass));showToast(`Скло: ${currentLiquidGlass}%`,'✨');});
 
 // =================== RESIZE ===================
 let resizeTimeout;
