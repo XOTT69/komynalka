@@ -26,7 +26,14 @@ let displayName  = localStorage.getItem('k_display_name') || '';
 let currentFilter = 'all';
 let syncState = 'synced';
 const defaultTariffs = { water: 30.38, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
-const defaultPrefs   = { showWater: true, showHotWater: false, showElectro: true, showGas: true, electroTwoZone: true, electroWinter: true, remindersEnabled: false, remWaterStart: 1, remWaterEnd: 5, remElectroStart: 28, remElectroEnd: 3 };
+const defaultPrefs   = { showWater: true, showHotWater: false, showElectro: true, showGas: true, electroTwoZone: true, electroWinter: true, remindersEnabled: false, remWaterStart: 1, remWaterEnd: 5, remElectroStart: 28, remElectroEnd: 3, remGasStart: 1, remGasEnd: 5, familyRole: 'owner' };
+const TARIFF_PRESETS = [
+  { id: 'kyiv-typical', name: 'Київ / типовий постачальник', tariffs: { water: 30.38, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 } },
+  { id: 'lviv-typical', name: 'Львів / типовий постачальник', tariffs: { water: 32.64, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 } },
+  { id: 'odesa-typical', name: 'Одеса / типовий постачальник', tariffs: { water: 35.16, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 } },
+  { id: 'dnipro-typical', name: 'Дніпро / типовий постачальник', tariffs: { water: 31.36, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 } },
+  { id: 'kharkiv-typical', name: 'Харків / типовий постачальник', tariffs: { water: 33.72, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 } },
+];
 const defaultCustomServices = [{ id: "s1", name: "Квартплата", defaultSum: "" }, { id: "s2", name: "Сміття", defaultSum: "" }];
 let addresses = [], currentAddressId = 'default', isGuest = false, tariffs = {}, prefs = {}, records = [], customServices = [];
 let currentCalc = { waterCost: 0, hotWaterCost: 0, electroCost: 0, gasCost: 0, customCost: 0, total: 0 };
@@ -135,6 +142,89 @@ function sanitizeDomId(value, fallback = 'item') {
 
 function createTariffSnapshot() {
   return { ...tariffs, savedAt: new Date().toISOString() };
+}
+
+function clampMoney(value, max = Infinity) {
+  const num = parseFloat(value);
+  if (!Number.isFinite(num)) return 0;
+  return Math.min(Math.max(num, 0), Number.isFinite(max) ? Math.max(max, 0) : num);
+}
+
+function getPaymentStatus(rec) {
+  const status = rec?.paymentStatus;
+  if (status === 'paid' || status === 'partial' || status === 'charged') return status;
+  return rec?.paid ? 'paid' : 'charged';
+}
+
+function getPaidAmount(rec) {
+  const total = Math.max(0, normalizeNumber(rec?.total));
+  const status = getPaymentStatus(rec);
+  if (status === 'paid') return total;
+  if (status === 'partial') return clampMoney(rec?.paidAmount, total);
+  return 0;
+}
+
+function getOutstandingAmount(rec) {
+  return Math.max(0, Math.max(0, normalizeNumber(rec?.total)) - getPaidAmount(rec));
+}
+
+function isRecordPaid(rec) {
+  return getOutstandingAmount(rec) <= 0;
+}
+
+function getPaymentLabel(rec) {
+  const status = getPaymentStatus(rec);
+  if (status === 'paid') return 'Оплачено';
+  if (status === 'partial') return 'Частково';
+  return 'Нараховано';
+}
+
+function setRecordPayment(rec, status, amount) {
+  const total = Math.max(0, normalizeNumber(rec?.total));
+  rec.paymentStatus = status === 'paid' || status === 'partial' ? status : 'charged';
+  rec.paidAmount = rec.paymentStatus === 'paid' ? total : rec.paymentStatus === 'partial' ? clampMoney(amount, total) : 0;
+  rec.paid = rec.paymentStatus === 'paid';
+  if (rec.paymentStatus === 'partial' && rec.paidAmount <= 0) rec.paymentStatus = 'charged';
+}
+
+function getFamilyRole() {
+  if (isGuest) return 'view';
+  return prefs.familyRole || defaultPrefs.familyRole;
+}
+
+function canEditData() {
+  const role = getFamilyRole();
+  return role === 'owner' || role === 'edit';
+}
+
+function requireEdit(message = 'Режим перегляду: редагування недоступне') {
+  if (canEditData()) return true;
+  showToast(message, '🔒');
+  return false;
+}
+
+function updateFamilyRoleHint() {
+  const hint = $('familyRoleHint');
+  if (!hint) return;
+  const role = getFamilyRole();
+  hint.textContent = role === 'owner' ? 'Власник може змінювати все й керувати доступом.' : role === 'edit' ? 'Редагування дозволяє додавати записи, але без ролі власника.' : 'Перегляд блокує додавання, оплату, редагування й видалення.';
+}
+
+function applyAccessMode() {
+  const locked = !canEditData();
+  const form = $('utilityForm');
+  if (form) {
+    form.querySelectorAll('input, select, textarea, button').forEach(el => {
+      el.disabled = locked;
+      el.classList.toggle('opacity-60', locked);
+    });
+    form.classList.toggle('pointer-events-none', locked);
+  }
+  if ($('btnClearFields')) {
+    $('btnClearFields').disabled = locked;
+    $('btnClearFields').classList.toggle('opacity-60', locked);
+  }
+  updateFamilyRoleHint();
 }
 
 function getChangeLog() {
@@ -542,6 +632,7 @@ $('closeAddressModalBtn')?.addEventListener('click', closeAddressModal);
 $('addressModal')?.addEventListener('click', (e) => { if (e.target === $('addressModal')) closeAddressModal(); });
 
 $('addAddressBtn')?.addEventListener('click', () => {
+  if(!requireEdit('У режимі перегляду не можна додавати об’єкти'))return;
   if (addresses.length >= MAX_ADDRESSES_FREE) { showToast(`Максимум ${MAX_ADDRESSES_FREE} адреси`, '⚠️'); closeAddressModal(); return; }
   const name = prompt("Назва об'єкту:");
   if (name && name.trim()) {
@@ -563,10 +654,10 @@ function renderAddressModal() {
     });
   });
   list.querySelectorAll('.addr-edit').forEach(btn => {
-    btn.addEventListener('click', (e) => { e.stopPropagation(); const addr = addresses.find(a => a.id===btn.dataset.id); const name = prompt("Нова назва:", addr.name); if (name&&name.trim()) { addr.name=name.trim(); renderAddressModal(); if (btn.dataset.id===currentAddressId) $('currentAddressDisplay').innerText=addr.name; syncToCloud(); } });
+    btn.addEventListener('click', (e) => { e.stopPropagation(); if(!requireEdit('У режимі перегляду не можна перейменовувати об’єкти'))return; const addr = addresses.find(a => a.id===btn.dataset.id); const name = prompt("Нова назва:", addr.name); if (name&&name.trim()) { addr.name=name.trim(); renderAddressModal(); if (btn.dataset.id===currentAddressId) $('currentAddressDisplay').innerText=addr.name; syncToCloud(); } });
   });
   list.querySelectorAll('.addr-del').forEach(btn => {
-    btn.addEventListener('click', (e) => { e.stopPropagation(); if (confirm("Видалити?")) { addresses=addresses.filter(a=>a.id!==btn.dataset.id); if (currentAddressId===btn.dataset.id) { currentAddressId=addresses[0].id; loadCurrentAddress(); } syncToCloud(); renderAddressModal(); } });
+    btn.addEventListener('click', (e) => { e.stopPropagation(); if(!requireEdit('У режимі перегляду не можна видаляти об’єкти'))return; if (confirm("Видалити?")) { addresses=addresses.filter(a=>a.id!==btn.dataset.id); if (currentAddressId===btn.dataset.id) { currentAddressId=addresses[0].id; loadCurrentAddress(); } syncToCloud(); renderAddressModal(); } });
   });
 }
 
@@ -576,7 +667,7 @@ const ACHIEVEMENTS = [
   { id:'streak_3',      emoji:'🔥', title:'3 місяці поспіль',desc:'3 місяці без перерви',        check:(r)=>getStreak(r)>=3 },
   { id:'streak_6',      emoji:'💪', title:'Полугідник',      desc:'6 місяців поспіль',           check:(r)=>getStreak(r)>=6 },
   { id:'streak_12',     emoji:'👑', title:'Рік без перерви', desc:'Цілий рік!',                  check:(r)=>getStreak(r)>=12 },
-  { id:'all_paid',      emoji:'✅', title:'Чистий рахунок',  desc:'Все оплачено',                check:(r)=>r.length>0&&r.every(rec=>rec.paid) },
+  { id:'all_paid',      emoji:'✅', title:'Чистий рахунок',  desc:'Все оплачено',                check:(r)=>r.length>0&&r.every(rec=>isRecordPaid(rec)) },
   { id:'records_10',    emoji:'📊', title:'Аналітик',        desc:'10+ записів',                 check:(r)=>r.length>=10 },
   { id:'saver',         emoji:'💰', title:'Економ',          desc:'Знизили витрати 3 міс',       check:(r)=>checkSaverAchievement(r) },
   { id:'multi_address', emoji:'🏘️', title:'Мультивласник',  desc:'2+ адреси',                   check:()=>addresses.length>=2 },
@@ -819,12 +910,45 @@ function renderDashboard() {
   const curRec=records.find(r=>r.month===curMonth); animateNumber($('dashCurrentMonth'),curRec?curRec.total:0);
   if($('dashRecordsCount')) $('dashRecordsCount').textContent=records.length;
   if(records.length>0){const avg=records.reduce((s,r)=>s+r.total,0)/records.length;if($('dashAvg'))$('dashAvg').textContent=fmt.format(avg)+' ₴';}else{if($('dashAvg'))$('dashAvg').textContent='0 ₴';}
-  const unpaid=records.filter(r=>!r.paid),debtTotal=unpaid.reduce((s,r)=>s+r.total,0);
-  if(unpaid.length>0){$('dashDebtCard')?.classList.remove('hidden');animateNumber($('dashDebt'),debtTotal);if($('dashDebtMonths'))$('dashDebtMonths').textContent=`${unpaid.length} міс. не оплачено`;$('debtBadge')?.classList.remove('hidden');if($('debtBadge'))$('debtBadge').textContent=unpaid.length;}
+  const unpaid=records.filter(r=>getOutstandingAmount(r)>0),debtTotal=unpaid.reduce((s,r)=>s+getOutstandingAmount(r),0);
+  if(unpaid.length>0){$('dashDebtCard')?.classList.remove('hidden');animateNumber($('dashDebt'),debtTotal);if($('dashDebtMonths'))$('dashDebtMonths').textContent=`${unpaid.length} міс. з боргом`;$('debtBadge')?.classList.remove('hidden');if($('debtBadge'))$('debtBadge').textContent=unpaid.length;}
   else{$('dashDebtCard')?.classList.add('hidden');$('debtBadge')?.classList.add('hidden');}
-  renderDashCanvasChart(); renderBudgetProgress(curRec); renderDonutChart(curRec); renderSmartInsight(curRec,curMonth); renderAchievements(); renderTips();
+  renderDashCanvasChart(); renderBudgetProgress(curRec); renderDonutChart(curRec); renderSmartInsight(curRec,curMonth); renderMonthMiniWidget(curRec,curMonth); renderAchievements(); renderTips();
   const unlocked=getUnlockedAchievements().length; if($('achCounter'))$('achCounter').textContent=`${unlocked}/${ACHIEVEMENTS.length}`;
   checkReminders();
+}
+
+function isDayInRange(day, start, end) {
+  return start <= end ? day >= start && day <= end : day >= start || day <= end;
+}
+
+function getNextDeadlineLabel() {
+  if (!prefs.remindersEnabled) return 'Нагадування вимкнені';
+  const day = new Date().getDate();
+  const windows = [
+    { label: 'вода', icon: '💧', start: prefs.remWaterStart || 1, end: prefs.remWaterEnd || 5, active: prefs.showWater || prefs.showHotWater },
+    { label: 'світло', icon: '⚡', start: prefs.remElectroStart || 28, end: prefs.remElectroEnd || 3, active: prefs.showElectro },
+    { label: 'газ', icon: '🔥', start: prefs.remGasStart || 1, end: prefs.remGasEnd || 5, active: prefs.showGas },
+  ].filter(item => item.active);
+  const active = windows.filter(item => isDayInRange(day, item.start, item.end));
+  if (active.length) return 'Зараз: ' + active.map(item => `${item.icon} ${item.label}`).join(', ');
+  const upcoming = windows
+    .map(item => ({ ...item, distance: item.start >= day ? item.start - day : item.start + 31 - day }))
+    .sort((a,b)=>a.distance-b.distance)[0];
+  return upcoming ? `${upcoming.icon} ${upcoming.label}: ${upcoming.start}–${upcoming.end}` : '—';
+}
+
+function renderMonthMiniWidget(curRec, curMonth) {
+  if (!$('monthMiniWidget')) return;
+  const debt = records.reduce((sum, rec) => sum + getOutstandingAmount(rec), 0);
+  if ($('miniDebt')) $('miniDebt').textContent = fmt.format(debt) + ' ₴';
+  if ($('miniDeadline')) $('miniDeadline').textContent = getNextDeadlineLabel();
+  let forecast = curRec?.total || 0;
+  if (!forecast) {
+    const prediction = new SmartForecast(records).predict(curMonth);
+    forecast = prediction?.predicted || (records.length ? records.slice(-3).reduce((sum, rec)=>sum + rec.total, 0) / Math.min(3, records.length) : 0);
+  }
+  if ($('miniForecast')) $('miniForecast').textContent = fmt.format(forecast) + ' ₴';
 }
 
 function renderBudgetProgress(curRec) {
@@ -859,7 +983,7 @@ function renderDashCanvasChart() {
   if(!$('dashChartCanvas')) return;
   if(!dashChart) dashChart=new ChartEngine('dashChartCanvas',{padding:24,barRadius:6});
   const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,8).reverse();
-  dashChart.setData(sorted.map(r=>({value:r.total,label:new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color:r.paid?'#007aff':'#ff9500'})));
+  dashChart.setData(sorted.map(r=>({value:r.total,label:new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color:isRecordPaid(r)?'#007aff':getPaymentStatus(r)==='partial'?'#ffcc00':'#ff9500'})));
 }
 
 function renderSmartInsight(curRec,curMonth) {
@@ -959,7 +1083,23 @@ function getSaveAnomalyWarning(total, month) {
   return '';
 }
 
+function getPaymentInputData(total = currentCalc.total) {
+  const status = $('paymentStatusInput')?.value || 'charged';
+  const paidAmount = status === 'paid' ? total : status === 'partial' ? clampMoney($('paidAmountInput')?.value, total) : 0;
+  return { paymentStatus: status === 'paid' || status === 'partial' ? status : 'charged', paidAmount, paid: status === 'paid' };
+}
+
+function setPaymentInputsFromRecord(rec = null) {
+  const status = rec ? getPaymentStatus(rec) : 'charged';
+  if ($('paymentStatusInput')) $('paymentStatusInput').value = status;
+  if ($('paidAmountInput')) {
+    $('paidAmountInput').value = status === 'partial' ? getPaidAmount(rec).toFixed(2) : '';
+    $('paidAmountInput').style.display = status === 'partial' ? 'block' : 'none';
+  }
+}
+
 readingInputIds.forEach(id=>{const el=$(id);if(el) el.addEventListener('input',debouncedCalculate);});
+$('paymentStatusInput')?.addEventListener('change',()=>{if($('paidAmountInput')){$('paidAmountInput').style.display=$('paymentStatusInput').value==='partial'?'block':'none';if($('paymentStatusInput').value!=='partial')$('paidAmountInput').value='';}});
 $('isWinterInput')?.addEventListener('change',calculatePreview);
 $('monthInput')?.addEventListener('change',()=>{fillPreviousReadings();calculatePreview();updateSmartBadges();});
 if($('monthInput')) $('monthInput').value=`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
@@ -977,6 +1117,7 @@ document.addEventListener('input',(e)=>{if(e.target.classList.contains('custom-s
 // =================== FORM SUBMIT ===================
 $('utilityForm')?.addEventListener('submit',(e)=>{
   e.preventDefault();
+  if(!requireEdit('У режимі перегляду не можна зберігати записи'))return;
   if(!validateReadingsUI()){showToast('Перевірте показники','⚠️');return;}
   const hasWater   =prefs.showWater   &&(getV('wCur')>0||getV('wPrev')>0);
   const hasHotWater=prefs.showHotWater&&(getV('hwCur')>0||getV('hwPrev')>0);
@@ -990,10 +1131,11 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
   let cData={};
   customServices.forEach(srv=>{let v=parseFloat($(`custom_${srv.id}`)?.value);if(isNaN(v)&&srv.defaultSum)v=parseFloat(srv.defaultSum);if(!isNaN(v)&&v>0)cData[srv.id]={name:srv.name,val:v};});
   const existingIdx=records.findIndex(r=>r.month===month);
-  const newData={id:Date.now(),month,wPrev:hasWater?getV('wPrev'):0,wCur:hasWater?getV('wCur'):0,hwPrev:hasHotWater?getV('hwPrev'):0,hwCur:hasHotWater?getV('hwCur'):0,dPrev:hasElectro?getV('dPrev'):0,dCur:hasElectro?getV('dCur'):0,nPrev:(hasElectro&&prefs.electroTwoZone)?getV('nPrev'):0,nCur:(hasElectro&&prefs.electroTwoZone)?getV('nCur'):0,gPrev:hasGas?getV('gPrev'):0,gCur:hasGas?getV('gCur'):0,customData:cData,note:$('recordNote')?.value?.trim()||'',waterCost:hasWater?currentCalc.waterCost:0,hotWaterCost:hasHotWater?currentCalc.hotWaterCost:0,electroCost:hasElectro?currentCalc.electroCost:0,gasCost:hasGas?currentCalc.gasCost:0,customCost:currentCalc.customCost,total:currentCalc.total,paid:false,tariffSnapshot:createTariffSnapshot(),_filled:{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas,custom:hasCustom}};
+  const paymentData=getPaymentInputData(currentCalc.total);
+  const newData={id:Date.now(),month,wPrev:hasWater?getV('wPrev'):0,wCur:hasWater?getV('wCur'):0,hwPrev:hasHotWater?getV('hwPrev'):0,hwCur:hasHotWater?getV('hwCur'):0,dPrev:hasElectro?getV('dPrev'):0,dCur:hasElectro?getV('dCur'):0,nPrev:(hasElectro&&prefs.electroTwoZone)?getV('nPrev'):0,nCur:(hasElectro&&prefs.electroTwoZone)?getV('nCur'):0,gPrev:hasGas?getV('gPrev'):0,gCur:hasGas?getV('gCur'):0,customData:cData,note:$('recordNote')?.value?.trim()||'',waterCost:hasWater?currentCalc.waterCost:0,hotWaterCost:hasHotWater?currentCalc.hotWaterCost:0,electroCost:hasElectro?currentCalc.electroCost:0,gasCost:hasGas?currentCalc.gasCost:0,customCost:currentCalc.customCost,total:currentCalc.total,...paymentData,tariffSnapshot:createTariffSnapshot(),_filled:{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas,custom:hasCustom}};
   if(existingIdx>=0){
     const existing=records[existingIdx];
-    const merged={...existing,...newData,id:existing.id,paid:existing.paid};
+    const merged={...existing,...newData,id:existing.id};
     if(!hasWater   &&existing._filled?.water)   {merged.wPrev=existing.wPrev;merged.wCur=existing.wCur;merged.waterCost=existing.waterCost;merged._filled.water=true;}
     if(!hasHotWater&&existing._filled?.hotWater){merged.hwPrev=existing.hwPrev;merged.hwCur=existing.hwCur;merged.hotWaterCost=existing.hotWaterCost;merged._filled.hotWater=true;}
     if(!hasElectro &&existing._filled?.electro) {merged.dPrev=existing.dPrev;merged.dCur=existing.dCur;merged.nPrev=existing.nPrev;merged.nCur=existing.nCur;merged.electroCost=existing.electroCost;merged._filled.electro=true;}
@@ -1001,6 +1143,7 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
     if(!hasCustom  &&existing._filled?.custom)  {merged.customData={...existing.customData,...cData};merged.customCost=existing.customCost;merged._filled.custom=true;}
     else if(hasCustom){merged.customData={...(existing.customData||{}),...cData};}
     merged.total=(merged.waterCost||0)+(merged.hotWaterCost||0)+(merged.electroCost||0)+(merged.gasCost||0)+(merged.customCost||0);
+    setRecordPayment(merged, paymentData.paymentStatus, paymentData.paidAmount);
     merged.note=newData.note||existing.note;
     records[existingIdx]=merged; addChangeLog('record_updated', { month, total: merged.total }); showToast("Оновлено! 🔄");
   } else { records.push(newData); addChangeLog('record_created', { month, total: newData.total }); showToast("Збережено! ✨"); }
@@ -1011,11 +1154,12 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
   syncToCloud();
   const[y,m]=$('monthInput').value.split('-').map(Number),nD=new Date(y,m);
   $('monthInput').value=`${nD.getFullYear()}-${String(nD.getMonth()+1).padStart(2,'0')}`;
+  setPaymentInputsFromRecord(null);
   fillPreviousReadings();calculatePreview();updateSmartBadges();checkNewAchievements();
   switchTab('tabDashboard',0);
 });
 
-$('btnClearFields')?.addEventListener('click',()=>{readingInputIds.forEach(id=>{const el=$(id);if(el){el.value='';el.classList.remove('input-invalid');}});document.querySelectorAll('.custom-srv-input').forEach(el=>el.value='');if($('recordNote'))$('recordNote').value='';calculatePreview();updateSmartBadges();clearDraft();showToast('Очищено','🧼');});
+$('btnClearFields')?.addEventListener('click',()=>{if(!requireEdit('У режимі перегляду очищення недоступне'))return;readingInputIds.forEach(id=>{const el=$(id);if(el){el.value='';el.classList.remove('input-invalid');}});document.querySelectorAll('.custom-srv-input').forEach(el=>el.value='');if($('recordNote'))$('recordNote').value='';setPaymentInputsFromRecord(null);calculatePreview();updateSmartBadges();clearDraft();showToast('Очищено','🧼');});
 
 // =================== FILL PREVIOUS READINGS ===================
 function fillPreviousReadings() {
@@ -1023,6 +1167,7 @@ function fillPreviousReadings() {
     readingInputIds.forEach(id=>{if($(id))$(id).value='';});
     document.querySelectorAll('.custom-srv-input').forEach(el=>el.value='');
     if($('recordNote'))$('recordNote').value='';
+    setPaymentInputsFromRecord(null);
     const selectedMonth=$('monthInput')?.value;
     if(!selectedMonth||records.length===0){autoSetWinter(selectedMonth);loadDraft();return;}
     const[sy,sm]=selectedMonth.split('-').map(Number);
@@ -1042,6 +1187,7 @@ function fillPreviousReadings() {
       if(prefs.showGas)     {if(currentRecord.gPrev!=null&&$('gPrev'))$('gPrev').value=currentRecord.gPrev;if(currentRecord.gCur!=null&&$('gCur'))$('gCur').value=currentRecord.gCur;}
       if(currentRecord.customData)Object.keys(currentRecord.customData).forEach(srvId=>{const el=$(`custom_${srvId}`);if(el)el.value=currentRecord.customData[srvId].val;});
       if($('recordNote'))$('recordNote').value=currentRecord.note||'';
+      setPaymentInputsFromRecord(currentRecord);
     } else {
       customServices.forEach(srv=>{const el=$(`custom_${srv.id}`);if(el&&srv.defaultSum)el.value=srv.defaultSum;});
       loadDraft();
@@ -1062,6 +1208,21 @@ function fillTariffInputs(nextTariffs) {
   if($('tGas'))           $('tGas').value           =nextTariffs.gas;
 }
 
+function renderTariffPresets() {
+  const select = $('tariffPresetSelect');
+  if (!select) return;
+  select.innerHTML = '<option value="">Обрати місто / постачальника</option>' + TARIFF_PRESETS.map(preset => `<option value="${escapeAttr(preset.id)}">${escapeHtml(preset.name)}</option>`).join('');
+}
+
+function applyTariffPreset(presetId) {
+  const preset = TARIFF_PRESETS.find(item => item.id === presetId);
+  if (!preset) return;
+  fillTariffInputs({ ...defaultTariffs, ...preset.tariffs });
+  addChangeLog('tariff_preset_loaded', { preset: preset.name });
+  renderChangeLog();
+  showToast('Шаблон тарифів застосовано', '🏙️');
+}
+
 function applyPreferences() {
   if($('prefWater'))         $('prefWater').checked         =prefs.showWater;
   if($('prefHotWater'))      $('prefHotWater').checked      =prefs.showHotWater;
@@ -1074,6 +1235,9 @@ function applyPreferences() {
   if($('remWaterEnd'))     $('remWaterEnd').value    =prefs.remWaterEnd    ||5;
   if($('remElectroStart')) $('remElectroStart').value=prefs.remElectroStart||28;
   if($('remElectroEnd'))   $('remElectroEnd').value  =prefs.remElectroEnd  ||3;
+  if($('remGasStart'))     $('remGasStart').value    =prefs.remGasStart    ||1;
+  if($('remGasEnd'))       $('remGasEnd').value      =prefs.remGasEnd      ||5;
+  if($('familyRoleSelect'))$('familyRoleSelect').value=getFamilyRole();
   if($('blockWater'))     $('blockWater').style.display    =prefs.showWater   ?'block':'none';
   if($('blockHotWater'))  $('blockHotWater').style.display =prefs.showHotWater?'block':'none';
   if($('settingHotWaterWrap'))$('settingHotWaterWrap').style.display=prefs.showHotWater?'flex':'none';
@@ -1085,12 +1249,13 @@ function applyPreferences() {
   if($('winterCheckboxWrapper'))   $('winterCheckboxWrapper').style.display   =prefs.electroWinter?'flex':'none';
   if($('settingElectroWinterWrap'))$('settingElectroWinterWrap').style.display=prefs.electroWinter?'flex':'none';
   updateServiceChartOptions();
+  applyAccessMode();
 }
 
 function renderChangeLog() {
   const list = $('changeLogList');
   if (!list) return;
-  const labels = { record_created:'Додано запис', record_updated:'Оновлено запис', record_deleted:'Видалено запис', record_restored:'Відновлено запис', record_paid_toggled:'Змінено оплату', visible_records_paid:'Оплачено видимі', json_imported:'Імпортовано JSON', import_rolled_back:'Скасовано імпорт', local_backup_restored:'Відновлено бекап', pre_import_backup_restored:'Відновлено до імпорту', tariffs_saved:'Збережено тарифи', tariff_template_saved:'Збережено шаблон тарифів', tariff_template_loaded:'Застосовано шаблон тарифів', tariffs_reset:'Повернено базові тарифи', device_credentials_forgotten:'Пристрій забуто' };
+  const labels = { record_created:'Додано запис', record_updated:'Оновлено запис', record_deleted:'Видалено запис', record_restored:'Відновлено запис', record_paid_toggled:'Змінено оплату', visible_records_paid:'Оплачено видимі', json_imported:'Імпортовано JSON', import_rolled_back:'Скасовано імпорт', local_backup_restored:'Відновлено бекап', pre_import_backup_restored:'Відновлено до імпорту', tariffs_saved:'Збережено тарифи', tariff_template_saved:'Збережено шаблон тарифів', tariff_template_loaded:'Застосовано шаблон тарифів', tariff_preset_loaded:'Застосовано міський шаблон', tariffs_reset:'Повернено базові тарифи', device_credentials_forgotten:'Пристрій забуто' };
   const log = getChangeLog().slice(0, 8);
   if (!log.length) { list.innerHTML = '<p class="text-slate-400">Поки немає змін</p>'; return; }
   list.innerHTML = log.map(item => { const d = new Date(item.ts).toLocaleString('uk-UA', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }); const month = item.details?.month ? ` · ${escapeHtml(item.details.month)}` : ''; return `<div class="flex justify-between gap-3 bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5"><span class="font-bold text-slate-700 dark:text-slate-200">${escapeHtml(labels[item.type]||item.type)}${month}</span><span class="text-slate-400 shrink-0">${d}</span></div>`; }).join('');
@@ -1108,6 +1273,8 @@ $('loadTariffTemplateBtn')?.addEventListener('click',()=>{
   catch(e){showToast('Шаблон пошкоджено','❌');}
 });
 $('resetTariffsBtn')?.addEventListener('click',()=>{fillTariffInputs(defaultTariffs);addChangeLog('tariffs_reset');renderChangeLog();showToast('Базові тарифи','✅');});
+$('tariffPresetSelect')?.addEventListener('change',(e)=>{applyTariffPreset(e.target.value);e.target.value='';});
+$('familyRoleSelect')?.addEventListener('change',(e)=>{prefs.familyRole=e.target.value;updateFamilyRoleHint();});
 
 ['prefWater','prefHotWater','prefElectro','prefGas','prefElectroTwoZone','prefElectroWinter'].forEach(id=>{$(id)?.addEventListener('change',()=>{prefs.showWater=$('prefWater')?.checked??prefs.showWater;prefs.showHotWater=$('prefHotWater')?.checked??prefs.showHotWater;prefs.showElectro=$('prefElectro')?.checked??prefs.showElectro;prefs.showGas=$('prefGas')?.checked??prefs.showGas;prefs.electroTwoZone=$('prefElectroTwoZone')?.checked??prefs.electroTwoZone;prefs.electroWinter=$('prefElectroWinter')?.checked??prefs.electroWinter;applyPreferences();renderCalcCustomServices();calculatePreview();updateSmartBadges();});});
 $('prefReminders')?.addEventListener('change',function(){
@@ -1117,7 +1284,7 @@ $('prefReminders')?.addEventListener('change',function(){
 
 $('saveSettingsBtn')?.addEventListener('click',()=>{
   tariffs={water:parseFloat($('tWater')?.value)||defaultTariffs.water,hotWater:parseFloat($('tHotWater')?.value)||defaultTariffs.hotWater,electroBase:parseFloat($('tElectroBase')?.value)||defaultTariffs.electroBase,electroWinter:parseFloat($('tElectroWinter')?.value)||defaultTariffs.electroWinter,winterLimit:2000,nightCoef:0.5,gas:parseFloat($('tGas')?.value)||defaultTariffs.gas};
-  prefs={showWater:$('prefWater')?.checked,showHotWater:$('prefHotWater')?.checked,showElectro:$('prefElectro')?.checked,showGas:$('prefGas')?.checked,electroTwoZone:$('prefElectroTwoZone')?.checked,electroWinter:$('prefElectroWinter')?.checked,remindersEnabled:$('prefReminders')?.checked,remWaterStart:parseInt($('remWaterStart')?.value)||1,remWaterEnd:parseInt($('remWaterEnd')?.value)||5,remElectroStart:parseInt($('remElectroStart')?.value)||28,remElectroEnd:parseInt($('remElectroEnd')?.value)||3};
+  prefs={showWater:$('prefWater')?.checked,showHotWater:$('prefHotWater')?.checked,showElectro:$('prefElectro')?.checked,showGas:$('prefGas')?.checked,electroTwoZone:$('prefElectroTwoZone')?.checked,electroWinter:$('prefElectroWinter')?.checked,remindersEnabled:$('prefReminders')?.checked,remWaterStart:parseInt($('remWaterStart')?.value)||1,remWaterEnd:parseInt($('remWaterEnd')?.value)||5,remElectroStart:parseInt($('remElectroStart')?.value)||28,remElectroEnd:parseInt($('remElectroEnd')?.value)||3,remGasStart:parseInt($('remGasStart')?.value)||1,remGasEnd:parseInt($('remGasEnd')?.value)||5,familyRole:$('familyRoleSelect')?.value||getFamilyRole()};
   customServices=customServices.filter(s=>s.name.trim()!=="");
   localStorage.setItem('k_budget',$('budgetInput')?.value||'0');
   addChangeLog('tariffs_saved');
@@ -1132,7 +1299,7 @@ $('displayNameInput')?.addEventListener('keydown', (e) => { if (e.key === 'Enter
 function renderSettingsCustomServices(){const list=$('customServicesSettingsList');if(!list)return;list.innerHTML=customServices.map((srv,i)=>`<div class="flex gap-2 items-center bg-slate-50 dark:bg-black/50 p-2 rounded-xl border border-slate-100 dark:border-white/5"><input type="text" value="${escapeAttr(srv.name)}" data-idx="${i}" data-field="name" placeholder="Назва" class="cs-setting-input flex-1 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2.5 py-2.5 border border-transparent focus:border-brand transition-colors"><input type="number" step="0.01" value="${escapeAttr(srv.defaultSum)}" data-idx="${i}" data-field="sum" placeholder="₴" class="cs-setting-input w-16 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2 py-2.5 text-center border border-transparent focus:border-brand transition-colors"><button type="button" class="cs-del p-2 text-slate-400 hover:text-red-500 bg-white dark:bg-[#2c2c2e] rounded-lg transition-colors" data-idx="${i}"><i class="fa-solid fa-trash text-[10px]"></i></button></div>`).join('');list.querySelectorAll('.cs-setting-input').forEach(input=>{input.addEventListener('change',()=>{const idx=parseInt(input.dataset.idx);if(input.dataset.field==='name')customServices[idx].name=input.value;else customServices[idx].defaultSum=input.value;});});list.querySelectorAll('.cs-del').forEach(btn=>{btn.addEventListener('click',()=>{customServices.splice(parseInt(btn.dataset.idx),1);renderSettingsCustomServices();});});}
 $('addCustomServiceBtn')?.addEventListener('click',()=>{customServices.push({id:'s'+Date.now(),name:"",defaultSum:""});renderSettingsCustomServices();});
 
-function renderCalcCustomServices(){const c=$('customServicesContainer');if(!c)return;if(customServices.length===0){c.innerHTML='';return;}c.innerHTML=customServices.map(srv=>`<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-1.5 text-center">${escapeHtml(srv.name)||'Послуга'}</span><input type="number" step="0.01" id="custom_${escapeAttr(srv.id)}" class="custom-srv-input premium-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-white/10" placeholder="${escapeAttr(srv.defaultSum||'0.00')}"></div>`).join('');document.querySelectorAll('.custom-srv-input').forEach(input=>input.addEventListener('input',()=>{calculatePreview();debouncedDraft();}));}
+function renderCalcCustomServices(){const c=$('customServicesContainer');if(!c)return;if(customServices.length===0){c.innerHTML='';applyAccessMode();return;}c.innerHTML=customServices.map(srv=>`<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-1.5 text-center">${escapeHtml(srv.name)||'Послуга'}</span><input type="number" step="0.01" id="custom_${escapeAttr(srv.id)}" class="custom-srv-input premium-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-white/10" placeholder="${escapeAttr(srv.defaultSum||'0.00')}"></div>`).join('');document.querySelectorAll('.custom-srv-input').forEach(input=>input.addEventListener('input',()=>{calculatePreview();debouncedDraft();}));applyAccessMode();}
 
 function getMonthKey() {
   const now = new Date();
@@ -1142,10 +1309,11 @@ function checkReminders(){
   const monthKey = getMonthKey();
   if(!prefs.remindersEnabled||localStorage.getItem('lastSubmittedMonth')===monthKey){$('reminderBanner')?.classList.add('hidden');return;}
   const d=new Date().getDate();let msgs=[];
-  const wS=prefs.remWaterStart||1,wE=prefs.remWaterEnd||5,eS=prefs.remElectroStart||28,eE=prefs.remElectroEnd||3;
-  const isW=wS<=wE?(d>=wS&&d<=wE):(d>=wS||d<=wE),isE=eS<=eE?(d>=eS&&d<=eE):(d>=eS||d<=eE);
+  const wS=prefs.remWaterStart||1,wE=prefs.remWaterEnd||5,eS=prefs.remElectroStart||28,eE=prefs.remElectroEnd||3,gS=prefs.remGasStart||1,gE=prefs.remGasEnd||5;
+  const isW=isDayInRange(d,wS,wE),isE=isDayInRange(d,eS,eE),isG=isDayInRange(d,gS,gE);
   if(isW&&(prefs.showWater||prefs.showHotWater))msgs.push("💧 Воду");
   if(isE&&prefs.showElectro)msgs.push("⚡️ Світло");
+  if(isG&&prefs.showGas)msgs.push("🔥 Газ");
   if(msgs.length>0){$('reminderBanner')?.classList.remove('hidden');if($('reminderText'))$('reminderText').innerText="Передайте: "+msgs.join(" та ");}
   else $('reminderBanner')?.classList.add('hidden');
 }
@@ -1167,8 +1335,9 @@ function initSwipe(card,recordId){
 
 // =================== RECORDS ===================
 function findRecordIndex(id){return records.findIndex(r=>r.id===id);}
-function togglePaidById(id){const idx=findRecordIndex(id);if(idx<0)return;records[idx].paid=!records[idx].paid;addChangeLog('record_paid_toggled',{month:records[idx].month,paid:records[idx].paid});renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();}
+function togglePaidById(id){if(!requireEdit('У режимі перегляду не можна змінювати оплату'))return;const idx=findRecordIndex(id);if(idx<0)return;const nextStatus=isRecordPaid(records[idx])?'charged':'paid';setRecordPayment(records[idx],nextStatus,nextStatus==='paid'?records[idx].total:0);addChangeLog('record_paid_toggled',{month:records[idx].month,paid:records[idx].paid,status:records[idx].paymentStatus});renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();}
 function deleteRecordById(id){
+  if(!requireEdit('У режимі перегляду не можна видаляти записи'))return;
   const idx=findRecordIndex(id);
   if(idx<0)return;
   const deleted=records[idx];
@@ -1187,28 +1356,28 @@ function renderRecords(){
   if(records.length===0){list.innerHTML=`<div class="text-center py-12"><i class="fa-solid fa-clock-rotate-left text-4xl text-slate-300 dark:text-slate-600 mb-4"></i><p class="text-slate-500 font-medium">Ще немає записів</p><p class="text-xs text-slate-400 mt-1">Додайте перший запис у вкладці "Рахунок"</p></div>`;if($('statsAvg'))$('statsAvg').innerText='0 ₴';if($('statsTotalPaid'))$('statsTotalPaid').innerText='0 ₴';if($('statsMin'))$('statsMin').innerText='0 ₴';if($('statsMax'))$('statsMax').innerText='0 ₴';if($('statsCount'))$('statsCount').innerText='0';renderHistoryChart([]);renderServiceChart();return;}
   const totals=records.map(r=>r.total);
   if($('statsAvg'))      $('statsAvg').innerText      =fmt.format(totals.reduce((a,b)=>a+b,0)/totals.length)+' ₴';
-  if($('statsTotalPaid'))$('statsTotalPaid').innerText=fmt.format(records.filter(r=>r.paid).reduce((s,r)=>s+r.total,0))+' ₴';
+  if($('statsTotalPaid'))$('statsTotalPaid').innerText=fmt.format(records.reduce((s,r)=>s+getPaidAmount(r),0))+' ₴';
   if($('statsMin'))      $('statsMin').innerText      =fmt.format(Math.min(...totals))+' ₴';
   if($('statsMax'))      $('statsMax').innerText      =fmt.format(Math.max(...totals))+' ₴';
   if($('statsCount'))    $('statsCount').innerText    =records.length;
   let sorted=[...records];
   const sortVal=$('sortSelect')?.value||'date-desc';
   switch(sortVal){case 'date-desc':sorted.sort((a,b)=>new Date(b.month)-new Date(a.month));break;case 'date-asc':sorted.sort((a,b)=>new Date(a.month)-new Date(b.month));break;case 'amount-desc':sorted.sort((a,b)=>b.total-a.total);break;case 'amount-asc':sorted.sort((a,b)=>a.total-b.total);break;}
-  if(currentFilter==='paid')  sorted=sorted.filter(r=>r.paid);
-  if(currentFilter==='unpaid')sorted=sorted.filter(r=>!r.paid);
+  if(currentFilter==='paid')  sorted=sorted.filter(r=>isRecordPaid(r));
+  if(currentFilter==='unpaid')sorted=sorted.filter(r=>getOutstandingAmount(r)>0);
   const search=$('searchRecords')?.value?.toLowerCase()||'';
   if(search)sorted=sorted.filter(r=>new Date(r.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'}).toLowerCase().includes(search)||r.month.includes(search));
   renderHistoryChart([...records].sort((a,b)=>new Date(a.month)-new Date(b.month)));
   renderServiceChart();
   list.innerHTML='';
     if(!sorted.length){list.innerHTML=`<div class="text-center py-8"><p class="text-slate-400 font-medium">Нічого не знайдено</p></div>`;return;}
-  const unpaidCount=sorted.filter(r=>!r.paid).length;
+  const unpaidCount=sorted.filter(r=>getOutstandingAmount(r)>0).length;
   if(unpaidCount>0&&currentFilter!=='paid'){
     const batchBar=document.createElement('div');
     batchBar.className='bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-2xl flex justify-between items-center text-white mb-4';
-    batchBar.innerHTML=`<div><p class="text-xs font-bold opacity-80">${unpaidCount} неоплачених у списку</p><p class="text-sm font-black">${fmt.format(sorted.filter(r=>!r.paid).reduce((s,r)=>s+r.total,0))} ₴</p></div><button class="batch-pay-btn px-4 py-2 bg-white/20 rounded-xl text-xs font-bold active:scale-95 transition-transform border border-white/20">✓ Оплатити видимі</button>`;
+    batchBar.innerHTML=`<div><p class="text-xs font-bold opacity-80">${unpaidCount} з боргом у списку</p><p class="text-sm font-black">${fmt.format(sorted.reduce((s,r)=>s+getOutstandingAmount(r),0))} ₴</p></div><button class="batch-pay-btn px-4 py-2 bg-white/20 rounded-xl text-xs font-bold active:scale-95 transition-transform border border-white/20">✓ Оплатити видимі</button>`;
     list.appendChild(batchBar);
-    batchBar.querySelector('.batch-pay-btn')?.addEventListener('click',()=>{if(confirm(`Позначити ${unpaidCount} видимих записів як оплачені?`)){const payableIds=new Set(sorted.filter(r=>!r.paid).map(r=>r.id));records.forEach(r=>{if(payableIds.has(r.id))r.paid=true;});addChangeLog('visible_records_paid',{count:payableIds.size});renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();showToast(`${unpaidCount} записів оплачено!`,'✅');}});
+    batchBar.querySelector('.batch-pay-btn')?.addEventListener('click',()=>{if(!requireEdit('У режимі перегляду не можна змінювати оплату'))return;if(confirm(`Позначити ${unpaidCount} видимих записів як оплачені?`)){const payableIds=new Set(sorted.filter(r=>getOutstandingAmount(r)>0).map(r=>r.id));records.forEach(r=>{if(payableIds.has(r.id))setRecordPayment(r,'paid',r.total);});addChangeLog('visible_records_paid',{count:payableIds.size});renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();showToast(`${unpaidCount} записів оплачено!`,'✅');}});
   }
   let lastYear=null;
   sorted.forEach(rec=>{
@@ -1218,14 +1387,15 @@ function renderRecords(){
   });
 }
 
-function renderHistoryChart(sortedRecords,retryCount=0){if(!$('historyChartCanvas'))return;if(!historyChart)historyChart=new ChartEngine('historyChartCanvas',{padding:30,barRadius:5});if(!historyChart.width)historyChart.setupCanvas();if(!historyChart.width){if(retryCount<5)setTimeout(()=>renderHistoryChart(sortedRecords,retryCount+1),200);return;}historyChart.setData(sortedRecords.slice(-10).map(r=>({value:r.total,label:new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color:r.paid?'#007aff':'#ff9500'})));}
+function renderHistoryChart(sortedRecords,retryCount=0){if(!$('historyChartCanvas'))return;if(!historyChart)historyChart=new ChartEngine('historyChartCanvas',{padding:30,barRadius:5});if(!historyChart.width)historyChart.setupCanvas();if(!historyChart.width){if(retryCount<5)setTimeout(()=>renderHistoryChart(sortedRecords,retryCount+1),200);return;}historyChart.setData(sortedRecords.slice(-10).map(r=>({value:r.total,label:new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color:isRecordPaid(r)?'#007aff':getPaymentStatus(r)==='partial'?'#ffcc00':'#ff9500'})));}
 
 function renderServiceChart(retryCount=0){if(!$('serviceChartCanvas')||records.length===0){if($('serviceChartSummary'))$('serviceChartSummary').innerHTML='';return;}const type=$('serviceChartSelect')?.value||'water',unit=type==='electro'?'кВт':'м³';if(!serviceChart)serviceChart=new ChartEngine('serviceChartCanvas',{padding:24,barRadius:4,unit});else serviceChart.options.unit=unit;if(!serviceChart.width)serviceChart.setupCanvas();if(!serviceChart.width){if(retryCount<5)setTimeout(()=>renderServiceChart(retryCount+1),200);return;}const sorted=[...records].sort((a,b)=>new Date(a.month)-new Date(b.month)).slice(-8);const getValue=rec=>{switch(type){case 'water':return Math.max(0,(rec.wCur||0)-(rec.wPrev||0));case 'hotWater':return Math.max(0,(rec.hwCur||0)-(rec.hwPrev||0));case 'electro':return Math.max(0,(rec.dCur||0)-(rec.dPrev||0))+Math.max(0,(rec.nCur||0)-(rec.nPrev||0));case 'gas':return Math.max(0,(rec.gCur||0)-(rec.gPrev||0));default:return 0;}};const getColor=()=>{switch(type){case 'water':return'#3b82f6';case 'hotWater':return'#ef4444';case 'electro':return'#eab308';case 'gas':return'#f97316';default:return'#6b7280';}};const color=getColor(),data=sorted.map(rec=>({value:getValue(rec),label:new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color}));serviceChart.setData(data);const values=data.map(d=>d.value),avg=values.length?values.reduce((a,b)=>a+b,0)/values.length:0,last=values[values.length-1]||0,prevLast=values.length>1?values[values.length-2]:last,trendPct=prevLast>0?Math.round(((last-prevLast)/prevLast)*100):0;const summary=$('serviceChartSummary');if(summary)summary.innerHTML=`<span>Сер.: <span style="color:${color}" class="font-black">${Math.round(avg)} ${unit}/міс</span></span><span>Ост.: <span class="${trendPct<0?'text-green-600':trendPct>0?'text-red-500':'text-slate-500'} font-black">${last} ${unit} (${trendPct>0?'+':''}${trendPct}%)</span></span>`;}
 $('serviceChartSelect')?.addEventListener('change',renderServiceChart);
 
 function createRecordCard(rec){
   const card=document.createElement('div');
-  card.className=`premium-card swipe-card p-5 relative overflow-hidden cursor-pointer select-none ${rec.paid?'':'ring-1 ring-orange-400/20'}`;
+  const recPaid=isRecordPaid(rec),paymentStatus=getPaymentStatus(rec),paidAmount=getPaidAmount(rec),outstanding=getOutstandingAmount(rec);
+  card.className=`premium-card swipe-card p-5 relative overflow-hidden cursor-pointer select-none ${recPaid?'':'ring-1 ring-orange-400/20'}`;
   const dStr=new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'long'});
   const[rY,rM]=rec.month.split('-');
   const filledServices=[];
@@ -1244,12 +1414,12 @@ function createRecordCard(rec){
   const recId=rec.id;
 
   card.innerHTML=`
-    ${!rec.paid?'<div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-400/15 to-transparent rounded-bl-[4rem]"></div>':''}
+    ${!recPaid?'<div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-400/15 to-transparent rounded-bl-[4rem]"></div>':''}
     <div class="flex justify-between items-center relative z-10" data-toggle-details="${recId}">
       <div>
         <h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${escapeHtml(dStr)}</h4>
         <div class="flex items-center flex-wrap gap-1">
-          <span class="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${rec.paid?'bg-brand-light text-brand':'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${rec.paid?'Оплачено':'Борг'}</span>
+          <span class="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${recPaid?'bg-brand-light text-brand':paymentStatus==='partial'?'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300':'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${getPaymentLabel(rec)}</span>
           ${partialBadge}${yoy}
         </div>
       </div>
@@ -1267,11 +1437,12 @@ function createRecordCard(rec){
           ${rec.electroCost>0?`<div class="flex justify-between"><span class="font-bold">⚡ Світло</span><span class="font-black">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>Д:${rec.dPrev}→${rec.dCur}</span><span class="text-yellow-600">+${rec.dCur-rec.dPrev}</span></div>${(rec.nCur||rec.nPrev)?`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl mt-1"><span>Н:${rec.nPrev}→${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur-rec.nPrev}</span></div>`:''}`:''}
           ${rec.gasCost>0?`<div class="flex justify-between"><span class="font-bold">🔥 Газ</span><span class="font-black">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.gPrev}→${rec.gCur}</span><span class="text-orange-500">+${rec.gCur-rec.gPrev} м³</span></div>`:''}
           ${rec.customCost>0?`<div class="flex justify-between"><span class="font-bold">📦 Інше</span><span class="font-black">${fmt.format(rec.customCost)} ₴</span></div>${rec.customData?Object.values(rec.customData).filter(s=>s.val>0).map(s=>`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${escapeHtml(s.name)}</span><span class="text-purple-500">${fmt.format(s.val)} ₴</span></div>`).join(''):''}`:'' }
+          ${paymentStatus==='partial'?`<div class="flex justify-between text-[11px] font-bold text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-500/10 px-3 py-2 rounded-xl"><span>💳 Сплачено частково</span><span>${fmt.format(paidAmount)} ₴ / борг ${fmt.format(outstanding)} ₴</span></div>`:''}
           ${rec.note?`<div class="mt-3 p-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs text-slate-500 italic"><i class="fa-solid fa-sticky-note mr-1"></i>${escapeHtml(rec.note)}</div>`:''}
         </div>
       </div>
       <div class="flex gap-2.5 mt-4 pt-3 border-t border-slate-100 dark:border-white/5">
-        <button type="button" class="rec-pay flex-1 py-3.5 rounded-2xl font-bold text-xs border active:scale-[0.96] transition-all ${rec.paid?'bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 border-slate-200 dark:border-white/10':'bg-gradient-to-r from-brand to-blue-600 text-white shadow-lg border-brand'}" data-rec-id="${recId}">${rec.paid?'↩ Скасувати':'✓ Оплачено'}</button>
+        <button type="button" class="rec-pay flex-1 py-3.5 rounded-2xl font-bold text-xs border active:scale-[0.96] transition-all ${recPaid?'bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 border-slate-200 dark:border-white/10':'bg-gradient-to-r from-brand to-blue-600 text-white shadow-lg border-brand'}" data-rec-id="${recId}">${recPaid?'↩ Нараховано':'✓ Оплачено'}</button>
         <button type="button" class="rec-share w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 active:scale-[0.90] transition-transform" data-rec-id="${recId}"><i class="fa-solid fa-share-nodes"></i></button>
         <button type="button" class="rec-edit w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 active:scale-[0.90] transition-transform" data-rec-id="${recId}"><i class="fa-solid fa-pen"></i></button>
         <button type="button" class="rec-del w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 active:scale-[0.90] transition-transform" data-rec-id="${recId}"><i class="fa-solid fa-trash"></i></button>
@@ -1279,7 +1450,7 @@ function createRecordCard(rec){
     </div>`;
 
   const swL=document.createElement('div');swL.className='swipe-bg-left';swL.innerHTML='<i class="fa-solid fa-trash mr-2"></i>Видалити';
-  const swR=document.createElement('div');swR.className='swipe-bg-right';swR.innerHTML=`<i class="fa-solid fa-${rec.paid?'rotate-left':'check'} mr-2"></i>${rec.paid?'Скасувати':'Оплачено'}`;
+  const swR=document.createElement('div');swR.className='swipe-bg-right';swR.innerHTML=`<i class="fa-solid fa-${recPaid?'rotate-left':'check'} mr-2"></i>${recPaid?'Нараховано':'Оплачено'}`;
   card.insertBefore(swL,card.firstChild);card.insertBefore(swR,card.firstChild);
   initSwipe(card,recId);
 
@@ -1289,14 +1460,14 @@ function createRecordCard(rec){
     const payBtn=e.target.closest('.rec-pay');  if(payBtn)  {e.stopPropagation();togglePaidById(recId);  return;}
     const shareBtn=e.target.closest('.rec-share');if(shareBtn){e.stopPropagation();shareRecordById(recId);return;}
     const editBtn=e.target.closest('.rec-edit'); if(editBtn) {e.stopPropagation();editRecordById(recId); return;}
-    const delBtn=e.target.closest('.rec-del');   if(delBtn)  {e.stopPropagation();if(confirm('Видалити?'))deleteRecordById(recId);return;}
+    const delBtn=e.target.closest('.rec-del');   if(delBtn)  {e.stopPropagation();if(requireEdit('У режимі перегляду не можна видаляти записи')&&confirm('Видалити?'))deleteRecordById(recId);return;}
   });
   return card;
 }
 
-async function shareRecordById(id){const rec=records.find(r=>r.id===id);if(!rec)return;const d=new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'});let t=`🧾 Комуналка за ${d}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n──────────\n`;if(rec.waterCost>0)t+=`💧 Вода: ${fmt.format(rec.waterCost)} ₴\n`;if(rec.hotWaterCost>0)t+=`🌡️ Гар.: ${fmt.format(rec.hotWaterCost)} ₴\n`;if(rec.electroCost>0)t+=`⚡ Світло: ${fmt.format(rec.electroCost)} ₴\n`;if(rec.gasCost>0)t+=`🔥 Газ: ${fmt.format(rec.gasCost)} ₴\n`;if(rec.customCost>0)t+=`📦 Інше: ${fmt.format(rec.customCost)} ₴\n`;t+=`──────────\n💰 Всього: ${fmt.format(rec.total)} ₴\n${rec.paid?'✅ Оплачено':'⏳ Очікує'}`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
+async function shareRecordById(id){const rec=records.find(r=>r.id===id);if(!rec)return;const d=new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'});let t=`🧾 Комуналка за ${d}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n──────────\n`;if(rec.waterCost>0)t+=`💧 Вода: ${fmt.format(rec.waterCost)} ₴\n`;if(rec.hotWaterCost>0)t+=`🌡️ Гар.: ${fmt.format(rec.hotWaterCost)} ₴\n`;if(rec.electroCost>0)t+=`⚡ Світло: ${fmt.format(rec.electroCost)} ₴\n`;if(rec.gasCost>0)t+=`🔥 Газ: ${fmt.format(rec.gasCost)} ₴\n`;if(rec.customCost>0)t+=`📦 Інше: ${fmt.format(rec.customCost)} ₴\n`;t+=`──────────\n💰 Всього: ${fmt.format(rec.total)} ₴\n💳 ${getPaymentLabel(rec)}${getPaymentStatus(rec)==='partial'?`: ${fmt.format(getPaidAmount(rec))} ₴ сплачено, борг ${fmt.format(getOutstandingAmount(rec))} ₴`:''}`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
 
-function editRecordById(id){const rec=records.find(r=>r.id===id);if(!rec)return;if($('monthInput'))$('monthInput').value=rec.month;if(prefs.showWater){if($('wPrev'))$('wPrev').value=rec.wPrev||'';if($('wCur'))$('wCur').value=rec.wCur||'';}if(prefs.showHotWater){if($('hwPrev'))$('hwPrev').value=rec.hwPrev||'';if($('hwCur'))$('hwCur').value=rec.hwCur||'';}if(prefs.showElectro){if($('dPrev'))$('dPrev').value=rec.dPrev||'';if($('dCur'))$('dCur').value=rec.dCur||'';if($('nPrev'))$('nPrev').value=rec.nPrev||'';if($('nCur'))$('nCur').value=rec.nCur||'';}if(prefs.showGas){if($('gPrev'))$('gPrev').value=rec.gPrev||'';if($('gCur'))$('gCur').value=rec.gCur||'';}if(rec.customData)Object.keys(rec.customData).forEach(srvId=>{const el=$(`custom_${srvId}`);if(el)el.value=rec.customData[srvId].val;});if($('recordNote'))$('recordNote').value=rec.note||'';autoSetWinter(rec.month);switchTab('tabCalc',1);calculatePreview();updateSmartBadges();}
+function editRecordById(id){if(!requireEdit('У режимі перегляду не можна редагувати записи'))return;const rec=records.find(r=>r.id===id);if(!rec)return;if($('monthInput'))$('monthInput').value=rec.month;if(prefs.showWater){if($('wPrev'))$('wPrev').value=rec.wPrev||'';if($('wCur'))$('wCur').value=rec.wCur||'';}if(prefs.showHotWater){if($('hwPrev'))$('hwPrev').value=rec.hwPrev||'';if($('hwCur'))$('hwCur').value=rec.hwCur||'';}if(prefs.showElectro){if($('dPrev'))$('dPrev').value=rec.dPrev||'';if($('dCur'))$('dCur').value=rec.dCur||'';if($('nPrev'))$('nPrev').value=rec.nPrev||'';if($('nCur'))$('nCur').value=rec.nCur||'';}if(prefs.showGas){if($('gPrev'))$('gPrev').value=rec.gPrev||'';if($('gCur'))$('gCur').value=rec.gCur||'';}if(rec.customData)Object.keys(rec.customData).forEach(srvId=>{const el=$(`custom_${srvId}`);if(el)el.value=rec.customData[srvId].val;});if($('recordNote'))$('recordNote').value=rec.note||'';setPaymentInputsFromRecord(rec);autoSetWinter(rec.month);switchTab('tabCalc',1);calculatePreview();updateSmartBadges();}
 
 // =================== FILTER & SEARCH ===================
 let searchDebounceTimer;
@@ -1324,7 +1495,7 @@ function exportCSV(){
     if(prefs.showHotWater) row.push(Math.max(0,(r.hwCur||0)-(r.hwPrev||0)),(r.hotWaterCost||0).toFixed(2));
     if(prefs.showElectro)  row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(2));
     if(prefs.showGas)      row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(2));
-    row.push((r.customCost||0).toFixed(2),(r.total||0).toFixed(2),r.paid?'Оплачено':'Борг',r.note||'');
+    row.push((r.customCost||0).toFixed(2),(r.total||0).toFixed(2),getPaymentLabel(r),r.note||'');
     rows.push(row);
   });
   downloadBlob('\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\n')+'\n','komunalka.csv','text/csv;charset=utf-8;');
@@ -1339,14 +1510,14 @@ async function generatePDF(){
   const t=hasFont?s=>s:transliterate;
   doc.setFillColor(0,122,255);doc.rect(0,0,210,35,'F');doc.setTextColor(255,255,255);doc.setFontSize(18);doc.text(t('Комунальні платежі'),15,15);doc.setFontSize(10);doc.text(t($('currentAddressDisplay')?.innerText||''),15,24);doc.setTextColor(60,60,60);
   const tH=[t('Міс.')];if(prefs.showWater)tH.push(t('Вода'),t('₴'));if(prefs.showElectro)tH.push(t('Світло'),t('₴'));if(prefs.showGas)tH.push(t('Газ'),t('₴'));tH.push(t('Інше'),t('Всього'),t('Статус'));
-  const tR=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).map(r=>{const row=[r.month];if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(0));if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(0));if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(0));row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),r.paid?'OK':t('Борг'));return row;});
+  const tR=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).map(r=>{const row=[r.month];if(prefs.showWater)row.push(Math.max(0,(r.wCur||0)-(r.wPrev||0)),(r.waterCost||0).toFixed(0));if(prefs.showElectro)row.push(Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0)),(r.electroCost||0).toFixed(0));if(prefs.showGas)row.push(Math.max(0,(r.gCur||0)-(r.gPrev||0)),(r.gasCost||0).toFixed(0));row.push((r.customCost||0).toFixed(0),(r.total||0).toFixed(0),t(getPaymentLabel(r)));return row;});
   doc.autoTable({startY:40,head:[tH],body:tR,theme:'striped',styles:{font:hasFont?'Roboto':'helvetica'},headStyles:{fillColor:[0,122,255],textColor:[255,255,255],fontSize:7,fontStyle:'bold',halign:'center'},bodyStyles:{fontSize:7,halign:'center'},margin:{left:10,right:10}});
   doc.save(`komunalka_${new Date().toISOString().slice(0,10)}.pdf`);showToast('PDF!','📄');
 }
 
 function transliterate(text){const map={'а':'a','б':'b','в':'v','г':'h','ґ':'g','д':'d','е':'e','є':'ye','ж':'zh','з':'z','и':'y','і':'i','ї':'yi','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ь':'','ю':'yu','я':'ya','А':'A','Б':'B','В':'V','Г':'H','Ґ':'G','Д':'D','Е':'E','Є':'Ye','Ж':'Zh','З':'Z','И':'Y','І':'I','Ї':'Yi','Й':'Y','К':'K','Л':'L','М':'M','Н':'N','О':'O','П':'P','Р':'R','С':'S','Т':'T','У':'U','Ф':'F','Х':'Kh','Ц':'Ts','Ч':'Ch','Ш':'Sh','Щ':'Shch','Ь':'','Ю':'Yu','Я':'Ya'};return text.split('').map(c=>map[c]||c).join('');}
 
-async function shareAllRecords(){if(!records.length)return showToast('Немає','⚠️');const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,6);let t=`📊 Комунальні\n📍 ${$('currentAddressDisplay')?.innerText||''}\n───────\n`;sorted.forEach(r=>{t+=`${new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'numeric'})}: ${fmt.format(r.total)} ₴ ${r.paid?'✅':'⏳'}\n`;});t+=`───────\nСередній: ${fmt.format(sorted.reduce((s,r)=>s+r.total,0)/sorted.length)} ₴/міс`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
+async function shareAllRecords(){if(!records.length)return showToast('Немає','⚠️');const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,6);let t=`📊 Комунальні\n📍 ${$('currentAddressDisplay')?.innerText||''}\n───────\n`;sorted.forEach(r=>{t+=`${new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'numeric'})}: ${fmt.format(r.total)} ₴ ${isRecordPaid(r)?'✅':getPaymentStatus(r)==='partial'?'◐':'⏳'}\n`;});t+=`───────\nСередній: ${fmt.format(sorted.reduce((s,r)=>s+r.total,0)/sorted.length)} ₴/міс`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
 
 $('exportCsvBtn')?.addEventListener('click',exportCSV);
 $('exportPdfBtn')?.addEventListener('click',generatePDF);
@@ -1357,7 +1528,7 @@ $('importJsonBtn')?.addEventListener('click',()=>$('importFileInput')?.click());
 // =================== IMPORT ===================
 function isPlainObject(value){return value&&typeof value==='object'&&!Array.isArray(value);}
 function normalizeNumber(value,fallback=0){const num=Number(value);return Number.isFinite(num)?num:fallback;}
-function normalizeImportedRecord(rec){if(!isPlainObject(rec)||!/^\d{4}-\d{2}$/.test(String(rec.month||'')))return null;const tariffSnapshot=isPlainObject(rec.tariffSnapshot)?{...defaultTariffs,...rec.tariffSnapshot}:null;return{...rec,id:rec.id||Date.now()+Math.random(),month:String(rec.month),total:normalizeNumber(rec.total),waterCost:normalizeNumber(rec.waterCost),hotWaterCost:normalizeNumber(rec.hotWaterCost),electroCost:normalizeNumber(rec.electroCost),gasCost:normalizeNumber(rec.gasCost),customCost:normalizeNumber(rec.customCost),paid:Boolean(rec.paid),note:String(rec.note||'').slice(0,500),tariffSnapshot};}
+function normalizeImportedRecord(rec){if(!isPlainObject(rec)||!/^\d{4}-\d{2}$/.test(String(rec.month||'')))return null;const tariffSnapshot=isPlainObject(rec.tariffSnapshot)?{...defaultTariffs,...rec.tariffSnapshot}:null;const normalized={...rec,id:rec.id||Date.now()+Math.random(),month:String(rec.month),total:normalizeNumber(rec.total),waterCost:normalizeNumber(rec.waterCost),hotWaterCost:normalizeNumber(rec.hotWaterCost),electroCost:normalizeNumber(rec.electroCost),gasCost:normalizeNumber(rec.gasCost),customCost:normalizeNumber(rec.customCost),note:String(rec.note||'').slice(0,500),tariffSnapshot};setRecordPayment(normalized,getPaymentStatus(rec),rec.paidAmount);return normalized;}
 function normalizeImportedAddress(addr,index){if(!isPlainObject(addr))return null;return{id:sanitizeDomId(addr.id||`addr_${Date.now()}_${index}`,'addr'),name:String(addr.name||`Об'єкт ${index+1}`).slice(0,80),tariffs:{...defaultTariffs,...(isPlainObject(addr.tariffs)?addr.tariffs:{})},prefs:{...defaultPrefs,...(isPlainObject(addr.prefs)?addr.prefs:{})},records:Array.isArray(addr.records)?addr.records.map(normalizeImportedRecord).filter(Boolean):[],customServices:Array.isArray(addr.customServices)?addr.customServices.filter(isPlainObject).map((srv,i)=>({id:sanitizeDomId(srv.id||`srv_${Date.now()}_${i}`,'srv'),name:String(srv.name||'').slice(0,60),defaultSum:srv.defaultSum==null?'':String(srv.defaultSum).slice(0,20)})):[]};}
 function normalizeImportData(data){if(!isPlainObject(data)||!Array.isArray(data.addresses))return null;const addrs=data.addresses.map(normalizeImportedAddress).filter(Boolean);if(!addrs.length)return null;const cid=String(data.currentAddressId||'');return{addresses:addrs,currentAddressId:addrs.some(a=>a.id===cid)?cid:addrs[0].id};}
 $('importFileInput')?.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const normalized=normalizeImportData(JSON.parse(ev.target.result));if(!normalized){showToast('Невірний формат','❌');return;}const recordCount=normalized.addresses.reduce((s,a)=>s+(a.records?.length||0),0);if(confirm(`Імпорт ${normalized.addresses.length} об'єктів і ${recordCount} записів? Поточні дані буде замінено, але перед цим створиться аварійний бекап.`)){backupCurrentState(PRE_IMPORT_BACKUP_KEY);addresses=normalized.addresses;currentAddressId=normalized.currentAddressId;addChangeLog('json_imported',{addresses:normalized.addresses.length,records:recordCount});loadCurrentAddress();syncToCloud();showActionToast('Імпортовано','Скасувати',()=>{if(restoreFromLocalBackup(PRE_IMPORT_BACKUP_KEY)){addChangeLog('import_rolled_back');showToast('Імпорт скасовано','✅');}else showToast('Немає бекапу','⚠️');},'✅');}}catch(err){showToast('Помилка','❌');}};reader.readAsText(file);e.target.value='';});
@@ -1367,7 +1538,7 @@ $('forgetDeviceBtn')?.addEventListener('click',()=>{if(confirm('Прибрати
 
 // =================== TIPS ===================
 function getConsumptionTrend(type,months=6){const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,months);if(sorted.length<2)return null;const values=sorted.map(r=>{switch(type){case 'water':return Math.max(0,(r.wCur||0)-(r.wPrev||0));case 'electro':return Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0));case 'gas':return Math.max(0,(r.gCur||0)-(r.gPrev||0));default:return r.total;}}).reverse();const first=values.slice(0,Math.ceil(values.length/2)),second=values.slice(Math.ceil(values.length/2));const avgF=first.reduce((a,b)=>a+b,0)/first.length,avgS=second.reduce((a,b)=>a+b,0)/second.length;if(avgF===0)return 0;return Math.round(((avgS-avgF)/avgF)*100);}
-function getSmartTips(){const tips=[];if(records.length>=3){const wT=getConsumptionTrend('water');if(wT&&wT>20)tips.push({emoji:'💧',text:`Споживання води зросло на ${wT}%. Перевірте крани.`});const eT=getConsumptionTrend('electro');if(eT&&eT>20)tips.push({emoji:'⚡',text:`Електрика +${eT}%. Перевірте прилади.`});if(eT&&eT<-10)tips.push({emoji:'🎉',text:`Електрика -${Math.abs(eT)}%! Чудова економія!`});}const budget=parseFloat(localStorage.getItem('k_budget'))||0;if(budget&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];if(last.total>budget*1.2)tips.push({emoji:'⚠️',text:`Перевищили бюджет на ${Math.round(((last.total-budget)/budget)*100)}%`});}const unpaid=records.filter(r=>!r.paid);if(unpaid.length>=3)tips.push({emoji:'💳',text:`${unpaid.length} неоплачених місяців. Оплатіть борг.`});if(prefs.showElectro&&prefs.electroTwoZone&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];const n=Math.max(0,(last.nCur||0)-(last.nPrev||0)),d=Math.max(0,(last.dCur||0)-(last.dPrev||0)),tot=n+d;if(tot>0&&n/tot<0.3)tips.push({emoji:'🌙',text:'Спробуйте більше електрики вночі — дешевше.'});}return tips.slice(0,3);}
+function getSmartTips(){const tips=[];if(records.length>=3){const wT=getConsumptionTrend('water');if(wT&&wT>20)tips.push({emoji:'💧',text:`Споживання води зросло на ${wT}%. Перевірте крани.`});const eT=getConsumptionTrend('electro');if(eT&&eT>20)tips.push({emoji:'⚡',text:`Електрика +${eT}%. Перевірте прилади.`});if(eT&&eT<-10)tips.push({emoji:'🎉',text:`Електрика -${Math.abs(eT)}%! Чудова економія!`});}const budget=parseFloat(localStorage.getItem('k_budget'))||0;if(budget&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];if(last.total>budget*1.2)tips.push({emoji:'⚠️',text:`Перевищили бюджет на ${Math.round(((last.total-budget)/budget)*100)}%`});}const unpaid=records.filter(r=>getOutstandingAmount(r)>0);if(unpaid.length>=3)tips.push({emoji:'💳',text:`${unpaid.length} місяців із боргом. Оплатіть або відмітьте часткову оплату.`});if(prefs.showElectro&&prefs.electroTwoZone&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];const n=Math.max(0,(last.nCur||0)-(last.nPrev||0)),d=Math.max(0,(last.dCur||0)-(last.dPrev||0)),tot=n+d;if(tot>0&&n/tot<0.3)tips.push({emoji:'🌙',text:'Спробуйте більше електрики вночі — дешевше.'});}return tips.slice(0,3);}
 function renderTips(){const container=$('tipsContainer');if(!container)return;const tips=getSmartTips();if(!tips.length){container.classList.add('hidden');return;}container.classList.remove('hidden');const listEl=$('tipsList');if(listEl)listEl.innerHTML=tips.map(t=>`<div class="flex items-start gap-3 bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5"><span class="text-lg shrink-0">${t.emoji}</span><p class="text-xs font-medium text-slate-600 dark:text-slate-300">${escapeHtml(t.text)}</p></div>`).join('');}
 
 // =================== YEAR REPORT ===================
@@ -1378,7 +1549,7 @@ function generateYearReport(){
   if($('yearReportYear'))$('yearReportYear').textContent=year;
   const total=yr.reduce((s,r)=>s+r.total,0),avg=total/yr.length;
   const maxR=yr.reduce((a,b)=>a.total>b.total?a:b),minR=yr.reduce((a,b)=>a.total<b.total?a:b);
-  const paid=yr.filter(r=>r.paid).length;
+  const paid=yr.filter(r=>isRecordPaid(r)).length;
   const wT=yr.reduce((s,r)=>s+(r.waterCost||0),0),hwT=yr.reduce((s,r)=>s+(r.hotWaterCost||0),0),eT=yr.reduce((s,r)=>s+(r.electroCost||0),0),gT=yr.reduce((s,r)=>s+(r.gasCost||0),0),cT=yr.reduce((s,r)=>s+(r.customCost||0),0);
   const maxM=new Date(maxR.month+'-01').toLocaleString('uk-UA',{month:'long'}),minM=new Date(minR.month+'-01').toLocaleString('uk-UA',{month:'long'});
   const streak=getStreak(records);
@@ -1400,7 +1571,7 @@ $('installPwaBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return
 // =================== PUSH ===================
 async function initPush(){if(!('Notification' in window))return;const btn=$('enablePushBtn'),st=$('pushStatus');if(Notification.permission==='granted'){if(btn)btn.classList.add('hidden');if(st){st.classList.remove('hidden');st.textContent='✓ Push увімкнено';st.className='text-[10px] text-green-500 text-center font-bold';}}else if(Notification.permission!=='denied'){if(btn)btn.classList.remove('hidden');}}
 $('enablePushBtn')?.addEventListener('click',async()=>{try{const p=await Notification.requestPermission();if(p==='granted'){showToast('Push увімкнено!','🔔');initPush();scheduleLocalReminder();}else showToast('Відмовлено','⚠️');}catch(e){showToast('Помилка','❌');}});
-function scheduleLocalReminder(){if(!('Notification' in window)||Notification.permission!=='granted')return;const d=new Date().getDate(),wS=prefs.remWaterStart||1,wE=prefs.remWaterEnd||5,eS=prefs.remElectroStart||28,eE=prefs.remElectroEnd||3;const isW=wS<=wE?(d>=wS&&d<=wE):(d>=wS||d<=wE),isE=eS<=eE?(d>=eS&&d<=eE):(d>=eS||d<=eE);const monthKey=getMonthKey();if((isW||isE)&&localStorage.getItem('lastSubmittedMonth')!==monthKey&&localStorage.getItem('lastPushShown')!==new Date().toDateString()){localStorage.setItem('lastPushShown',new Date().toDateString());new Notification('Комуналка 🏠',{body:'Час передати показники!',icon:'icon.png'});}}
+function scheduleLocalReminder(){if(!('Notification' in window)||Notification.permission!=='granted')return;const d=new Date().getDate(),wS=prefs.remWaterStart||1,wE=prefs.remWaterEnd||5,eS=prefs.remElectroStart||28,eE=prefs.remElectroEnd||3,gS=prefs.remGasStart||1,gE=prefs.remGasEnd||5;const isW=isDayInRange(d,wS,wE)&&(prefs.showWater||prefs.showHotWater),isE=isDayInRange(d,eS,eE)&&prefs.showElectro,isG=isDayInRange(d,gS,gE)&&prefs.showGas;const monthKey=getMonthKey();if((isW||isE||isG)&&localStorage.getItem('lastSubmittedMonth')!==monthKey&&localStorage.getItem('lastPushShown')!==new Date().toDateString()){localStorage.setItem('lastPushShown',new Date().toDateString());new Notification('Комуналка 🏠',{body:'Час передати показники!',icon:'icon.png'});}}
 setTimeout(initPush,1000);setTimeout(scheduleLocalReminder,3000);
 
 // =================== SHARE APP ===================
@@ -1561,7 +1732,7 @@ function renderAnalyticsChart(sf, curMonth) {
     const x = padding.left + i * barWidth + barPad;
     const y = padding.top + chartH - barH;
     const w = barWidth - barPad * 2;
-    const color = r.month === curMonth ? '#007aff' : r.paid ? '#34c759' : '#ff9500';
+    const color = r.month === curMonth ? '#007aff' : isRecordPaid(r) ? '#34c759' : getPaymentStatus(r)==='partial' ? '#ffcc00' : '#ff9500';
 
     ctx.beginPath();
     ctx.roundRect ? ctx.roundRect(x, y, w, barH, 4) : ctx.rect(x, y, w, barH);
@@ -1616,8 +1787,10 @@ function initAppUI(){
   if($('accountLoginDisplay'))$('accountLoginDisplay').textContent=sessionLogin||'—';
   updateGoogleButton();
   updateDisplayName();
+  renderTariffPresets();
   applyPreferences();
   renderCalcCustomServices();
+  setPaymentInputsFromRecord(null);
   fillPreviousReadings();
   switchTab('tabDashboard',0);
   calculatePreview();
