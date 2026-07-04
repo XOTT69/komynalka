@@ -16,7 +16,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <style>
-        :root{--brand:#007aff;--brand-hover:#005bb5;--brand-light:rgba(0,122,255,0.08);--brand-border:rgba(0,122,255,0.2);--success:#34c759;--warning:#ff9500;--danger:#ff3b30;--glass-bg:rgba(255,255,255,0.72);--glass-border:rgba(255,255,255,0.18);--card-radius:2rem;--premium-shadow:0 20px 60px -15px rgba(0,0,0,.08),0 4px 12px -2px rgba(0,0,0,.04)}
+        :root{--brand:#007aff;--brand-hover:#005bb5;--brand-light:rgba(0,122,255,0.08);--brand-border:rgba(0,122,255,0.2);--success:#34c759;--warning:#ff9500;--danger:#ff3b30;--glass-bg:rgba(255,255,255,0.72);--glass-border:rgba(255,255,255,0.18);--premium-shadow:0 20px 60px -15px rgba(0,0,0,.08),0 4px 12px -2px rgba(0,0,0,.04)}
         html{background:#f2f2f7}html.dark{background:#000;--glass-bg:rgba(28,28,30,0.78);--glass-border:rgba(255,255,255,0.06);--premium-shadow:0 20px 60px -15px rgba(0,0,0,.5),0 4px 12px -2px rgba(0,0,0,.3)}
         .dark .bg-white{background:#1c1c1e!important}.dark .bg-slate-50{background:#2c2c2e!important}.dark .bg-slate-100{background:#3a3a3c!important}.dark .text-slate-900{color:#fff!important}.dark .text-slate-700{color:#e5e5ea!important}.dark .text-slate-600{color:#d1d1d6!important}.dark .text-slate-500{color:#aeaeb2!important}.dark .text-slate-400{color:#8e8e93!important}.dark .border-slate-200{border-color:#38383a!important}.dark .border-slate-100{border-color:#2c2c2e!important}
         html,body{margin:0;padding:0;width:100%;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior:none}body{min-height:100dvh;overflow:hidden}
@@ -58,6 +58,7 @@
         #swipeContainer{scroll-padding-bottom:120px}.sync-dot{box-shadow:0 0 0 3px rgb(var(--liquid-rgb)/.22)}.dark .sync-dot{box-shadow:0 0 0 3px rgba(255,255,255,.08)}
         @media (prefers-reduced-transparency:reduce){:root{--liquid-card-alpha:.94!important;--liquid-bar-alpha:.94!important;--liquid-control-alpha:.86!important;--liquid-blur:12px!important}.premium-card,.glass,#aiPanelInner,#addressModalContent{background:rgb(var(--liquid-rgb)/.96)!important}}
         @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.premium-card,.glass,#aiPanelInner,#addressModalContent,#quickActionsModal>div{background:rgb(var(--liquid-rgb)/.96)!important}}
+        @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.tab-active{animation:none!important}.badge-pulse{animation:none!important}.count-up{transition:none!important}}
     </style>
     <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{DEFAULT:'var(--brand)',hover:'var(--brand-hover)',light:'var(--brand-light)',border:'var(--brand-border)'},apple:{dark:'#1c1c1e',darker:'#000000',light:'#f2f2f7'}},boxShadow:{'soft':'0 8px 32px -8px rgba(0,0,0,.08)','premium':'0 20px 60px -15px rgba(0,0,0,.12)'}}}}</script>
     <meta name="theme-color" content="#f2f2f7" id="metaThemeColor">
@@ -493,7 +494,7 @@
   </details>
 
   <div class="text-center pt-2 space-y-3">
-    <p class="text-[9px] text-slate-400">by <span class="font-bold text-slate-500">Антон Миколенко</span> • v4.0</p>
+    <p class="text-[9px] text-slate-400">by <span class="font-bold text-slate-500">Антон Миколенко</span> • v5.0</p>
     <button type="button" id="logoutBtn" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-2xl py-3.5 border border-red-100 dark:border-red-500/20 active:scale-[0.98] text-sm transition-transform"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Вийти з акаунту</button>
   </div>
 </div>
@@ -548,11 +549,11 @@
   <!-- Bottom Nav -->
   <nav class="fixed bottom-0 left-0 right-0 w-full shrink-0 z-40 glass border-t border-slate-200 dark:border-white/10 pb-5" id="bottomNav">
     <div class="max-w-md mx-auto flex justify-around items-center px-4 pt-2.5 pb-1.5">
-      <button id="btnTabDashboard" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-brand active:scale-[0.92] transition-transform"><i class="fa-solid fa-house text-[20px]"></i><span class="text-[9px] font-bold">Головна</span></button>
-      <button id="btnTabCalc"      class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-calculator text-[20px]"></i><span class="text-[9px] font-bold">Рахунок</span></button>
-      <button id="btnTabHistory"   class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform relative"><i class="fa-solid fa-clock-rotate-left text-[20px]"></i><span class="text-[9px] font-bold">Історія</span><span id="debtBadge" class="hidden absolute -top-1 right-1/4 w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-lg badge-pulse">0</span></button>
-      <button id="btnTabAnalytics" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-chart-line text-[20px]"></i><span class="text-[9px] font-bold">Аналітика</span></button>
-      <button id="btnTabSettings"  class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-gear text-[20px]"></i><span class="text-[9px] font-bold">Ще</span></button>
+      <button id="btnTabDashboard" aria-label="Головна" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-brand active:scale-[0.92] transition-transform"><i class="fa-solid fa-house text-[20px]" aria-hidden="true"></i><span class="text-[9px] font-bold">Головна</span></button>
+      <button id="btnTabCalc"      aria-label="Рахунок" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-calculator text-[20px]" aria-hidden="true"></i><span class="text-[9px] font-bold">Рахунок</span></button>
+      <button id="btnTabHistory"   aria-label="Історія" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform relative"><i class="fa-solid fa-clock-rotate-left text-[20px]" aria-hidden="true"></i><span class="text-[9px] font-bold">Історія</span><span id="debtBadge" class="hidden absolute -top-1 right-1/4 w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-lg badge-pulse" aria-label="Борг">0</span></button>
+      <button id="btnTabAnalytics" aria-label="Аналітика" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-chart-line text-[20px]" aria-hidden="true"></i><span class="text-[9px] font-bold">Аналітика</span></button>
+      <button id="btnTabSettings"  aria-label="Налаштування" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-gear text-[20px]" aria-hidden="true"></i><span class="text-[9px] font-bold">Ще</span></button>
     </div>
   </nav>
 
@@ -656,6 +657,72 @@
       <p class="text-sm font-bold text-slate-700 dark:text-slate-200" id="achDetailHow">—</p>
     </div>
     <div class="mt-4"><span id="achDetailStatus" class="text-xs font-bold px-3 py-1.5 rounded-lg">—</span></div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="changePassModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
+  <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-white/10">
+    <div class="text-center mb-6">
+      <div class="w-14 h-14 bg-brand-light rounded-2xl flex items-center justify-center text-brand text-2xl mx-auto mb-3"><i class="fa-solid fa-key"></i></div>
+      <h3 class="text-xl font-black text-slate-900 dark:text-white">Змінити пароль</h3>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-1 tracking-wider">Поточний пароль</label>
+        <input type="password" id="cpOldPass" placeholder="••••••••" autocomplete="current-password"
+          class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl p-3.5 text-sm font-bold outline-none text-slate-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-1 tracking-wider">Новий пароль</label>
+        <input type="password" id="cpNewPass" placeholder="Мін 4 символи" autocomplete="new-password"
+          class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl p-3.5 text-sm font-bold outline-none text-slate-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-1 tracking-wider">Підтвердіть пароль</label>
+        <input type="password" id="cpConfirmPass" placeholder="Повторіть пароль" autocomplete="new-password"
+          class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl p-3.5 text-sm font-bold outline-none text-slate-900 dark:text-white">
+      </div>
+      <p id="cpError" class="hidden text-red-500 text-xs font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-xl"></p>
+    </div>
+    <div class="flex gap-3 mt-6">
+      <button id="cpSubmitBtn" class="flex-1 py-3.5 bg-gradient-to-r from-brand to-blue-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-transform">
+        <span id="cpBtnText">Змінити</span>
+        <i id="cpSpinner" class="fa-solid fa-spinner fa-spin hidden ml-2"></i>
+      </button>
+      <button id="cpCancelBtn" class="flex-1 py-3.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-95 transition-transform">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Link Account Modal (замість prompt) -->
+<div id="linkAccountModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
+  <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-white/10">
+    <div class="text-center mb-6">
+      <div class="text-4xl mb-3">🔗</div>
+      <h3 class="text-xl font-black text-slate-900 dark:text-white">Прив'язати акаунт</h3>
+      <p class="text-xs text-slate-500 mt-2">Введіть логін та пароль існуючого акаунту</p>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-1 tracking-wider">Логін</label>
+        <input type="text" id="laLogin" placeholder="Ваш логін" autocapitalize="none" autocomplete="username"
+          class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl p-3.5 text-sm font-bold outline-none text-slate-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-1 tracking-wider">Пароль</label>
+        <input type="password" id="laPass" placeholder="••••••••" autocomplete="current-password"
+          class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl p-3.5 text-sm font-bold outline-none text-slate-900 dark:text-white">
+      </div>
+      <p id="laError" class="hidden text-red-500 text-xs font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-xl"></p>
+    </div>
+    <div class="flex gap-3 mt-6">
+      <button id="laSubmitBtn" class="flex-1 py-3.5 bg-gradient-to-r from-brand to-blue-600 text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-transform">
+        <span id="laBtnText">Прив'язати</span>
+        <i id="laSpinner" class="fa-solid fa-spinner fa-spin hidden ml-2"></i>
+      </button>
+      <button id="laCancelBtn" class="flex-1 py-3.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-95 transition-transform">Скасувати</button>
+    </div>
   </div>
 </div>
 

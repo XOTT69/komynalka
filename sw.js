@@ -1,4 +1,4 @@
-const CACHE_NAME = 'komunalka-v4.0.0';
+const CACHE_NAME = 'komunalka-v5.0.0';
 const PRECACHE_URLS = ['./', './index.html', './app.js', './year-report-image.js', './ai-chat.js', './manifest.json', './icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {

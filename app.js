@@ -4,7 +4,7 @@
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
-const APP_VERSION = '4.0.0';
+const APP_VERSION = '5.0.0';
 const MAX_ADDRESSES_FREE = 3;
 const LOCAL_BACKUP_KEY = 'komynalka_backup';
 const PRE_IMPORT_BACKUP_KEY = 'komynalka_pre_import_backup';
@@ -540,9 +540,37 @@ async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) {
 }
 
 $('linkYesBtn')?.addEventListener('click', () => {
-  const lgn = prompt("Введіть ваш існуючий логін:"); if (!lgn) return;
-  const pss = prompt("Введіть пароль:"); if (pss) linkAccount(lgn, pss);
+  $('linkModal')?.classList.add('hidden');
+  const laModal = $('linkAccountModal');
+  if (laModal) {
+    const laLogin = $('laLogin'), laPass = $('laPass'), laErr = $('laError');
+    if (laLogin) laLogin.value = '';
+    if (laPass)  laPass.value  = '';
+    if (laErr)   laErr.classList.add('hidden');
+    laModal.classList.remove('hidden');
+    setTimeout(() => laLogin?.focus(), 100);
+  }
 });
+$('laCancelBtn')?.addEventListener('click', () => $('linkAccountModal')?.classList.add('hidden'));
+$('laSubmitBtn')?.addEventListener('click', async () => {
+  const lgn = $('laLogin')?.value.trim();
+  const pss = $('laPass')?.value;
+  const laErr = $('laError');
+  const laBtn = $('laBtnText');
+  const laSpinner = $('laSpinner');
+  if (!lgn || !pss) { if (laErr) { laErr.textContent = 'Введіть логін та пароль'; laErr.classList.remove('hidden'); } return; }
+  if (laBtn) laBtn.textContent = 'Прив\'язую...';
+  if (laSpinner) laSpinner.classList.remove('hidden');
+  if (laErr) laErr.classList.add('hidden');
+  try {
+    await linkAccount(lgn, pss);
+  } catch(e) {
+    if (laErr) { laErr.textContent = 'Помилка: ' + e.message; laErr.classList.remove('hidden'); }
+  }
+  if (laBtn) laBtn.textContent = 'Прив\'язати';
+  if (laSpinner) laSpinner.classList.add('hidden');
+});
+$('laPass')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('laSubmitBtn')?.click(); });
 $('linkNoBtn')?.addEventListener('click', async () => {
   $('linkModal')?.classList.add('hidden');
   sessionLogin = `uid_${googleUser.uid}`;
@@ -744,7 +772,8 @@ class ChartEngine {
   constructor(canvasId, options={}) {
     this.canvas=$(canvasId); if(!this.canvas) return;
     this.ctx=this.canvas.getContext('2d');
-    this.options={padding:40,barRadius:8,animDuration:600,unit:null,colors:{grid:'rgba(0,0,0,0.05)',text:'#8e8e93'},...options};
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    this.options={padding:40,barRadius:8,animDuration:600,unit:null,colors:{grid:isDarkMode?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)',text:isDarkMode?'#636366':'#8e8e93'},...options};
     this.data=[]; this.animProgress=0; this.tooltip=null; this.width=0; this.height=0; this.interactionBound=false;
     this.setupCanvas(); this.setupInteraction();
   }
@@ -1286,7 +1315,8 @@ $('saveSettingsBtn')?.addEventListener('click',()=>{
   tariffs={water:parseFloat($('tWater')?.value)||defaultTariffs.water,hotWater:parseFloat($('tHotWater')?.value)||defaultTariffs.hotWater,electroBase:parseFloat($('tElectroBase')?.value)||defaultTariffs.electroBase,electroWinter:parseFloat($('tElectroWinter')?.value)||defaultTariffs.electroWinter,winterLimit:2000,nightCoef:0.5,gas:parseFloat($('tGas')?.value)||defaultTariffs.gas};
   prefs={showWater:$('prefWater')?.checked,showHotWater:$('prefHotWater')?.checked,showElectro:$('prefElectro')?.checked,showGas:$('prefGas')?.checked,electroTwoZone:$('prefElectroTwoZone')?.checked,electroWinter:$('prefElectroWinter')?.checked,remindersEnabled:$('prefReminders')?.checked,remWaterStart:parseInt($('remWaterStart')?.value)||1,remWaterEnd:parseInt($('remWaterEnd')?.value)||5,remElectroStart:parseInt($('remElectroStart')?.value)||28,remElectroEnd:parseInt($('remElectroEnd')?.value)||3,remGasStart:parseInt($('remGasStart')?.value)||1,remGasEnd:parseInt($('remGasEnd')?.value)||5,familyRole:$('familyRoleSelect')?.value||getFamilyRole()};
   customServices=customServices.filter(s=>s.name.trim()!=="");
-  localStorage.setItem('k_budget',$('budgetInput')?.value||'0');
+  const budgetVal = parseFloat($('budgetInput')?.value);
+  localStorage.setItem('k_budget', Number.isFinite(budgetVal) && budgetVal > 0 ? String(budgetVal) : '');
   addChangeLog('tariffs_saved');
   syncToCloud();applyPreferences();renderCalcCustomServices();calculatePreview();updateSmartBadges();checkReminders();
   renderChangeLog();
@@ -1323,7 +1353,50 @@ $('reminderDismissBtn')?.addEventListener('click',()=>{
   showToast("Нагадаємо наступного місяця","🔔");
 });
 
-$('changePassBtn')?.addEventListener('click',async()=>{const oldPass=prompt("Поточний:");if(!oldPass)return;const newPass=prompt("Новий (мін 4):");if(!newPass||newPass.length<4)return showToast("Мін 4","⚠️");if(newPass!==prompt("Підтвердіть:"))return showToast("Не збігаються","❌");try{const oldHash=await getHash(oldPass),newHash=await getHash(newPass);const res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:"change_password",login:sessionLogin,oldPass:oldHash,newPass:newHash})});if((await res.json()).success){sessionPass=newHash;localStorage.setItem('k_passHash',newHash);showToast("Змінено!","✅");}else showToast("Неправильний пароль","❌");}catch(e){showToast("Помилка","❌");}});
+$('changePassBtn')?.addEventListener('click', () => {
+  const modal = $('changePassModal');
+  if (!modal) return;
+  if ($('cpOldPass'))    $('cpOldPass').value    = '';
+  if ($('cpNewPass'))    $('cpNewPass').value    = '';
+  if ($('cpConfirmPass'))$('cpConfirmPass').value = '';
+  if ($('cpError'))      $('cpError').classList.add('hidden');
+  modal.classList.remove('hidden');
+  setTimeout(() => $('cpOldPass')?.focus(), 100);
+});
+$('cpCancelBtn')?.addEventListener('click', () => $('changePassModal')?.classList.add('hidden'));
+$('cpSubmitBtn')?.addEventListener('click', async () => {
+  const oldPass = $('cpOldPass')?.value;
+  const newPass = $('cpNewPass')?.value;
+  const confirmPass = $('cpConfirmPass')?.value;
+  const cpErr = $('cpError');
+  const cpBtn = $('cpBtnText');
+  const cpSpinner = $('cpSpinner');
+  if (!oldPass) { if (cpErr) { cpErr.textContent = 'Введіть поточний пароль'; cpErr.classList.remove('hidden'); } return; }
+  if (!newPass || newPass.length < 4) { if (cpErr) { cpErr.textContent = 'Новий пароль — мінімум 4 символи'; cpErr.classList.remove('hidden'); } return; }
+  if (newPass !== confirmPass) { if (cpErr) { cpErr.textContent = 'Паролі не збігаються'; cpErr.classList.remove('hidden'); } return; }
+  if (cpErr) cpErr.classList.add('hidden');
+  if (cpBtn) cpBtn.textContent = 'Змінюю...';
+  if (cpSpinner) cpSpinner.classList.remove('hidden');
+  try {
+    const oldHash = await getHash(oldPass);
+    const newHash = await getHash(newPass);
+    const res = await secureFetch('POST', {}, { action: 'change_password', login: sessionLogin, oldPass: oldHash, newPass: newHash });
+    const data = await res.json();
+    if (data.success) {
+      sessionPass = newHash;
+      localStorage.setItem('k_passHash', newHash);
+      $('changePassModal')?.classList.add('hidden');
+      showToast('Пароль змінено! ✅');
+    } else {
+      if (cpErr) { cpErr.textContent = 'Неправильний поточний пароль'; cpErr.classList.remove('hidden'); }
+    }
+  } catch(e) {
+    if (cpErr) { cpErr.textContent = 'Помилка мережі: ' + e.message; cpErr.classList.remove('hidden'); }
+  }
+  if (cpBtn) cpBtn.textContent = 'Змінити';
+  if (cpSpinner) cpSpinner.classList.add('hidden');
+});
+$('cpConfirmPass')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('cpSubmitBtn')?.click(); });
 
 // =================== SWIPE ===================
 function initSwipe(card,recordId){
@@ -1626,8 +1699,7 @@ function renderAnalytics() {
       <span class="text-[9px] font-bold ${pred.confidence === 'high' ? 'text-green-500' : pred.confidence === 'medium' ? 'text-yellow-500' : 'text-red-400'}">${confLabels[pred.confidence]}</span>
       <span class="text-[9px] text-slate-400 ml-2">${new Date(nextMonth+'-01').toLocaleString('uk-UA',{month:'long'})} · сезонний коеф.: ${pred.seasonalFactor}x</span>
     `;
-    if (pred.confidence === 'high') $('forecastCard')?.classList.remove('hidden');
-    else $('forecastCard')?.classList.remove('hidden');
+    $('forecastCard')?.classList.remove('hidden');
   } else {
     if (records.length >= 3) {
       const avg = Math.round(records.reduce((s,r) => s + r.total, 0) / records.length);

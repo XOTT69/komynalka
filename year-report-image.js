@@ -44,8 +44,9 @@ async function shareAsImage() {
 
     // Status
     ctx.font = '700 40px -apple-system, sans-serif';
-    ctx.fillStyle = curRec.paid ? '#34c759' : '#ff9500';
-    ctx.fillText(curRec.paid ? '✅ Оплачено' : '⏳ Очікує оплати', 540, 460);
+    const _recPaidStatus = typeof isRecordPaid === 'function' ? isRecordPaid(curRec) : curRec.paid;
+    ctx.fillStyle = _recPaidStatus ? '#34c759' : '#ff9500';
+    ctx.fillText(_recPaidStatus ? '✅ Оплачено' : '⏳ Очікує оплати', 540, 460);
 
     // Details card background
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
