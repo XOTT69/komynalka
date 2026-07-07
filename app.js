@@ -10,6 +10,8 @@ const LOCAL_BACKUP_KEY = 'komynalka_backup';
 const PRE_IMPORT_BACKUP_KEY = 'komynalka_pre_import_backup';
 const CHANGE_LOG_KEY = 'komynalka_change_log';
 const CUSTOM_TARIFF_TEMPLATE_KEY = 'komynalka_tariff_template';
+const CUSTOM_REMINDERS_KEY = 'komynalka_custom_reminders';
+const COMMUNITY_TARIFF_KEY = 'komynalka_community_tariff';
 
 const firebaseConfig = { apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80", authDomain: "pwakomun.firebaseapp.com", projectId: "pwakomun", storageBucket: "pwakomun.firebasestorage.app", messagingSenderId: "4437974770", appId: "1:4437974770:web:bf7d2f7bac35eff5707a6b" };
 firebase.initializeApp(firebaseConfig);
@@ -1938,4 +1940,753 @@ function showUpdateBanner(){
   banner.innerHTML=`<div class="flex items-center gap-3"><span class="text-lg">🆕</span><div><p class="text-sm font-bold">Оновлення доступне</p><p class="text-[10px] opacity-60">Натисніть щоб оновити</p></div></div><button id="applyUpdateBtn" type="button" class="px-4 py-2 bg-brand text-white rounded-xl text-xs font-bold active:scale-95">Оновити</button>`;
   document.body.appendChild(banner);
   $('applyUpdateBtn')?.addEventListener('click',()=>{if(pendingServiceWorker)pendingServiceWorker.postMessage({type:'SKIP_WAITING'});else window.location.reload();});
+}
+
+// =================== FIX: RECALC WITH CURRENT TARIFFS ===================
+// При редагуванні запису — перераховуємо по АКТУАЛЬНИХ тарифах (не по старому snapshot)
+// Перезаписуємо функцію editRecordById щоб показувати банер "редагуєш запис"
+function editRecordById(id) {
+  if(!requireEdit('У режимі перегляду не можна редагувати записи')) return;
+  const rec = records.find(r => r.id === id);
+  if (!rec) return;
+  if ($('monthInput')) $('monthInput').value = rec.month;
+  if (prefs.showWater)    { if($('wPrev'))$('wPrev').value=rec.wPrev||''; if($('wCur'))$('wCur').value=rec.wCur||''; }
+  if (prefs.showHotWater) { if($('hwPrev'))$('hwPrev').value=rec.hwPrev||''; if($('hwCur'))$('hwCur').value=rec.hwCur||''; }
+  if (prefs.showElectro)  { if($('dPrev'))$('dPrev').value=rec.dPrev||''; if($('dCur'))$('dCur').value=rec.dCur||''; if($('nPrev'))$('nPrev').value=rec.nPrev||''; if($('nCur'))$('nCur').value=rec.nCur||''; }
+  if (prefs.showGas)      { if($('gPrev'))$('gPrev').value=rec.gPrev||''; if($('gCur'))$('gCur').value=rec.gCur||''; }
+  if (rec.customData) Object.keys(rec.customData).forEach(srvId=>{ const el=$(`custom_${srvId}`); if(el) el.value=rec.customData[srvId].val; });
+  if ($('recordNote')) $('recordNote').value = rec.note || '';
+  setPaymentInputsFromRecord(rec);
+  autoSetWinter(rec.month);
+  // Показати банер що редагуємо
+  showEditingBanner(rec.month);
+  switchTab('tabCalc', 1);
+  // Важливо: рахуємо по АКТУАЛЬНИХ тарифах (не tariffSnapshot)
+  calculatePreview();
+  updateSmartBadges();
+}
+
+function showEditingBanner(month) {
+  const existing = $('editingBanner');
+  if (existing) existing.remove();
+  const mLabel = new Date(month + '-01').toLocaleString('uk-UA', {month:'long', year:'numeric'});
+  const banner = document.createElement('div');
+  banner.id = 'editingBanner';
+  banner.className = 'mx-auto max-w-md px-5 mb-2';
+  banner.innerHTML = `<div class="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2.5">
+      <span class="text-base">✏️</span>
+      <div>
+        <p class="text-xs font-black text-amber-700 dark:text-amber-400">Редагування: ${escapeHtml(mLabel)}</p>
+        <p class="text-[10px] text-amber-600/70 dark:text-amber-500/70">Рахунок перераховується по актуальних тарифах</p>
+      </div>
+    </div>
+    <button type="button" onclick="document.getElementById('editingBanner')?.remove()" class="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-600 flex items-center justify-center text-xs active:scale-90">✕</button>
+  </div>`;
+  const calcTab = $('tabCalc');
+  if (calcTab) calcTab.insertBefore(banner, calcTab.firstChild);
+}
+
+// =================== FIX: MERGE RECALCULATES COSTS ===================
+// При зберіганні існуючого запису завжди перераховуємо по новому тарифу
+// Патчимо submit щоб при merge заповнених послуг — брати currentCalc а не existing
+// (вже зроблено в основній submit через newData — вона рахує calculatePreview → currentCalc)
+
+// =================== CUSTOM REMINDERS ===================
+function getCustomReminders() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_REMINDERS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  // Дефолтні нагадування (видаляються)
+  return [
+    { id: 'water',   emoji: '💧', label: 'Вода',   startDay: 1,  endDay: 5,  active: true,  deletable: false },
+    { id: 'electro', emoji: '⚡', label: 'Світло', startDay: 28, endDay: 3,  active: true,  deletable: false },
+    { id: 'gas',     emoji: '🔥', label: 'Газ',    startDay: 1,  endDay: 5,  active: true,  deletable: false },
+  ];
+}
+
+function saveCustomReminders(reminders) {
+  try { localStorage.setItem(CUSTOM_REMINDERS_KEY, JSON.stringify(reminders)); } catch(e) {}
+}
+
+function renderCustomReminders() {
+  const container = $('customRemindersList');
+  if (!container) return;
+  const reminders = getCustomReminders();
+  container.innerHTML = reminders.map((rem, idx) => `
+    <div class="flex items-center gap-2 bg-slate-50 dark:bg-black/40 p-2.5 rounded-xl border border-slate-100 dark:border-white/5">
+      <input type="text" value="${escapeAttr(rem.emoji)}" data-rem-idx="${idx}" data-rem-field="emoji"
+        class="rem-field w-10 bg-white dark:bg-[#2c2c2e] rounded-lg text-center text-base outline-none border border-transparent focus:border-brand px-1 py-1.5 transition-colors">
+      <input type="text" value="${escapeAttr(rem.label)}" data-rem-idx="${idx}" data-rem-field="label"
+        class="rem-field flex-1 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2.5 py-2 border border-transparent focus:border-brand transition-colors">
+      <div class="flex items-center gap-1 text-[10px] text-slate-400 font-bold">
+        <input type="number" value="${rem.startDay}" min="1" max="31" data-rem-idx="${idx}" data-rem-field="startDay"
+          class="rem-field w-9 bg-white dark:bg-[#2c2c2e] rounded-lg text-center outline-none border border-transparent focus:border-brand py-1.5 font-bold text-xs transition-colors">
+        <span>—</span>
+        <input type="number" value="${rem.endDay}" min="1" max="31" data-rem-idx="${idx}" data-rem-field="endDay"
+          class="rem-field w-9 bg-white dark:bg-[#2c2c2e] rounded-lg text-center outline-none border border-transparent focus:border-brand py-1.5 font-bold text-xs transition-colors">
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer shrink-0">
+        <input type="checkbox" ${rem.active ? 'checked' : ''} data-rem-idx="${idx}" data-rem-field="active"
+          class="rem-field sr-only peer">
+        <div class="w-8 h-4 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors"></div>
+        <div class="absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform shadow-sm peer-checked:translate-x-4"></div>
+      </label>
+      ${rem.deletable !== false ? `<button type="button" class="rem-del w-7 h-7 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-400 flex items-center justify-center text-xs active:scale-90 shrink-0" data-rem-idx="${idx}"><i class="fa-solid fa-trash text-[9px]"></i></button>` : `<div class="w-7 shrink-0"></div>`}
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.rem-field').forEach(input => {
+    input.addEventListener('change', () => {
+      const reminders = getCustomReminders();
+      const idx = parseInt(input.dataset.remIdx);
+      const field = input.dataset.remField;
+      if (field === 'active') reminders[idx][field] = input.checked;
+      else if (field === 'startDay' || field === 'endDay') reminders[idx][field] = parseInt(input.value) || 1;
+      else reminders[idx][field] = input.value;
+      saveCustomReminders(reminders);
+    });
+  });
+  container.querySelectorAll('.rem-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const reminders = getCustomReminders();
+      reminders.splice(parseInt(btn.dataset.remIdx), 1);
+      saveCustomReminders(reminders);
+      renderCustomReminders();
+      showToast('Нагадування видалено', '🗑');
+    });
+  });
+}
+
+$('addCustomReminderBtn')?.addEventListener('click', () => {
+  const reminders = getCustomReminders();
+  reminders.push({ id: 'rem_' + Date.now(), emoji: '🔔', label: 'Моє нагадування', startDay: 1, endDay: 5, active: true, deletable: true });
+  saveCustomReminders(reminders);
+  renderCustomReminders();
+  showToast('Нагадування додано', '🔔');
+});
+
+// Розширена перевірка нагадувань (враховує кастомні)
+function checkRemindersExtended() {
+  const monthKey = getMonthKey();
+  if (!prefs.remindersEnabled || localStorage.getItem('lastSubmittedMonth') === monthKey) {
+    $('reminderBanner')?.classList.add('hidden');
+    return;
+  }
+  const d = new Date().getDate();
+  const reminders = getCustomReminders();
+  const activeNow = reminders.filter(rem => rem.active && isDayInRange(d, rem.startDay, rem.endDay));
+  // Фільтруємо прив'язані до послуг
+  const msgs = activeNow.filter(rem => {
+    if (rem.id === 'water') return prefs.showWater || prefs.showHotWater;
+    if (rem.id === 'electro') return prefs.showElectro;
+    if (rem.id === 'gas') return prefs.showGas;
+    return true; // кастомні завжди
+  }).map(rem => `${rem.emoji} ${rem.label}`);
+
+  if (msgs.length > 0) {
+    $('reminderBanner')?.classList.remove('hidden');
+    if ($('reminderText')) $('reminderText').innerText = 'Передайте: ' + msgs.join(', ');
+  } else {
+    $('reminderBanner')?.classList.add('hidden');
+  }
+}
+
+// =================== COMMUNITY TARIFF PRESETS ===================
+function getCommunityTariffs() {
+  try {
+    const raw = localStorage.getItem(COMMUNITY_TARIFF_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return [];
+}
+
+function saveCommunityTariff(name, tariffData) {
+  const list = getCommunityTariffs();
+  const id = 'custom_' + Date.now();
+  list.unshift({ id, name: name.trim(), tariffs: tariffData, createdAt: new Date().toISOString() });
+  // Зберігаємо максимум 20
+  const trimmed = list.slice(0, 20);
+  try { localStorage.setItem(COMMUNITY_TARIFF_KEY, JSON.stringify(trimmed)); } catch(e) {}
+  return id;
+}
+
+function deleteCommunityTariff(id) {
+  const list = getCommunityTariffs().filter(t => t.id !== id);
+  try { localStorage.setItem(COMMUNITY_TARIFF_KEY, JSON.stringify(list)); } catch(e) {}
+}
+
+function renderCommunityTariffs() {
+  const container = $('communityTariffsList');
+  if (!container) return;
+  const list = getCommunityTariffs();
+  if (!list.length) {
+    container.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-2">Немає збережених тарифів</p>';
+    return;
+  }
+  container.innerHTML = list.map(item => `
+    <div class="flex items-center gap-2 bg-slate-50 dark:bg-black/40 p-2.5 rounded-xl border border-slate-100 dark:border-white/5">
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">${escapeHtml(item.name)}</p>
+        <p class="text-[9px] text-slate-400 mt-0.5">💧${item.tariffs.water} ⚡${item.tariffs.electroBase} 🔥${item.tariffs.gas} ₴</p>
+      </div>
+      <button type="button" class="comm-load px-3 py-1.5 bg-brand-light text-brand rounded-lg text-[10px] font-bold border border-brand-border active:scale-95 transition-transform shrink-0" data-comm-id="${escapeAttr(item.id)}">Застосувати</button>
+      <button type="button" class="comm-del w-7 h-7 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-400 flex items-center justify-center text-xs active:scale-90 shrink-0" data-comm-id="${escapeAttr(item.id)}"><i class="fa-solid fa-trash text-[9px]"></i></button>
+    </div>
+  `).join('');
+  container.querySelectorAll('.comm-load').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = getCommunityTariffs().find(t => t.id === btn.dataset.commId);
+      if (!item) return;
+      fillTariffInputs({ ...defaultTariffs, ...item.tariffs });
+      showToast(`Тариф "${item.name}" застосовано`, '✅');
+    });
+  });
+  container.querySelectorAll('.comm-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      deleteCommunityTariff(btn.dataset.commId);
+      renderCommunityTariffs();
+      showToast('Видалено', '🗑');
+    });
+  });
+}
+
+$('saveCommunityTariffBtn')?.addEventListener('click', async () => {
+  const nameInput = $('communityTariffName');
+  const name = nameInput?.value?.trim();
+  if (!name) { showToast('Введіть назву населеного пункту', '⚠️'); nameInput?.focus(); return; }
+  const tariffData = {
+    water:        parseFloat($('tWater')?.value)        || defaultTariffs.water,
+    hotWater:     parseFloat($('tHotWater')?.value)     || defaultTariffs.hotWater,
+    electroBase:  parseFloat($('tElectroBase')?.value)  || defaultTariffs.electroBase,
+    electroWinter:parseFloat($('tElectroWinter')?.value)|| defaultTariffs.electroWinter,
+    gas:          parseFloat($('tGas')?.value)          || defaultTariffs.gas,
+  };
+  // Зберігаємо локально
+  saveCommunityTariff(name, tariffData);
+  if (nameInput) nameInput.value = '';
+  renderCommunityTariffs();
+  showToast(`Тариф "${name}" збережено! 💾`);
+  // Також публікуємо в хмару (щоб інші могли побачити)
+  try {
+    await secureFetch('POST', {}, {
+      action: 'publish_tariff',
+      name: name.trim(),
+      tariffs: tariffData,
+      author: displayName || sessionLogin || 'Анонім'
+    });
+  } catch(e) {
+    // Хмарна публікація необов'язкова — помовчки ігноруємо
+  }
+});
+
+// =================== CLOUD COMMUNITY TARIFFS ===================
+async function loadCloudCommunityTariffs() {
+  const container = $('cloudTariffsList');
+  if (!container) return;
+  container.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-2 animate-pulse">Завантаження...</p>';
+  try {
+    const res = await secureFetch('POST', {}, { action: 'get_tariffs' });
+    if (!res.ok) { container.innerHTML = '<p class="text-[10px] text-red-400 text-center py-2">Помилка завантаження</p>'; return; }
+    const data = await res.json();
+    if (!data.success || !Array.isArray(data.tariffs) || !data.tariffs.length) {
+      container.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-2">Поки немає тарифів від спільноти</p>';
+      return;
+    }
+    container.innerHTML = data.tariffs.slice(0, 15).map(item => `
+      <div class="flex items-center gap-2 bg-slate-50 dark:bg-black/40 p-2.5 rounded-xl border border-slate-100 dark:border-white/5">
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">${escapeHtml(item.name)}</p>
+          <p class="text-[9px] text-slate-400 mt-0.5">💧${item.tariffs?.water||'—'} ⚡${item.tariffs?.electroBase||'—'} 🔥${item.tariffs?.gas||'—'} ₴ · від ${escapeHtml(item.author||'?')}</p>
+        </div>
+        <button type="button" class="cloud-tariff-load px-3 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold border border-emerald-200 dark:border-emerald-500/20 active:scale-95 transition-transform shrink-0" data-tariff='${escapeAttr(JSON.stringify(item.tariffs))}' data-name="${escapeAttr(item.name)}">Застосувати</button>
+      </div>
+    `).join('');
+    container.querySelectorAll('.cloud-tariff-load').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try {
+          const t = JSON.parse(btn.dataset.tariff);
+          fillTariffInputs({ ...defaultTariffs, ...t });
+          showToast(`"${btn.dataset.name}" застосовано`, '🌐');
+        } catch(e) { showToast('Помилка тарифу', '❌'); }
+      });
+    });
+  } catch(e) {
+    container.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-2">Немає зв\'язку з сервером</p>';
+  }
+}
+
+// Розширений renderTariffPresets — додає community тарифи
+function renderTariffPresetsExtended() {
+  const select = $('tariffPresetSelect');
+  if (!select) return;
+  const community = getCommunityTariffs();
+  let html = '<option value="">Обрати місто / постачальника</option>';
+  if (community.length) {
+    html += `<optgroup label="📍 Мої тарифи">`;
+    html += community.map(item => `<option value="comm_${escapeAttr(item.id)}">${escapeHtml(item.name)}</option>`).join('');
+    html += '</optgroup>';
+    html += `<optgroup label="🏙️ Базові шаблони">`;
+  }
+  html += TARIFF_PRESETS.map(p => `<option value="${escapeAttr(p.id)}">${escapeHtml(p.name)}</option>`).join('');
+  if (community.length) html += '</optgroup>';
+  select.innerHTML = html;
+}
+
+// Перевизначаємо renderTariffPresets
+window._origRenderTariffPresets = renderTariffPresets;
+function renderTariffPresets() { renderTariffPresetsExtended(); }
+
+// Розширений applyTariffPreset — підтримує community
+const _origApplyTariffPreset = applyTariffPreset;
+function applyTariffPreset(presetId) {
+  if (presetId.startsWith('comm_')) {
+    const id = presetId.replace('comm_', '');
+    const item = getCommunityTariffs().find(t => t.id === id);
+    if (!item) return;
+    fillTariffInputs({ ...defaultTariffs, ...item.tariffs });
+    showToast(`"${item.name}" застосовано`, '🏙️');
+    return;
+  }
+  _origApplyTariffPreset(presetId);
+}
+
+// =================== FIX: HIDE DISABLED SERVICES IN RECORD CARD ===================
+// Перевизначаємо createRecordCard щоб не показувати вимкнені послуги
+const _origCreateRecordCard = createRecordCard;
+function createRecordCard(rec) {
+  const card = document.createElement('div');
+  const recPaid = isRecordPaid(rec), paymentStatus = getPaymentStatus(rec), paidAmount = getPaidAmount(rec), outstanding = getOutstandingAmount(rec);
+  card.className = `premium-card swipe-card p-5 relative overflow-hidden cursor-pointer select-none ${recPaid ? '' : 'ring-1 ring-orange-400/20'}`;
+  const dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', { month: 'long' });
+  const [rY, rM] = rec.month.split('-');
+
+  // Рахуємо лише активні послуги
+  const showW  = prefs.showWater   && (rec._filled?.water    || rec.waterCost > 0);
+  const showHW = prefs.showHotWater && (rec._filled?.hotWater || rec.hotWaterCost > 0);
+  const showE  = prefs.showElectro  && (rec._filled?.electro  || rec.electroCost > 0);
+  const showG  = prefs.showGas      && (rec._filled?.gas      || rec.gasCost > 0);
+  const showC  = rec.customCost > 0;
+
+  const filledServices = [];
+  if (showW)  filledServices.push('💧');
+  if (showHW) filledServices.push('🌡️');
+  if (showE)  filledServices.push('⚡');
+  if (showG)  filledServices.push('🔥');
+  if (showC)  filledServices.push('📦');
+
+  const totalExp = (prefs.showWater?1:0)+(prefs.showHotWater?1:0)+(prefs.showElectro?1:0)+(prefs.showGas?1:0)+(customServices.length>0?1:0);
+  const isPartial = filledServices.length < totalExp && filledServices.length > 0;
+  const partialBadge = isPartial ? `<span class="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-md ml-2">Частково</span>` : '';
+  const prevYR = records.find(r => r.month === (parseInt(rY)-1) + '-' + rM);
+  let yoy = '';
+  if (prevYR && prevYR.total > 0 && rec.total > 0) {
+    const p = Math.round(((rec.total - prevYR.total) / prevYR.total) * 100);
+    if (p < 0) yoy = `<span class="text-[9px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-0.5 rounded-md ml-2">↓${Math.abs(p)}%</span>`;
+    else if (p > 0) yoy = `<span class="text-[9px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-md ml-2">↑+${p}%</span>`;
+  }
+
+  // Доля тільки активних
+  const activeTotal = (showW ? rec.waterCost||0 : 0) + (showHW ? rec.hotWaterCost||0 : 0) + (showE ? rec.electroCost||0 : 0) + (showG ? rec.gasCost||0 : 0) + (showC ? rec.customCost||0 : 0);
+  const pW  = activeTotal > 0 ? ((showW  ? rec.waterCost||0    : 0) / activeTotal) * 100 : 0;
+  const pHW = activeTotal > 0 ? ((showHW ? rec.hotWaterCost||0 : 0) / activeTotal) * 100 : 0;
+  const pE  = activeTotal > 0 ? ((showE  ? rec.electroCost||0  : 0) / activeTotal) * 100 : 0;
+  const pG  = activeTotal > 0 ? ((showG  ? rec.gasCost||0      : 0) / activeTotal) * 100 : 0;
+  const conic = `conic-gradient(#3b82f6 0% ${pW}%,#ef4444 ${pW}% ${pW+pHW}%,#eab308 ${pW+pHW}% ${pW+pHW+pE}%,#f97316 ${pW+pHW+pE}% ${pW+pHW+pE+pG}%,#a855f7 ${pW+pHW+pE+pG}% 100%)`;
+  const recId = rec.id;
+
+  // Перевірка зміни тарифу
+  let tariffChangedBadge = '';
+  if (rec.tariffSnapshot) {
+    const changed = [];
+    if (showW  && Math.abs((rec.tariffSnapshot.water||0)      - tariffs.water)       > 0.001) changed.push('💧');
+    if (showHW && Math.abs((rec.tariffSnapshot.hotWater||0)   - tariffs.hotWater)    > 0.001) changed.push('🌡️');
+    if (showE  && Math.abs((rec.tariffSnapshot.electroBase||0)- tariffs.electroBase) > 0.001) changed.push('⚡');
+    if (showG  && Math.abs((rec.tariffSnapshot.gas||0)        - tariffs.gas)         > 0.001) changed.push('🔥');
+    if (changed.length) tariffChangedBadge = `<span class="text-[9px] font-bold text-violet-600 bg-violet-50 dark:bg-violet-500/10 px-2 py-0.5 rounded-md ml-1" title="Тариф змінився з часу запису">⚠️ тариф ${changed.join('')}</span>`;
+  }
+
+  card.innerHTML = `
+    ${!recPaid ? '<div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-400/15 to-transparent rounded-bl-[4rem]"></div>' : ''}
+    <div class="flex justify-between items-center relative z-10" data-toggle-details="${recId}">
+      <div>
+        <h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${escapeHtml(dStr)}</h4>
+        <div class="flex items-center flex-wrap gap-1">
+          <span class="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${recPaid ? 'bg-brand-light text-brand' : paymentStatus === 'partial' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${getPaymentLabel(rec)}</span>
+          ${partialBadge}${yoy}${tariffChangedBadge}
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span>
+        <div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-full text-slate-400"><i class="chevron-icon fa-solid fa-chevron-down transition-transform duration-300"></i></div>
+      </div>
+    </div>
+    <div class="details-panel hidden">
+      <div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5">
+        ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background:${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span>💧 Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span>🌡️ Гар.</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span>⚡ Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span>🔥 Газ</span><span>${Math.round(pG)}%</span></div>`:''}${(100-pW-pHW-pE-pG)>1?`<div class="flex justify-between"><span>📦 Інше</span><span>${Math.round(100-pW-pHW-pE-pG)}%</span></div>`:''}</div></div>` : ''}
+        <div class="space-y-3">
+          ${showW ? `<div class="flex justify-between"><span class="font-bold">💧 Вода</span><span class="font-black">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.wPrev}→${rec.wCur}</span><span class="text-blue-500">+${rec.wCur-rec.wPrev} м³</span></div>` : ''}
+          ${showHW ? `<div class="flex justify-between"><span class="font-bold">🌡️ Гар.</span><span class="font-black">${fmt.format(rec.hotWaterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.hwPrev}→${rec.hwCur}</span><span class="text-red-500">+${rec.hwCur-rec.hwPrev} м³</span></div>` : ''}
+          ${showE ? `<div class="flex justify-between"><span class="font-bold">⚡ Світло</span><span class="font-black">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>Д:${rec.dPrev}→${rec.dCur}</span><span class="text-yellow-600">+${rec.dCur-rec.dPrev}</span></div>${(rec.nCur||rec.nPrev)?`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl mt-1"><span>Н:${rec.nPrev}→${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur-rec.nPrev}</span></div>`:''}` : ''}
+          ${showG ? `<div class="flex justify-between"><span class="font-bold">🔥 Газ</span><span class="font-black">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.gPrev}→${rec.gCur}</span><span class="text-orange-500">+${rec.gCur-rec.gPrev} м³</span></div>` : ''}
+          ${showC ? `<div class="flex justify-between"><span class="font-bold">📦 Інше</span><span class="font-black">${fmt.format(rec.customCost)} ₴</span></div>${rec.customData ? Object.values(rec.customData).filter(s=>s.val>0).map(s=>`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${escapeHtml(s.name)}</span><span class="text-purple-500">${fmt.format(s.val)} ₴</span></div>`).join('') : ''}` : ''}
+          ${paymentStatus === 'partial' ? `<div class="flex justify-between text-[11px] font-bold text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-500/10 px-3 py-2 rounded-xl"><span>💳 Сплачено частково</span><span>${fmt.format(paidAmount)} ₴ / борг ${fmt.format(outstanding)} ₴</span></div>` : ''}
+          ${rec.note ? `<div class="mt-3 p-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs text-slate-500 italic"><i class="fa-solid fa-sticky-note mr-1"></i>${escapeHtml(rec.note)}</div>` : ''}
+        </div>
+      </div>
+      <div class="flex gap-2.5 mt-4 pt-3 border-t border-slate-100 dark:border-white/5">
+        <button type="button" class="rec-pay flex-1 py-3.5 rounded-2xl font-bold text-xs border active:scale-[0.96] transition-all ${recPaid ? 'bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 border-slate-200 dark:border-white/10' : 'bg-gradient-to-r from-brand to-blue-600 text-white shadow-lg border-brand'}" data-rec-id="${recId}">${recPaid ? '↩ Нараховано' : '✓ Оплачено'}</button>
+        <button type="button" class="rec-share w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 active:scale-[0.90] transition-transform" data-rec-id="${recId}"><i class="fa-solid fa-share-nodes"></i></button>
+        <button type="button" class="rec-edit w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 active:scale-[0.90] transition-transform" data-rec-id="${recId}"><i class="fa-solid fa-pen"></i></button>
+        <button type="button" class="rec-del w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 active:scale-[0.90] transition-transform" data-rec-id="${recId}"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>`;
+
+  const swL = document.createElement('div'); swL.className = 'swipe-bg-left'; swL.innerHTML = '<i class="fa-solid fa-trash mr-2"></i>Видалити';
+  const swR = document.createElement('div'); swR.className = 'swipe-bg-right'; swR.innerHTML = `<i class="fa-solid fa-${recPaid ? 'rotate-left' : 'check'} mr-2"></i>${recPaid ? 'Нараховано' : 'Оплачено'}`;
+  card.insertBefore(swL, card.firstChild); card.insertBefore(swR, card.firstChild);
+  initSwipe(card, recId);
+
+  card.addEventListener('click', (e) => {
+    const toggleTarget = e.target.closest('[data-toggle-details]');
+    if (toggleTarget) { const panel = card.querySelector('.details-panel'), chevron = card.querySelector('.chevron-icon'); if (panel) { panel.classList.toggle('hidden'); if (chevron) chevron.style.transform = panel.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'; } return; }
+    const payBtn = e.target.closest('.rec-pay');     if (payBtn)   { e.stopPropagation(); togglePaidById(recId); return; }
+    const shareBtn = e.target.closest('.rec-share'); if (shareBtn) { e.stopPropagation(); shareRecordById(recId); return; }
+    const editBtn = e.target.closest('.rec-edit');   if (editBtn)  { e.stopPropagation(); editRecordById(recId); return; }
+    const delBtn = e.target.closest('.rec-del');     if (delBtn)   { e.stopPropagation(); if (requireEdit('У режимі перегляду не можна видаляти записи') && confirm('Видалити?')) deleteRecordById(recId); return; }
+  });
+  return card;
+}
+
+// =================== PATCH checkReminders ===================
+// Замінюємо стандартну checkReminders на розширену
+const _origCheckReminders = checkReminders;
+function checkReminders() { checkRemindersExtended(); }
+
+// =================== INIT EXTENDED ===================
+// Патчимо initAppUI щоб ініціалізувати нові компоненти
+const _origInitAppUI = initAppUI;
+function initAppUI() {
+  _origInitAppUI();
+  // Ініціалізуємо кастомні нагадування та тарифи в налаштуваннях
+  setTimeout(() => {
+    renderCustomReminders();
+    renderCommunityTariffs();
+    renderTariffPresets();
+  }, 200);
+}
+
+// Кнопка завантаження тарифів з хмари
+$('loadCloudTariffsBtn')?.addEventListener('click', () => loadCloudCommunityTariffs());
+
+// Також патчимо switchTab для settings
+const _origSwitchTab = switchTab;
+function switchTab(tabId, index) {
+  _origSwitchTab(tabId, index);
+  if (tabId === 'tabSettings') {
+    setTimeout(() => {
+      renderCustomReminders();
+      renderCommunityTariffs();
+    }, 100);
+  }
+  // Видаляємо банер редагування при переході з tabCalc
+  if (tabId !== 'tabCalc') {
+    $('editingBanner')?.remove();
+  }
+}
+
+// =================== SEASONAL PROFILE ===================
+function renderSeasonalProfile(sf) {
+  const container = $('seasonalContent');
+  if (!container) return;
+  if (!sf || sf.sorted.length < 6) {
+    container.innerHTML = '<p class="text-xs text-slate-400">Доступно після 6+ місяців даних</p>';
+    return;
+  }
+  const factors = sf.calcSeasonalFactors();
+  const monthNames = ['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+  const maxF = Math.max(...factors);
+  const minF = Math.min(...factors);
+  const html = `
+    <div class="grid grid-cols-4 gap-1.5">
+      ${factors.map((f, i) => {
+        const pct = maxF > minF ? Math.round(((f - minF) / (maxF - minF)) * 100) : 50;
+        const color = f >= 1.15 ? '#ef4444' : f >= 1.05 ? '#f97316' : f <= 0.85 ? '#22c55e' : f <= 0.95 ? '#3b82f6' : '#8e8e93';
+        const label = f >= 1.15 ? 'Дорого' : f >= 1.05 ? 'Вище' : f <= 0.85 ? 'Дешево' : f <= 0.95 ? 'Нижче' : 'Норма';
+        return `<div class="bg-slate-50 dark:bg-black/40 p-2 rounded-xl text-center border border-slate-100 dark:border-white/5">
+          <p class="text-[9px] font-bold text-slate-400 mb-1">${monthNames[i]}</p>
+          <div class="h-8 bg-slate-200 dark:bg-white/10 rounded-lg overflow-hidden mb-1">
+            <div class="h-full rounded-lg transition-all" style="height:${Math.max(10,pct)}%;background:${color};margin-top:${100-Math.max(10,pct)}%"></div>
+          </div>
+          <p class="text-[8px] font-bold" style="color:${color}">${f.toFixed(2)}x</p>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="mt-3 flex gap-2 flex-wrap">
+      <span class="text-[9px] font-bold bg-red-50 dark:bg-red-500/10 text-red-500 px-2 py-1 rounded-lg">🔴 Дорого &gt;1.15x</span>
+      <span class="text-[9px] font-bold bg-green-50 dark:bg-green-500/10 text-green-500 px-2 py-1 rounded-lg">🟢 Дешево &lt;0.85x</span>
+      <span class="text-[9px] text-slate-400 px-2 py-1">Коефіцієнт відносно середнього</span>
+    </div>`;
+  container.innerHTML = html;
+}
+
+// =================== SUBSIDY CALCULATOR ===================
+function renderSubsidyCalc() {
+  const container = $('subsidyCalcContent');
+  if (!container) return;
+  const income = parseFloat($('subsidyIncome')?.value) || 0;
+  const members = parseInt($('subsidyMembers')?.value) || 1;
+  const avgBill = records.length > 0
+    ? records.slice(-3).reduce((s,r) => s + r.total, 0) / Math.min(3, records.length)
+    : 0;
+  if (income <= 0 || avgBill <= 0) {
+    container.innerHTML = '<p class="text-[10px] text-slate-400 text-center">Введіть дохід та кількість осіб</p>';
+    return;
+  }
+  // Нормативи (спрощені): субсидія якщо частка КП > 15% доходу
+  const threshold = 0.15;
+  const incomeShare = avgBill / income;
+  const eligiblePct = Math.max(0, incomeShare - threshold);
+  const subsidy = Math.min(avgBill * 0.8, avgBill * eligiblePct / incomeShare * avgBill);
+  const eligible = incomeShare > threshold;
+  const perCapita = income / members;
+  container.innerHTML = `
+    <div class="space-y-2">
+      <div class="flex justify-between text-xs"><span class="text-slate-500 font-bold">Середній рахунок</span><span class="font-black">${fmt.format(avgBill)} ₴</span></div>
+      <div class="flex justify-between text-xs"><span class="text-slate-500 font-bold">Частка від доходу</span><span class="font-black ${incomeShare > threshold ? 'text-red-500' : 'text-green-600'}">${(incomeShare * 100).toFixed(1)}%</span></div>
+      <div class="flex justify-between text-xs"><span class="text-slate-500 font-bold">Дохід на особу</span><span class="font-black">${fmt.format(perCapita)} ₴</span></div>
+      <div class="mt-3 p-3 rounded-xl ${eligible ? 'bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20' : 'bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/5'}">
+        <p class="text-[10px] font-bold ${eligible ? 'text-green-600' : 'text-slate-500'} uppercase tracking-wider mb-1">${eligible ? '✅ Орієнтовна субсидія' : '❌ Субсидія не передбачена'}</p>
+        ${eligible ? `<p class="text-lg font-black text-green-600">~ ${fmt.format(Math.round(subsidy))} ₴/міс</p><p class="text-[9px] text-green-600/70 mt-1">Рахунок перевищує 15% доходу. Зверніться до ЦНАП для оформлення.</p>` : `<p class="text-[10px] text-slate-400">Рахунок менше 15% доходу — субсидія не призначається за базовими критеріями.</p>`}
+      </div>
+      <p class="text-[9px] text-slate-400 mt-2">⚠️ Орієнтовний розрахунок. Точні умови субсидування — на сайті Мінсоцполітики.</p>
+    </div>`;
+}
+
+// Обробники для калькулятора субсидій
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'subsidyIncome' || e.target.id === 'subsidyMembers') {
+    renderSubsidyCalc();
+  }
+});
+
+// =================== MULTI-ADDRESS COMPARE ===================
+function renderAddressCompare() {
+  const container = $('addressCompareContent');
+  if (!container) return;
+  if (addresses.length < 2) {
+    container.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-3">Додайте 2+ адреси для порівняння</p>';
+    return;
+  }
+  syncCurrentAddress();
+  const addrData = addresses.map(addr => {
+    const recs = addr.records || [];
+    const total = recs.reduce((s,r) => s + r.total, 0);
+    const avg = recs.length ? total / recs.length : 0;
+    const last3 = [...recs].sort((a,b) => b.month.localeCompare(a.month)).slice(0,3);
+    const last3avg = last3.length ? last3.reduce((s,r) => s + r.total, 0) / last3.length : 0;
+    const unpaid = recs.filter(r => getOutstandingAmount(r) > 0).length;
+    return { name: addr.name, count: recs.length, avg, last3avg, total, unpaid };
+  });
+  const maxAvg = Math.max(...addrData.map(a => a.last3avg), 1);
+  container.innerHTML = addrData.map((a, i) => `
+    <div class="bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5 mb-2">
+      <div class="flex justify-between items-start mb-2">
+        <p class="text-xs font-black text-slate-900 dark:text-white truncate flex-1 pr-2">${escapeHtml(a.name)}</p>
+        <span class="text-xs font-black text-brand shrink-0">${fmt.format(a.last3avg)} ₴</span>
+      </div>
+      <div class="h-2 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden mb-2">
+        <div class="h-full rounded-full bg-gradient-to-r from-brand to-blue-500 transition-all" style="width:${Math.round((a.last3avg/maxAvg)*100)}%"></div>
+      </div>
+      <div class="flex justify-between text-[9px] font-bold text-slate-400">
+        <span>📊 ${a.count} записів</span>
+        <span>Сер.: ${fmt.format(a.avg)} ₴</span>
+        ${a.unpaid > 0 ? `<span class="text-orange-500">⚠️ ${a.unpaid} борг</span>` : '<span class="text-green-500">✅ Без боргу</span>'}
+      </div>
+    </div>
+  `).join('');
+  const cheapest = addrData.reduce((a,b) => a.last3avg < b.last3avg ? a : b);
+  const most = addrData.reduce((a,b) => a.last3avg > b.last3avg ? a : b);
+  if (addrData.length >= 2) {
+    container.innerHTML += `<div class="mt-2 p-3 bg-brand-light rounded-xl border border-brand-border text-[10px] font-bold text-brand">
+      💡 Найменше: <span class="text-slate-700 dark:text-slate-200">${escapeHtml(cheapest.name)}</span> · Найбільше: <span class="text-slate-700 dark:text-slate-200">${escapeHtml(most.name)}</span>
+    </div>`;
+  }
+}
+
+// =================== COMBINED REPORT ===================
+function renderCombinedReport() {
+  const container = $('combinedReportContent');
+  if (!container) return;
+  syncCurrentAddress();
+  if (addresses.length < 2) {
+    container.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-3">Додайте 2+ адреси для зведеного звіту</p>';
+    return;
+  }
+  const allRecs = addresses.flatMap(a => (a.records || []).map(r => ({ ...r, addrName: a.name })));
+  if (!allRecs.length) {
+    container.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-3">Немає записів</p>';
+    return;
+  }
+  const grandTotal = allRecs.reduce((s,r) => s + r.total, 0);
+  const grandAvg = grandTotal / allRecs.length;
+  const unpaid = allRecs.filter(r => getOutstandingAmount(r) > 0);
+  const debtTotal = unpaid.reduce((s,r) => s + getOutstandingAmount(r), 0);
+
+  // По місяцях (останні 6)
+  const monthMap = {};
+  allRecs.forEach(r => {
+    if (!monthMap[r.month]) monthMap[r.month] = 0;
+    monthMap[r.month] += r.total;
+  });
+  const months = Object.entries(monthMap).sort((a,b) => b[0].localeCompare(a[0])).slice(0,6);
+
+  container.innerHTML = `
+    <div class="grid grid-cols-2 gap-2 mb-3">
+      <div class="bg-brand-light border border-brand-border p-3 rounded-xl text-center">
+        <p class="text-[8px] font-bold text-brand uppercase mb-1">Всього (всі адреси)</p>
+        <p class="text-sm font-black text-brand">${fmt.format(grandTotal)} ₴</p>
+      </div>
+      <div class="bg-slate-50 dark:bg-black/40 border border-slate-100 dark:border-white/5 p-3 rounded-xl text-center">
+        <p class="text-[8px] font-bold text-slate-400 uppercase mb-1">Середній платіж</p>
+        <p class="text-sm font-black text-slate-900 dark:text-white">${fmt.format(grandAvg)} ₴</p>
+      </div>
+    </div>
+    ${debtTotal > 0 ? `<div class="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-3 rounded-xl mb-3">
+      <p class="text-[9px] font-bold text-red-500 uppercase">⚠️ Загальний борг</p>
+      <p class="text-base font-black text-red-500">${fmt.format(debtTotal)} ₴ · ${unpaid.length} записів</p>
+    </div>` : ''}
+    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Витрати по місяцях (всі адреси)</p>
+    <div class="space-y-1.5">
+      ${months.map(([month, total]) => {
+        const mLabel = new Date(month + '-01').toLocaleString('uk-UA', {month:'short', year:'numeric'});
+        const pct = Math.round((total / Math.max(...months.map(m=>m[1]))) * 100);
+        return `<div class="flex items-center gap-2">
+          <span class="text-[9px] font-bold text-slate-400 w-14 shrink-0">${mLabel}</span>
+          <div class="flex-1 h-2 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+            <div class="h-full bg-brand rounded-full" style="width:${pct}%"></div>
+          </div>
+          <span class="text-[9px] font-black text-slate-700 dark:text-slate-200 shrink-0">${fmt.format(total)} ₴</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// =================== CURRENCY SUPPORT ===================
+const CURRENCIES = {
+  UAH: { symbol: '₴', rate: 1, name: 'Гривня' },
+  USD: { symbol: '$', rate: null, name: 'Долар США' },
+  EUR: { symbol: '€', rate: null, name: 'Євро' },
+  PLN: { symbol: 'zł', rate: null, name: 'Злотий' },
+};
+let currentCurrency = localStorage.getItem('k_currency') || 'UAH';
+let exchangeRates = JSON.parse(localStorage.getItem('k_exchange_rates') || '{}');
+
+async function loadExchangeRates() {
+  try {
+    const res = await fetch('https://api.exchangerate-api.com/v4/latest/UAH');
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    exchangeRates = { USD: data.rates.USD, EUR: data.rates.EUR, PLN: data.rates.PLN, ts: Date.now() };
+    localStorage.setItem('k_exchange_rates', JSON.stringify(exchangeRates));
+    CURRENCIES.USD.rate = exchangeRates.USD;
+    CURRENCIES.EUR.rate = exchangeRates.EUR;
+    CURRENCIES.PLN.rate = exchangeRates.PLN;
+    updateCurrencyDisplay();
+    showToast('Курс оновлено', '💱');
+  } catch(e) {
+    // Fallback: ручні курси
+    if (!exchangeRates.USD) {
+      exchangeRates = { USD: 0.0244, EUR: 0.0225, PLN: 0.0972, ts: 0 };
+      CURRENCIES.USD.rate = exchangeRates.USD;
+      CURRENCIES.EUR.rate = exchangeRates.EUR;
+      CURRENCIES.PLN.rate = exchangeRates.PLN;
+    }
+  }
+}
+
+function formatInCurrency(amountUAH, currency = currentCurrency) {
+  const cur = CURRENCIES[currency];
+  if (!cur || currency === 'UAH' || !cur.rate) {
+    return fmt.format(amountUAH) + ' ₴';
+  }
+  const converted = amountUAH * cur.rate;
+  return new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(converted) + ' ' + cur.symbol;
+}
+
+function renderCurrencySelector() {
+  const container = $('currencySelectorContent');
+  if (!container) return;
+  const rateAge = exchangeRates.ts ? Math.round((Date.now() - exchangeRates.ts) / 3600000) : null;
+  container.innerHTML = `
+    <div class="flex gap-2 flex-wrap mb-3">
+      ${Object.entries(CURRENCIES).map(([code, cur]) => `
+        <button type="button" class="currency-btn px-3 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 ${currentCurrency === code ? 'bg-brand text-white border-brand shadow-lg shadow-brand/20' : 'bg-slate-50 dark:bg-black/40 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10'}" data-currency="${code}">
+          ${cur.symbol} ${code}
+        </button>
+      `).join('')}
+    </div>
+    ${currentCurrency !== 'UAH' && CURRENCIES[currentCurrency]?.rate ? `
+      <div class="bg-brand-light border border-brand-border p-3 rounded-xl mb-2">
+        <p class="text-[9px] font-bold text-brand uppercase mb-1">Поточний курс</p>
+        <p class="text-sm font-black text-brand">1 ₴ = ${CURRENCIES[currentCurrency].rate.toFixed(4)} ${CURRENCIES[currentCurrency].symbol}</p>
+        ${rateAge !== null ? `<p class="text-[9px] text-brand/70 mt-0.5">Оновлено ${rateAge < 1 ? 'щойно' : rateAge + ' год. тому'}</p>` : ''}
+      </div>
+    ` : ''}
+    <button type="button" id="refreshRatesBtn" class="w-full py-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl text-[10px] font-bold border border-emerald-200 dark:border-emerald-500/20 active:scale-[0.98] flex items-center justify-center gap-1.5">
+      <i class="fa-solid fa-rotate text-[9px]"></i>Оновити курс
+    </button>
+    ${currentCurrency !== 'UAH' && records.length > 0 ? `
+      <div class="mt-3 pt-3 border-t border-slate-100 dark:border-white/5">
+        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Останні 3 місяці (${currentCurrency})</p>
+        ${[...records].sort((a,b) => b.month.localeCompare(a.month)).slice(0,3).map(r => `
+          <div class="flex justify-between text-xs mb-1">
+            <span class="font-bold text-slate-500">${new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'numeric'})}</span>
+            <span class="font-black">${formatInCurrency(r.total)}</span>
+          </div>`).join('')}
+      </div>` : ''}`;
+
+  container.querySelectorAll('.currency-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentCurrency = btn.dataset.currency;
+      localStorage.setItem('k_currency', currentCurrency);
+      renderCurrencySelector();
+      showToast(`Валюта: ${btn.dataset.currency}`, '💱');
+    });
+  });
+  container.querySelector('#refreshRatesBtn')?.addEventListener('click', loadExchangeRates);
+}
+
+// Завантажити курси при старті (якщо застарілі або відсутні)
+setTimeout(() => {
+  const age = exchangeRates.ts ? (Date.now() - exchangeRates.ts) / 3600000 : Infinity;
+  if (age > 6) loadExchangeRates();
+  else {
+    CURRENCIES.USD.rate = exchangeRates.USD || 0.0244;
+    CURRENCIES.EUR.rate = exchangeRates.EUR || 0.0225;
+    CURRENCIES.PLN.rate = exchangeRates.PLN || 0.0972;
+  }
+}, 2000);
+
+function updateCurrencyDisplay() {
+  // Оновлюємо відображення якщо вкладка аналітики відкрита
+  const analyticsTab = $('tabAnalytics');
+  if (analyticsTab && !analyticsTab.classList.contains('tab-hidden')) {
+    renderCurrencySelector();
+  }
+}
+
+// Розширюємо renderAnalytics для нових секцій
+const _origRenderAnalytics = renderAnalytics;
+function renderAnalytics() {
+  _origRenderAnalytics();
+  if (records.length >= 6) {
+    const sf = new SmartForecast(records);
+    renderSeasonalProfile(sf);
+  }
+  renderSubsidyCalc();
+  renderAddressCompare();
+  renderCombinedReport();
+  renderCurrencySelector();
 }
