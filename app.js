@@ -1338,6 +1338,8 @@ function getMonthKey() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 function checkReminders(){
+  // Делегуємо до розширеної версії (якщо вже оголошена) або базової логіки
+  if (typeof checkRemindersExtended === 'function') { checkRemindersExtended(); return; }
   const monthKey = getMonthKey();
   if(!prefs.remindersEnabled||localStorage.getItem('lastSubmittedMonth')===monthKey){$('reminderBanner')?.classList.add('hidden');return;}
   const d=new Date().getDate();let msgs=[];
@@ -2234,13 +2236,15 @@ function renderTariffPresetsExtended() {
   select.innerHTML = html;
 }
 
-// Перевизначаємо renderTariffPresets
-window._origRenderTariffPresets = renderTariffPresets;
-function renderTariffPresets() { renderTariffPresetsExtended(); }
+// Перевизначаємо renderTariffPresets через присвоєння (не через function declaration,
+// щоб уникнути рекурсії через JS hoisting)
+const _renderTariffPresetsBase = renderTariffPresets;
+renderTariffPresets = function() { renderTariffPresetsExtended(); };
 
 // Розширений applyTariffPreset — підтримує community
-const _origApplyTariffPreset = applyTariffPreset;
-function applyTariffPreset(presetId) {
+// Зберігаємо оригінал через const (не перевизначаємо function — інакше hoisting викликає рекурсію)
+const _applyTariffPresetBase = applyTariffPreset;
+applyTariffPreset = function(presetId) {
   if (presetId.startsWith('comm_')) {
     const id = presetId.replace('comm_', '');
     const item = getCommunityTariffs().find(t => t.id === id);
@@ -2249,13 +2253,14 @@ function applyTariffPreset(presetId) {
     showToast(`"${item.name}" застосовано`, '🏙️');
     return;
   }
-  _origApplyTariffPreset(presetId);
-}
+  _applyTariffPresetBase(presetId);
+};
 
 // =================== FIX: HIDE DISABLED SERVICES IN RECORD CARD ===================
-// Перевизначаємо createRecordCard щоб не показувати вимкнені послуги
+// Перевизначаємо createRecordCard через присвоєння (не function declaration)
+// щоб уникнути рекурсії через JS hoisting
 const _origCreateRecordCard = createRecordCard;
-function createRecordCard(rec) {
+createRecordCard = function(rec) {
   const card = document.createElement('div');
   const recPaid = isRecordPaid(rec), paymentStatus = getPaymentStatus(rec), paidAmount = getPaidAmount(rec), outstanding = getOutstandingAmount(rec);
   card.className = `premium-card swipe-card p-5 relative overflow-hidden cursor-pointer select-none ${recPaid ? '' : 'ring-1 ring-orange-400/20'}`;
@@ -2359,57 +2364,60 @@ function createRecordCard(rec) {
   return card;
 }
 
-// =================== PATCH checkReminders ===================
-// Замінюємо стандартну checkReminders на розширену
-const _origCheckReminders = checkReminders;
-function checkReminders() { checkRemindersExtended(); }
+// checkReminders вже делегує до checkRemindersExtended через typeof перевірку вище
 
 // =================== INIT EXTENDED ===================
-// Патчимо initAppUI щоб ініціалізувати нові компоненти
-const _origInitAppUI = initAppUI;
-function initAppUI() {
-  _origInitAppUI();
-  // Ініціалізуємо кастомні нагадування та тарифи в налаштуваннях
+// Ініціалізуємо нові компоненти при старті через window.onload (без патчу initAppUI)
+window.addEventListener('load', () => {
   setTimeout(() => {
-    renderCustomReminders();
-    renderCommunityTariffs();
-    renderTariffPresets();
-  }, 200);
-}
+    if (typeof renderCustomReminders === 'function') renderCustomReminders();
+    if (typeof renderCommunityTariffs === 'function') renderCommunityTariffs();
+    if (typeof renderTariffPresets === 'function') renderTariffPresets();
+  }, 500);
+});
 
 // Кнопка завантаження тарифів з хмари
 $('loadCloudTariffsBtn')?.addEventListener('click', () => loadCloudCommunityTariffs());
 
-// Також патчимо switchTab для settings та analytics
-const _origSwitchTab = switchTab;
-function switchTab(tabId, index) {
-  _origSwitchTab(tabId, index);
-  if (tabId === 'tabSettings') {
-    setTimeout(() => {
-      renderCustomReminders();
-      renderCommunityTariffs();
-    }, 100);
-  }
-  if (tabId === 'tabAnalytics') {
-    setTimeout(() => {
-      if (records.length >= 6) {
-        const sf = new SmartForecast(records);
-        renderSeasonalProfile(sf);
-      } else {
-        const el = $('seasonalContent');
-        if (el) el.innerHTML = '<p class="text-xs text-slate-400">Доступно після 6+ місяців даних</p>';
-      }
-      renderSubsidyCalc();
-      renderAddressCompare();
-      renderCombinedReport();
-      renderCurrencySelector();
-    }, 200);
-  }
-  // Видаляємо банер редагування при переході з tabCalc
-  if (tabId !== 'tabCalc') {
-    $('editingBanner')?.remove();
-  }
-}
+// Розширення switchTab: settings + analytics + editingBanner
+// Перехоплюємо події через addEventListener на кнопки навігації,
+// щоб НЕ створювати рекурсивний патч функції switchTab
+['btnTabSettings','btnTabAnalytics','btnTabDashboard','btnTabCalc','btnTabHistory'].forEach(btnId => {
+  const btn = $(btnId);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const targetTabId = btnId === 'btnTabSettings' ? 'tabSettings'
+      : btnId === 'btnTabAnalytics' ? 'tabAnalytics'
+      : btnId === 'btnTabDashboard' ? 'tabDashboard'
+      : btnId === 'btnTabCalc' ? 'tabCalc'
+      : 'tabHistory';
+
+    if (targetTabId === 'tabSettings') {
+      setTimeout(() => {
+        renderCustomReminders();
+        renderCommunityTariffs();
+      }, 120);
+    }
+    if (targetTabId === 'tabAnalytics') {
+      setTimeout(() => {
+        if (records.length >= 6) {
+          const sf = new SmartForecast(records);
+          renderSeasonalProfile(sf);
+        } else {
+          const el = $('seasonalContent');
+          if (el) el.innerHTML = '<p class="text-xs text-slate-400">Доступно після 6+ місяців даних</p>';
+        }
+        renderSubsidyCalc();
+        renderAddressCompare();
+        renderCombinedReport();
+        renderCurrencySelector();
+      }, 220);
+    }
+    if (targetTabId !== 'tabCalc') {
+      setTimeout(() => $('editingBanner')?.remove(), 50);
+    }
+  });
+});
 
 // =================== SEASONAL PROFILE ===================
 function renderSeasonalProfile(sf) {
