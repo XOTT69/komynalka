@@ -871,28 +871,13 @@ class SmartForecast {
     return { slope, intercept, nextValue: slope * n + intercept };
   }
 
-  calcSeasonalFactors() {
-    const months = Array(12).fill(0).map(() => ({ sum: 0, count: 0 }));
-    this.sorted.forEach(r => {
-      const m = parseInt(r.month.split('-')[1]) - 1;
-      if (m >= 0 && m < 12) { months[m].sum += r.total; months[m].count++; }
-    });
-    const avg = this.sorted.length ? this.sorted.reduce((s, r) => s + r.total, 0) / this.sorted.length : 0;
-    return months.map(m => m.count > 0 ? (m.sum / m.count) / (avg || 1) : 1);
-  }
-
   predict(month) {
     const trend = this.calcTrend();
-    const factors = this.calcSeasonalFactors();
     if (!trend) return null;
-    const m = parseInt(month.split('-')[1]) - 1;
-    const basePrediction = trend.nextValue;
-    const seasonalFactor = (factors[m] || 1);
     return {
-      predicted: Math.round(basePrediction * seasonalFactor),
+      predicted: Math.round(Math.max(0, trend.nextValue)),
       trend: Math.round(trend.slope * 100) / 100,
       confidence: this.sorted.length >= 6 ? 'high' : this.sorted.length >= 3 ? 'medium' : 'low',
-      seasonalFactor: Math.round(seasonalFactor * 100) / 100,
     };
   }
 
@@ -1701,7 +1686,7 @@ function renderAnalytics() {
     $('forecastValue').innerHTML = `<span class="text-3xl font-black">${fmt.format(pred.predicted)} ₴</span>`;
     $('forecastConfidence').innerHTML = `
       <span class="text-[9px] font-bold ${pred.confidence === 'high' ? 'text-green-500' : pred.confidence === 'medium' ? 'text-yellow-500' : 'text-red-400'}">${confLabels[pred.confidence]}</span>
-      <span class="text-[9px] text-slate-400 ml-2">${new Date(nextMonth+'-01').toLocaleString('uk-UA',{month:'long'})} · сезонний коеф.: ${pred.seasonalFactor}x</span>
+      <span class="text-[9px] text-slate-400 ml-2">${new Date(nextMonth+'-01').toLocaleString('uk-UA',{month:'long'})}</span>
     `;
     $('forecastCard')?.classList.remove('hidden');
   } else {
@@ -2540,17 +2525,9 @@ $('loadCloudTariffsBtn')?.addEventListener('click', () => loadCloudCommunityTari
     }
     if (targetTabId === 'tabAnalytics') {
       setTimeout(() => {
-        if (records.length >= 6) {
-          const sf = new SmartForecast(records);
-          renderSeasonalProfile(sf);
-        } else {
-          const el = $('seasonalContent');
-          if (el) el.innerHTML = '<p class="text-xs text-slate-400">Доступно після 6+ місяців даних</p>';
-        }
         renderSubsidyCalc();
         renderAddressCompare();
         renderCombinedReport();
-        renderCurrencySelector();
       }, 220);
     }
     if (targetTabId !== 'tabCalc') {
@@ -2558,41 +2535,6 @@ $('loadCloudTariffsBtn')?.addEventListener('click', () => loadCloudCommunityTari
     }
   });
 });
-
-// =================== SEASONAL PROFILE ===================
-function renderSeasonalProfile(sf) {
-  const container = $('seasonalContent');
-  if (!container) return;
-  if (!sf || sf.sorted.length < 6) {
-    container.innerHTML = '<p class="text-xs text-slate-400">Доступно після 6+ місяців даних</p>';
-    return;
-  }
-  const factors = sf.calcSeasonalFactors();
-  const monthNames = ['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
-  const maxF = Math.max(...factors);
-  const minF = Math.min(...factors);
-  const html = `
-    <div class="grid grid-cols-4 gap-1.5">
-      ${factors.map((f, i) => {
-        const pct = maxF > minF ? Math.round(((f - minF) / (maxF - minF)) * 100) : 50;
-        const color = f >= 1.15 ? '#ef4444' : f >= 1.05 ? '#f97316' : f <= 0.85 ? '#22c55e' : f <= 0.95 ? '#3b82f6' : '#8e8e93';
-        const label = f >= 1.15 ? 'Дорого' : f >= 1.05 ? 'Вище' : f <= 0.85 ? 'Дешево' : f <= 0.95 ? 'Нижче' : 'Норма';
-        return `<div class="bg-slate-50 dark:bg-black/40 p-2 rounded-xl text-center border border-slate-100 dark:border-white/5">
-          <p class="text-[9px] font-bold text-slate-400 mb-1">${monthNames[i]}</p>
-          <div class="h-8 bg-slate-200 dark:bg-white/10 rounded-lg overflow-hidden mb-1">
-            <div class="h-full rounded-lg transition-all" style="height:${Math.max(10,pct)}%;background:${color};margin-top:${100-Math.max(10,pct)}%"></div>
-          </div>
-          <p class="text-[8px] font-bold" style="color:${color}">${f.toFixed(2)}x</p>
-        </div>`;
-      }).join('')}
-    </div>
-    <div class="mt-3 flex gap-2 flex-wrap">
-      <span class="text-[9px] font-bold bg-red-50 dark:bg-red-500/10 text-red-500 px-2 py-1 rounded-lg">🔴 Дорого &gt;1.15x</span>
-      <span class="text-[9px] font-bold bg-green-50 dark:bg-green-500/10 text-green-500 px-2 py-1 rounded-lg">🟢 Дешево &lt;0.85x</span>
-      <span class="text-[9px] text-slate-400 px-2 py-1">Коефіцієнт відносно середнього</span>
-    </div>`;
-  container.innerHTML = html;
-}
 
 // =================== SUBSIDY CALCULATOR ===================
 function renderSubsidyCalc() {
@@ -2735,110 +2677,3 @@ function renderCombinedReport() {
       }).join('')}
     </div>`;
 }
-
-// =================== CURRENCY SUPPORT ===================
-const CURRENCIES = {
-  UAH: { symbol: '₴', rate: 1, name: 'Гривня' },
-  USD: { symbol: '$', rate: null, name: 'Долар США' },
-  EUR: { symbol: '€', rate: null, name: 'Євро' },
-  PLN: { symbol: 'zł', rate: null, name: 'Злотий' },
-};
-let currentCurrency = localStorage.getItem('k_currency') || 'UAH';
-let exchangeRates = JSON.parse(localStorage.getItem('k_exchange_rates') || '{}');
-
-async function loadExchangeRates() {
-  try {
-    const res = await fetch('https://api.exchangerate-api.com/v4/latest/UAH');
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    exchangeRates = { USD: data.rates.USD, EUR: data.rates.EUR, PLN: data.rates.PLN, ts: Date.now() };
-    localStorage.setItem('k_exchange_rates', JSON.stringify(exchangeRates));
-    CURRENCIES.USD.rate = exchangeRates.USD;
-    CURRENCIES.EUR.rate = exchangeRates.EUR;
-    CURRENCIES.PLN.rate = exchangeRates.PLN;
-    updateCurrencyDisplay();
-    showToast('Курс оновлено', '💱');
-  } catch(e) {
-    // Fallback: ручні курси
-    if (!exchangeRates.USD) {
-      exchangeRates = { USD: 0.0244, EUR: 0.0225, PLN: 0.0972, ts: 0 };
-      CURRENCIES.USD.rate = exchangeRates.USD;
-      CURRENCIES.EUR.rate = exchangeRates.EUR;
-      CURRENCIES.PLN.rate = exchangeRates.PLN;
-    }
-  }
-}
-
-function formatInCurrency(amountUAH, currency = currentCurrency) {
-  const cur = CURRENCIES[currency];
-  if (!cur || currency === 'UAH' || !cur.rate) {
-    return fmt.format(amountUAH) + ' ₴';
-  }
-  const converted = amountUAH * cur.rate;
-  return new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(converted) + ' ' + cur.symbol;
-}
-
-function renderCurrencySelector() {
-  const container = $('currencySelectorContent');
-  if (!container) return;
-  const rateAge = exchangeRates.ts ? Math.round((Date.now() - exchangeRates.ts) / 3600000) : null;
-  container.innerHTML = `
-    <div class="flex gap-2 flex-wrap mb-3">
-      ${Object.entries(CURRENCIES).map(([code, cur]) => `
-        <button type="button" class="currency-btn px-3 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 ${currentCurrency === code ? 'bg-brand text-white border-brand shadow-lg shadow-brand/20' : 'bg-slate-50 dark:bg-black/40 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10'}" data-currency="${code}">
-          ${cur.symbol} ${code}
-        </button>
-      `).join('')}
-    </div>
-    ${currentCurrency !== 'UAH' && CURRENCIES[currentCurrency]?.rate ? `
-      <div class="bg-brand-light border border-brand-border p-3 rounded-xl mb-2">
-        <p class="text-[9px] font-bold text-brand uppercase mb-1">Поточний курс</p>
-        <p class="text-sm font-black text-brand">1 ₴ = ${CURRENCIES[currentCurrency].rate.toFixed(4)} ${CURRENCIES[currentCurrency].symbol}</p>
-        ${rateAge !== null ? `<p class="text-[9px] text-brand/70 mt-0.5">Оновлено ${rateAge < 1 ? 'щойно' : rateAge + ' год. тому'}</p>` : ''}
-      </div>
-    ` : ''}
-    <button type="button" id="refreshRatesBtn" class="w-full py-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl text-[10px] font-bold border border-emerald-200 dark:border-emerald-500/20 active:scale-[0.98] flex items-center justify-center gap-1.5">
-      <i class="fa-solid fa-rotate text-[9px]"></i>Оновити курс
-    </button>
-    ${currentCurrency !== 'UAH' && records.length > 0 ? `
-      <div class="mt-3 pt-3 border-t border-slate-100 dark:border-white/5">
-        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Останні 3 місяці (${currentCurrency})</p>
-        ${[...records].sort((a,b) => b.month.localeCompare(a.month)).slice(0,3).map(r => `
-          <div class="flex justify-between text-xs mb-1">
-            <span class="font-bold text-slate-500">${new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'numeric'})}</span>
-            <span class="font-black">${formatInCurrency(r.total)}</span>
-          </div>`).join('')}
-      </div>` : ''}`;
-
-  container.querySelectorAll('.currency-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentCurrency = btn.dataset.currency;
-      localStorage.setItem('k_currency', currentCurrency);
-      renderCurrencySelector();
-      showToast(`Валюта: ${btn.dataset.currency}`, '💱');
-    });
-  });
-  container.querySelector('#refreshRatesBtn')?.addEventListener('click', loadExchangeRates);
-}
-
-// Завантажити курси при старті (якщо застарілі або відсутні)
-setTimeout(() => {
-  const age = exchangeRates.ts ? (Date.now() - exchangeRates.ts) / 3600000 : Infinity;
-  if (age > 6) loadExchangeRates();
-  else {
-    CURRENCIES.USD.rate = exchangeRates.USD || 0.0244;
-    CURRENCIES.EUR.rate = exchangeRates.EUR || 0.0225;
-    CURRENCIES.PLN.rate = exchangeRates.PLN || 0.0972;
-  }
-}, 2000);
-
-function updateCurrencyDisplay() {
-  // Оновлюємо відображення якщо вкладка аналітики відкрита
-  const analyticsTab = $('tabAnalytics');
-  if (analyticsTab && !analyticsTab.classList.contains('tab-hidden')) {
-    renderCurrencySelector();
-  }
-}
-
-// Нові секції аналітики рендеряться в вже існуючому патчу _origSwitchTab вище
-// (не створюємо новий патч, щоб не було рекурсії)
