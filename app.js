@@ -2380,7 +2380,7 @@ function initAppUI() {
 // Кнопка завантаження тарифів з хмари
 $('loadCloudTariffsBtn')?.addEventListener('click', () => loadCloudCommunityTariffs());
 
-// Також патчимо switchTab для settings
+// Також патчимо switchTab для settings та analytics
 const _origSwitchTab = switchTab;
 function switchTab(tabId, index) {
   _origSwitchTab(tabId, index);
@@ -2389,6 +2389,21 @@ function switchTab(tabId, index) {
       renderCustomReminders();
       renderCommunityTariffs();
     }, 100);
+  }
+  if (tabId === 'tabAnalytics') {
+    setTimeout(() => {
+      if (records.length >= 6) {
+        const sf = new SmartForecast(records);
+        renderSeasonalProfile(sf);
+      } else {
+        const el = $('seasonalContent');
+        if (el) el.innerHTML = '<p class="text-xs text-slate-400">Доступно після 6+ місяців даних</p>';
+      }
+      renderSubsidyCalc();
+      renderAddressCompare();
+      renderCombinedReport();
+      renderCurrencySelector();
+    }, 200);
   }
   // Видаляємо банер редагування при переході з tabCalc
   if (tabId !== 'tabCalc') {
@@ -2677,16 +2692,5 @@ function updateCurrencyDisplay() {
   }
 }
 
-// Розширюємо renderAnalytics для нових секцій
-const _origRenderAnalytics = renderAnalytics;
-function renderAnalytics() {
-  _origRenderAnalytics();
-  if (records.length >= 6) {
-    const sf = new SmartForecast(records);
-    renderSeasonalProfile(sf);
-  }
-  renderSubsidyCalc();
-  renderAddressCompare();
-  renderCombinedReport();
-  renderCurrencySelector();
-}
+// Нові секції аналітики рендеряться в вже існуючому патчу _origSwitchTab вище
+// (не створюємо новий патч, щоб не було рекурсії)
