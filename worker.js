@@ -92,11 +92,26 @@ function parseAuth(req) {
 async function resolveLogin(env, auth) {
   if (auth.type === 'uid') {
     let linked = await env.KV.get(`uid:${auth.uid}`);
-    if (!linked) linked = await env.KV.get(`uid_${auth.uid}`);
-    return linked || null;
+    if (linked) return linked;
+    const legacyKey = `uid_${auth.uid}`;
+    const legacyRaw = await env.KV.get(legacyKey);
+    if (legacyRaw) {
+      try {
+        const parsed = JSON.parse(legacyRaw);
+        if (parsed && typeof parsed === 'object') return legacyKey;
+      } catch {
+        return legacyRaw;
+      }
+    }
+    return null;
   }
   const l = auth.login;
   return (l && l.length >= 2 && l.length <= 80) ? l : null;
+}
+
+function getUidLogin(uid) {
+  const safe = String(uid || '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128);
+  return safe ? `uid_${safe}` : null;
 }
 
 export default {
@@ -166,18 +181,22 @@ async function doPost(req, env, ip, fp) {
 
   const auth = parseAuth(req);
   if (!auth) return err('NO_AUTH', 401);
-  const login = await resolveLogin(env, auth);
+  let login = await resolveLogin(env, auth);
+  if (!login && auth.type === 'uid' && action === '' && Array.isArray(body.addresses)) {
+    login = getUidLogin(auth.uid);
+    if (login) await env.KV.put(`uid:${auth.uid}`, login);
+  }
   if (!login) return err('NOT_FOUND', 404);
   if (!await rateLimit(env, `post:${login}`, 60, 60000)) return err('RATE_LIMITED', 429);
 
   let userData = await getUser(env, login);
 
   if (!userData) {
-    if (auth.type === 'login' && action === '' && Array.isArray(body.addresses)) {
+    if ((auth.type === 'login' || auth.type === 'uid') && action === '' && Array.isArray(body.addresses)) {
       userData = {
-        pass: auth.passHash, passHash: auth.passHash,
+        ...(auth.type === 'login' ? { pass: auth.passHash, passHash: auth.passHash } : {}),
         displayName: '', addresses: [], currentAddressId: null,
-        hasGoogle: false, isPro: false,
+        hasGoogle: auth.type === 'uid', isPro: false,
         createdAt: new Date().toISOString(),
         knownDevices: [fp], suspiciousActivity: 0,
         lastIP: ip, lastDevice: fp,
@@ -201,6 +220,7 @@ async function doPost(req, env, ip, fp) {
     case 'ai_chat':          return doAiChat(body, env, login);
     // ═══ НОВІ: тарифи спільноти ═══
     case 'publish_tariff':   return doPublishTariff(body, env, login, ip);
+    case 'vote_tariff':      return doVoteTariff(body, env, login);
     default:                 return doSave(body, env, login, userData, ip, fp);
   }
 }
@@ -273,9 +293,8 @@ async function doLinkGoogle(body, env) {
   const uData = await getUser(env, cl);
   if (!uData) return err('NOT_FOUND', 404);
   const stored = uData.passHash || uData.pass;
-  if (pass && stored !== pass) return err('WRONG_PASSWORD', 403);
+  if (!pass || stored !== pass) return err('WRONG_PASSWORD', 403);
   await env.KV.put(`uid:${uid}`, cl);
-  await env.KV.put(`uid_${uid}`, cl);
   await saveUser(env, cl, { ...uData, hasGoogle: true });
   return ok({ success: true });
 }
@@ -325,6 +344,10 @@ async function doPublishTariff(body, env, login, ip) {
   if (water > 10000 || electroBase > 1000 || gas > 1000) return err('TARIFF_TOO_HIGH', 400);
 
   const author = String(body.author || 'Анонім').trim().slice(0, 50);
+  const city = String(body.city || '').trim().slice(0, 40);
+  const region = String(body.region || '').trim().slice(0, 40);
+  const allowedServices = new Set(['all', 'water', 'hotWater', 'electro', 'gas']);
+  const serviceType = allowedServices.has(body.serviceType) ? body.serviceType : 'all';
 
   // Rate limit: 5 публікацій на годину з одного логіну
   if (!await rateLimit(env, `tariff_pub:${login}`, 5, 3_600_000)) {
@@ -344,20 +367,39 @@ async function doPublishTariff(body, env, login, ip) {
   const existingIdx = list.findIndex(item =>
     item.login === login && item.name.toLowerCase() === normalName
   );
+  const previous = existingIdx >= 0 ? list[existingIdx] : null;
 
   const entry = {
     id:        `t_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
     name,
+    city,
+    region,
+    serviceType,
     author,
     login,    // для модерації (не показується юзерам)
     tariffs:  { water, hotWater, electroBase, electroWinter, gas },
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    verified:  false,
     votes:     1,
+    voters:    [login],
+    history:   [],
   };
 
   if (existingIdx >= 0) {
     // Оновлюємо існуючий запис
-    list[existingIdx] = { ...list[existingIdx], ...entry, id: list[existingIdx].id };
+    const history = Array.isArray(previous.history) ? previous.history : [];
+    const previousSnapshot = previous.tariffs ? { tariffs: previous.tariffs, updatedAt: previous.updatedAt || previous.createdAt || new Date().toISOString() } : null;
+    list[existingIdx] = {
+      ...previous,
+      ...entry,
+      id: previous.id,
+      createdAt: previous.createdAt || entry.createdAt,
+      verified: !!previous.verified,
+      votes: Math.max(1, previous.votes || 1),
+      voters: Array.isArray(previous.voters) ? previous.voters : [login],
+      history: previousSnapshot ? [previousSnapshot, ...history].slice(0, 12) : history.slice(0, 12),
+    };
   } else {
     // Додаємо новий на початок
     list.unshift(entry);
@@ -368,7 +410,32 @@ async function doPublishTariff(body, env, login, ip) {
 
   await env.KV.put('community_tariffs', JSON.stringify(list), { expirationTtl: 86400 * 365 });
 
-  return ok({ success: true, id: entry.id });
+  return ok({ success: true, id: existingIdx >= 0 ? list[existingIdx].id : entry.id });
+}
+
+async function doVoteTariff(body, env, login) {
+  const id = String(body.id || '').trim();
+  if (!id) return err('NO_ID', 400);
+  if (!await rateLimit(env, `tariff_vote:${login}`, 30, 3_600_000)) return err('RATE_LIMITED', 429);
+  let list = [];
+  try {
+    const raw = await env.KV.get('community_tariffs');
+    if (raw) list = JSON.parse(raw);
+    if (!Array.isArray(list)) list = [];
+  } catch(e) { list = []; }
+  const idx = list.findIndex(item => item.id === id);
+  if (idx < 0) return err('NOT_FOUND', 404);
+  const voters = Array.isArray(list[idx].voters) ? list[idx].voters : [];
+  if (voters.includes(login)) return err('ALREADY_VOTED', 409);
+  voters.push(login);
+  list[idx] = {
+    ...list[idx],
+    voters,
+    votes: Math.max(Number(list[idx].votes) || 0, voters.length),
+    updatedAt: list[idx].updatedAt || list[idx].createdAt || new Date().toISOString(),
+  };
+  await env.KV.put('community_tariffs', JSON.stringify(list), { expirationTtl: 86400 * 365 });
+  return ok({ success: true, votes: list[idx].votes });
 }
 
 /**
@@ -384,8 +451,8 @@ async function doGetTariffs(env) {
     let list = JSON.parse(raw);
     if (!Array.isArray(list)) return ok({ success: true, tariffs: [] });
 
-    // Повертаємо без поля login (приватна інфо)
-    const public_list = list.map(({ login: _l, ...item }) => item);
+    // Повертаємо без приватних полів
+    const public_list = list.map(({ login: _l, voters: _v, ...item }) => item);
 
     return ok({ success: true, tariffs: public_list });
   } catch(e) {
@@ -471,6 +538,7 @@ async function doAdmin(action, body, env, ip) {
     case 'admin_get_tariffs':      return doAdminGetTariffs(env);
     case 'admin_delete_tariff':    return doAdminDeleteTariff(body, env);
     case 'admin_clear_tariffs':    return doAdminClearTariffs(env);
+    case 'admin_verify_tariff':    return doAdminVerifyTariff(body, env);
     default: return err('UNKNOWN_ACTION', 400);
   }
 }
@@ -555,6 +623,21 @@ async function doAdminDeleteTariff(body, env) {
     const raw = await env.KV.get('community_tariffs');
     let list = raw ? JSON.parse(raw) : [];
     list = list.filter(item => item.id !== body.id);
+    await env.KV.put('community_tariffs', JSON.stringify(list), { expirationTtl: 86400 * 365 });
+    return ok({ success: true });
+  } catch(e) {
+    return err('ERROR', 500);
+  }
+}
+
+async function doAdminVerifyTariff(body, env) {
+  if (!body.id) return err('NO_ID', 400);
+  try {
+    const raw = await env.KV.get('community_tariffs');
+    let list = raw ? JSON.parse(raw) : [];
+    const idx = list.findIndex(item => item.id === body.id);
+    if (idx < 0) return err('NOT_FOUND', 404);
+    list[idx] = { ...list[idx], verified: body.verified !== false, moderatedAt: new Date().toISOString() };
     await env.KV.put('community_tariffs', JSON.stringify(list), { expirationTtl: 86400 * 365 });
     return ok({ success: true });
   } catch(e) {

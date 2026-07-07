@@ -1,0 +1,10 @@
+name = "komunproga"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "ЗАМІНІТЬ_НА_РЕАЛЬНИЙ_KV_ID"
+
+[vars]
+# ADMIN_PASS, GROQ_API_KEY, GEMINI_API_KEY — встановіть через Dashboard або wrangler secret

@@ -55,6 +55,14 @@ if (!app.includes('renderChangeLog')) fail('change log rendering is missing');
 if (!app.includes('nextDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)')) fail('year-safe next-month forecast is missing');
 if (!app.includes('applyLiquidGlassLevel')) fail('Liquid Glass runtime settings are missing');
 if (!app.includes('TARIFF_PRESETS')) fail('city/provider tariff presets are missing');
+if (!app.includes('publishCommunityTariffToCloud')) fail('community provider cloud publishing status is missing');
+if (!app.includes('setCommunityTariffStatus')) fail('community provider status UI logic is missing');
+if (!app.includes('cloud_tariff_loaded')) fail('cloud provider apply action is not logged');
+if (!app.includes('cloudCommunityTariffsCache')) fail('cloud provider catalog cache is missing');
+if (!app.includes("action: 'vote_tariff'")) fail('cloud provider voting action is missing');
+if (!app.includes('TARIFF_SERVICE_LABELS')) fail('provider service labels are missing');
+if (!app.includes('data.data?.linkedLogin')) fail('Google login does not read linkedLogin from response data');
+if (!app.includes('action:"link_google", login: sessionLogin, pass: sessionPass, uid')) fail('Google linking does not send the current password hash');
 if (!app.includes('familyRole')) fail('family role preferences are missing');
 if (!app.includes('getPaymentStatus')) fail('payment status helpers are missing');
 if (!app.includes('remGasStart')) fail('gas submission calendar is missing');
@@ -66,9 +74,16 @@ for (const id of ['restoreBackupBtn', 'restorePreImportBtn', 'saveTariffTemplate
   if (!index.includes(`id="${id}"`)) fail(`index is missing ${id}`);
 }
 if (!index.includes('--liquid-card-alpha')) fail('Liquid Glass CSS tokens are missing');
+if (!index.includes('--surface-base')) fail('clean design-system surface tokens are missing');
+if (!index.includes('Inter Tight')) fail('modern display font is missing');
+if (!index.includes('.tracking-tight{letter-spacing:0!important}')) fail('negative tracking override is missing');
 if (!index.includes('id="liquidGlassRange"')) fail('Liquid Glass slider is missing');
 for (const id of ['monthMiniWidget', 'miniDebt', 'miniDeadline', 'miniForecast', 'paymentStatusInput', 'paidAmountInput', 'tariffPresetSelect', 'familyRoleSelect', 'remGasStart', 'remGasEnd']) {
   if (!index.includes(`id="${id}"`)) fail(`index is missing ${id}`);
+}
+if (!index.includes('id="communityTariffStatus"')) fail('community provider publish status is missing');
+for (const id of ['communityTariffCity', 'communityTariffRegion', 'communityTariffService', 'cloudTariffSearch', 'cloudTariffServiceFilter']) {
+  if (!index.includes(`id="${id}"`)) fail(`index is missing provider catalog control ${id}`);
 }
 if (!index.includes('max-width:390px')) fail('floating dock max-width is missing');
 if (!index.includes('bottom:calc(env(safe-area-inset-bottom,0px) + 14px)')) fail('floating dock safe-area offset is missing');
@@ -79,5 +94,16 @@ for (const unsafe of ['onclick="viewUser(', 'onclick="resetPassword(', 'onclick=
   if (admin.includes(unsafe)) fail(`admin still contains unsafe generated handler: ${unsafe}`);
 }
 if (!admin.includes("escHtml((ud.lastDevice || '—').slice(0, 12))")) fail('admin device details are not escaped');
+
+const worker = await readFile(path.join(root, 'worker.js'), 'utf8');
+if (!worker.includes('function getUidLogin')) fail('worker cannot create first Google UID accounts');
+if (!worker.includes("if (!pass || stored !== pass) return err('WRONG_PASSWORD', 403);")) fail('worker allows unsafe Google account linking');
+if (worker.includes('await env.KV.put(`uid_${uid}`, cl);')) fail('worker still overwrites legacy uid user keys during Google linking');
+const workerGetBlock = worker.slice(worker.indexOf('async function doGet'), worker.indexOf('async function doPost'));
+if (/\b(action|body)\b/.test(workerGetBlock)) fail('worker GET path references POST-only action/body state');
+if (!worker.includes("case 'vote_tariff':")) fail('worker provider voting endpoint is missing');
+if (!worker.includes("case 'admin_verify_tariff':")) fail('worker provider moderation endpoint is missing');
+if (!worker.includes('voters: _v')) fail('worker leaks provider tariff voters');
+if (!worker.includes('history: previousSnapshot')) fail('worker provider tariff history is missing');
 
 if (!process.exitCode) console.log('Sanity checks passed');

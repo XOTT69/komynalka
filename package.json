@@ -4,6 +4,7 @@
   "description": "Розумний облік комунальних платежів PWA",
   "scripts": {
     "dev": "npx serve .",
+    "smoke": "node tests/ui-smoke.mjs",
     "build": "echo 'Static site - no build needed'"
   },
   "keywords": ["pwa", "utilities", "komunalka", "finance"],
