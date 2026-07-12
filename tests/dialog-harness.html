@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dialog smoke harness</title>
+  <link rel="stylesheet" href="../dist/tailwind.css">
+</head>
+<body class="bg-slate-100 p-6">
+  <button id="launchDialog" class="bg-blue-600 text-white px-5 py-3 rounded-xl font-bold">Відкрити діалог</button>
+  <output id="dialogResult" class="block mt-4"></output>
+  <div id="appDialog" class="hidden fixed inset-0 z-50 bg-black/55 flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle" aria-describedby="appDialogMessage">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-6">
+      <div id="appDialogIcon"></div>
+      <h2 id="appDialogTitle" class="text-xl font-black"></h2>
+      <p id="appDialogMessage" class="text-sm text-slate-500 mt-2"></p>
+      <input id="appDialogInput" type="text" class="hidden w-full mt-4 p-3 border rounded-xl">
+      <textarea id="appDialogTextarea" class="hidden w-full mt-4 p-3 border rounded-xl" rows="4" readonly></textarea>
+      <div class="flex gap-3 mt-5">
+        <button id="appDialogCancelBtn" class="flex-1 p-3 bg-slate-100 rounded-xl">Скасувати</button>
+        <button id="appDialogConfirmBtn" class="flex-1 p-3 bg-brand text-white rounded-xl">Підтвердити</button>
+      </div>
+    </div>
+  </div>
+  <script>const $ = id => document.getElementById(id);</script>
+  <script src="../ui-dialogs.js"></script>
+  <script>
+    $('launchDialog').addEventListener('click', async () => {
+      const result = await showAppPrompt('Назва об’єкта', 'Квартира');
+      $('dialogResult').textContent = result == null ? 'cancelled' : result;
+    });
+  </script>
+</body>
+</html>

@@ -2,22 +2,21 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Мої Комунальні</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="preconnect" href="https://komunproga.mikolenko-anton1.workers.dev">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&family=Inter+Tight:wght@600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="styles/fonts.css">
+    <link rel="stylesheet" href="dist/tailwind.css">
+    <script src="vendor/firebase/firebase-app-compat.js"></script>
+    <script src="vendor/firebase/firebase-auth-compat.js"></script>
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+    <script src="vendor/jspdf/jspdf.umd.min.js"></script>
+    <script src="vendor/jspdf/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root{--brand:#007aff;--brand-hover:#005bb5;--brand-light:rgba(0,122,255,0.08);--brand-border:rgba(0,122,255,0.2);--success:#34c759;--warning:#ff9500;--danger:#ff3b30;--glass-bg:rgba(255,255,255,0.72);--glass-border:rgba(255,255,255,0.18);--premium-shadow:0 20px 60px -15px rgba(0,0,0,.08),0 4px 12px -2px rgba(0,0,0,.04)}
         html{background:#f2f2f7}html.dark{background:#000;--glass-bg:rgba(28,28,30,0.78);--glass-border:rgba(255,255,255,0.06);--premium-shadow:0 20px 60px -15px rgba(0,0,0,.5),0 4px 12px -2px rgba(0,0,0,.3)}
@@ -67,7 +66,6 @@
         @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.premium-card,.glass,#aiPanelInner,#addressModalContent,#quickActionsModal>div{background:rgb(var(--liquid-rgb)/.96)!important}}
         @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.tab-active{animation:none!important}.badge-pulse{animation:none!important}.count-up{transition:none!important}}
     </style>
-    <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{brand:{DEFAULT:'var(--brand)',hover:'var(--brand-hover)',light:'var(--brand-light)',border:'var(--brand-border)'},apple:{dark:'#1c1c1e',darker:'#000000',light:'#f2f2f7'}},boxShadow:{'soft':'0 8px 32px -8px rgba(0,0,0,.08)','premium':'0 20px 60px -15px rgba(0,0,0,.12)'}}}}</script>
     <meta name="theme-color" content="#f2f2f7" id="metaThemeColor">
     <link rel="apple-touch-icon" href="icon.png">
     <meta property="og:title" content="Комуналка — розумний облік комунальних">
@@ -87,22 +85,22 @@
 </div>
 
 <!-- Toast -->
-<div id="toast" class="fixed top-[env(safe-area-inset-top,20px)] left-1/2 -translate-x-1/2 z-[1000] bg-apple-darker/90 dark:bg-white/90 backdrop-blur-2xl text-white dark:text-apple-darker px-6 py-3.5 rounded-full shadow-2xl font-bold text-sm transition-all duration-300 transform -translate-y-24 opacity-0 flex items-center gap-2.5 pointer-events-none border border-white/10 dark:border-black/10">
+<div id="toast" role="status" aria-live="polite" aria-atomic="true" class="fixed top-[env(safe-area-inset-top,20px)] left-1/2 -translate-x-1/2 z-[1000] bg-apple-darker/90 dark:bg-white/90 backdrop-blur-2xl text-white dark:text-apple-darker px-6 py-3.5 rounded-full shadow-2xl font-bold text-sm transition-all duration-300 transform -translate-y-24 opacity-0 flex items-center gap-2.5 pointer-events-none border border-white/10 dark:border-black/10">
   <span id="toastIcon" class="text-lg">✅</span><span id="toastMsg">OK</span>
 </div>
 
 <!-- Welcome -->
-<div id="welcomeTooltip" class="hidden fixed inset-0 z-[900] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6" onclick="dismissWelcome()">
-  <div class="welcome-tooltip premium-card bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-slate-100 dark:border-white/10" onclick="event.stopPropagation()">
+<div id="welcomeTooltip" class="hidden fixed inset-0 z-[900] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+  <div class="welcome-tooltip premium-card bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-slate-100 dark:border-white/10">
     <div class="text-6xl mb-4">🏠</div>
-    <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-3">Вітаємо в Комуналці!</h2>
+    <h2 id="welcomeTitle" class="text-2xl font-black text-slate-900 dark:text-white mb-3">Вітаємо в Комуналці!</h2>
     <p class="text-slate-500 text-sm leading-relaxed mb-6">Вносьте показники води, світла та газу — отримуйте миттєвий розрахунок, графіки та прогнози.</p>
     <div class="flex gap-2 text-xs text-slate-400 justify-center mb-6">
       <span class="bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-lg">💧 Вода</span>
       <span class="bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-lg">⚡ Світло</span>
       <span class="bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-lg">🔥 Газ</span>
     </div>
-    <button onclick="dismissWelcome()" class="w-full bg-gradient-to-r from-brand to-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 active:scale-[0.96] text-lg transition-transform">Почати 🚀</button>
+    <button id="welcomeStartBtn" data-dialog-close type="button" class="w-full bg-gradient-to-r from-brand to-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 active:scale-[0.96] text-lg transition-transform">Почати 🚀</button>
   </div>
 </div>
 
@@ -118,14 +116,14 @@
       <div class="absolute -top-20 -right-20 w-40 h-40 bg-brand/5 rounded-full blur-3xl pointer-events-none"></div>
       <form id="authForm" class="space-y-4 relative z-10">
         <div>
-          <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 tracking-wider">Логін</label>
+          <label for="authLogin" class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 tracking-wider">Логін</label>
           <input type="text" id="authLogin" placeholder="Ваш логін" required autocapitalize="none" autocorrect="off" autocomplete="username" spellcheck="false" class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-base font-bold outline-none text-slate-900 dark:text-white">
         </div>
         <div>
-          <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 tracking-wider">Пароль</label>
+          <label for="authPass" class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 tracking-wider">Пароль</label>
           <div class="relative">
             <input type="password" id="authPass" placeholder="••••••••" required autocomplete="current-password" class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 pr-12 text-base font-bold outline-none text-slate-900 dark:text-white">
-            <button type="button" id="togglePassBtn" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors w-8 h-8 flex items-center justify-center"><i id="passEyeIcon" class="fa-solid fa-eye"></i></button>
+            <button type="button" id="togglePassBtn" aria-label="Показати пароль" aria-pressed="false" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors w-8 h-8 flex items-center justify-center"><i id="passEyeIcon" class="fa-solid fa-eye" aria-hidden="true"></i></button>
           </div>
           <div id="passStrength" class="hidden mt-2 mx-2">
             <div class="flex gap-1">
@@ -136,7 +134,7 @@
             <p id="passStrText" class="text-[9px] font-bold mt-1 text-slate-400"></p>
           </div>
         </div>
-        <p id="authError" class="text-red-500 text-sm hidden text-center font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-xl"></p>
+        <p id="authError" role="alert" aria-live="assertive" class="text-red-500 text-sm hidden text-center font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-xl"></p>
         <button type="submit" id="authSubmitBtn" class="w-full bg-gradient-to-r from-brand to-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 active:scale-[0.96] text-lg mt-6 flex items-center justify-center gap-2 transition-all">
           <span id="authBtnText">Увійти</span>
           <i id="authSpinner" class="fa-solid fa-spinner fa-spin hidden"></i>
@@ -174,7 +172,7 @@
         </h2>
       </div>
     </div>
-    <button id="quickActionsBtn" class="w-11 h-11 bg-white dark:bg-apple-dark rounded-2xl flex items-center justify-center text-slate-500 shadow-soft border border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/10 transition-all active:scale-90"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+    <button id="quickActionsBtn" type="button" aria-label="Швидкі дії" aria-haspopup="menu" aria-expanded="false" class="w-11 h-11 bg-white dark:bg-apple-dark rounded-2xl flex items-center justify-center text-slate-500 shadow-soft border border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/10 transition-all active:scale-90"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></button>
   </div>
 
   <div id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar px-5 relative w-full pb-24">
@@ -199,7 +197,7 @@
     <div class="text-5xl mb-4">📝</div>
     <h3 class="font-black text-lg text-slate-900 dark:text-white mb-2">Почніть вести облік</h3>
     <p class="text-sm text-slate-500 mb-5">Додайте перший запис — і побачите графіки, прогнози та рекомендації</p>
-    <button onclick="switchTab('tabCalc', 1)" class="bg-gradient-to-r from-brand to-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-brand/20 active:scale-95 transition-transform text-sm">Внести показники →</button>
+    <button id="emptyStateAddBtn" type="button" class="bg-gradient-to-r from-brand to-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-brand/20 active:scale-95 transition-transform text-sm">Внести показники →</button>
   </div>
 
   <div id="dashDebtCard" class="bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 p-5 rounded-[2rem] shadow-xl shadow-red-500/20 text-white hidden relative overflow-hidden">
@@ -544,7 +542,7 @@
       <p class="text-xs font-bold text-slate-900 dark:text-white">Поділитись</p>
       <p class="text-[9px] text-slate-400">з друзями</p>
     </button>
-    <a href="https://send.monobank.ua/jar/58RYPiLjdS" target="_blank" class="premium-card p-4 active:scale-[0.98] transition-transform text-center block">
+    <a href="https://send.monobank.ua/jar/58RYPiLjdS" target="_blank" rel="noopener noreferrer" class="premium-card p-4 active:scale-[0.98] transition-transform text-center block">
       <div class="w-10 h-10 bg-pink-50 dark:bg-pink-500/10 rounded-xl flex items-center justify-center text-pink-500 mx-auto mb-2"><i class="fa-solid fa-heart"></i></div>
       <p class="text-xs font-bold text-slate-900 dark:text-white">Підтримати</p>
       <p class="text-[9px] text-slate-400">каву ☕</p>
@@ -666,8 +664,8 @@
         <div><p class="font-black text-slate-900 dark:text-white text-base">AI-помічник</p><p class="text-[10px] text-slate-400 font-medium">Аналізую ваші комунальні · 20 запитів/год</p></div>
       </div>
       <div class="flex gap-2">
-        <button id="aiClearBtn" title="Очистити чат" class="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400 text-xs active:scale-90 transition-transform hover:bg-red-50 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>
-        <button id="aiCloseBtn" class="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400 font-bold active:scale-90 transition-transform text-sm">✕</button>
+        <button id="aiClearBtn" type="button" aria-label="Очистити чат" title="Очистити чат" class="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400 text-xs active:scale-90 transition-transform hover:bg-red-50 hover:text-red-400"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button>
+        <button id="aiCloseBtn" data-dialog-close type="button" aria-label="Закрити AI-помічник" class="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400 font-bold active:scale-90 transition-transform text-sm">✕</button>
       </div>
     </div>
     <div id="aiChatToast" class="opacity-0 transition-opacity duration-500 text-center text-[10px] font-bold text-slate-400 py-1 shrink-0 pointer-events-none"></div>
@@ -687,7 +685,7 @@
         <textarea id="aiInput" placeholder="Запитайте про витрати..." rows="1"
           class="flex-1 bg-transparent outline-none resize-none text-sm font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 leading-relaxed py-1.5 max-h-24"
           style="scrollbar-width:none;" aria-label="Повідомлення AI"></textarea>
-        <button id="aiSendBtn" class="w-9 h-9 bg-gradient-to-br from-violet-500 to-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/30 active:scale-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 mb-0.5"><i class="fa-solid fa-paper-plane text-xs"></i></button>
+        <button id="aiSendBtn" type="button" aria-label="Надіслати повідомлення" class="w-9 h-9 bg-gradient-to-br from-violet-500 to-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/30 active:scale-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 mb-0.5"><i class="fa-solid fa-paper-plane text-xs" aria-hidden="true"></i></button>
       </div>
       <p class="text-[9px] text-slate-300 dark:text-slate-600 text-center mt-1.5 font-medium">AI може помилятися · дані на вашому пристрої</p>
     </div>
@@ -695,34 +693,35 @@
 </div>
 
 <!-- Address Modal -->
-<div id="addressModal" class="hidden fixed inset-0 z-[500] bg-apple-darker/60 dark:bg-black/60 backdrop-blur-md flex items-end justify-center">
+<div id="addressModal" class="hidden fixed inset-0 z-[500] bg-apple-darker/60 dark:bg-black/60 backdrop-blur-md flex items-end justify-center" role="dialog" aria-modal="true" aria-labelledby="addressModalTitle">
   <div class="bg-white dark:bg-apple-dark w-full max-w-md rounded-t-[2.5rem] p-6 pb-[max(env(safe-area-inset-bottom),2rem)] spring-modal translate-y-full shadow-[0_-20px_40px_rgba(0,0,0,.15)]" id="addressModalContent">
     <div class="w-12 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-6"></div>
-    <h3 class="font-black text-2xl text-slate-900 dark:text-white mb-4">🏡 Мої об'єкти</h3>
+    <h3 id="addressModalTitle" class="font-black text-2xl text-slate-900 dark:text-white mb-4">🏡 Мої об'єкти</h3>
     <div id="addressListModal" class="space-y-3 mb-4 max-h-[50vh] overflow-y-auto no-scrollbar"></div>
     <button id="addAddressBtn" class="w-full py-4 bg-brand-light hover:bg-brand-border text-brand font-bold rounded-2xl transition-colors mb-2 active:scale-[0.98]">+ Додати адресу</button>
-    <button id="closeAddressModalBtn" class="w-full py-4 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-[0.98]">Закрити</button>
+    <button id="closeAddressModalBtn" data-dialog-close class="w-full py-4 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-[0.98]">Закрити</button>
   </div>
 </div>
 
 <!-- Link Modal -->
-<div id="linkModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
+<div id="linkModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="linkModalTitle">
   <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-white/5">
     <div class="text-4xl mb-4">🔗</div>
-    <h3 class="text-xl font-black mb-2 text-slate-900 dark:text-white">Google акаунт</h3>
+    <h3 id="linkModalTitle" class="text-xl font-black mb-2 text-slate-900 dark:text-white">Google акаунт</h3>
     <p class="text-sm text-slate-500 mb-2 font-medium">У вас вже є акаунт з логіном/паролем?</p>
     <p class="text-xs text-slate-400 mb-6">Підв'яжіть Google — надалі входьте через Google, а дані збережуться.</p>
     <div class="space-y-3">
       <button id="linkYesBtn" class="w-full py-4 bg-brand text-white font-bold rounded-2xl shadow-lg active:scale-95 transition-transform"><i class="fa-solid fa-link mr-2"></i>Підв'язати до існуючого</button>
       <button id="linkNoBtn"  class="w-full py-4 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-95 transition-transform"><i class="fa-solid fa-plus mr-2"></i>Створити новий акаунт</button>
+      <button id="linkCancelBtn" data-dialog-close class="w-full py-3 text-slate-400 font-bold rounded-xl text-sm active:scale-95 transition-transform">Скасувати</button>
     </div>
     <p class="text-[10px] text-slate-400 mt-4">⚠️ "Новий акаунт" — порожній профіль.</p>
   </div>
 </div>
 
 <!-- Quick Actions -->
-<div id="quickActionsModal" class="hidden fixed inset-0 z-[500] bg-black/40 backdrop-blur-sm flex items-start justify-end pt-20 pr-5" onclick="if(event.target===this)this.classList.add('hidden')">
-  <div class="bg-white dark:bg-[#2c2c2e] rounded-2xl shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden w-56">
+<div id="quickActionsModal" class="hidden fixed inset-0 z-[500] bg-black/40 backdrop-blur-sm flex items-start justify-end pt-20 pr-5">
+  <div role="menu" aria-label="Швидкі дії" class="bg-white dark:bg-[#2c2c2e] rounded-2xl shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden w-56">
     <button id="qaExport" class="w-full px-5 py-3.5 text-left text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 active:bg-slate-100 transition-colors"><i class="fa-solid fa-file-excel text-green-500 w-5"></i>Excel</button>
     <button id="qaPdf"    class="w-full px-5 py-3.5 text-left text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 border-t border-slate-100 dark:border-white/5 active:bg-slate-100 transition-colors"><i class="fa-solid fa-file-pdf text-red-500 w-5"></i>PDF</button>
     <button id="qaShare"  class="w-full px-5 py-3.5 text-left text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 border-t border-slate-100 dark:border-white/5 active:bg-slate-100 transition-colors"><i class="fa-solid fa-share text-brand w-5"></i>Поділитись</button>
@@ -739,7 +738,7 @@
 </div>
 
 <!-- Achievement Detail Modal -->
-<div id="achievementDetailModal" class="hidden fixed inset-0 z-[1050] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6" onclick="if(event.target===this)this.classList.add('hidden')">
+<div id="achievementDetailModal" class="hidden fixed inset-0 z-[1050] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="achDetailTitle">
   <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-xs rounded-[2.5rem] p-8 text-center shadow-2xl border border-slate-100 dark:border-white/10">
     <div class="text-5xl mb-3" id="achDetailEmoji">🏆</div>
     <h3 class="text-lg font-black text-slate-900 dark:text-white mb-2" id="achDetailTitle">Досягнення</h3>
@@ -749,15 +748,16 @@
       <p class="text-sm font-bold text-slate-700 dark:text-slate-200" id="achDetailHow">—</p>
     </div>
     <div class="mt-4"><span id="achDetailStatus" class="text-xs font-bold px-3 py-1.5 rounded-lg">—</span></div>
+    <button id="closeAchievementDetailBtn" data-dialog-close type="button" class="mt-6 w-full py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-sm active:scale-[0.98]">Закрити</button>
   </div>
 </div>
 
 <!-- Change Password Modal -->
-<div id="changePassModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
+<div id="changePassModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="changePassTitle">
   <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-white/10">
     <div class="text-center mb-6">
       <div class="w-14 h-14 bg-brand-light rounded-2xl flex items-center justify-center text-brand text-2xl mx-auto mb-3"><i class="fa-solid fa-key"></i></div>
-      <h3 class="text-xl font-black text-slate-900 dark:text-white">Змінити пароль</h3>
+      <h3 id="changePassTitle" class="text-xl font-black text-slate-900 dark:text-white">Змінити пароль</h3>
     </div>
     <div class="space-y-3">
       <div>
@@ -782,17 +782,17 @@
         <span id="cpBtnText">Змінити</span>
         <i id="cpSpinner" class="fa-solid fa-spinner fa-spin hidden ml-2"></i>
       </button>
-      <button id="cpCancelBtn" class="flex-1 py-3.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-95 transition-transform">Скасувати</button>
+      <button id="cpCancelBtn" data-dialog-close class="flex-1 py-3.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-95 transition-transform">Скасувати</button>
     </div>
   </div>
 </div>
 
 <!-- Link Account Modal (замість prompt) -->
-<div id="linkAccountModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
+<div id="linkAccountModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="linkAccountTitle">
   <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-white/10">
     <div class="text-center mb-6">
       <div class="text-4xl mb-3">🔗</div>
-      <h3 class="text-xl font-black text-slate-900 dark:text-white">Прив'язати акаунт</h3>
+      <h3 id="linkAccountTitle" class="text-xl font-black text-slate-900 dark:text-white">Прив'язати акаунт</h3>
       <p class="text-xs text-slate-500 mt-2">Введіть логін та пароль існуючого акаунту</p>
     </div>
     <div class="space-y-3">
@@ -813,27 +813,45 @@
         <span id="laBtnText">Прив'язати</span>
         <i id="laSpinner" class="fa-solid fa-spinner fa-spin hidden ml-2"></i>
       </button>
-      <button id="laCancelBtn" class="flex-1 py-3.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-95 transition-transform">Скасувати</button>
+      <button id="laCancelBtn" data-dialog-close class="flex-1 py-3.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-95 transition-transform">Скасувати</button>
     </div>
   </div>
 </div>
 
 <!-- Year Report Modal -->
-<div id="yearReportModal" class="hidden fixed inset-0 z-[1050] bg-black/60 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+<div id="yearReportModal" class="hidden fixed inset-0 z-[1050] bg-black/60 backdrop-blur-md flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="yearReportTitle">
   <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm max-h-[85vh] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden flex flex-col">
     <div class="bg-gradient-to-br from-brand to-blue-600 p-6 text-white text-center shrink-0">
-      <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest">Річний звіт</p>
+      <p id="yearReportTitle" class="text-white/60 text-[10px] font-bold uppercase tracking-widest">Річний звіт</p>
       <h2 class="text-3xl font-black mt-1" id="yearReportYear">2025</h2>
     </div>
     <div class="overflow-y-auto no-scrollbar p-6 space-y-4 flex-1" id="yearReportContent"></div>
     <div class="p-4 border-t border-slate-100 dark:border-white/5 shrink-0 flex gap-3">
-      <button onclick="shareYearReport()" class="flex-1 py-3 bg-brand text-white font-bold rounded-xl text-sm active:scale-[0.98]"><i class="fa-solid fa-share mr-1.5"></i>Поділитись</button>
-      <button onclick="document.getElementById('yearReportModal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-sm active:scale-[0.98]">Закрити</button>
+      <button id="shareYearReportBtn" type="button" class="flex-1 py-3 bg-brand text-white font-bold rounded-xl text-sm active:scale-[0.98]"><i class="fa-solid fa-share mr-1.5"></i>Поділитись</button>
+      <button id="closeYearReportBtn" data-dialog-close type="button" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-sm active:scale-[0.98]">Закрити</button>
+    </div>
+  </div>
+</div>
+
+<!-- Accessible confirmation, input and copy dialog -->
+<div id="appDialog" class="hidden fixed inset-0 z-[1300] bg-black/55 backdrop-blur-md flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle" aria-describedby="appDialogMessage">
+  <div class="premium-card w-full max-w-sm rounded-[2rem] p-6 shadow-2xl">
+    <div id="appDialogIcon" class="w-12 h-12 rounded-2xl bg-brand-light text-brand flex items-center justify-center text-2xl mb-4" aria-hidden="true">✓</div>
+    <h2 id="appDialogTitle" class="text-xl font-black text-slate-900 dark:text-white">Підтвердження</h2>
+    <p id="appDialogMessage" class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mt-2"></p>
+    <input id="appDialogInput" type="text" class="hidden premium-input w-full mt-5 px-4 py-3 border border-slate-200 dark:border-white/10 outline-none font-bold" maxlength="80">
+    <textarea id="appDialogTextarea" class="hidden premium-input w-full mt-5 px-4 py-3 border border-slate-200 dark:border-white/10 outline-none font-medium resize-none" rows="7" readonly></textarea>
+    <div class="flex gap-3 mt-6">
+      <button id="appDialogCancelBtn" type="button" class="flex-1 py-3.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-xl active:scale-[0.98]">Скасувати</button>
+      <button id="appDialogConfirmBtn" type="button" class="flex-1 py-3.5 bg-brand text-white font-bold rounded-xl shadow-lg shadow-brand/20 active:scale-[0.98]">Підтвердити</button>
     </div>
   </div>
 </div>
 
 <script src="app.js"></script>
+<script src="ui-dialogs.js"></script>
+<script src="export-tools.js"></script>
+<script src="record-card.js"></script>
 <script src="year-report-image.js"></script>
 <script src="ai-chat.js"></script>
 </body>

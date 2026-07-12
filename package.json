@@ -1,13 +1,31 @@
 {
   "name": "komunalka",
-  "version": "5.0.0",
+  "version": "5.2.1",
   "description": "Розумний облік комунальних платежів PWA",
   "scripts": {
-    "dev": "npx serve .",
+    "dev": "NO_UPDATE_NOTIFIER=1 serve .",
+    "build:vendor": "node scripts/build-vendor.mjs",
+    "build:css": "BROWSERSLIST_IGNORE_OLD_DATA=true tailwindcss -i ./styles/tailwind.css -o ./dist/tailwind.css --minify",
     "smoke": "node tests/ui-smoke.mjs",
-    "build": "echo 'Static site - no build needed'"
+    "check": "node tests/sanity-check.mjs && node tests/ui-smoke.mjs",
+    "build": "pnpm run build:vendor && pnpm run build:css && pnpm run check"
   },
-  "keywords": ["pwa", "utilities", "komunalka", "finance"],
+  "keywords": [
+    "pwa",
+    "utilities",
+    "komunalka",
+    "finance"
+  ],
   "author": "Антон Миколенко",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@fontsource-variable/inter": "5.2.8",
+    "@fontsource-variable/inter-tight": "5.2.7",
+    "@fortawesome/fontawesome-free": "6.5.1",
+    "firebase": "10.8.0",
+    "jspdf": "2.5.1",
+    "jspdf-autotable": "3.8.2",
+    "serve": "14.2.4",
+    "tailwindcss": "3.4.17"
+  }
 }

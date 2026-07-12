@@ -1,6 +1,7 @@
 import { access, readFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
@@ -18,7 +19,15 @@ async function fileExists(relativePath) {
   }
 }
 
-for (const file of ['app.js', 'sw.js', 'year-report-image.js']) {
+function checkInlineScripts(source, filename) {
+  const scripts = [...source.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
+  scripts.forEach((match, index) => {
+    try { new Function(match[1]); }
+    catch (error) { fail(`${filename} inline script ${index + 1} has a syntax error: ${error.message}`); }
+  });
+}
+
+for (const file of ['app.js', 'ui-dialogs.js', 'export-tools.js', 'record-card.js', 'ai-chat.js', 'sw.js', 'worker.js', 'year-report-image.js']) {
   try {
     execFileSync('node', ['--check', path.join(root, file)], { stdio: 'pipe' });
   } catch (error) {
@@ -27,11 +36,42 @@ for (const file of ['app.js', 'sw.js', 'year-report-image.js']) {
 }
 
 const manifest = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8'));
+const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+const vendorAssets = [
+  'vendor/firebase/firebase-app-compat.js',
+  'vendor/firebase/firebase-auth-compat.js',
+  'vendor/jspdf/jspdf.umd.min.js',
+  'vendor/jspdf/jspdf.plugin.autotable.min.js',
+  'vendor/fonts/Roboto-Regular.ttf',
+  'vendor/fonts/inter/inter-cyrillic-wght-normal.woff2',
+  'vendor/fonts/inter/inter-latin-wght-normal.woff2',
+  'vendor/fonts/inter-tight/inter-tight-cyrillic-wght-normal.woff2',
+  'vendor/fonts/inter-tight/inter-tight-latin-wght-normal.woff2',
+  'vendor/fontawesome/css/all.min.css',
+  'vendor/fontawesome/webfonts/fa-brands-400.woff2',
+  'vendor/fontawesome/webfonts/fa-regular-400.woff2',
+  'vendor/fontawesome/webfonts/fa-solid-900.woff2',
+  'vendor/fontawesome/webfonts/fa-v4compatibility.woff2',
+];
+for (const asset of vendorAssets) {
+  if (!(await fileExists(asset))) fail(`vendor asset is missing: ${asset}`);
+}
+const robotoBytes = await readFile(path.join(root, 'vendor/fonts/Roboto-Regular.ttf'));
+const robotoHash = createHash('sha256').update(robotoBytes).digest('hex');
+if (robotoHash !== '466989fd178ca6ed13641893b7003e5d6ec36e42c2a816dee71f87b775ea097f') fail('vendored Roboto font checksum does not match the pinned source');
 for (const icon of manifest.icons || []) {
   if (!(await fileExists(icon.src))) fail(`manifest icon is missing: ${icon.src}`);
 }
 
 const sw = await readFile(path.join(root, 'sw.js'), 'utf8');
+const precacheBlock = sw.slice(sw.indexOf('const PRECACHE_URLS'), sw.indexOf('];', sw.indexOf('const PRECACHE_URLS')) + 2);
+const precachePaths = [...precacheBlock.matchAll(/['"]\.\/([^'"]*)['"]/g)].map(match => match[1]).filter(Boolean);
+for (const relativePath of precachePaths) {
+  if (!(await fileExists(relativePath))) fail(`service worker precache target is missing: ${relativePath}`);
+}
+for (const asset of vendorAssets) {
+  if (!sw.includes(`./${asset}`)) fail(`service worker does not precache vendor asset: ${asset}`);
+}
 for (const icon of ['icon-192.png', 'icon-512.png']) {
   if (!sw.includes(icon)) fail(`service worker does not precache ${icon}`);
 }
@@ -39,9 +79,14 @@ if (!sw.includes('SKIP_WAITING')) fail('service worker cannot apply a waiting up
 if (!sw.includes("event.request.mode === 'navigate'")) fail('service worker navigation fallback is missing');
 
 const app = await readFile(path.join(root, 'app.js'), 'utf8');
+const uiDialogs = await readFile(path.join(root, 'ui-dialogs.js'), 'utf8');
+const exportTools = await readFile(path.join(root, 'export-tools.js'), 'utf8');
+const recordCard = await readFile(path.join(root, 'record-card.js'), 'utf8');
+if (!app.includes(`const APP_VERSION = '${packageJson.version}'`)) fail('app and package versions are out of sync');
+if (!sw.includes(`komunalka-v${packageJson.version}`)) fail('service worker cache and package versions are out of sync');
 if (!app.includes('updatefound')) fail('app does not listen for real service worker updates');
 if (!app.includes('normalizeImportData')) fail('JSON import normalization is missing');
-if (!app.includes('csvCell')) fail('CSV escaping helper is missing');
+if (!exportTools.includes('csvCell')) fail('CSV escaping helper is missing');
 if (!app.includes('restoreFromLocalBackup')) fail('offline local-backup restore is missing');
 if (!app.includes('tariffSnapshot')) fail('record tariff snapshots are missing');
 if (!app.includes('komynalka_pre_import_backup')) fail('pre-import backup is missing');
@@ -68,8 +113,49 @@ if (!app.includes('getPaymentStatus')) fail('payment status helpers are missing'
 if (!app.includes('remGasStart')) fail('gas submission calendar is missing');
 if (!app.includes('renderMonthMiniWidget')) fail('month mini widget logic is missing');
 if (app.includes('localStorage.clear()')) fail('logout still clears all local storage');
+const editRecordDefinitions = [...app.matchAll(/^function editRecordById\(/gm)].length;
+if (editRecordDefinitions !== 1) fail(`editRecordById must have exactly one implementation, found ${editRecordDefinitions}`);
+if (/onclick=["'][^"']*dismissBroadcast/.test(app)) fail('broadcast dismissal still uses an inline handler');
+if (/onclick=["'][^"']*editingBanner/.test(app)) fail('editing banner still uses an inline handler');
+if (!app.includes("input.dataset.keyboardNavBound==='true'")) fail('calculator keyboard navigation can be bound repeatedly');
+if (!uiDialogs.includes('function showAppDialog(') || !uiDialogs.includes('DIALOG_FOCUSABLE')) fail('accessible dialog manager is missing');
+if (/\bconfirm\s*\(/.test(app) || /(?<!deferredPrompt\.)\bprompt\s*\(/.test(app)) fail('native blocking dialogs remain in the main app');
+if (app.includes('_origCreateRecordCard') || app.includes('createRecordCard = function')) fail('record card still has a dead overridden implementation');
+if (!recordCard.includes('function createRecordCard(')) fail('record card module is missing its renderer');
+if (!exportTools.includes('function exportCSV(') || !exportTools.includes('async function generatePDF(')) fail('export tools module is incomplete');
+if (exportTools.includes('cdn.jsdelivr.net') || !exportTools.includes("fetch('vendor/fonts/Roboto-Regular.ttf')")) fail('PDF font is not loaded from the local vendor asset');
+if (app.includes('function exportCSV(') || app.includes('async function generatePDF(')) fail('export tools were not removed from the app monolith');
+for (const label of ['Поділитися записом', 'Редагувати запис', 'Видалити запис']) {
+  if (!recordCard.includes(`aria-label="${label}"`)) fail(`record card action is missing label: ${label}`);
+}
+if (!recordCard.includes('aria-expanded="false"')) fail('record card details toggle is not accessible');
+if (recordCard.includes('data-rec-id="${recId}"') || recordCard.includes('data-toggle-details="${recId}"')) fail('raw imported record id is interpolated into HTML');
+if (app.includes('function createRecordCard(')) fail('record card renderer was not removed from the app monolith');
+if (!(await fileExists('tests/record-card-harness.html'))) fail('record card browser harness is missing');
+if (!(await fileExists('tests/dialog-harness.html'))) fail('dialog browser harness is missing');
+if (!(await fileExists('tests/vendor-harness.html'))) fail('vendor browser harness is missing');
+
+const runtimeSources = await Promise.all(['app.js', 'ui-dialogs.js', 'export-tools.js', 'record-card.js', 'ai-chat.js', 'year-report-image.js'].map(file => readFile(path.join(root, file), 'utf8')));
+const combinedRuntime = runtimeSources.join('\n');
+for (const [sourceIndex, source] of runtimeSources.entries()) {
+  for (const match of source.matchAll(/^(?:async )?function\s+(\w+)/gm)) {
+    const name = match[1];
+    const references = combinedRuntime.match(new RegExp(`\\b${name}\\b`, 'g')) || [];
+    if (references.length === 1) fail(`possible dead function ${name} in runtime source ${sourceIndex + 1}`);
+  }
+}
 
 const index = await readFile(path.join(root, 'index.html'), 'utf8');
+checkInlineScripts(index, 'index.html');
+if (index.includes('cdn.tailwindcss.com')) fail('main app still loads Tailwind from the CDN');
+if (/https:\/\/(?:www\.gstatic\.com\/firebasejs|cdnjs\.cloudflare\.com)/.test(index)) fail('main app still loads a critical library from a CDN');
+if (/https:\/\/fonts\.(?:googleapis|gstatic)\.com/.test(index)) fail('main app still loads fonts from Google');
+if (!index.includes('dist/tailwind.css')) fail('main app production stylesheet is missing');
+if (!index.includes('styles/fonts.css')) fail('main app self-hosted font stylesheet is missing');
+if (!index.includes('<script src="record-card.js"></script>')) fail('record card module is not loaded');
+if (!index.includes('<script src="ui-dialogs.js"></script>')) fail('dialog module is not loaded');
+if (!index.includes('<script src="export-tools.js"></script>')) fail('export tools module is not loaded');
+if (!(await fileExists('dist/tailwind.css'))) fail('compiled Tailwind stylesheet is missing; run the build');
 for (const id of ['restoreBackupBtn', 'restorePreImportBtn', 'saveTariffTemplateBtn', 'loadTariffTemplateBtn', 'resetTariffsBtn', 'changeLogList', 'forgetDeviceBtn']) {
   if (!index.includes(`id="${id}"`)) fail(`index is missing ${id}`);
 }
@@ -88,8 +174,25 @@ for (const id of ['communityTariffCity', 'communityTariffRegion', 'communityTari
 if (!index.includes('max-width:390px')) fail('floating dock max-width is missing');
 if (!index.includes('bottom:calc(env(safe-area-inset-bottom,0px) + 14px)')) fail('floating dock safe-area offset is missing');
 if (!index.includes('#aiFabBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 104px)')) fail('AI FAB is not offset above dock');
+if (index.includes('user-scalable=no') || index.includes('maximum-scale=1')) fail('viewport blocks user zoom');
+if (!index.includes('role="status" aria-live="polite"')) fail('toast live region is missing');
+if (!index.includes('rel="noopener noreferrer"')) fail('external blank-target links are not isolated');
+if (/onclick=/.test(index)) fail('main app still contains inline event handlers');
+for (const id of ['appDialog', 'appDialogTitle', 'appDialogInput', 'appDialogTextarea', 'appDialogConfirmBtn', 'appDialogCancelBtn']) {
+  if (!index.includes(`id="${id}"`)) fail(`accessible app dialog is missing ${id}`);
+}
 
 const admin = await readFile(path.join(root, 'admin.html'), 'utf8');
+const landing = await readFile(path.join(root, 'landing.html'), 'utf8');
+checkInlineScripts(admin, 'admin.html');
+checkInlineScripts(landing, 'landing.html');
+if (/\b(?:confirm|prompt)\s*\(/.test(admin)) fail('admin still uses native blocking dialogs');
+if (/\bon(?:click|change|input)=/i.test(admin)) fail('admin still contains inline event handlers');
+if (!admin.includes("if (!pass) {") || !admin.includes("errEl.textContent = 'Введіть пароль'")) fail('admin login does not reject an empty password locally');
+if (admin.includes('cdn.tailwindcss.com') || landing.includes('cdn.tailwindcss.com')) fail('a secondary page still loads Tailwind from the CDN');
+if (admin.includes('cdnjs.cloudflare.com') || landing.includes('cdnjs.cloudflare.com')) fail('a secondary page still loads Font Awesome from a CDN');
+if (!admin.includes('dist/tailwind.css') || !landing.includes('dist/tailwind.css')) fail('a secondary page is missing the production stylesheet');
+if (!admin.includes(`Комуналка PWA v${packageJson.version}`)) fail('admin app version is out of sync');
 for (const unsafe of ['onclick="viewUser(', 'onclick="resetPassword(', 'onclick="deleteUser(', 'onclick="givePro(', 'onclick="revokePro(']) {
   if (admin.includes(unsafe)) fail(`admin still contains unsafe generated handler: ${unsafe}`);
 }

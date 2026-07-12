@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <title>Vendor smoke harness</title>
+  <link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+  <script src="../vendor/firebase/firebase-app-compat.js"></script>
+  <script src="../vendor/firebase/firebase-auth-compat.js"></script>
+  <script src="../vendor/jspdf/jspdf.umd.min.js"></script>
+  <script src="../vendor/jspdf/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <i id="vendorIcon" class="fa-solid fa-bolt"></i>
+  <output id="vendorResult">Перевірка…</output>
+  <script>
+    (async () => {
+      const fontResponse = await fetch('../vendor/fonts/Roboto-Regular.ttf');
+      const checks = {
+        firebase: typeof firebase === 'object' && typeof firebase.initializeApp === 'function',
+        auth: typeof firebase?.auth === 'function',
+        jsPDF: typeof window.jspdf?.jsPDF === 'function',
+        autoTable: typeof window.jspdf?.jsPDF?.API?.autoTable === 'function',
+        icon: getComputedStyle(document.getElementById('vendorIcon')).fontFamily.includes('Font Awesome'),
+        pdfFont: fontResponse.ok,
+      };
+      if (checks.jsPDF && checks.autoTable && checks.pdfFont) {
+        const bytes = new Uint8Array(await fontResponse.arrayBuffer());
+        let binary = '';
+        for (const byte of bytes) binary += String.fromCharCode(byte);
+        const doc = new window.jspdf.jsPDF();
+        doc.addFileToVFS('Roboto.ttf', btoa(binary));
+        doc.addFont('Roboto.ttf', 'Roboto', 'normal');
+        doc.setFont('Roboto');
+        doc.text('Комунальні платежі', 10, 10);
+        doc.autoTable({ startY: 15, head: [['Місяць', 'Сума']], body: [['Липень', '500 ₴']], styles: { font: 'Roboto' } });
+        checks.pdfRender = doc.output('arraybuffer').byteLength > 1000;
+      } else checks.pdfRender = false;
+      document.getElementById('vendorResult').textContent = Object.entries(checks).map(([key, ok]) => `${key}:${ok ? 'ok' : 'fail'}`).join(' ');
+    })().catch(error => { document.getElementById('vendorResult').textContent = `error:${error.message}`; });
+  </script>
+</body>
+</html>

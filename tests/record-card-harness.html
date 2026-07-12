@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Record card smoke harness</title>
+  <link rel="stylesheet" href="../dist/tailwind.css">
+</head>
+<body class="bg-slate-100 p-6">
+  <main id="root" class="max-w-md mx-auto"></main>
+  <script>
+    const fixture = {
+      id: '1" data-injected="true', month: '2026-06', total: 520, paid: false, paymentStatus: 'partial', paidAmount: 200,
+      waterCost: 120, wPrev: 100, wCur: 104,
+      hotWaterCost: 0, electroCost: 300, dPrev: 1000, dCur: 1060, nPrev: 400, nCur: 420,
+      gasCost: 100, gPrev: 20, gCur: 30, customCost: 0,
+      note: 'Тестовий запис', _filled: { water: true, electro: true, gas: true },
+      tariffSnapshot: { water: 28, electroBase: 4, gas: 7 },
+    };
+    const records = [fixture];
+    const prefs = { showWater: true, showHotWater: false, showElectro: true, showGas: false };
+    const customServices = [];
+    const tariffs = { water: 30.38, hotWater: 100, electroBase: 4.32, gas: 7.96 };
+    const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const escapeHtml = value => { const el = document.createElement('div'); el.textContent = String(value || ''); return el.innerHTML; };
+    const getPaymentStatus = record => record.paymentStatus || (record.paid ? 'paid' : 'charged');
+    const getPaidAmount = record => record.paidAmount || 0;
+    const getOutstandingAmount = record => Math.max(0, record.total - getPaidAmount(record));
+    const isRecordPaid = record => getOutstandingAmount(record) === 0;
+    const getPaymentLabel = record => getPaymentStatus(record) === 'partial' ? 'Частково' : 'Нараховано';
+    const initSwipe = () => {};
+    const togglePaidById = () => {};
+    const shareRecordById = () => {};
+    const editRecordById = () => {};
+    const deleteRecordById = () => {};
+    const requireEdit = () => true;
+    const showAppConfirm = async () => false;
+  </script>
+  <script src="../record-card.js"></script>
+  <script>
+    document.getElementById('root').appendChild(createRecordCard(fixture));
+  </script>
+</body>
+</html>
