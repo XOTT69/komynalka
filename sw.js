@@ -1,16 +1,5 @@
-const CACHE_NAME = 'komunalka-v5.2.1';
-const PRECACHE_URLS = [
-  './', './index.html', './dist/tailwind.css', './styles/fonts.css', './app.js', './ui-dialogs.js', './export-tools.js', './record-card.js', './year-report-image.js', './ai-chat.js',
-  './vendor/firebase/firebase-app-compat.js', './vendor/firebase/firebase-auth-compat.js',
-  './vendor/jspdf/jspdf.umd.min.js', './vendor/jspdf/jspdf.plugin.autotable.min.js',
-  './vendor/fonts/Roboto-Regular.ttf',
-  './vendor/fonts/inter/inter-cyrillic-wght-normal.woff2', './vendor/fonts/inter/inter-latin-wght-normal.woff2',
-  './vendor/fonts/inter-tight/inter-tight-cyrillic-wght-normal.woff2', './vendor/fonts/inter-tight/inter-tight-latin-wght-normal.woff2',
-  './vendor/fontawesome/css/all.min.css',
-  './vendor/fontawesome/webfonts/fa-brands-400.woff2', './vendor/fontawesome/webfonts/fa-regular-400.woff2',
-  './vendor/fontawesome/webfonts/fa-solid-900.woff2', './vendor/fontawesome/webfonts/fa-v4compatibility.woff2',
-  './manifest.json', './icon.png', './icon-192.png', './icon-512.png'
-];
+const CACHE_NAME = 'komunalka-v5.0.0';
+const PRECACHE_URLS = ['./', './index.html', './app.js', './year-report-image.js', './ai-chat.js', './manifest.json', './icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(

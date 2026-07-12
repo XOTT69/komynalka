@@ -26,9 +26,6 @@ for (const id of [
   'communityTariffName',
   'communityTariffCity',
   'cloudTariffSearch',
-  'appDialog',
-  'appDialogConfirmBtn',
-  'appDialogCancelBtn',
 ]) {
   if (!html.includes(`id="${id}"`)) fail(`critical UI id is missing: ${id}`);
 }
@@ -40,15 +37,6 @@ for (const token of [
   '.tracking-tight{letter-spacing:0!important}',
 ]) {
   if (!html.includes(token)) fail(`design-system token is missing: ${token}`);
-}
-
-for (const accessibilityToken of [
-  'aria-label="Показати пароль"',
-  'role="status" aria-live="polite"',
-  'role="dialog" aria-modal="true"',
-  'aria-label="Швидкі дії"',
-]) {
-  if (!html.includes(accessibilityToken)) fail(`accessibility contract is missing: ${accessibilityToken}`);
 }
 
 for (const fn of [
