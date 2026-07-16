@@ -1,0 +1,360 @@
+:root {
+  --quiet-bg: #f4f6f8;
+  --quiet-surface: #ffffff;
+  --quiet-surface-muted: #f8fafc;
+  --quiet-border: #e5e7eb;
+  --quiet-text: #111827;
+  --quiet-muted: #64748b;
+  --quiet-accent: #2563eb;
+  --quiet-accent-soft: #eff6ff;
+  --quiet-danger: #dc2626;
+}
+
+.fa-solid.hidden,
+.fa-regular.hidden,
+.fa-brands.hidden {
+  display: none !important;
+}
+
+html,
+body {
+  background: var(--quiet-bg) !important;
+}
+
+body,
+html.dark body {
+  background-image: none !important;
+}
+
+body::before {
+  display: none !important;
+}
+
+#appScreen,
+#authScreen,
+#splashScreen {
+  background: var(--quiet-bg) !important;
+}
+
+#authScreen {
+  justify-content: flex-start !important;
+  padding: 20px !important;
+}
+
+#authScreen > div {
+  padding-top: max(22px, env(safe-area-inset-top, 0px)) !important;
+  padding-bottom: 22px !important;
+}
+
+#authScreen .text-center.mb-10 {
+  margin-bottom: 24px !important;
+}
+
+#authScreen .w-24.h-24 {
+  width: 68px !important;
+  height: 68px !important;
+  margin-bottom: 16px !important;
+  border-radius: 20px !important;
+  font-size: 1.8rem !important;
+  background: var(--quiet-accent) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+#authScreen .premium-card {
+  padding: 24px !important;
+}
+
+#authSubmitBtn {
+  color: #fff !important;
+  background: var(--quiet-accent) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.premium-card,
+.glass,
+.shadow-premium,
+#welcomeTooltip > div,
+#aiPanelInner,
+#addressModalContent,
+#quickActionsModal > div,
+#linkModal > div,
+#achievementToast,
+#achievementDetailModal > div,
+#yearReportModal > div {
+  background: var(--quiet-surface) !important;
+  border: 1px solid var(--quiet-border) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(15, 23, 42, .04) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.premium-card::before,
+.shadow-premium::before,
+#welcomeTooltip > div::before,
+#aiPanelInner::before,
+#addressModalContent::before,
+#quickActionsModal > div::before,
+#yearReportModal > div::before {
+  display: none !important;
+}
+
+.premium-card:hover {
+  transform: none;
+}
+
+#appScreen > .app-frame:first-child {
+  padding-top: max(18px, env(safe-area-inset-top, 0px)) !important;
+  padding-bottom: 14px !important;
+}
+
+#addressHeaderTrigger > div:first-child {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 13px !important;
+  background: var(--quiet-accent) !important;
+  box-shadow: none !important;
+}
+
+#quickActionsBtn {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 13px !important;
+  box-shadow: none !important;
+}
+
+#tabDashboard {
+  gap: 14px;
+}
+
+.dashboard-summary {
+  padding: 24px !important;
+  color: var(--quiet-text) !important;
+  background: var(--quiet-surface) !important;
+  border: 1px solid var(--quiet-border) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04) !important;
+}
+
+.dashboard-summary .summary-label,
+.dashboard-summary .summary-meta {
+  color: var(--quiet-muted) !important;
+}
+
+.dashboard-summary #dashCurrentMonth {
+  color: var(--quiet-text) !important;
+  font-size: clamp(2.25rem, 7vw, 3.25rem) !important;
+}
+
+.dashboard-summary #dashInsight {
+  color: #1e3a8a !important;
+  background: var(--quiet-accent-soft) !important;
+  border: 0 !important;
+}
+
+.primary-action {
+  min-height: 48px;
+  border-radius: 13px !important;
+  background: var(--quiet-accent) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+#submitFormBtn,
+#saveSettingsBtn,
+#installPwaBtn,
+#emptyStateAddBtn {
+  color: #fff !important;
+  background: var(--quiet-accent) !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+#dashDebtCard {
+  padding: 18px 20px !important;
+  color: var(--quiet-text) !important;
+  background: var(--quiet-surface) !important;
+  border: 1px solid #fecaca !important;
+  border-left: 4px solid var(--quiet-danger) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+#dashDebtCard p:first-child,
+#dashDebtMonths {
+  color: var(--quiet-muted) !important;
+  opacity: 1 !important;
+}
+
+#monthMiniWidget .grid > div + div {
+  border-left: 1px solid var(--quiet-border);
+}
+
+.dashboard-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dashboard-actions button {
+  min-height: 82px;
+  padding: 16px !important;
+  text-align: left;
+  border-radius: 16px !important;
+}
+
+.dashboard-actions button i {
+  margin-bottom: 10px;
+  color: var(--quiet-accent) !important;
+}
+
+#tipsContainer {
+  padding: 18px 20px !important;
+}
+
+#tipsList > div {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.hero-gradient,
+#analyticsCard > .bg-gradient-to-br {
+  color: #fff !important;
+  background: #172033 !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 20px !important;
+  box-shadow: none !important;
+}
+
+#reminderBanner {
+  color: #1e3a8a !important;
+  background: var(--quiet-accent-soft) !important;
+  background-image: none !important;
+  border: 1px solid #bfdbfe !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+#reminderDismissBtn {
+  color: #fff !important;
+  background: var(--quiet-accent) !important;
+  box-shadow: none !important;
+}
+
+.premium-card [class*="bg-gradient"] {
+  color: var(--quiet-accent) !important;
+  background: var(--quiet-accent-soft) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition-duration: 150ms !important;
+}
+
+button:active,
+.nav-btn:active,
+.premium-card:active {
+  transform: scale(.985) !important;
+}
+
+#bottomNav {
+  background: rgba(255, 255, 255, .96) !important;
+  border-color: var(--quiet-border) !important;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, .12) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.nav-btn.text-brand {
+  color: var(--quiet-accent) !important;
+  background: var(--quiet-accent-soft) !important;
+  box-shadow: none !important;
+}
+
+.settings-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-tools > * {
+  min-height: 82px;
+}
+
+html.dark {
+  --quiet-bg: #0b0d12;
+  --quiet-surface: #151820;
+  --quiet-surface-muted: #1b1f29;
+  --quiet-border: #272c37;
+  --quiet-text: #f8fafc;
+  --quiet-muted: #94a3b8;
+  --quiet-accent: #60a5fa;
+  --quiet-accent-soft: rgba(37, 99, 235, .16);
+}
+
+html.dark #bottomNav {
+  background: rgba(21, 24, 32, .96) !important;
+}
+
+@media (max-width: 420px) {
+  .dashboard-summary {
+    padding: 20px !important;
+  }
+
+  #monthMiniWidget {
+    padding: 14px 10px !important;
+  }
+}
+
+@media (min-width: 900px) {
+  #appScreen {
+    padding-left: 96px;
+  }
+
+  #bottomNav {
+    top: 50% !important;
+    left: 16px !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 72px !important;
+    max-width: 72px !important;
+    transform: translateY(-50%) !important;
+    border-radius: 22px !important;
+    padding: 8px !important;
+  }
+
+  #bottomNav > div {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  #bottomNav .nav-btn {
+    width: 54px;
+    min-height: 58px;
+    flex: none;
+  }
+
+  #swipeContainer {
+    margin-bottom: 0;
+    padding-bottom: 32px !important;
+  }
+
+  #aiFabBtn {
+    right: 26px !important;
+    bottom: 26px !important;
+  }
+
+  .dashboard-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -13,6 +13,54 @@ const ok  = (d, s=200) => new Response(JSON.stringify(d), {
 });
 const err = (msg, s) => ok({ success: false, error: msg }, s);
 
+function isSupabaseShadowEnabled(env) {
+  return env.SUPABASE_SHADOW_WRITES === 'true' && Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function getSupabaseBaseUrl(env) {
+  const url = new URL(String(env.SUPABASE_URL || ''));
+  if (url.protocol !== 'https:') throw new Error('SUPABASE_URL must use HTTPS');
+  return url.origin;
+}
+
+async function supabaseShadowRequest(env, path, init = {}) {
+  const response = await fetch(`${getSupabaseBaseUrl(env)}/rest/v1/${path}`, {
+    ...init,
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      ...(init.headers || {}),
+    },
+  });
+  if (!response.ok) throw new Error(`Supabase shadow request failed (${response.status})`);
+  return response;
+}
+
+async function mirrorUserToSupabase(env, login, data) {
+  if (!isSupabaseShadowEnabled(env)) return;
+  const { pass, passHash, ...payload } = data || {};
+  const pass_hash = passHash || pass;
+  await supabaseShadowRequest(env, 'legacy_accounts?on_conflict=login', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      login,
+      pass_hash,
+      payload,
+      source_updated_at: data.updatedAt || new Date().toISOString(),
+    }),
+  });
+}
+
+async function deleteUserFromSupabaseShadow(env, login) {
+  if (!isSupabaseShadowEnabled(env)) return;
+  await supabaseShadowRequest(env, `legacy_accounts?login=eq.${encodeURIComponent(login)}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+}
+
 async function sha256(t) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
   return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join('');
@@ -37,6 +85,11 @@ async function saveUser(env, login, data) {
   if (data.passHash && !data.pass)  data.pass = data.passHash;
   if (data.pass && !data.passHash)  data.passHash = data.pass;
   await env.KV.put(login, JSON.stringify(data));
+  try {
+    await mirrorUserToSupabase(env, login, data);
+  } catch (error) {
+    console.error('supabase shadow write:', login, error?.message);
+  }
 }
 
 function normalize(d) {
@@ -588,6 +641,11 @@ async function doAdminPro(body, env, val) {
 async function doAdminDelete(body, env) {
   if (!body.login) return err('NO_LOGIN', 400);
   await env.KV.delete(body.login);
+  try {
+    await deleteUserFromSupabaseShadow(env, body.login);
+  } catch (error) {
+    console.error('supabase shadow delete:', body.login, error?.message);
+  }
   return ok({ success:true });
 }
 

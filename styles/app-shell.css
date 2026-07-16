@@ -1,0 +1,103 @@
+/* Shared responsive geometry for the authenticated application shell. */
+#appScreen {
+  --app-frame-max: 500px;
+  --app-inline-space: 20px;
+}
+
+.app-frame {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--app-frame-max);
+  margin-inline: auto;
+  padding-inline: var(--app-inline-space);
+}
+
+#swipeContainer {
+  padding-inline: 0 !important;
+  margin-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 24px !important;
+  scroll-padding-bottom: 24px;
+  scrollbar-gutter: stable both-edges;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+#bottomNav {
+  left: 50% !important;
+  right: auto !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 14px) !important;
+  width: calc(100% - 24px) !important;
+  max-width: 420px !important;
+  transform: translateX(-50%);
+  border-radius: 999px !important;
+  padding: 6px 8px !important;
+  border: 1px solid rgb(var(--liquid-stroke-rgb) / calc(var(--liquid-stroke-alpha) + .10)) !important;
+  box-shadow: 0 22px 54px -30px rgb(var(--liquid-shadow-rgb) / .55), 0 8px 18px -14px rgb(var(--liquid-shadow-rgb) / .36), inset 0 1px 0 var(--liquid-edge) !important;
+  overflow: hidden;
+}
+
+#bottomNav > div {
+  width: 100%;
+  max-width: none !important;
+  padding: 0 !important;
+}
+
+#achievementsList {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  column-gap: 8px;
+  row-gap: 16px;
+}
+
+#achievementsList .achievement {
+  width: 100% !important;
+  min-width: 0;
+}
+
+#achievementsList .achievement > span:last-child {
+  font-size: 10px !important;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.achievement.locked {
+  opacity: .48;
+  filter: grayscale(.9);
+}
+
+@media (max-width: 420px) {
+  #appScreen {
+    --app-inline-space: 16px;
+  }
+
+  #bottomNav {
+    width: calc(100% - 20px) !important;
+  }
+
+  #achievementsList .achievement > span:last-child {
+    font-size: 8px !important;
+    line-height: 1.2;
+  }
+}
+
+@media (min-width: 900px) {
+  #appScreen {
+    --app-frame-max: 760px;
+    --app-inline-space: 24px;
+  }
+
+  #bottomNav {
+    max-width: 520px !important;
+  }
+}

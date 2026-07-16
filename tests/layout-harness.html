@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="../dist/tailwind.css">
+  <link rel="stylesheet" href="../styles/app-shell.css?v=600">
+  <link rel="stylesheet" href="../styles/quiet-ui.css?v=600">
+  <style>
+    :root{--liquid-stroke-rgb:255 255 255;--liquid-stroke-alpha:.46;--liquid-shadow-rgb:15 23 42;--liquid-edge:rgba(255,255,255,.72)}
+    *{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif}.chart-placeholder{height:110px;display:flex;align-items:flex-end;gap:12px;padding:12px 6px 0}.chart-placeholder i{display:block;flex:1;background:#bfdbfe;border-radius:5px 5px 2px 2px}.chart-placeholder i:nth-child(1){height:38%}.chart-placeholder i:nth-child(2){height:60%}.chart-placeholder i:nth-child(3){height:48%}.chart-placeholder i:nth-child(4){height:74%}.chart-placeholder i:nth-child(5){height:58%}.chart-placeholder i:nth-child(6){height:82%}
+  </style>
+</head>
+<body>
+<main id="appScreen" class="fixed inset-0 flex flex-col w-full h-[100dvh] overflow-hidden">
+  <header class="app-frame flex justify-between items-center shrink-0">
+    <div class="flex items-center gap-3" id="addressHeaderTrigger"><div class="text-white grid place-items-center">⌂</div><div><p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Привіт, Антоне! ●</p><h1 class="text-xl font-black">Покровська 30Б⌄</h1></div></div>
+    <button id="quickActionsBtn" aria-label="Меню">⋮</button>
+  </header>
+  <section id="swipeContainer" class="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar relative w-full">
+    <div class="app-frame">
+      <div id="tabDashboard" class="space-y-4 pt-2">
+        <section class="dashboard-summary"><div class="flex justify-between mb-5"><div><p class="summary-label text-xs font-semibold">Доброго дня, Антоне!</p><p class="summary-meta text-sm mt-1">липень 2026</p></div><span class="summary-meta text-xs">Поточний місяць</span></div><p id="dashCurrentMonth" class="font-black">3 480 ₴</p><div id="dashInsight" class="mt-4 px-4 py-3 rounded-xl text-sm font-semibold">↓ Витрати на 12% нижчі</div><button id="dashAddBtn" class="primary-action w-full mt-5 font-bold">＋ Внести показники</button></section>
+        <section id="monthMiniWidget" class="premium-card p-4"><div class="grid grid-cols-3 gap-2 text-center"><div><p class="text-[9px] text-slate-400">Борг</p><b>0 ₴</b></div><div><p class="text-[9px] text-slate-400">Дедлайн</p><b>28–3</b></div><div><p class="text-[9px] text-slate-400">Прогноз</p><b>3 650 ₴</b></div></div></section>
+        <section class="premium-card p-5"><div class="flex justify-between"><b class="text-sm">Динаміка витрат</b><span class="text-xs text-slate-400">8 місяців</span></div><div class="chart-placeholder"><i></i><i></i><i></i><i></i><i></i><i></i></div></section>
+        <div class="dashboard-actions"><button class="premium-card"><span class="text-blue-600">◷</span><p class="font-bold text-sm mt-2">Історія</p><p class="text-xs text-slate-500">Усі записи</p></button><button class="premium-card"><span class="text-blue-600">⌁</span><p class="font-bold text-sm mt-2">Аналітика</p><p class="text-xs text-slate-500">Тренди та прогноз</p></button></div>
+        <section id="tipsContainer" class="premium-card"><div class="flex items-center gap-2 mb-3"><span class="text-blue-600">◉</span><b class="text-xs text-slate-500">Актуальна порада</b></div><p class="text-sm text-slate-600">Нічний тариф допоможе зменшити витрати на електрику.</p></section>
+      </div>
+    </div>
+  </section>
+  <nav id="bottomNav" class="fixed z-40"><div class="flex justify-around"><button class="nav-btn text-brand">⌂<small class="block">Головна</small></button><button class="nav-btn">▦<small class="block">Показники</small></button><button class="nav-btn">◷<small class="block">Історія</small></button><button class="nav-btn">⚙<small class="block">Ще</small></button></div></nav>
+</main>
+</body>
+</html>
