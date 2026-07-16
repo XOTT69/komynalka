@@ -65,7 +65,7 @@ for (const icon of manifest.icons || []) {
 
 const sw = await readFile(path.join(root, 'sw.js'), 'utf8');
 const precacheBlock = sw.slice(sw.indexOf('const PRECACHE_URLS'), sw.indexOf('];', sw.indexOf('const PRECACHE_URLS')) + 2);
-const precachePaths = [...precacheBlock.matchAll(/['"]\.\/([^'"]*)['"]/g)].map(match => match[1]).filter(Boolean);
+const precachePaths = [...precacheBlock.matchAll(/['"]\.\/([^'"]*)['"]/g)].map(match => match[1].split('?')[0]).filter(Boolean);
 for (const relativePath of precachePaths) {
   if (!(await fileExists(relativePath))) fail(`service worker precache target is missing: ${relativePath}`);
 }
@@ -156,9 +156,9 @@ if (!index.includes('dist/tailwind.css')) fail('main app production stylesheet i
 if (!index.includes('styles/fonts.css')) fail('main app self-hosted font stylesheet is missing');
 if (!index.includes('styles/app-shell.css')) fail('responsive application shell stylesheet is missing');
 if (!index.includes('styles/quiet-ui.css')) fail('quiet UI stylesheet is missing');
-if (!index.includes('<script src="record-card.js"></script>')) fail('record card module is not loaded');
-if (!index.includes('<script src="ui-dialogs.js"></script>')) fail('dialog module is not loaded');
-if (!index.includes('<script src="export-tools.js"></script>')) fail('export tools module is not loaded');
+if (!index.includes(`<script src="record-card.js?v=${packageJson.version}"></script>`)) fail('versioned record card module is not loaded');
+if (!index.includes(`<script src="ui-dialogs.js?v=${packageJson.version}"></script>`)) fail('versioned dialog module is not loaded');
+if (!index.includes(`<script src="export-tools.js?v=${packageJson.version}"></script>`)) fail('versioned export tools module is not loaded');
 if (!(await fileExists('dist/tailwind.css'))) fail('compiled Tailwind stylesheet is missing; run the build');
 for (const id of ['restoreBackupBtn', 'restorePreImportBtn', 'saveTariffTemplateBtn', 'loadTariffTemplateBtn', 'resetTariffsBtn', 'changeLogList', 'forgetDeviceBtn']) {
   if (!index.includes(`id="${id}"`)) fail(`index is missing ${id}`);
@@ -176,17 +176,20 @@ for (const id of ['communityTariffCity', 'communityTariffRegion', 'communityTari
 }
 if (!index.includes('class="app-frame pt-5') || !index.includes('<div class="app-frame">')) fail('header and content do not share the responsive frame');
 if (!appShellCss.includes('scrollbar-gutter: stable both-edges')) fail('scroll content can drift off the viewport center');
-if (!appShellCss.includes('margin-bottom: calc(82px + env(safe-area-inset-bottom, 0px))')) fail('scroll content is not reserved above the floating dock');
+if (!appShellCss.includes('position: relative !important') || !appShellCss.includes('--app-viewport-height')) fail('mobile dock is not part of the iPhone-safe application flow');
 if (!appShellCss.includes('grid-template-columns: repeat(5')) fail('achievements do not use a balanced grid');
 if (/blur\(/.test(appShellCss.match(/\.achievement\.locked\s*\{[^}]*\}/)?.[0] || '')) fail('locked achievements are still visually blurred');
-if (!appShellCss.includes('bottom: calc(env(safe-area-inset-bottom, 0px) + 14px)')) fail('floating dock safe-area offset is missing');
-if (!index.includes('#aiFabBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 104px)')) fail('AI FAB is not offset above dock');
+if (!appShellCss.includes('margin: 7px auto max(8px, env(safe-area-inset-bottom, 0px))')) fail('mobile dock safe-area margin is missing');
+if (!index.includes('id="aiFabBtn" class="hidden col-span-2')) fail('AI assistant is not integrated into the More tools panel');
+if (index.includes('<!-- AI FAB -->') || index.includes('z-[450] w-14 h-14')) fail('obsolete floating AI button is still present');
 if (!quietUiCss.includes('.dashboard-summary') || !quietUiCss.includes('@media (min-width: 900px)')) fail('responsive quiet design system is incomplete');
 if (!index.includes('class="dashboard-summary"')) fail('dashboard does not use the simplified summary');
 if (index.includes('id="donutCanvas"') || app.includes('DonutChart')) fail('removed dashboard donut code is still present');
 const bottomNav = index.slice(index.indexOf('<nav class="fixed'), index.indexOf('</nav>', index.indexOf('<nav class="fixed')));
 const bottomNavButtons = [...bottomNav.matchAll(/<button\b/g)].length;
 if (bottomNavButtons !== 4) fail(`bottom navigation must contain 4 primary destinations, found ${bottomNavButtons}`);
+if (!index.includes(`styles/quiet-ui.css?v=${packageJson.version}`) || !index.includes(`app.js?v=${packageJson.version}`)) fail('app-shell assets are not versioned against mixed iPhone caches');
+if (!sw.includes(`styles/quiet-ui.css?v=${packageJson.version}`) || !sw.includes('fetch(event.request).then(response =>')) fail('service worker does not cache and refresh versioned app-shell assets consistently');
 if (index.includes('user-scalable=no') || index.includes('maximum-scale=1')) fail('viewport blocks user zoom');
 if (!index.includes('role="status" aria-live="polite"')) fail('toast live region is missing');
 if (!index.includes('rel="noopener noreferrer"')) fail('external blank-target links are not isolated');

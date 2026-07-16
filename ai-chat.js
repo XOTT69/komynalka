@@ -232,8 +232,8 @@ ${recLines}
   init() {
     document.getElementById('aiFabBtn')?.addEventListener('click',  () => this.toggle());
     document.getElementById('aiCloseBtn')?.addEventListener('click', () => this.close());
-    document.getElementById('aiClearBtn')?.addEventListener('click', () => {
-      if (confirm('Очистити всю історію чату?')) this.clearHistory();
+    document.getElementById('aiClearBtn')?.addEventListener('click', async () => {
+      if (await showAppConfirm('Цю дію не можна скасувати.', { title:'Очистити історію чату?', confirmLabel:'Очистити', danger:true, icon:'🗑️' })) this.clearHistory();
     });
     document.getElementById('aiChatPanel')?.addEventListener('click', e => {
       if (e.target.id === 'aiChatPanel') this.close();
@@ -266,10 +266,13 @@ ${recLines}
 let komunalkaAI = null;
 
 function initAI() {
-  if (komunalkaAI) return;
-  komunalkaAI = new KomunalkaAI();
-  komunalkaAI.init();
-  document.getElementById('aiFabBtn')?.classList.remove('hidden');
+  if (!komunalkaAI) {
+    komunalkaAI = new KomunalkaAI();
+    komunalkaAI.init();
+  }
+  const trigger = document.getElementById('aiFabBtn');
+  trigger?.classList.remove('hidden');
+  trigger?.style.removeProperty('display');
   window.komunalkaAI = komunalkaAI;
 }
 

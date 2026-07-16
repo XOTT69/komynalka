@@ -13,8 +13,9 @@
 }
 
 #swipeContainer {
+  min-height: 0;
   padding-inline: 0 !important;
-  margin-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  margin-bottom: 0;
   padding-bottom: 24px !important;
   scroll-padding-bottom: 24px;
   scrollbar-gutter: stable both-edges;
@@ -49,6 +50,23 @@
   width: 100%;
   max-width: none !important;
   padding: 0 !important;
+}
+
+@media (max-width: 899px) {
+  #appScreen {
+    height: var(--app-viewport-height, 100dvh) !important;
+    max-height: var(--app-viewport-height, 100dvh);
+  }
+
+  #bottomNav {
+    position: relative !important;
+    flex: 0 0 auto;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    margin: 7px auto max(8px, env(safe-area-inset-bottom, 0px));
+  }
 }
 
 #achievementsList {

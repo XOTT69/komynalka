@@ -10,8 +10,8 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="preconnect" href="https://komunproga.mikolenko-anton1.workers.dev">
-    <link rel="stylesheet" href="styles/fonts.css">
-    <link rel="stylesheet" href="dist/tailwind.css">
+    <link rel="stylesheet" href="styles/fonts.css?v=6.0.1">
+    <link rel="stylesheet" href="dist/tailwind.css?v=6.0.1">
     <script src="vendor/firebase/firebase-app-compat.js"></script>
     <script src="vendor/firebase/firebase-auth-compat.js"></script>
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
@@ -57,14 +57,13 @@
         #toast{background:linear-gradient(180deg,rgba(20,20,24,.80),rgba(20,20,24,.70))!important;color:#fff!important;-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);border:1px solid rgba(255,255,255,.22)}html.dark #toast{background:linear-gradient(180deg,rgba(245,245,247,.86),rgba(245,245,247,.74))!important;color:#111!important}
         button.bg-brand,button[class*="from-brand"],#submitFormBtn,#saveSettingsBtn,#installPwaBtn{box-shadow:0 16px 38px -22px rgba(0,73,180,.78),inset 0 1px 0 rgba(255,255,255,.34);border:1px solid rgba(255,255,255,.22)}button:active,.nav-btn:active{filter:saturate(1.08) brightness(.98)}
         #tabDashboard>.bg-gradient-to-br,#dashAddBtn,#reminderBanner,#yearReportModal .bg-gradient-to-br{background:linear-gradient(145deg,rgba(0,122,255,.82),rgba(52,120,246,.66) 52%,rgba(94,92,230,.62))!important;-webkit-backdrop-filter:blur(34px) saturate(190%);backdrop-filter:blur(34px) saturate(190%);border:1px solid rgba(255,255,255,.34)!important;box-shadow:0 26px 64px -34px rgba(0,73,180,.62),inset 0 1px 0 rgba(255,255,255,.46)}
-        #aiFabBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 104px)!important;background:linear-gradient(145deg,rgba(120,92,255,.86),rgba(54,91,240,.72))!important;-webkit-backdrop-filter:blur(24px) saturate(190%);backdrop-filter:blur(24px) saturate(190%);border-color:rgba(255,255,255,.36)!important;box-shadow:0 22px 54px -26px rgba(54,91,240,.85),inset 0 1px 0 rgba(255,255,255,.46)}
-        #swipeContainer{scroll-padding-bottom:120px}.sync-dot{box-shadow:0 0 0 3px rgb(var(--liquid-rgb)/.22)}.dark .sync-dot{box-shadow:0 0 0 3px rgba(255,255,255,.08)}
+        .sync-dot{box-shadow:0 0 0 3px rgb(var(--liquid-rgb)/.22)}.dark .sync-dot{box-shadow:0 0 0 3px rgba(255,255,255,.08)}
         @media (prefers-reduced-transparency:reduce){:root{--liquid-card-alpha:.94!important;--liquid-bar-alpha:.94!important;--liquid-control-alpha:.86!important;--liquid-blur:12px!important}.premium-card,.glass,#aiPanelInner,#addressModalContent{background:rgb(var(--liquid-rgb)/.96)!important}}
         @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.premium-card,.glass,#aiPanelInner,#addressModalContent,#quickActionsModal>div{background:rgb(var(--liquid-rgb)/.96)!important}}
         @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.tab-active{animation:none!important}.badge-pulse{animation:none!important}.count-up{transition:none!important}}
     </style>
-    <link rel="stylesheet" href="styles/app-shell.css">
-    <link rel="stylesheet" href="styles/quiet-ui.css">
+    <link rel="stylesheet" href="styles/app-shell.css?v=6.0.1">
+    <link rel="stylesheet" href="styles/quiet-ui.css?v=6.0.1">
     <meta name="theme-color" content="#f2f2f7" id="metaThemeColor">
     <link rel="apple-touch-icon" href="icon.png">
     <meta property="og:title" content="Комуналка — розумний облік комунальних">
@@ -480,6 +479,7 @@
     <div class="settings-tools">
       <button id="yearReportBtn" class="p-4 rounded-2xl bg-slate-50 dark:bg-black/30 border border-slate-100 dark:border-white/5 text-left"><i class="fa-regular fa-calendar text-blue-600 mb-2" aria-hidden="true"></i><p class="text-sm font-bold">Річний звіт</p><p class="text-xs text-slate-500 mt-1">Підсумок за рік</p></button>
       <button id="shareAddressBtn" class="p-4 rounded-2xl bg-slate-50 dark:bg-black/30 border border-slate-100 dark:border-white/5 text-left"><i class="fa-solid fa-user-group text-blue-600 mb-2" aria-hidden="true"></i><p class="text-sm font-bold">Спільний доступ</p><p class="text-xs text-slate-500 mt-1">Поділитися адресою</p></button>
+      <button id="aiFabBtn" class="hidden col-span-2 p-4 rounded-2xl bg-slate-50 dark:bg-black/30 border border-slate-100 dark:border-white/5 text-left"><i class="fa-solid fa-wand-magic-sparkles text-blue-600 mb-2" aria-hidden="true"></i><p class="text-sm font-bold">AI-помічник</p><p class="text-xs text-slate-500 mt-1">Аналіз витрат і персональні поради</p></button>
     </div>
     <details class="mt-3 border-t border-slate-100 dark:border-white/5 pt-3">
       <summary class="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">Досягнення</summary>
@@ -527,12 +527,12 @@
       <details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer">Як додати показники?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Натисніть "Внести" на головній або перейдіть у "Рахунок".</p></details>
       <details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer">Можна вносити частково?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Так! Дані об'єднуються автоматично в один місяць.</p></details>
       <details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer">Як працює офлайн?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Дані зберігаються локально і синхронізуються при підключенні.</p></details>
-      <details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer">Що вміє AI-помічник?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Аналізує витрати, знаходить аномалії, порівнює місяці, дає поради з економії. Натисніть 🤖 внизу праворуч.</p></details>
+      <details class="bg-slate-50 dark:bg-black/40 rounded-xl overflow-hidden"><summary class="p-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer">Що вміє AI-помічник?</summary><p class="px-3 pb-3 text-[10px] text-slate-500">Аналізує витрати, знаходить аномалії, порівнює місяці та дає поради з економії. Відкрити його можна вище, у «Додаткових можливостях».</p></details>
     </div>
   </details>
 
   <div class="text-center pt-2 space-y-3">
-    <p class="text-[9px] text-slate-400">by <span class="font-bold text-slate-500">Антон Миколенко</span> • v6.0</p>
+    <p class="text-[9px] text-slate-400">by <span class="font-bold text-slate-500">Антон Миколенко</span> • v6.0.1</p>
     <button type="button" id="logoutBtn" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-2xl py-3.5 border border-red-100 dark:border-red-500/20 active:scale-[0.98] text-sm transition-transform"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Вийти з акаунту</button>
   </div>
 </div>
@@ -619,12 +619,6 @@
   </nav>
 
 </div><!-- /appScreen -->
-
-<!-- AI FAB -->
-<button id="aiFabBtn"
-  class="hidden fixed z-[450] w-14 h-14 bg-gradient-to-br from-violet-500 to-indigo-600 text-white rounded-2xl shadow-2xl shadow-violet-500/40 flex items-center justify-center text-2xl active:scale-[0.92] transition-all border border-white/20"
-  style="bottom: calc(env(safe-area-inset-bottom, 0px) + 88px); right: 20px;"
-  aria-label="AI помічник">🤖</button>
 
 <!-- AI Chat Panel -->
 <div id="aiChatPanel" class="hidden fixed inset-0 z-[700] bg-black/40 backdrop-blur-sm flex items-end justify-center" role="dialog" aria-modal="true">
@@ -819,11 +813,11 @@
   </div>
 </div>
 
-<script src="app.js"></script>
-<script src="ui-dialogs.js"></script>
-<script src="export-tools.js"></script>
-<script src="record-card.js"></script>
-<script src="year-report-image.js"></script>
-<script src="ai-chat.js"></script>
+<script src="app.js?v=6.0.1"></script>
+<script src="ui-dialogs.js?v=6.0.1"></script>
+<script src="export-tools.js?v=6.0.1"></script>
+<script src="record-card.js?v=6.0.1"></script>
+<script src="year-report-image.js?v=6.0.1"></script>
+<script src="ai-chat.js?v=6.0.1"></script>
 </body>
 </html>

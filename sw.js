@@ -1,6 +1,6 @@
-const CACHE_NAME = 'komunalka-v6.0.0';
+const CACHE_NAME = 'komunalka-v6.0.1';
 const PRECACHE_URLS = [
-  './', './index.html', './dist/tailwind.css', './styles/fonts.css', './styles/app-shell.css', './styles/quiet-ui.css', './app.js', './ui-dialogs.js', './export-tools.js', './record-card.js', './year-report-image.js', './ai-chat.js',
+  './', './index.html', './dist/tailwind.css?v=6.0.1', './styles/fonts.css?v=6.0.1', './styles/app-shell.css?v=6.0.1', './styles/quiet-ui.css?v=6.0.1', './app.js?v=6.0.1', './ui-dialogs.js?v=6.0.1', './export-tools.js?v=6.0.1', './record-card.js?v=6.0.1', './year-report-image.js?v=6.0.1', './ai-chat.js?v=6.0.1',
   './vendor/firebase/firebase-app-compat.js', './vendor/firebase/firebase-auth-compat.js',
   './vendor/jspdf/jspdf.umd.min.js', './vendor/jspdf/jspdf.plugin.autotable.min.js',
   './vendor/fonts/Roboto-Regular.ttf',
@@ -14,7 +14,8 @@ const PRECACHE_URLS = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS).catch(() => {}))
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(PRECACHE_URLS))
   );
 });
 
@@ -60,16 +61,13 @@ self.addEventListener('fetch', event => {
     return;
   }
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      const fetchPromise = fetch(event.request).then(response => {
-        if (response && response.status === 200 && response.type === 'basic') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => { try { cache.put(event.request, clone); } catch(e) {} });
-        }
-        return response;
-      }).catch(() => cached);
-      return cached || fetchPromise;
-    })
+    fetch(event.request).then(response => {
+      if (response && response.status === 200 && response.type === 'basic') {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
+      }
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });
 

@@ -177,6 +177,7 @@ body::before {
   padding: 18px 20px !important;
   color: var(--quiet-text) !important;
   background: var(--quiet-surface) !important;
+  background-image: none !important;
   border: 1px solid #fecaca !important;
   border-left: 4px solid var(--quiet-danger) !important;
   border-radius: 16px !important;
@@ -219,6 +220,10 @@ body::before {
   padding: 0 !important;
   background: transparent !important;
   border: 0 !important;
+}
+
+#tipsList > div:not(:first-child) {
+  display: none !important;
 }
 
 .hero-gradient,
@@ -347,11 +352,6 @@ html.dark #bottomNav {
   #swipeContainer {
     margin-bottom: 0;
     padding-bottom: 32px !important;
-  }
-
-  #aiFabBtn {
-    right: 26px !important;
-    bottom: 26px !important;
   }
 
   .dashboard-actions {
