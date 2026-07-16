@@ -1,6 +1,6 @@
 {
   "name": "komunalka",
-  "version": "6.0.3",
+  "version": "6.0.4",
   "description": "Розумний облік комунальних платежів PWA",
   "scripts": {
     "dev": "NO_UPDATE_NOTIFIER=1 serve .",

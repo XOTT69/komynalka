@@ -1,6 +1,6 @@
-const CACHE_NAME = 'komunalka-v6.0.3';
+const CACHE_NAME = 'komunalka-v6.0.4';
 const PRECACHE_URLS = [
-  './', './index.html', './dist/tailwind.css?v=6.0.3', './styles/fonts.css?v=6.0.3', './styles/app-shell.css?v=6.0.3', './styles/quiet-ui.css?v=6.0.3', './app.js?v=6.0.3', './ui-dialogs.js?v=6.0.3', './export-tools.js?v=6.0.3', './record-card.js?v=6.0.3', './year-report-image.js?v=6.0.3', './ai-chat.js?v=6.0.3',
+  './', './index.html', './dist/tailwind.css?v=6.0.4', './styles/fonts.css?v=6.0.4', './styles/app-shell.css?v=6.0.4', './styles/quiet-ui.css?v=6.0.4', './app.js?v=6.0.4', './ui-dialogs.js?v=6.0.4', './export-tools.js?v=6.0.4', './record-card.js?v=6.0.4', './year-report-image.js?v=6.0.4', './ai-chat.js?v=6.0.4',
   './vendor/firebase/firebase-app-compat.js', './vendor/firebase/firebase-auth-compat.js',
   './vendor/jspdf/jspdf.umd.min.js', './vendor/jspdf/jspdf.plugin.autotable.min.js',
   './vendor/fonts/Roboto-Regular.ttf',
