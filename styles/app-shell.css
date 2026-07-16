@@ -68,7 +68,7 @@
     position: fixed !important;
     left: 50% !important;
     right: auto !important;
-    bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+    bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) - 18px)) !important;
     transform: translateX(-50%) !important;
     margin: 0;
   }

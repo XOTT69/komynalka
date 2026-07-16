@@ -178,9 +178,10 @@ if (!index.includes('class="app-frame pt-5') || !index.includes('<div class="app
 if (!appShellCss.includes('scrollbar-gutter: stable both-edges')) fail('scroll content can drift off the viewport center');
 if (!appShellCss.includes('position: fixed !important') || !appShellCss.includes('--app-viewport-height')) fail('mobile dock is not fixed to the iPhone viewport');
 if (!appShellCss.includes('padding-bottom: var(--mobile-dock-space) !important')) fail('scroll content is not reserved above the fixed dock');
+if (!app.includes('visualHeight < layoutHeight * 0.78') || !app.includes('keyboardIsOpen ? visualHeight : layoutHeight')) fail('iPhone viewport height can still leave the dock artificially high');
 if (!appShellCss.includes('grid-template-columns: repeat(5')) fail('achievements do not use a balanced grid');
 if (/blur\(/.test(appShellCss.match(/\.achievement\.locked\s*\{[^}]*\}/)?.[0] || '')) fail('locked achievements are still visually blurred');
-if (!appShellCss.includes('bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important')) fail('fixed mobile dock safe-area offset is missing');
+if (!appShellCss.includes('bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) - 18px)) !important')) fail('mobile dock is not lowered within the iPhone safe area');
 if (!index.includes('id="aiFabBtn" class="hidden col-span-2')) fail('AI assistant is not integrated into the More tools panel');
 if (index.includes('<!-- AI FAB -->') || index.includes('z-[450] w-14 h-14')) fail('obsolete floating AI button is still present');
 if (!quietUiCss.includes('.dashboard-summary') || !quietUiCss.includes('@media (min-width: 900px)')) fail('responsive quiet design system is incomplete');
