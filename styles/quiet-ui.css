@@ -184,10 +184,25 @@ body::before {
   box-shadow: none !important;
 }
 
-#dashDebtCard p:first-child,
+#dashDebtCard .debt-card-label,
 #dashDebtMonths {
-  color: var(--quiet-muted) !important;
+  color: #7f1d1d !important;
   opacity: 1 !important;
+}
+
+#dashDebt {
+  color: #b91c1c !important;
+}
+
+html.dark #dashDebtCard {
+  background: #211416 !important;
+  border-color: #7f1d1d !important;
+}
+
+html.dark #dashDebtCard .debt-card-label,
+html.dark #dashDebtMonths,
+html.dark #dashDebt {
+  color: #fca5a5 !important;
 }
 
 #monthMiniWidget .grid > div + div {

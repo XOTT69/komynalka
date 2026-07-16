@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="../dist/tailwind.css">
-  <link rel="stylesheet" href="../styles/app-shell.css?v=604">
-  <link rel="stylesheet" href="../styles/quiet-ui.css?v=604">
+  <link rel="stylesheet" href="../styles/app-shell.css?v=610">
+  <link rel="stylesheet" href="../styles/quiet-ui.css?v=610">
   <style>
     :root{--liquid-stroke-rgb:255 255 255;--liquid-stroke-alpha:.46;--liquid-shadow-rgb:15 23 42;--liquid-edge:rgba(255,255,255,.72)}
     *{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif}.chart-placeholder{height:110px;display:flex;align-items:flex-end;gap:12px;padding:12px 6px 0}.chart-placeholder i{display:block;flex:1;background:#bfdbfe;border-radius:5px 5px 2px 2px}.chart-placeholder i:nth-child(1){height:38%}.chart-placeholder i:nth-child(2){height:60%}.chart-placeholder i:nth-child(3){height:48%}.chart-placeholder i:nth-child(4){height:74%}.chart-placeholder i:nth-child(5){height:58%}.chart-placeholder i:nth-child(6){height:82%}
@@ -21,6 +21,7 @@
     <div class="app-frame">
       <div id="tabDashboard" class="space-y-4 pt-2">
         <section class="dashboard-summary"><div class="flex justify-between mb-5"><div><p class="summary-label text-xs font-semibold">Доброго дня, Антоне!</p><p class="summary-meta text-sm mt-1">липень 2026</p></div><span class="summary-meta text-xs">Поточний місяць</span></div><p id="dashCurrentMonth" class="font-black">3 480 ₴</p><div id="dashInsight" class="mt-4 px-4 py-3 rounded-xl text-sm font-semibold">↓ Витрати на 12% нижчі</div><button id="dashAddBtn" class="primary-action w-full mt-5 font-bold">＋ Внести показники</button></section>
+        <section id="dashDebtCard" aria-labelledby="dashDebtLabel"><div class="flex justify-between items-center gap-4"><div><p id="dashDebtLabel" class="debt-card-label">Непогашений борг</p><p id="dashDebt" class="text-2xl font-black">2 864,10 ₴</p></div><p id="dashDebtMonths">1 міс. з боргом</p></div></section>
         <section id="monthMiniWidget" class="premium-card p-4"><div class="grid grid-cols-3 gap-2 text-center"><div><p class="text-[9px] text-slate-400">Борг</p><b>0 ₴</b></div><div><p class="text-[9px] text-slate-400">Дедлайн</p><b>28–3</b></div><div><p class="text-[9px] text-slate-400">Прогноз</p><b>3 650 ₴</b></div></div></section>
         <section class="premium-card p-5"><div class="flex justify-between"><b class="text-sm">Динаміка витрат</b><span class="text-xs text-slate-400">8 місяців</span></div><div class="chart-placeholder"><i></i><i></i><i></i><i></i><i></i><i></i></div></section>
         <div class="dashboard-actions"><button class="premium-card"><span class="text-blue-600">◷</span><p class="font-bold text-sm mt-2">Історія</p><p class="text-xs text-slate-500">Усі записи</p></button><button class="premium-card"><span class="text-blue-600">⌁</span><p class="font-bold text-sm mt-2">Аналітика</p><p class="text-xs text-slate-500">Тренди та прогноз</p></button></div>

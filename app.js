@@ -1,10 +1,10 @@
 // ============================================================
-// КОМУНАЛКА PWA v6.0.4
+// КОМУНАЛКА PWA v6.1.0
 // ============================================================
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
-const APP_VERSION = '6.0.4';
+const APP_VERSION = '6.1.0';
 const MAX_ADDRESSES_FREE = 3;
 const LOCAL_BACKUP_KEY = 'komynalka_backup';
 const PRE_IMPORT_BACKUP_KEY = 'komynalka_pre_import_backup';
@@ -12,12 +12,6 @@ const CHANGE_LOG_KEY = 'komynalka_change_log';
 const CUSTOM_TARIFF_TEMPLATE_KEY = 'komynalka_tariff_template';
 const CUSTOM_REMINDERS_KEY = 'komynalka_custom_reminders';
 const COMMUNITY_TARIFF_KEY = 'komynalka_community_tariff';
-
-function attachBottomNavToViewport() {
-  const bottomNav = $('bottomNav');
-  if (bottomNav && bottomNav.parentElement !== document.body) document.body.appendChild(bottomNav);
-}
-attachBottomNavToViewport();
 
 function syncAppViewportHeight() {
   const layoutHeight = window.innerHeight;

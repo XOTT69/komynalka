@@ -192,7 +192,19 @@ const bottomNavButtons = [...bottomNav.matchAll(/<button\b/g)].length;
 if (bottomNavButtons !== 4) fail(`bottom navigation must contain 4 primary destinations, found ${bottomNavButtons}`);
 if (index.indexOf('id="bottomNav"') < index.indexOf('</div><!-- /appScreen -->')) fail('bottom navigation is still trapped inside the iOS app container');
 if (!app.includes("$('bottomNav')?.classList.remove('hidden')")) fail('external bottom navigation is not shown with the app screen');
-if (!app.includes('document.body.appendChild(bottomNav)')) fail('iOS DOM recovery can still trap the bottom navigation inside appScreen');
+const divTokens = [...index.matchAll(/<div\b[^>]*>|<\/div>/gi)].map(match => match[0]);
+let divDepth = 0;
+for (const token of divTokens) {
+  divDepth += token.startsWith('</') ? -1 : 1;
+  if (divDepth < 0) fail('index closes a div before it is opened');
+}
+if (divDepth !== 0) fail(`index has ${Math.abs(divDepth)} unbalanced div element(s)`);
+const htmlIds = [...index.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+const duplicateIds = [...new Set(htmlIds.filter((id, position) => htmlIds.indexOf(id) !== position))];
+if (duplicateIds.length) fail(`index has duplicate ids: ${duplicateIds.join(', ')}`);
+if (index.includes('#tabDashboard>.bg-gradient-to-br')) fail('obsolete dashboard gradient selector can override debt-card contrast');
+if (!index.includes('id="dashDebtCard" class="hidden relative overflow-hidden" aria-labelledby="dashDebtLabel"')) fail('debt card accessibility contract is missing');
+if (!quietUiCss.includes('#dashDebt {') || !quietUiCss.includes('color: #b91c1c !important')) fail('debt amount does not have an explicit high-contrast color');
 if (!index.includes(`styles/quiet-ui.css?v=${packageJson.version}`) || !index.includes(`app.js?v=${packageJson.version}`)) fail('app-shell assets are not versioned against mixed iPhone caches');
 if (!sw.includes(`styles/quiet-ui.css?v=${packageJson.version}`) || !sw.includes('fetch(event.request).then(response =>')) fail('service worker does not cache and refresh versioned app-shell assets consistently');
 if (!index.includes('maximum-scale=1.0, user-scalable=no')) fail('mobile viewport zoom is not disabled');
