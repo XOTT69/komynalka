@@ -2,6 +2,7 @@
 #appScreen {
   --app-frame-max: 500px;
   --app-inline-space: 20px;
+  --mobile-dock-space: calc(90px + env(safe-area-inset-bottom, 0px));
 }
 
 .app-frame {
@@ -58,14 +59,18 @@
     max-height: var(--app-viewport-height, 100dvh);
   }
 
+  #swipeContainer {
+    padding-bottom: var(--mobile-dock-space) !important;
+    scroll-padding-bottom: var(--mobile-dock-space);
+  }
+
   #bottomNav {
-    position: relative !important;
-    flex: 0 0 auto;
-    left: auto !important;
+    position: fixed !important;
+    left: 50% !important;
     right: auto !important;
-    bottom: auto !important;
-    transform: none !important;
-    margin: 7px auto max(8px, env(safe-area-inset-bottom, 0px));
+    bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+    transform: translateX(-50%) !important;
+    margin: 0;
   }
 }
 

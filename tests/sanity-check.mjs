@@ -176,10 +176,11 @@ for (const id of ['communityTariffCity', 'communityTariffRegion', 'communityTari
 }
 if (!index.includes('class="app-frame pt-5') || !index.includes('<div class="app-frame">')) fail('header and content do not share the responsive frame');
 if (!appShellCss.includes('scrollbar-gutter: stable both-edges')) fail('scroll content can drift off the viewport center');
-if (!appShellCss.includes('position: relative !important') || !appShellCss.includes('--app-viewport-height')) fail('mobile dock is not part of the iPhone-safe application flow');
+if (!appShellCss.includes('position: fixed !important') || !appShellCss.includes('--app-viewport-height')) fail('mobile dock is not fixed to the iPhone viewport');
+if (!appShellCss.includes('padding-bottom: var(--mobile-dock-space) !important')) fail('scroll content is not reserved above the fixed dock');
 if (!appShellCss.includes('grid-template-columns: repeat(5')) fail('achievements do not use a balanced grid');
 if (/blur\(/.test(appShellCss.match(/\.achievement\.locked\s*\{[^}]*\}/)?.[0] || '')) fail('locked achievements are still visually blurred');
-if (!appShellCss.includes('margin: 7px auto max(8px, env(safe-area-inset-bottom, 0px))')) fail('mobile dock safe-area margin is missing');
+if (!appShellCss.includes('bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important')) fail('fixed mobile dock safe-area offset is missing');
 if (!index.includes('id="aiFabBtn" class="hidden col-span-2')) fail('AI assistant is not integrated into the More tools panel');
 if (index.includes('<!-- AI FAB -->') || index.includes('z-[450] w-14 h-14')) fail('obsolete floating AI button is still present');
 if (!quietUiCss.includes('.dashboard-summary') || !quietUiCss.includes('@media (min-width: 900px)')) fail('responsive quiet design system is incomplete');
@@ -190,7 +191,7 @@ const bottomNavButtons = [...bottomNav.matchAll(/<button\b/g)].length;
 if (bottomNavButtons !== 4) fail(`bottom navigation must contain 4 primary destinations, found ${bottomNavButtons}`);
 if (!index.includes(`styles/quiet-ui.css?v=${packageJson.version}`) || !index.includes(`app.js?v=${packageJson.version}`)) fail('app-shell assets are not versioned against mixed iPhone caches');
 if (!sw.includes(`styles/quiet-ui.css?v=${packageJson.version}`) || !sw.includes('fetch(event.request).then(response =>')) fail('service worker does not cache and refresh versioned app-shell assets consistently');
-if (index.includes('user-scalable=no') || index.includes('maximum-scale=1')) fail('viewport blocks user zoom');
+if (!index.includes('maximum-scale=1.0, user-scalable=no')) fail('mobile viewport zoom is not disabled');
 if (!index.includes('role="status" aria-live="polite"')) fail('toast live region is missing');
 if (!index.includes('rel="noopener noreferrer"')) fail('external blank-target links are not isolated');
 if (/onclick=/.test(index)) fail('main app still contains inline event handlers');

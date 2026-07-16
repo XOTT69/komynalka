@@ -1,10 +1,10 @@
 // ============================================================
-// КОМУНАЛКА PWA v6.0.1
+// КОМУНАЛКА PWA v6.0.2
 // ============================================================
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
-const APP_VERSION = '6.0.1';
+const APP_VERSION = '6.0.2';
 const MAX_ADDRESSES_FREE = 3;
 const LOCAL_BACKUP_KEY = 'komynalka_backup';
 const PRE_IMPORT_BACKUP_KEY = 'komynalka_pre_import_backup';
