@@ -1,10 +1,11 @@
 // ============================================================
-// КОМУНАЛКА PWA v6.1.0
+// КОМУНАЛКА PWA v6.4.0
 // ============================================================
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
-const APP_VERSION = '6.1.0';
+const APP_URL = 'https://komynalka.vercel.app';
+const APP_VERSION = '6.4.0';
 const MAX_ADDRESSES_FREE = 3;
 const LOCAL_BACKUP_KEY = 'komynalka_backup';
 const PRE_IMPORT_BACKUP_KEY = 'komynalka_pre_import_backup';
@@ -50,6 +51,7 @@ const TARIFF_PRESETS = [
 ];
 const defaultCustomServices = [{ id: "s1", name: "Квартплата", defaultSum: "" }, { id: "s2", name: "Сміття", defaultSum: "" }];
 let addresses = [], currentAddressId = 'default', isGuest = false, tariffs = {}, prefs = {}, records = [], customServices = [];
+let tariffTemplate = null, addressReminders = [];
 let currentCalc = { waterCost: 0, hotWaterCost: 0, electroCost: 0, gasCost: 0, customCost: 0, total: 0 };
 const urlParamsObj  = new URLSearchParams(window.location.search);
 const urlShareToken = urlParamsObj.get('share');
@@ -346,14 +348,28 @@ function dismissBroadcast(date) { localStorage.setItem('k_broadcast_seen', date)
 
 // =================== SYNC ===================
 let isSyncing = false;
+let syncRequested = false;
+const syncQueue = window.KomunalkaSyncQueue;
+
+function createSyncPayload() {
+  return {
+    addresses,
+    currentAddressId,
+    clientMutationId: syncQueue?.createId?.() || `sync_${Date.now().toString(36)}`,
+  };
+}
+
+function queueCurrentSync(payload) {
+  syncQueue?.enqueue?.(payload);
+}
 
 async function syncToCloud() {
-  if (isSyncing) return;
-  isSyncing = true;
   syncCurrentAddress();
   saveToLocal();
 
   if (isGuest && urlShareToken) {
+    if (isSyncing) return;
+    isSyncing = true;
     try {
       await fetch(`${WORKER_URL}?share=${urlShareToken}`, {
         method: 'POST',
@@ -364,28 +380,59 @@ async function syncToCloud() {
     return;
   }
 
-  if (!sessionLogin && !localStorage.getItem('k_uid')) { isSyncing = false; return; }
+  const localPayload = createSyncPayload();
+  if (!sessionLogin && !localStorage.getItem('k_uid')) {
+    return;
+  }
 
-  const hasRealData = addresses.flatMap(a => a.records || []).length > 0;
-  const isNew = addresses.length === 1 && addresses[0].id === 'default' && !hasRealData;
-  if (!hasRealData && !isNew) { isSyncing = false; return; }
+  if (!navigator.onLine) {
+    queueCurrentSync(localPayload);
+    setSyncState('offline');
+    return;
+  }
+
+  if (isSyncing) {
+    syncRequested = true;
+    queueCurrentSync(localPayload);
+    return;
+  }
+
+  isSyncing = true;
+  const queued = syncQueue?.read?.();
+  const payload = queued?.payload || localPayload;
+  const mutationId = queued?.id || payload.clientMutationId;
 
   setSyncState('syncing');
   try {
-    const res  = await secureFetch('POST', {}, { addresses, currentAddressId });
+    const res  = await secureFetch('POST', {}, payload);
     const data = await res.json();
     if (res.status === 403 || data.error === "WRONG_PASSWORD") { logout(); return; }
-    if (res.status === 429) { showToast('Зачекайте хвилину', '⏳'); setSyncState('offline'); return; }
+    if (!res.ok || !data.success) {
+      queueCurrentSync(payload);
+      if (res.status === 429) showToast('Зачекайте хвилину', '⏳');
+      setSyncState('offline');
+      return;
+    }
+    syncQueue?.clearIfCurrent?.(mutationId);
     setSyncState('synced');
   } catch(e) {
+    queueCurrentSync(payload);
     setSyncState('offline');
   } finally {
     isSyncing = false;
+    const pending = syncQueue?.read?.();
+    if (syncRequested || (pending && pending.id !== mutationId)) {
+      syncRequested = false;
+      queueMicrotask(() => syncToCloud());
+    }
   }
 }
 
 window.addEventListener('online',  () => { showToast('Онлайн', '🌐'); syncToCloud(); });
 window.addEventListener('offline', () => { setSyncState('offline'); showToast('Офлайн', '📴'); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && navigator.onLine && syncQueue?.read?.()) syncToCloud();
+});
 
 // =================== THEME ===================
 let currentMode = localStorage.getItem('themeMode') || 'auto';
@@ -412,6 +459,32 @@ $('welcomeStartBtn')?.addEventListener('click', dismissWelcome);
 $('welcomeTooltip')?.addEventListener('click', (event) => { if (event.target === event.currentTarget) dismissWelcome(); });
 
 // =================== AUTH ===================
+function getGoogleAuthErrorMessage(error) {
+  switch (error?.code) {
+    case 'auth/unauthorized-domain':
+      return `Домен ${location.hostname} ще не дозволений у Firebase Authorized domains.`;
+    case 'auth/popup-blocked':
+      return 'Браузер заблокував вікно Google. Дозвольте спливаючі вікна для цього сайту.';
+    case 'auth/network-request-failed':
+      return 'Не вдалося з’єднатися з Google. Перевірте інтернет і спробуйте ще раз.';
+    case 'auth/account-exists-with-different-credential':
+      return 'Ця пошта вже прив’язана до іншого способу входу.';
+    default:
+      return 'Не вдалося увійти через Google. Спробуйте ще раз.';
+  }
+}
+
+function showGoogleAuthError(error) {
+  const message = getGoogleAuthErrorMessage(error);
+  const errEl = $('authError');
+  if (errEl) {
+    errEl.textContent = message;
+    errEl.classList.remove('hidden');
+  }
+  console.warn('[auth] Google sign-in failed:', error?.code || 'unknown');
+  showToast(message, '❌');
+}
+
 $('authForm')?.addEventListener('submit', async (e) => { e.preventDefault(); await performLogin($('authLogin').value.trim(), $('authPass').value, false); });
 $('togglePassBtn')?.addEventListener('click', () => {
   const p = $('authPass');
@@ -427,7 +500,7 @@ $('googleAuthBtn')?.addEventListener('click', async () => {
     const result = await firebase.auth().signInWithPopup(provider);
     googleUser = result.user;
     await performLogin(null, null, false, googleUser.uid);
-  } catch(e) { if (e.code !== 'auth/popup-closed-by-user') showToast("Помилка Google", "❌"); }
+  } catch(e) { if (e.code !== 'auth/popup-closed-by-user') showGoogleAuthError(e); }
 });
 
 async function performLogin(rawLogin, rawPass, isAlreadyHashed, uid = null) {
@@ -594,7 +667,10 @@ $('btnLinkGoogle')?.addEventListener('click', async () => {
     const uid    = result.user.uid;
     const res    = await fetch(WORKER_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:"link_google", login: sessionLogin, pass: sessionPass, uid }) });
     if ((await res.json()).success) { showToast("Google підв'язано!"); localStorage.setItem('k_uid', uid); updateGoogleButton(); }
-  } catch(e) { showToast("Скасовано", "⚠️"); }
+  } catch(e) {
+    if (e.code === 'auth/popup-closed-by-user') showToast("Скасовано", "⚠️");
+    else showGoogleAuthError(e);
+  }
 });
 
 function updateGoogleButton() {
@@ -627,6 +703,83 @@ $('authPass')?.addEventListener('input', function() {
 setTimeout(() => { if ($('authScreen') && !$('authScreen').classList.contains('hidden')) $('authLogin')?.focus(); }, 800);
 
 // =================== ADDRESS ===================
+function createDefaultReminders() {
+  return [
+    { id: 'water', serviceId: 'water', emoji: '💧', label: 'Вода', startDay: 1, endDay: 5, active: true, deletable: false },
+    { id: 'hotWater', serviceId: 'hotWater', emoji: '🌡️', label: 'Гаряча вода', startDay: 1, endDay: 5, active: true, deletable: false },
+    { id: 'electro', serviceId: 'electro', emoji: '⚡', label: 'Світло', startDay: 28, endDay: 3, active: true, deletable: false },
+    { id: 'gas', serviceId: 'gas', emoji: '🔥', label: 'Газ', startDay: 1, endDay: 5, active: true, deletable: false },
+  ];
+}
+
+function normalizeReminders(items) {
+  const defaults = createDefaultReminders();
+  const source = Array.isArray(items) ? items.filter(isPlainObject) : [];
+  const known = new Map(source.map(item => [String(item.id || ''), item]));
+  const builtIn = defaults.map(item => {
+    const saved = known.get(item.id) || {};
+    return {
+      ...item,
+      ...saved,
+      id: item.id,
+      serviceId: saved.serviceId || item.serviceId,
+      label: String(saved.label || item.label).slice(0, 60),
+      emoji: String(saved.emoji || item.emoji).slice(0, 8),
+      startDay: Math.min(31, Math.max(1, parseInt(saved.startDay, 10) || item.startDay)),
+      endDay: Math.min(31, Math.max(1, parseInt(saved.endDay, 10) || item.endDay)),
+      active: saved.active !== false,
+      deletable: false,
+    };
+  });
+  const custom = source
+    .filter(item => !defaults.some(def => def.id === item.id))
+    .map((item, index) => ({
+      id: sanitizeDomId(item.id || `rem_${Date.now()}_${index}`, 'rem'),
+      serviceId: item.serviceId || null,
+      emoji: String(item.emoji || '🔔').slice(0, 8),
+      label: String(item.label || 'Моє нагадування').slice(0, 60),
+      startDay: Math.min(31, Math.max(1, parseInt(item.startDay, 10) || 1)),
+      endDay: Math.min(31, Math.max(1, parseInt(item.endDay, 10) || 5)),
+      active: item.active !== false,
+      deletable: true,
+    }));
+  return [...builtIn, ...custom];
+}
+
+function getLegacyTariffTemplate() {
+  try {
+    const value = JSON.parse(localStorage.getItem(CUSTOM_TARIFF_TEMPLATE_KEY) || 'null');
+    return isPlainObject(value) ? { ...defaultTariffs, ...value } : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function getLegacyReminders() {
+  try {
+    const value = JSON.parse(localStorage.getItem(CUSTOM_REMINDERS_KEY) || 'null');
+    return Array.isArray(value) ? value : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function isServiceEnabled(serviceId) {
+  if (serviceId === 'water') return !!prefs.showWater;
+  if (serviceId === 'hotWater') return !!prefs.showHotWater;
+  if (serviceId === 'electro') return !!prefs.showElectro;
+  if (serviceId === 'gas') return !!prefs.showGas;
+  return true;
+}
+
+function isReminderVisible(reminder) {
+  return !reminder.serviceId || isServiceEnabled(reminder.serviceId);
+}
+
+function getReminderDismissKey() {
+  return `lastSubmittedMonth_${currentAddressId || 'default'}`;
+}
+
 function loadCurrentAddress() {
   if (!addresses || addresses.length === 0) {
     const backup = loadFromLocal();
@@ -639,13 +792,24 @@ function loadCurrentAddress() {
   prefs          = { ...defaultPrefs,    ...(addr.prefs    || {}) };
   records        = addr.records        || [];
   customServices = addr.customServices || [...defaultCustomServices];
+  tariffTemplate = isPlainObject(addr.tariffTemplate) ? { ...defaultTariffs, ...addr.tariffTemplate } : getLegacyTariffTemplate();
+  addressReminders = normalizeReminders(Array.isArray(addr.reminders) ? addr.reminders : getLegacyReminders());
+  addr.tariffTemplate = tariffTemplate;
+  addr.reminders = addressReminders;
   if ($('currentAddressDisplay')) $('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : '');
   initAppUI();
 }
 
 function syncCurrentAddress() {
   const idx = addresses.findIndex(a => a.id === currentAddressId);
-  if (idx >= 0) { addresses[idx].tariffs = tariffs; addresses[idx].prefs = prefs; addresses[idx].records = records; addresses[idx].customServices = customServices; }
+  if (idx >= 0) {
+    addresses[idx].tariffs = tariffs;
+    addresses[idx].prefs = prefs;
+    addresses[idx].records = records;
+    addresses[idx].customServices = customServices;
+    addresses[idx].tariffTemplate = tariffTemplate;
+    addresses[idx].reminders = addressReminders;
+  }
 }
 
 function openAddressModal()  { $('addressModal')?.classList.remove('hidden'); setTimeout(() => $('addressModalContent')?.classList.remove('translate-y-full'), 10); renderAddressModal(); }
@@ -661,7 +825,7 @@ $('addAddressBtn')?.addEventListener('click', async () => {
   if (name && name.trim()) {
     syncCurrentAddress();
     const newId = 'addr_' + Date.now();
-    addresses.push({ id: newId, name: name.trim(), tariffs:{...defaultTariffs}, prefs:{...defaultPrefs}, records:[], customServices:[{ id:"s1", name:"Квартплата", defaultSum:"" }] });
+    addresses.push({ id: newId, name: name.trim(), tariffs:{...defaultTariffs}, prefs:{...defaultPrefs}, records:[], customServices:[{ id:"s1", name:"Квартплата", defaultSum:"" }], tariffTemplate: null, reminders: createDefaultReminders() });
     currentAddressId = newId;
     loadCurrentAddress(); syncToCloud(); closeAddressModal(); showToast("Додано"); checkNewAchievements();
   }
@@ -728,7 +892,7 @@ function switchTab(tabId, index) {
       if (tabId==='tabCalc')        { fillPreviousReadings(); calculatePreview(); updateSmartBadges(); }
       if (tabId==='tabHistory')     renderRecords();
       if (tabId==='tabAnalytics')   renderAnalytics();
-      if (tabId==='tabSettings')    { renderSettingsCustomServices(); updateDisplayName(); renderChangeLog(); }
+      if (tabId==='tabSettings')    { renderSettingsCustomServices(); renderCustomReminders(); updateDisplayName(); renderChangeLog(); }
     }));
   }, activeTab && activeTab !== targetTab ? 80 : 0);
   btnIds.forEach((id,i) => { const btn=$(id); if(!btn) return; btn.classList.toggle('text-brand',i===index); btn.classList.toggle('text-slate-400',i!==index); btn.classList.toggle('dark:text-slate-500',i!==index); });
@@ -916,11 +1080,9 @@ function isDayInRange(day, start, end) {
 function getNextDeadlineLabel() {
   if (!prefs.remindersEnabled) return 'Нагадування вимкнені';
   const day = new Date().getDate();
-  const windows = [
-    { label: 'вода', icon: '💧', start: prefs.remWaterStart || 1, end: prefs.remWaterEnd || 5, active: prefs.showWater || prefs.showHotWater },
-    { label: 'світло', icon: '⚡', start: prefs.remElectroStart || 28, end: prefs.remElectroEnd || 3, active: prefs.showElectro },
-    { label: 'газ', icon: '🔥', start: prefs.remGasStart || 1, end: prefs.remGasEnd || 5, active: prefs.showGas },
-  ].filter(item => item.active);
+  const windows = getCustomReminders()
+    .filter(reminder => reminder.active && isReminderVisible(reminder))
+    .map(reminder => ({ label: reminder.label.toLowerCase(), icon: reminder.emoji, start: reminder.startDay, end: reminder.endDay }));
   const active = windows.filter(item => isDayInRange(day, item.start, item.end));
   if (active.length) return 'Зараз: ' + active.map(item => `${item.icon} ${item.label}`).join(', ');
   const upcoming = windows
@@ -1125,7 +1287,7 @@ $('utilityForm')?.addEventListener('submit',async(e)=>{
   clearDraft();
   $('submitFormBtn')?.classList.add('save-btn-success');
   setTimeout(()=>$('submitFormBtn')?.classList.remove('save-btn-success'),600);
-  localStorage.setItem('lastSubmittedMonth', getMonthKey());
+  localStorage.setItem(getReminderDismissKey(), getMonthKey());
   syncToCloud();
   const[y,m]=$('monthInput').value.split('-').map(Number),nD=new Date(y,m);
   $('monthInput').value=`${nD.getFullYear()}-${String(nD.getMonth()+1).padStart(2,'0')}`;
@@ -1183,6 +1345,12 @@ function fillTariffInputs(nextTariffs) {
   if($('tGas'))           $('tGas').value           =nextTariffs.gas;
 }
 
+function persistAddressSettings() {
+  syncCurrentAddress();
+  saveToLocal();
+  syncToCloud();
+}
+
 function renderTariffPresets() {
   renderTariffPresetsExtended();
 }
@@ -1220,9 +1388,12 @@ function applyPreferences() {
   if($('familyRoleSelect'))$('familyRoleSelect').value=getFamilyRole();
   if($('blockWater'))     $('blockWater').style.display    =prefs.showWater   ?'block':'none';
   if($('blockHotWater'))  $('blockHotWater').style.display =prefs.showHotWater?'block':'none';
+  if($('settingWaterWrap'))$('settingWaterWrap').style.display=prefs.showWater?'block':'none';
   if($('settingHotWaterWrap'))$('settingHotWaterWrap').style.display=prefs.showHotWater?'flex':'none';
   if($('blockElectro'))   $('blockElectro').style.display  =prefs.showElectro ?'block':'none';
+  if($('settingElectroWrap'))$('settingElectroWrap').style.display=prefs.showElectro?'block':'none';
   if($('blockGas'))       $('blockGas').style.display      =prefs.showGas     ?'block':'none';
+  if($('settingGasWrap')) $('settingGasWrap').style.display=prefs.showGas?'block':'none';
   if($('blockCustomServices'))$('blockCustomServices').style.display=customServices.length>0?'block':'none';
   if(prefs.electroTwoZone){if($('electroNightRow'))$('electroNightRow').style.display='flex';if($('lblDay1'))$('lblDay1').innerText='(День)';if($('lblDay2'))$('lblDay2').innerText='(День)';}
   else{if($('electroNightRow'))$('electroNightRow').style.display='none';if($('lblDay1'))$('lblDay1').innerText='';if($('lblDay2'))$('lblDay2').innerText='';}
@@ -1243,20 +1414,22 @@ function renderChangeLog() {
 
 $('saveTariffTemplateBtn')?.addEventListener('click',()=>{
   const tpl={water:parseFloat($('tWater')?.value)||defaultTariffs.water,hotWater:parseFloat($('tHotWater')?.value)||defaultTariffs.hotWater,electroBase:parseFloat($('tElectroBase')?.value)||defaultTariffs.electroBase,electroWinter:parseFloat($('tElectroWinter')?.value)||defaultTariffs.electroWinter,gas:parseFloat($('tGas')?.value)||defaultTariffs.gas};
-  localStorage.setItem(CUSTOM_TARIFF_TEMPLATE_KEY,JSON.stringify(tpl));
+  tariffTemplate = tpl;
+  persistAddressSettings();
   addChangeLog('tariff_template_saved');
   renderChangeLog();
   showToast('Шаблон тарифів збережено','💾');
 });
 $('loadTariffTemplateBtn')?.addEventListener('click',()=>{
-  try{const tpl=JSON.parse(localStorage.getItem(CUSTOM_TARIFF_TEMPLATE_KEY)||'null');if(!tpl)return showToast('Шаблон не знайдено','⚠️');fillTariffInputs({...defaultTariffs,...tpl});addChangeLog('tariff_template_loaded');renderChangeLog();showToast('Шаблон застосовано','✅');}
-  catch(e){showToast('Шаблон пошкоджено','❌');}
+  if(!tariffTemplate) return showToast('Для цієї адреси шаблон ще не збережено','⚠️');
+  fillTariffInputs({...defaultTariffs,...tariffTemplate});
+  addChangeLog('tariff_template_loaded');renderChangeLog();showToast('Шаблон застосовано','✅');
 });
 $('resetTariffsBtn')?.addEventListener('click',()=>{fillTariffInputs(defaultTariffs);addChangeLog('tariffs_reset');renderChangeLog();showToast('Базові тарифи','✅');});
 $('tariffPresetSelect')?.addEventListener('change',(e)=>{applyTariffPreset(e.target.value);e.target.value='';});
 $('familyRoleSelect')?.addEventListener('change',(e)=>{prefs.familyRole=e.target.value;updateFamilyRoleHint();});
 
-['prefWater','prefHotWater','prefElectro','prefGas','prefElectroTwoZone','prefElectroWinter'].forEach(id=>{$(id)?.addEventListener('change',()=>{prefs.showWater=$('prefWater')?.checked??prefs.showWater;prefs.showHotWater=$('prefHotWater')?.checked??prefs.showHotWater;prefs.showElectro=$('prefElectro')?.checked??prefs.showElectro;prefs.showGas=$('prefGas')?.checked??prefs.showGas;prefs.electroTwoZone=$('prefElectroTwoZone')?.checked??prefs.electroTwoZone;prefs.electroWinter=$('prefElectroWinter')?.checked??prefs.electroWinter;applyPreferences();renderCalcCustomServices();calculatePreview();updateSmartBadges();});});
+['prefWater','prefHotWater','prefElectro','prefGas','prefElectroTwoZone','prefElectroWinter'].forEach(id=>{$(id)?.addEventListener('change',()=>{prefs.showWater=$('prefWater')?.checked??prefs.showWater;prefs.showHotWater=$('prefHotWater')?.checked??prefs.showHotWater;prefs.showElectro=$('prefElectro')?.checked??prefs.showElectro;prefs.showGas=$('prefGas')?.checked??prefs.showGas;prefs.electroTwoZone=$('prefElectroTwoZone')?.checked??prefs.electroTwoZone;prefs.electroWinter=$('prefElectroWinter')?.checked??prefs.electroWinter;applyPreferences();renderCalcCustomServices();renderCustomReminders();calculatePreview();updateSmartBadges();checkReminders();persistAddressSettings();});});
 $('prefReminders')?.addEventListener('change',function(){
   prefs.remindersEnabled = this.checked;
   if($('remindersSettings'))$('remindersSettings').style.display=this.checked?'block':'none';
@@ -1269,7 +1442,7 @@ $('saveSettingsBtn')?.addEventListener('click',()=>{
   const budgetVal = parseFloat($('budgetInput')?.value);
   localStorage.setItem('k_budget', Number.isFinite(budgetVal) && budgetVal > 0 ? String(budgetVal) : '');
   addChangeLog('tariffs_saved');
-  syncToCloud();applyPreferences();renderCalcCustomServices();calculatePreview();updateSmartBadges();checkReminders();
+  persistAddressSettings();applyPreferences();renderCalcCustomServices();renderCustomReminders();calculatePreview();updateSmartBadges();checkReminders();
   renderChangeLog();
   showToast("Збережено ✓");
 });
@@ -1290,7 +1463,7 @@ function checkReminders(){
   // Делегуємо до розширеної версії (якщо вже оголошена) або базової логіки
   if (typeof checkRemindersExtended === 'function') { checkRemindersExtended(); return; }
   const monthKey = getMonthKey();
-  if(!prefs.remindersEnabled||localStorage.getItem('lastSubmittedMonth')===monthKey){$('reminderBanner')?.classList.add('hidden');return;}
+  if(!prefs.remindersEnabled||localStorage.getItem(getReminderDismissKey())===monthKey){$('reminderBanner')?.classList.add('hidden');return;}
   const d=new Date().getDate();let msgs=[];
   const wS=prefs.remWaterStart||1,wE=prefs.remWaterEnd||5,eS=prefs.remElectroStart||28,eE=prefs.remElectroEnd||3,gS=prefs.remGasStart||1,gE=prefs.remGasEnd||5;
   const isW=isDayInRange(d,wS,wE),isE=isDayInRange(d,eS,eE),isG=isDayInRange(d,gS,gE);
@@ -1301,7 +1474,7 @@ function checkReminders(){
   else $('reminderBanner')?.classList.add('hidden');
 }
 $('reminderDismissBtn')?.addEventListener('click',()=>{
-  localStorage.setItem('lastSubmittedMonth', getMonthKey());
+  localStorage.setItem(getReminderDismissKey(), getMonthKey());
   $('reminderBanner')?.classList.add('hidden');
   showToast("Нагадаємо наступного місяця","🔔");
 });
@@ -1433,7 +1606,7 @@ $('sortSelect')?.addEventListener('change',()=>renderRecords());
 function isPlainObject(value){return value&&typeof value==='object'&&!Array.isArray(value);}
 function normalizeNumber(value,fallback=0){const num=Number(value);return Number.isFinite(num)?num:fallback;}
 function normalizeImportedRecord(rec){if(!isPlainObject(rec)||!/^\d{4}-\d{2}$/.test(String(rec.month||'')))return null;const tariffSnapshot=isPlainObject(rec.tariffSnapshot)?{...defaultTariffs,...rec.tariffSnapshot}:null;const normalized={...rec,id:rec.id||Date.now()+Math.random(),month:String(rec.month),total:normalizeNumber(rec.total),waterCost:normalizeNumber(rec.waterCost),hotWaterCost:normalizeNumber(rec.hotWaterCost),electroCost:normalizeNumber(rec.electroCost),gasCost:normalizeNumber(rec.gasCost),customCost:normalizeNumber(rec.customCost),note:String(rec.note||'').slice(0,500),tariffSnapshot};setRecordPayment(normalized,getPaymentStatus(rec),rec.paidAmount);return normalized;}
-function normalizeImportedAddress(addr,index){if(!isPlainObject(addr))return null;return{id:sanitizeDomId(addr.id||`addr_${Date.now()}_${index}`,'addr'),name:String(addr.name||`Об'єкт ${index+1}`).slice(0,80),tariffs:{...defaultTariffs,...(isPlainObject(addr.tariffs)?addr.tariffs:{})},prefs:{...defaultPrefs,...(isPlainObject(addr.prefs)?addr.prefs:{})},records:Array.isArray(addr.records)?addr.records.map(normalizeImportedRecord).filter(Boolean):[],customServices:Array.isArray(addr.customServices)?addr.customServices.filter(isPlainObject).map((srv,i)=>({id:sanitizeDomId(srv.id||`srv_${Date.now()}_${i}`,'srv'),name:String(srv.name||'').slice(0,60),defaultSum:srv.defaultSum==null?'':String(srv.defaultSum).slice(0,20)})):[]};}
+function normalizeImportedAddress(addr,index){if(!isPlainObject(addr))return null;return{id:sanitizeDomId(addr.id||`addr_${Date.now()}_${index}`,'addr'),name:String(addr.name||`Об'єкт ${index+1}`).slice(0,80),tariffs:{...defaultTariffs,...(isPlainObject(addr.tariffs)?addr.tariffs:{})},prefs:{...defaultPrefs,...(isPlainObject(addr.prefs)?addr.prefs:{})},records:Array.isArray(addr.records)?addr.records.map(normalizeImportedRecord).filter(Boolean):[],customServices:Array.isArray(addr.customServices)?addr.customServices.filter(isPlainObject).map((srv,i)=>({id:sanitizeDomId(srv.id||`srv_${Date.now()}_${i}`,'srv'),name:String(srv.name||'').slice(0,60),defaultSum:srv.defaultSum==null?'':String(srv.defaultSum).slice(0,20)})):[],tariffTemplate:isPlainObject(addr.tariffTemplate)?{...defaultTariffs,...addr.tariffTemplate}:null,reminders:normalizeReminders(addr.reminders)};}
 function normalizeImportData(data){if(!isPlainObject(data)||!Array.isArray(data.addresses))return null;const addrs=data.addresses.map(normalizeImportedAddress).filter(Boolean);if(!addrs.length)return null;const cid=String(data.currentAddressId||'');return{addresses:addrs,currentAddressId:addrs.some(a=>a.id===cid)?cid:addrs[0].id};}
 $('importFileInput')?.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=async ev=>{try{const normalized=normalizeImportData(JSON.parse(ev.target.result));if(!normalized){showToast('Невірний формат','❌');return;}const recordCount=normalized.addresses.reduce((s,a)=>s+(a.records?.length||0),0);if(await showAppConfirm(`Буде імпортовано ${normalized.addresses.length} об’єктів і ${recordCount} записів. Поточні дані заміняться після створення аварійного бекапу.`,{title:'Імпортувати дані?',confirmLabel:'Імпортувати',icon:'📥'})){backupCurrentState(PRE_IMPORT_BACKUP_KEY);addresses=normalized.addresses;currentAddressId=normalized.currentAddressId;addChangeLog('json_imported',{addresses:normalized.addresses.length,records:recordCount});loadCurrentAddress();syncToCloud();showActionToast('Імпортовано','Скасувати',()=>{if(restoreFromLocalBackup(PRE_IMPORT_BACKUP_KEY)){addChangeLog('import_rolled_back');showToast('Імпорт скасовано','✅');}else showToast('Немає бекапу','⚠️');},'✅');}}catch(err){showToast('Помилка','❌');}};reader.readAsText(file);e.target.value='';});
 $('restoreBackupBtn')?.addEventListener('click',async()=>{if(await showAppConfirm('Поточні дані буде замінено, але перед цим ми збережемо їх окремо.',{title:'Відновити локальний бекап?',confirmLabel:'Відновити',icon:'🕘'})){backupCurrentState(PRE_IMPORT_BACKUP_KEY);if(restoreFromLocalBackup(LOCAL_BACKUP_KEY)){addChangeLog('local_backup_restored');showToast('Бекап відновлено','✅');}else showToast('Бекап не знайдено','⚠️');}});
@@ -1475,11 +1648,21 @@ $('installPwaBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return
 // =================== PUSH ===================
 async function initPush(){if(!('Notification' in window))return;const btn=$('enablePushBtn'),st=$('pushStatus');if(Notification.permission==='granted'){if(btn)btn.classList.add('hidden');if(st){st.classList.remove('hidden');st.textContent='✓ Push увімкнено';st.className='text-[10px] text-green-500 text-center font-bold';}}else if(Notification.permission!=='denied'){if(btn)btn.classList.remove('hidden');}}
 $('enablePushBtn')?.addEventListener('click',async()=>{try{const p=await Notification.requestPermission();if(p==='granted'){showToast('Push увімкнено!','🔔');initPush();scheduleLocalReminder();}else showToast('Відмовлено','⚠️');}catch(e){showToast('Помилка','❌');}});
-function scheduleLocalReminder(){if(!('Notification' in window)||Notification.permission!=='granted')return;const d=new Date().getDate(),wS=prefs.remWaterStart||1,wE=prefs.remWaterEnd||5,eS=prefs.remElectroStart||28,eE=prefs.remElectroEnd||3,gS=prefs.remGasStart||1,gE=prefs.remGasEnd||5;const isW=isDayInRange(d,wS,wE)&&(prefs.showWater||prefs.showHotWater),isE=isDayInRange(d,eS,eE)&&prefs.showElectro,isG=isDayInRange(d,gS,gE)&&prefs.showGas;const monthKey=getMonthKey();if((isW||isE||isG)&&localStorage.getItem('lastSubmittedMonth')!==monthKey&&localStorage.getItem('lastPushShown')!==new Date().toDateString()){localStorage.setItem('lastPushShown',new Date().toDateString());new Notification('Комуналка 🏠',{body:'Час передати показники!',icon:'icon.png'});}}
+function scheduleLocalReminder(){
+  if(!('Notification' in window)||Notification.permission!=='granted'||!prefs.remindersEnabled)return;
+  const day=new Date().getDate();
+  const due=getCustomReminders().filter(reminder=>reminder.active&&isReminderVisible(reminder)&&isDayInRange(day,reminder.startDay,reminder.endDay));
+  const monthKey=getMonthKey();
+  const pushKey=`lastPushShown_${currentAddressId}`;
+  if(due.length&&localStorage.getItem(getReminderDismissKey())!==monthKey&&localStorage.getItem(pushKey)!==new Date().toDateString()){
+    localStorage.setItem(pushKey,new Date().toDateString());
+    new Notification('Комуналка',{body:`Час передати: ${due.map(item=>item.label).join(', ')}`,icon:'icon.png'});
+  }
+}
 setTimeout(initPush,1000);setTimeout(scheduleLocalReminder,3000);
 
 // =================== SHARE APP ===================
-$('shareAppBtn')?.addEventListener('click',async()=>{const text='🏠 Комуналка — розумний облік комунальних платежів.\nВода, світло, газ — все в одному додатку. Безкоштовно!\n\nhttps://komynalka.vercel.app';if(navigator.share){try{await navigator.share({text,url:'https://komynalka.vercel.app'});return;}catch(e){}}try{await navigator.clipboard.writeText(text);showToast('Посилання скопійовано!','📋');}catch(e){await showCopyDialog('Скопіюйте посилання',text);}});
+$('shareAppBtn')?.addEventListener('click',async()=>{const text=`🏠 Комуналка — розумний облік комунальних платежів.\nВода, світло, газ — все в одному додатку. Безкоштовно!\n\n${APP_URL}`;if(navigator.share){try{await navigator.share({text,url:APP_URL});return;}catch(e){}}try{await navigator.clipboard.writeText(text);showToast('Посилання скопійовано!','📋');}catch(e){await showCopyDialog('Скопіюйте посилання',text);}});
 
 // =================== LOGOUT ===================
 async function logout(){
@@ -1693,6 +1876,7 @@ function initAppUI(){
   renderTariffPresets();
   applyPreferences();
   renderCalcCustomServices();
+  renderCustomReminders();
   setPaymentInputsFromRecord(null);
   fillPreviousReadings();
   switchTab('tabDashboard',0);
@@ -1832,27 +2016,20 @@ function showEditingBanner(month) {
 
 // =================== CUSTOM REMINDERS ===================
 function getCustomReminders() {
-  try {
-    const raw = localStorage.getItem(CUSTOM_REMINDERS_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch(e) {}
-  // Дефолтні нагадування (видаляються)
-  return [
-    { id: 'water',   emoji: '💧', label: 'Вода',   startDay: 1,  endDay: 5,  active: true,  deletable: false },
-    { id: 'electro', emoji: '⚡', label: 'Світло', startDay: 28, endDay: 3,  active: true,  deletable: false },
-    { id: 'gas',     emoji: '🔥', label: 'Газ',    startDay: 1,  endDay: 5,  active: true,  deletable: false },
-  ];
+  return Array.isArray(addressReminders) && addressReminders.length ? addressReminders : createDefaultReminders();
 }
 
 function saveCustomReminders(reminders) {
-  try { localStorage.setItem(CUSTOM_REMINDERS_KEY, JSON.stringify(reminders)); } catch(e) {}
+  addressReminders = normalizeReminders(reminders);
+  persistAddressSettings();
 }
 
 function renderCustomReminders() {
   const container = $('customRemindersList');
   if (!container) return;
   const reminders = getCustomReminders();
-  container.innerHTML = reminders.map((rem, idx) => `
+  const visibleReminders = reminders.map((rem, idx) => ({ rem, idx })).filter(({ rem }) => isReminderVisible(rem));
+  container.innerHTML = visibleReminders.length ? visibleReminders.map(({ rem, idx }) => `
     <div class="flex items-center gap-2 bg-slate-50 dark:bg-black/40 p-2.5 rounded-xl border border-slate-100 dark:border-white/5">
       <input type="text" value="${escapeAttr(rem.emoji)}" data-rem-idx="${idx}" data-rem-field="emoji"
         class="rem-field w-10 bg-white dark:bg-[#2c2c2e] rounded-lg text-center text-base outline-none border border-transparent focus:border-brand px-1 py-1.5 transition-colors">
@@ -1873,7 +2050,7 @@ function renderCustomReminders() {
       </label>
       ${rem.deletable !== false ? `<button type="button" class="rem-del w-7 h-7 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-400 flex items-center justify-center text-xs active:scale-90 shrink-0" data-rem-idx="${idx}"><i class="fa-solid fa-trash text-[9px]"></i></button>` : `<div class="w-7 shrink-0"></div>`}
     </div>
-  `).join('');
+  `).join('') : '<p class="text-xs text-slate-400 text-center py-3">Увімкніть послугу, щоб налаштувати її нагадування.</p>';
 
   container.querySelectorAll('.rem-field').forEach(input => {
     input.addEventListener('change', () => {
@@ -1899,7 +2076,7 @@ function renderCustomReminders() {
 
 $('addCustomReminderBtn')?.addEventListener('click', () => {
   const reminders = getCustomReminders();
-  reminders.push({ id: 'rem_' + Date.now(), emoji: '🔔', label: 'Моє нагадування', startDay: 1, endDay: 5, active: true, deletable: true });
+  reminders.push({ id: 'rem_' + Date.now(), serviceId: null, emoji: '🔔', label: 'Моє нагадування', startDay: 1, endDay: 5, active: true, deletable: true });
   saveCustomReminders(reminders);
   renderCustomReminders();
   showToast('Нагадування додано', '🔔');
@@ -1908,7 +2085,7 @@ $('addCustomReminderBtn')?.addEventListener('click', () => {
 // Розширена перевірка нагадувань (враховує кастомні)
 function checkRemindersExtended() {
   const monthKey = getMonthKey();
-  if (!prefs.remindersEnabled || localStorage.getItem('lastSubmittedMonth') === monthKey) {
+  if (!prefs.remindersEnabled || localStorage.getItem(getReminderDismissKey()) === monthKey) {
     $('reminderBanner')?.classList.add('hidden');
     return;
   }
@@ -1916,12 +2093,7 @@ function checkRemindersExtended() {
   const reminders = getCustomReminders();
   const activeNow = reminders.filter(rem => rem.active && isDayInRange(d, rem.startDay, rem.endDay));
   // Фільтруємо прив'язані до послуг
-  const msgs = activeNow.filter(rem => {
-    if (rem.id === 'water') return prefs.showWater || prefs.showHotWater;
-    if (rem.id === 'electro') return prefs.showElectro;
-    if (rem.id === 'gas') return prefs.showGas;
-    return true; // кастомні завжди
-  }).map(rem => `${rem.emoji} ${rem.label}`);
+  const msgs = activeNow.filter(isReminderVisible).map(rem => `${rem.emoji} ${rem.label}`);
 
   if (msgs.length > 0) {
     $('reminderBanner')?.classList.remove('hidden');
@@ -1966,6 +2138,15 @@ function getCurrentTariffFormData() {
     electroWinter: num('tElectroWinter', defaultTariffs.electroWinter),
     gas:           num('tGas', defaultTariffs.gas),
   };
+}
+
+function formatActiveTariffSummary(tariffData = {}) {
+  const parts = [];
+  if (prefs.showWater) parts.push(`💧${tariffData.water ?? '—'}`);
+  if (prefs.showHotWater) parts.push(`🌡️${tariffData.hotWater ?? '—'}`);
+  if (prefs.showElectro) parts.push(`⚡${tariffData.electroBase ?? '—'}`);
+  if (prefs.showGas) parts.push(`🔥${tariffData.gas ?? '—'}`);
+  return parts.length ? `${parts.join(' · ')} ₴` : 'Немає активних послуг';
 }
 
 function isValidCommunityTariff(tariffData) {
@@ -2037,7 +2218,7 @@ function renderCommunityTariffs() {
       <div class="flex-1 min-w-0">
         <p class="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">${escapeHtml(item.name)}${item.verified ? ' · ✓' : ''}</p>
         <p class="text-[9px] text-slate-400 mt-0.5">${escapeHtml([item.city, item.region, TARIFF_SERVICE_LABELS[item.serviceType]].filter(Boolean).join(' · ')) || 'Без регіону'}</p>
-        <p class="text-[9px] text-slate-400 mt-0.5">💧${item.tariffs.water} ⚡${item.tariffs.electroBase} 🔥${item.tariffs.gas} ₴${item.votes ? ` · ${item.votes} голосів` : ''}</p>
+        <p class="text-[9px] text-slate-400 mt-0.5">${escapeHtml(formatActiveTariffSummary(item.tariffs))}${item.votes ? ` · ${item.votes} голосів` : ''}</p>
       </div>
       <button type="button" class="comm-load px-3 py-1.5 bg-brand-light text-brand rounded-lg text-[10px] font-bold border border-brand-border active:scale-95 transition-transform shrink-0" data-comm-id="${escapeAttr(item.id)}">Застосувати</button>
       <button type="button" class="comm-del w-7 h-7 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-400 flex items-center justify-center text-xs active:scale-90 shrink-0" data-comm-id="${escapeAttr(item.id)}"><i class="fa-solid fa-trash text-[9px]"></i></button>
@@ -2130,7 +2311,7 @@ function renderCloudCommunityTariffs() {
       <div class="flex-1 min-w-0">
         <p class="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">${item.verified ? '<span class="text-emerald-500">✓</span> ' : ''}${escapeHtml(item.name)}</p>
         <p class="text-[9px] text-slate-400 mt-0.5">${escapeHtml([item.city, item.region, TARIFF_SERVICE_LABELS[item.serviceType || 'all']].filter(Boolean).join(' · ')) || 'Без регіону'}</p>
-        <p class="text-[9px] text-slate-400 mt-0.5">💧${item.tariffs?.water||'—'} ⚡${item.tariffs?.electroBase||'—'} 🔥${item.tariffs?.gas||'—'} ₴ · ${Math.max(0, item.votes || 0)} голосів · від ${escapeHtml(item.author||'?')}</p>
+        <p class="text-[9px] text-slate-400 mt-0.5">${escapeHtml(formatActiveTariffSummary(item.tariffs))} · ${Math.max(0, item.votes || 0)} голосів · від ${escapeHtml(item.author||'?')}</p>
       </div>
       <div class="flex gap-1 shrink-0">
         <button type="button" class="cloud-tariff-vote w-8 h-8 bg-white dark:bg-[#2c2c2e] text-emerald-500 rounded-lg text-[10px] font-bold border border-emerald-200 dark:border-emerald-500/20 active:scale-95 transition-transform" data-cloud-id="${escapeAttr(item.id)}" title="Підтвердити тариф"><i class="fa-solid fa-thumbs-up"></i></button>

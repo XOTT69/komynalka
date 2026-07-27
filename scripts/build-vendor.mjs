@@ -1,7 +1,8 @@
 import { copyFile, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 async function copy(source, destination) {
   const from = path.join(root, 'node_modules', source);

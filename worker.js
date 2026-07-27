@@ -6,6 +6,9 @@ const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Device-FP',
+  'Cache-Control': 'no-store',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'no-referrer',
 };
 
 const ok  = (d, s=200) => new Response(JSON.stringify(d), {
@@ -175,6 +178,9 @@ export default {
     const ip    = req.headers.get('CF-Connecting-IP') || 'unknown';
     const fp    = (req.headers.get('X-Device-FP') || 'unknown').slice(0, 64);
     try {
+      if (url.searchParams.get('health') === '1' && req.method === 'GET') {
+        return ok({ success: true, status: 'ok', timestamp: new Date().toISOString() });
+      }
       if (share)                 return doShare(req, env, share, ip);
       if (req.method === 'GET')  return doGet(req, env, ip, fp);
       if (req.method === 'POST') return doPost(req, env, ip, fp);
@@ -212,6 +218,7 @@ async function doGet(req, env, ip, fp) {
       hasGoogle:        normalized.hasGoogle  || false,
       displayName:      normalized.displayName || '',
       createdAt:        normalized.createdAt  || null,
+      updatedAt:        normalized.updatedAt  || null,
       linkedLogin:      login,
     }
   });
@@ -221,7 +228,11 @@ async function doPost(req, env, ip, fp) {
   const cl = parseInt(req.headers.get('content-length') || '0');
   if (cl > 512 * 1024) return err('PAYLOAD_TOO_LARGE', 413);
   let body;
-  try { body = await req.json(); } catch { return err('INVALID_JSON', 400); }
+  try {
+    const raw = await req.text();
+    if (raw.length > 512 * 1024) return err('PAYLOAD_TOO_LARGE', 413);
+    body = JSON.parse(raw);
+  } catch { return err('INVALID_JSON', 400); }
   const action = typeof body.action === 'string' ? body.action : '';
 
   if (action === 'admin_login' || action.startsWith('admin_')) return doAdmin(action, body, env, ip);
@@ -289,14 +300,15 @@ async function doSave(body, env, login, data, ip, fp) {
   }
   const devs = data.knownDevices || [];
   if (!devs.includes(fp)) devs.push(fp);
+  const updatedAt = new Date().toISOString();
   await saveUser(env, login, {
     ...data,
     addresses:        body.addresses,
     currentAddressId: body.currentAddressId || data.currentAddressId,
-    updatedAt:        new Date().toISOString(),
+    updatedAt,
     lastIP: ip, lastDevice: fp, knownDevices: devs.slice(-10),
   });
-  return ok({ success: true });
+  return ok({ success: true, updatedAt, clientMutationId: body.clientMutationId || null });
 }
 
 async function doUpdateName(body, env, login, data) {
@@ -321,7 +333,11 @@ async function doShare(req, env, token, ip) {
   if (req.method === 'POST') {
     if (!await rateLimit(env, `share:${token}:${ip}`, 20, 60000)) return err('RATE_LIMITED', 429);
     let body;
-    try { body = await req.json(); } catch { return err('INVALID_JSON', 400); }
+    try {
+      const rawBody = await req.text();
+      if (rawBody.length > 512 * 1024) return err('PAYLOAD_TOO_LARGE', 413);
+      body = JSON.parse(rawBody);
+    } catch { return err('INVALID_JSON', 400); }
     if (!Array.isArray(body.addresses) || !body.addresses.length) return err('INVALID_DATA', 400);
     const idx = uData.addresses.findIndex(a => a.id === sd.addressId);
     if (idx < 0) return err('ADDRESS_NOT_FOUND', 404);

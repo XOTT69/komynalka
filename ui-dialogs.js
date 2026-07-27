@@ -106,4 +106,3 @@ $('appDialog')?.addEventListener('click', event => { if (event.target === event.
 $('appDialogInput')?.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); $('appDialogConfirmBtn')?.click(); } });
 
 window.showAppConfirm = showAppConfirm;
-

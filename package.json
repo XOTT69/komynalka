@@ -1,13 +1,14 @@
 {
   "name": "komunalka",
-  "version": "6.1.0",
+  "version": "6.4.0",
   "description": "Розумний облік комунальних платежів PWA",
   "scripts": {
     "dev": "NO_UPDATE_NOTIFIER=1 serve .",
     "build:vendor": "node scripts/build-vendor.mjs",
     "build:css": "BROWSERSLIST_IGNORE_OLD_DATA=true tailwindcss -i ./styles/tailwind.css -o ./dist/tailwind.css --minify",
+    "test:unit": "node tests/sync-queue.test.mjs",
     "smoke": "node tests/ui-smoke.mjs",
-    "check": "node tests/sanity-check.mjs && node tests/ui-smoke.mjs",
+    "check": "pnpm run test:unit && node tests/sanity-check.mjs && node tests/ui-smoke.mjs",
     "build": "pnpm run build:vendor && pnpm run build:css && pnpm run check"
   },
   "keywords": [

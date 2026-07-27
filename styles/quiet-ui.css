@@ -373,3 +373,195 @@ html.dark #bottomNav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Mobile-first warm design system — the app should feel calm and tactile,
+   while keeping the important numbers and actions immediately legible. */
+:root {
+  --quiet-bg: #fff8f1;
+  --quiet-surface: #fffdfa;
+  --quiet-surface-muted: #fff4e8;
+  --quiet-border: #f0dfd0;
+  --quiet-text: #2e2420;
+  --quiet-muted: #7d6b62;
+  --quiet-accent: #c65d36;
+  --quiet-accent-soft: #fff0e7;
+  --quiet-danger: #b84035;
+  --brand: #c65d36;
+  --brand-hover: #a94726;
+  --brand-light: #fff0e7;
+  --brand-border: #f1cbb8;
+}
+
+html,
+body,
+#appScreen,
+#authScreen,
+#splashScreen {
+  background: var(--quiet-bg) !important;
+}
+
+#appScreen::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 7% -10%, rgba(246, 180, 125, .25), transparent 35%), radial-gradient(circle at 95% 15%, rgba(244, 207, 166, .32), transparent 34%);
+}
+
+.premium-card,
+.glass,
+.shadow-premium {
+  border-color: var(--quiet-border) !important;
+  box-shadow: 0 1px 2px rgba(91, 55, 38, .04), 0 12px 28px rgba(91, 55, 38, .055) !important;
+}
+
+#addressHeaderTrigger > div:first-child,
+#authScreen .w-24.h-24,
+#submitFormBtn,
+#saveSettingsBtn,
+#installPwaBtn,
+#emptyStateAddBtn,
+.primary-action,
+#reminderDismissBtn {
+  background: var(--quiet-accent) !important;
+}
+
+#quickActionsBtn,
+#addressHeaderTrigger > div:first-child {
+  border-color: #efd7c5 !important;
+}
+
+.dashboard-summary {
+  background: linear-gradient(145deg, #fffdf9, #fff1e5) !important;
+  border-color: #efd7c5 !important;
+}
+
+.dashboard-summary #dashInsight,
+#reminderBanner {
+  color: #7b351e !important;
+  background: #fff0e6 !important;
+  border-color: #f4cfbb !important;
+}
+
+#dashDebtCard {
+  color: #67231f !important;
+  background: #fff5f2 !important;
+  border-color: #f3ccc6 !important;
+  border-left-color: #bd4a3e !important;
+}
+
+#dashDebtCard .debt-card-label,
+#dashDebtMonths,
+#dashDebt {
+  color: #8d3029 !important;
+}
+
+.hero-gradient,
+#analyticsCard > .bg-gradient-to-br {
+  background: linear-gradient(145deg, #50352c, #7c4936) !important;
+  border-color: rgba(255, 235, 218, .28) !important;
+}
+
+#bottomNav {
+  background: rgba(255, 253, 250, .96) !important;
+  border-color: #eedccd !important;
+  box-shadow: 0 14px 34px rgba(83, 47, 31, .15) !important;
+}
+
+#updateBanner {
+  color: #fffaf5 !important;
+  background: #50352c !important;
+  border: 1px solid rgba(255, 226, 204, .22);
+  box-shadow: 0 18px 36px rgba(83, 47, 31, .24) !important;
+}
+
+#updateBanner #applyUpdateBtn {
+  color: #5c2b1a !important;
+  background: #ffd8c2 !important;
+}
+
+.nav-btn.text-brand {
+  color: var(--quiet-accent) !important;
+  background: var(--quiet-accent-soft) !important;
+}
+
+input,
+select,
+textarea {
+  font-size: max(16px, 1rem) !important;
+  border-color: var(--quiet-border) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 3px solid rgba(198, 93, 54, .15) !important;
+  outline-offset: 1px;
+  border-color: var(--quiet-accent) !important;
+}
+
+@media (max-width: 899px) {
+  #appScreen > .app-frame:first-child {
+    padding-top: max(14px, env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: 12px !important;
+  }
+
+  #swipeContainer {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  #bottomNav {
+    bottom: max(5px, calc(env(safe-area-inset-bottom, 0px) - 24px)) !important;
+    min-height: 64px;
+  }
+
+  #bottomNav .nav-btn {
+    min-height: 50px;
+    border-radius: 15px !important;
+  }
+
+  .premium-card,
+  .dashboard-summary,
+  #dashDebtCard {
+    border-radius: 18px !important;
+  }
+
+  #tabDashboard,
+  #tabCalc,
+  #tabHistory,
+  #tabSettings,
+  #tabAnalytics {
+    gap: 12px !important;
+  }
+
+  .dashboard-actions button {
+    min-height: 72px;
+    padding: 14px !important;
+  }
+}
+
+html.dark {
+  --quiet-bg: #1d1512;
+  --quiet-surface: #281d19;
+  --quiet-surface-muted: #34251f;
+  --quiet-border: #4a342b;
+  --quiet-text: #fff8f3;
+  --quiet-muted: #d1b8a9;
+  --quiet-accent: #f39a6a;
+  --quiet-accent-soft: rgba(243, 154, 106, .16);
+  --brand: #f39a6a;
+  --brand-hover: #ffb28a;
+  --brand-light: rgba(243, 154, 106, .16);
+  --brand-border: rgba(243, 154, 106, .34);
+}
+
+html.dark #bottomNav {
+  background: rgba(40, 29, 25, .96) !important;
+  border-color: #4a342b !important;
+}
+
+html.dark #dashDebtCard {
+  background: #351d1c !important;
+  border-color: #6e3934 !important;
+}
