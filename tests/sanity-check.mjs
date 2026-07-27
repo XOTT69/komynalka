@@ -3,8 +3,9 @@ import { constants } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const fail = message => {
   console.error(`FAIL: ${message}`);
   process.exitCode = 1;
@@ -27,7 +28,7 @@ function checkInlineScripts(source, filename) {
   });
 }
 
-for (const file of ['app.js', 'ui-dialogs.js', 'export-tools.js', 'record-card.js', 'ai-chat.js', 'sw.js', 'worker.js', 'year-report-image.js']) {
+for (const file of ['app.js', 'sync-queue.js', 'ui-dialogs.js', 'export-tools.js', 'record-card.js', 'ai-chat.js', 'sw.js', 'worker.js', 'year-report-image.js']) {
   try {
     execFileSync('node', ['--check', path.join(root, file)], { stdio: 'pipe' });
   } catch (error) {
@@ -37,6 +38,7 @@ for (const file of ['app.js', 'ui-dialogs.js', 'export-tools.js', 'record-card.j
 
 const manifest = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8'));
 const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+const vercelConfig = JSON.parse(await readFile(path.join(root, 'vercel.json'), 'utf8'));
 const vendorAssets = [
   'vendor/firebase/firebase-app-compat.js',
   'vendor/firebase/firebase-auth-compat.js',
@@ -99,6 +101,9 @@ if (!app.includes('getSaveAnomalyWarning')) fail('save-time anomaly warning is m
 if (!app.includes('escapeAttr')) fail('HTML attribute escaping helper is missing');
 if (!app.includes('sanitizeDomId')) fail('imported DOM id sanitization is missing');
 if (!app.includes('CUSTOM_TARIFF_TEMPLATE_KEY')) fail('custom tariff template support is missing');
+if (!app.includes('tariffTemplate =') || !app.includes('addresses[idx].tariffTemplate = tariffTemplate')) fail('tariff templates are not stored per address');
+if (!app.includes('addresses[idx].reminders = addressReminders')) fail('reminders are not stored per address');
+if (!app.includes('function isReminderVisible(') || !app.includes('renderCustomReminders();calculatePreview()')) fail('disabled services are not removed from the reminder flow');
 if (!app.includes('renderChangeLog')) fail('change log rendering is missing');
 if (!app.includes('nextDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)')) fail('year-safe next-month forecast is missing');
 if (!app.includes('TARIFF_PRESETS')) fail('city/provider tariff presets are missing');
@@ -106,10 +111,12 @@ if (!app.includes('publishCommunityTariffToCloud')) fail('community provider clo
 if (!app.includes('setCommunityTariffStatus')) fail('community provider status UI logic is missing');
 if (!app.includes('cloud_tariff_loaded')) fail('cloud provider apply action is not logged');
 if (!app.includes('cloudCommunityTariffsCache')) fail('cloud provider catalog cache is missing');
+if (app.includes('DOMAIN_MIGRATION_NOTICE_KEY') || app.includes('previewDomainMigration')) fail('paused domain-migration notice is still active');
 if (!app.includes("action: 'vote_tariff'")) fail('cloud provider voting action is missing');
 if (!app.includes('TARIFF_SERVICE_LABELS')) fail('provider service labels are missing');
 if (!app.includes('data.data?.linkedLogin')) fail('Google login does not read linkedLogin from response data');
 if (!app.includes('action:"link_google", login: sessionLogin, pass: sessionPass, uid')) fail('Google linking does not send the current password hash');
+if (!app.includes("case 'auth/unauthorized-domain'") || !app.includes('showGoogleAuthError(e)')) fail('Google login still hides actionable Firebase errors');
 if (!app.includes('familyRole')) fail('family role preferences are missing');
 if (!app.includes('getPaymentStatus')) fail('payment status helpers are missing');
 if (!app.includes('remGasStart')) fail('gas submission calendar is missing');
@@ -149,6 +156,22 @@ for (const [sourceIndex, source] of runtimeSources.entries()) {
 
 const index = await readFile(path.join(root, 'index.html'), 'utf8');
 checkInlineScripts(index, 'index.html');
+const canonicalOrigin = 'https://komynalka.vercel.app';
+if (!index.includes(`<link rel="canonical" href="${canonicalOrigin}/">`)) fail('main app canonical URL is not the production domain');
+if (!index.includes(`<meta property="og:url" content="${canonicalOrigin}/">`)) fail('main app Open Graph URL is not the production domain');
+if (!app.includes(`const APP_URL = '${canonicalOrigin}'`)) fail('share URL is not centralized on the production domain');
+if (app.includes('https://mykomunalka.pp.ua')) fail('paused custom domain remains in the application runtime');
+if (vercelConfig.redirects?.some((redirect) =>
+  redirect.has?.some((condition) => condition.type === 'host' && condition.value === 'komynalka.vercel.app')
+)) fail('the restored production host must not redirect elsewhere');
+for (const host of ['mykomunalka.pp.ua', 'www.mykomunalka.pp.ua']) {
+  const rollbackRedirect = vercelConfig.redirects?.find((redirect) =>
+    redirect.has?.some((condition) => condition.type === 'host' && condition.value === host)
+  );
+  if (!rollbackRedirect) fail(`${host} does not redirect to the restored production host`);
+  if (rollbackRedirect.destination !== 'https://komynalka.vercel.app/$1') fail(`${host} has the wrong rollback destination`);
+  if (rollbackRedirect.permanent !== false) fail(`${host} rollback redirect must stay temporary`);
+}
 if (index.includes('cdn.tailwindcss.com')) fail('main app still loads Tailwind from the CDN');
 if (/https:\/\/(?:www\.gstatic\.com\/firebasejs|cdnjs\.cloudflare\.com)/.test(index)) fail('main app still loads a critical library from a CDN');
 if (/https:\/\/fonts\.(?:googleapis|gstatic)\.com/.test(index)) fail('main app still loads fonts from Google');
@@ -158,9 +181,16 @@ if (!index.includes('styles/app-shell.css')) fail('responsive application shell 
 if (!index.includes('styles/quiet-ui.css')) fail('quiet UI stylesheet is missing');
 if (!index.includes(`<script src="record-card.js?v=${packageJson.version}"></script>`)) fail('versioned record card module is not loaded');
 if (!index.includes(`<script src="ui-dialogs.js?v=${packageJson.version}"></script>`)) fail('versioned dialog module is not loaded');
+if (!index.includes(`<script src="sync-queue.js?v=${packageJson.version}"></script>`)) fail('versioned sync queue module is not loaded');
+if (!app.includes('const syncQueue = window.KomunalkaSyncQueue')) fail('app is not using the persistent sync queue');
+if (!app.includes('clientMutationId') || !app.includes('queueCurrentSync(payload)')) fail('cloud sync does not retain an offline-safe mutation snapshot');
+const workerSource = await readFile(path.join(root, 'worker.js'), 'utf8');
+if (!workerSource.includes("url.searchParams.get('health') === '1'")) fail('worker health endpoint is missing');
+if (!workerSource.includes("'X-Content-Type-Options': 'nosniff'")) fail('worker hardening response header is missing');
+if (!workerSource.includes('raw.length > 512 * 1024')) fail('worker does not verify streamed request size');
 if (!index.includes(`<script src="export-tools.js?v=${packageJson.version}"></script>`)) fail('versioned export tools module is not loaded');
 if (!(await fileExists('dist/tailwind.css'))) fail('compiled Tailwind stylesheet is missing; run the build');
-for (const id of ['restoreBackupBtn', 'restorePreImportBtn', 'saveTariffTemplateBtn', 'loadTariffTemplateBtn', 'resetTariffsBtn', 'changeLogList', 'forgetDeviceBtn']) {
+for (const id of ['restoreBackupBtn', 'restorePreImportBtn', 'saveTariffTemplateBtn', 'loadTariffTemplateBtn', 'resetTariffsBtn', 'changeLogList', 'forgetDeviceBtn', 'settingWaterWrap', 'settingElectroWrap', 'settingGasWrap']) {
   if (!index.includes(`id="${id}"`)) fail(`index is missing ${id}`);
 }
 if (!index.includes('--surface-base')) fail('clean design-system surface tokens are missing');
@@ -219,6 +249,7 @@ const admin = await readFile(path.join(root, 'admin.html'), 'utf8');
 const landing = await readFile(path.join(root, 'landing.html'), 'utf8');
 checkInlineScripts(admin, 'admin.html');
 checkInlineScripts(landing, 'landing.html');
+if (!landing.includes(`${canonicalOrigin}/og-image.png`) || landing.includes('https://mykomunalka.pp.ua')) fail('landing page metadata is not restored to the current production domain');
 if (/\b(?:confirm|prompt)\s*\(/.test(admin)) fail('admin still uses native blocking dialogs');
 if (/\bon(?:click|change|input)=/i.test(admin)) fail('admin still contains inline event handlers');
 if (!admin.includes("if (!pass) {") || !admin.includes("errEl.textContent = 'Введіть пароль'")) fail('admin login does not reject an empty password locally');
@@ -230,6 +261,8 @@ for (const unsafe of ['onclick="viewUser(', 'onclick="resetPassword(', 'onclick=
   if (admin.includes(unsafe)) fail(`admin still contains unsafe generated handler: ${unsafe}`);
 }
 if (!admin.includes("escHtml((ud.lastDevice || '—').slice(0, 12))")) fail('admin device details are not escaped');
+
+if (vercelConfig.redirects?.some(rule => rule.has?.some(condition => condition.type === 'host' && condition.value === 'komynalka.vercel.app'))) fail('current production domain still redirects to the paused custom domain');
 
 const worker = await readFile(path.join(root, 'worker.js'), 'utf8');
 if (!supabaseMigration.includes('alter table public.utility_records enable row level security')) fail('Supabase records RLS is missing');
