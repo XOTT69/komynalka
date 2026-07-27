@@ -143,6 +143,7 @@ if (app.includes('function createRecordCard(')) fail('record card renderer was n
 if (!(await fileExists('tests/record-card-harness.html'))) fail('record card browser harness is missing');
 if (!(await fileExists('tests/dialog-harness.html'))) fail('dialog browser harness is missing');
 if (!(await fileExists('tests/vendor-harness.html'))) fail('vendor browser harness is missing');
+if (!(await fileExists('tests/reminders-harness.html'))) fail('reminder browser harness is missing');
 
 const runtimeSources = await Promise.all(['app.js', 'ui-dialogs.js', 'export-tools.js', 'record-card.js', 'ai-chat.js', 'year-report-image.js'].map(file => readFile(path.join(root, file), 'utf8')));
 const combinedRuntime = runtimeSources.join('\n');

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../dist/tailwind.css?v=6.4.1">
+  <link rel="stylesheet" href="../styles/fonts.css?v=6.4.1">
+  <link rel="stylesheet" href="../styles/quiet-ui.css?v=6.4.1">
+  <title>Reminder layout QA</title>
+</head>
+<body class="p-4">
+  <main class="premium-card mx-auto max-w-md p-4">
+    <p class="mb-3 text-sm font-black">Мої нагадування</p>
+    <div id="customRemindersList">
+      <div class="reminder-row">
+        <input class="reminder-emoji" value="💧" aria-label="Іконка нагадування: Вода">
+        <input class="reminder-label" value="Вода" aria-label="Назва нагадування">
+        <div class="reminder-range" aria-label="Період нагадування"><input class="reminder-day" value="1" aria-label="Початковий день"><span aria-hidden="true">—</span><input class="reminder-day" value="5" aria-label="Останній день"></div>
+        <label class="reminder-toggle"><input class="sr-only peer" checked type="checkbox" aria-label="Увімкнути нагадування: Вода"><span class="reminder-toggle-track" aria-hidden="true"></span><span class="reminder-toggle-thumb" aria-hidden="true"></span></label>
+        <div class="reminder-delete-placeholder" aria-hidden="true"></div>
+      </div>
+      <div class="reminder-row">
+        <input class="reminder-emoji" value="⚡" aria-label="Іконка нагадування: Світло">
+        <input class="reminder-label" value="Дуже довге нагадування для перевірки" aria-label="Назва нагадування">
+        <div class="reminder-range" aria-label="Період нагадування"><input class="reminder-day" value="28" aria-label="Початковий день"><span aria-hidden="true">—</span><input class="reminder-day" value="3" aria-label="Останній день"></div>
+        <label class="reminder-toggle"><input class="sr-only peer" checked type="checkbox" aria-label="Увімкнути нагадування: Світло"><span class="reminder-toggle-track" aria-hidden="true"></span><span class="reminder-toggle-thumb" aria-hidden="true"></span></label>
+        <button class="reminder-delete" type="button" aria-label="Видалити нагадування: Світло">×</button>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

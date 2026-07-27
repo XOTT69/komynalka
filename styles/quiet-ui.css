@@ -501,6 +501,139 @@ textarea:focus {
   border-color: var(--quiet-accent) !important;
 }
 
+/* Reminder settings: fixed, collision-free controls on narrow iPhone screens. */
+#customRemindersList {
+  display: grid;
+  gap: 8px;
+}
+
+.reminder-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 82px 32px 28px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--quiet-border);
+  border-radius: 14px;
+  background: var(--quiet-surface-muted);
+}
+
+.reminder-row input {
+  min-width: 0;
+}
+
+.reminder-emoji,
+.reminder-label,
+.reminder-day {
+  width: 100%;
+  height: 38px;
+  border: 1px solid transparent !important;
+  border-radius: 11px;
+  background: var(--quiet-surface) !important;
+  color: var(--quiet-text) !important;
+  box-shadow: 0 1px 2px rgba(91, 55, 38, .04);
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.reminder-emoji {
+  padding: 0 2px;
+  text-align: center;
+}
+
+.reminder-label {
+  padding: 0 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+}
+
+.reminder-range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 10px minmax(0, 1fr);
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  color: var(--quiet-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.reminder-day {
+  padding: 0;
+  text-align: center;
+  font-weight: 700;
+}
+
+.reminder-toggle {
+  position: relative;
+  display: inline-flex;
+  width: 32px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.reminder-toggle-track {
+  width: 32px;
+  height: 20px;
+  border-radius: 999px;
+  background: #d9c8bc;
+  transition: background .16s ease;
+}
+
+.reminder-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(75, 43, 29, .28);
+  transition: transform .16s ease;
+}
+
+.reminder-toggle .peer:checked ~ .reminder-toggle-track { background: var(--quiet-accent); }
+.reminder-toggle .peer:checked ~ .reminder-toggle-thumb { transform: translateX(12px); }
+
+.reminder-delete,
+.reminder-delete-placeholder {
+  width: 28px;
+  height: 28px;
+}
+
+.reminder-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9px;
+  color: #b84035;
+  background: #fff0ed;
+  font-size: 11px;
+}
+
+.reminder-delete:active { transform: scale(.92); }
+
+@media (max-width: 359px) {
+  .reminder-row {
+    grid-template-columns: 36px minmax(0, 1fr) 30px 26px;
+    gap: 6px;
+  }
+
+  .reminder-range {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    width: min(132px, 100%);
+    justify-self: end;
+  }
+
+  .reminder-delete,
+  .reminder-delete-placeholder {
+    width: 26px;
+    height: 26px;
+  }
+}
+
 @media (max-width: 899px) {
   #appScreen > .app-frame:first-child {
     padding-top: max(14px, env(safe-area-inset-top, 0px)) !important;

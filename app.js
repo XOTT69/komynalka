@@ -1,11 +1,11 @@
 // ============================================================
-// КОМУНАЛКА PWA v6.4.0
+// КОМУНАЛКА PWA v6.4.1
 // ============================================================
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
 const APP_URL = 'https://komynalka.vercel.app';
-const APP_VERSION = '6.4.0';
+const APP_VERSION = '6.4.1';
 const MAX_ADDRESSES_FREE = 3;
 const LOCAL_BACKUP_KEY = 'komynalka_backup';
 const PRE_IMPORT_BACKUP_KEY = 'komynalka_pre_import_backup';
@@ -2030,25 +2030,30 @@ function renderCustomReminders() {
   const reminders = getCustomReminders();
   const visibleReminders = reminders.map((rem, idx) => ({ rem, idx })).filter(({ rem }) => isReminderVisible(rem));
   container.innerHTML = visibleReminders.length ? visibleReminders.map(({ rem, idx }) => `
-    <div class="flex items-center gap-2 bg-slate-50 dark:bg-black/40 p-2.5 rounded-xl border border-slate-100 dark:border-white/5">
+    <div class="reminder-row">
       <input type="text" value="${escapeAttr(rem.emoji)}" data-rem-idx="${idx}" data-rem-field="emoji"
-        class="rem-field w-10 bg-white dark:bg-[#2c2c2e] rounded-lg text-center text-base outline-none border border-transparent focus:border-brand px-1 py-1.5 transition-colors">
+        aria-label="Іконка нагадування: ${escapeAttr(rem.label)}"
+        class="rem-field reminder-emoji">
       <input type="text" value="${escapeAttr(rem.label)}" data-rem-idx="${idx}" data-rem-field="label"
-        class="rem-field flex-1 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2.5 py-2 border border-transparent focus:border-brand transition-colors">
-      <div class="flex items-center gap-1 text-[10px] text-slate-400 font-bold">
+        aria-label="Назва нагадування"
+        class="rem-field reminder-label">
+      <div class="reminder-range" aria-label="Період нагадування">
         <input type="number" value="${rem.startDay}" min="1" max="31" data-rem-idx="${idx}" data-rem-field="startDay"
-          class="rem-field w-9 bg-white dark:bg-[#2c2c2e] rounded-lg text-center outline-none border border-transparent focus:border-brand py-1.5 font-bold text-xs transition-colors">
-        <span>—</span>
+          aria-label="Початковий день"
+          class="rem-field reminder-day">
+        <span aria-hidden="true">—</span>
         <input type="number" value="${rem.endDay}" min="1" max="31" data-rem-idx="${idx}" data-rem-field="endDay"
-          class="rem-field w-9 bg-white dark:bg-[#2c2c2e] rounded-lg text-center outline-none border border-transparent focus:border-brand py-1.5 font-bold text-xs transition-colors">
+          aria-label="Останній день"
+          class="rem-field reminder-day">
       </div>
-      <label class="relative inline-flex items-center cursor-pointer shrink-0">
+      <label class="reminder-toggle" title="Увімкнути або вимкнути нагадування">
         <input type="checkbox" ${rem.active ? 'checked' : ''} data-rem-idx="${idx}" data-rem-field="active"
+          aria-label="Увімкнути нагадування: ${escapeAttr(rem.label)}"
           class="rem-field sr-only peer">
-        <div class="w-8 h-4 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors"></div>
-        <div class="absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform shadow-sm peer-checked:translate-x-4"></div>
+        <span class="reminder-toggle-track" aria-hidden="true"></span>
+        <span class="reminder-toggle-thumb" aria-hidden="true"></span>
       </label>
-      ${rem.deletable !== false ? `<button type="button" class="rem-del w-7 h-7 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-400 flex items-center justify-center text-xs active:scale-90 shrink-0" data-rem-idx="${idx}"><i class="fa-solid fa-trash text-[9px]"></i></button>` : `<div class="w-7 shrink-0"></div>`}
+      ${rem.deletable !== false ? `<button type="button" class="rem-del reminder-delete" aria-label="Видалити нагадування: ${escapeAttr(rem.label)}" data-rem-idx="${idx}"><i class="fa-solid fa-trash"></i></button>` : `<div class="reminder-delete-placeholder" aria-hidden="true"></div>`}
     </div>
   `).join('') : '<p class="text-xs text-slate-400 text-center py-3">Увімкніть послугу, щоб налаштувати її нагадування.</p>';
 
@@ -2058,7 +2063,7 @@ function renderCustomReminders() {
       const idx = parseInt(input.dataset.remIdx);
       const field = input.dataset.remField;
       if (field === 'active') reminders[idx][field] = input.checked;
-      else if (field === 'startDay' || field === 'endDay') reminders[idx][field] = parseInt(input.value) || 1;
+      else if (field === 'startDay' || field === 'endDay') reminders[idx][field] = Math.min(31, Math.max(1, parseInt(input.value, 10) || 1));
       else reminders[idx][field] = input.value;
       saveCustomReminders(reminders);
     });
