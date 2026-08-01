@@ -4,7 +4,7 @@
 function createRecordCard(rec) {
   const card = document.createElement('div');
   const recPaid = isRecordPaid(rec), paymentStatus = getPaymentStatus(rec), paidAmount = getPaidAmount(rec), outstanding = getOutstandingAmount(rec);
-  card.className = `premium-card swipe-card p-5 relative overflow-hidden cursor-pointer select-none ${recPaid ? '' : 'ring-1 ring-orange-400/20'}`;
+  card.className = `premium-card history-record swipe-card p-5 relative overflow-hidden cursor-pointer select-none ${recPaid ? '' : 'ring-1 ring-orange-400/20'}`;
   const dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', { month: 'long' });
   const [rY, rM] = rec.month.split('-');
 
@@ -55,17 +55,16 @@ function createRecordCard(rec) {
   }
 
   card.innerHTML = `
-    ${!recPaid ? '<div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-400/15 to-transparent rounded-bl-[4rem]"></div>' : ''}
     <button type="button" class="w-full flex justify-between items-center relative z-10 text-left" data-toggle-details aria-expanded="false" aria-controls="${detailsId}">
       <div>
         <h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${escapeHtml(dStr)}</h4>
         <div class="flex items-center flex-wrap gap-1">
-          <span class="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${recPaid ? 'bg-brand-light text-brand' : paymentStatus === 'partial' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${getPaymentLabel(rec)}</span>
+          <span class="record-status text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${recPaid ? 'bg-brand-light text-brand' : paymentStatus === 'partial' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${getPaymentLabel(rec)}</span>
           ${partialBadge}${yoy}${tariffChangedBadge}
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span>
+        <span class="record-total font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span>
         <div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-full text-slate-400"><i class="chevron-icon fa-solid fa-chevron-down transition-transform duration-300"></i></div>
       </div>
     </button>

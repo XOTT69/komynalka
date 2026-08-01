@@ -1,0 +1,79 @@
+/* Комуналка design tokens — a single visual source of truth. */
+:root {
+  color-scheme: light;
+  --color-primary: #6d5df6;
+  --color-primary-hover: #4c3ce0;
+  --color-primary-soft: #edeaff;
+  --color-accent: #7cf5d1;
+  --color-accent-soft: #e2fff5;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-bg: #f7f6fb;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f2f1f8;
+  --color-text: #171528;
+  --color-text-muted: #6f6c82;
+  --color-border: #e5e3ee;
+  --shadow-subtle: 0 1px 2px rgb(32 27 71 / 6%);
+  --shadow-card: 0 12px 28px rgb(32 27 71 / 8%);
+  --shadow-floating: 0 22px 50px rgb(32 27 71 / 16%);
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --motion-standard: cubic-bezier(.32,.72,0,1);
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Inter Tight', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* Compatibility aliases for existing semantic markup. */
+  --brand: var(--color-primary);
+  --brand-hover: var(--color-primary-hover);
+  --brand-light: var(--color-primary-soft);
+  --brand-border: #d6d0ff;
+  --success: var(--color-success);
+  --warning: var(--color-warning);
+  --danger: var(--color-danger);
+  --card-radius: var(--radius-lg);
+  --premium-shadow: var(--shadow-card);
+  --app-viewport-height: 100dvh;
+}
+
+html.dark {
+  color-scheme: dark;
+  --color-primary: #9f95ff;
+  --color-primary-hover: #b4a5ff;
+  --color-primary-soft: #29254d;
+  --color-accent: #7cf5d1;
+  --color-accent-soft: #173b35;
+  --color-bg: #0d0b1a;
+  --color-surface: #17142b;
+  --color-surface-muted: #211d38;
+  --color-text: #f5f3ff;
+  --color-text-muted: #bbb6d1;
+  --color-border: #302b4c;
+  --shadow-subtle: 0 1px 2px rgb(0 0 0 / 24%);
+  --shadow-card: 0 14px 30px rgb(0 0 0 / 28%);
+  --shadow-floating: 0 24px 56px rgb(0 0 0 / 46%);
+  --brand-border: #484074;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not(.light):not(.dark) {
+    color-scheme: dark;
+    --color-primary: #9f95ff;
+    --color-primary-hover: #b4a5ff;
+    --color-primary-soft: #29254d;
+    --color-accent: #7cf5d1;
+    --color-accent-soft: #173b35;
+    --color-bg: #0d0b1a;
+    --color-surface: #17142b;
+    --color-surface-muted: #211d38;
+    --color-text: #f5f3ff;
+    --color-text-muted: #bbb6d1;
+    --color-border: #302b4c;
+    --shadow-subtle: 0 1px 2px rgb(0 0 0 / 24%);
+    --shadow-card: 0 14px 30px rgb(0 0 0 / 28%);
+    --shadow-floating: 0 24px 56px rgb(0 0 0 / 46%);
+    --brand-border: #484074;
+  }
+}

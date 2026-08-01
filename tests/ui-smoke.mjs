@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const html = await readFile(path.join(root, 'index.html'), 'utf8');
 const app = await readFile(path.join(root, 'app.js'), 'utf8');
+const tokens = await readFile(path.join(root, 'styles/design-tokens.css'), 'utf8');
+const theme = await readFile(path.join(root, 'styles/theme.css'), 'utf8');
 
 const fail = message => {
   console.error(`FAIL: ${message}`);
@@ -35,13 +37,13 @@ for (const id of [
 }
 
 for (const token of [
-  '--surface-base',
-  '--radius-control',
-  'Inter Tight',
-  '.tracking-tight{letter-spacing:0!important}',
+  '--color-primary: #6d5df6',
+  '--radius-lg: 20px',
+  '--font-display',
 ]) {
-  if (!html.includes(token)) fail(`design-system token is missing: ${token}`);
+  if (!tokens.includes(token)) fail(`design-system token is missing: ${token}`);
 }
+if (!theme.includes('.dashboard-summary') || !theme.includes('#bottomNav')) fail('unified theme does not cover core product surfaces');
 
 for (const accessibilityToken of [
   'aria-label="Показати пароль"',

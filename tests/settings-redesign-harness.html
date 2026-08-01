@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings redesign visual check</title>
+  <link rel="stylesheet" href="../dist/tailwind.css?v=6.6.0">
+  <link rel="stylesheet" href="../styles/design-tokens.css?v=6.6.0">
+  <link rel="stylesheet" href="../styles/theme.css?v=6.6.0">
+  <script src="https://kit.fontawesome.com/4c7f3ba53d.js" crossorigin="anonymous"></script>
+</head>
+<body class="p-4">
+  <main id="tabSettings" class="mx-auto max-w-md space-y-3 pt-2 pb-6">
+    <header class="product-section-header"><p>Ще</p><span>Адреса, послуги, дані та акаунт</span></header>
+    <section class="premium-card p-5">
+      <div class="flex items-center gap-4 mb-4"><div class="w-14 h-14 text-white flex items-center justify-center"><i class="fa-solid fa-user"></i></div><div class="flex-1 min-w-0"><p id="userDisplayName" class="font-black">Антон Петренко</p><p id="accountLoginDisplay" class="text-[10px] text-slate-400">anton@example.com</p></div><button class="w-9 h-9 rounded-xl bg-slate-100"><i class="fa-solid fa-key"></i></button></div>
+      <label class="block text-[11px] font-bold uppercase text-slate-400 tracking-wider mb-2">Ваше ім'я / нікнейм</label><div class="flex gap-2"><input value="Антон" class="premium-input min-w-0 flex-1"><button class="px-4 py-3 bg-brand text-white rounded-xl font-bold text-sm">Зберегти</button></div>
+    </section>
+    <section class="premium-card overflow-hidden">
+      <div class="p-4 border-b border-slate-100"><p class="text-sm font-black"><i class="fa-solid fa-sliders text-brand mr-2"></i>Налаштування послуг</p></div>
+      <div class="p-4 space-y-3"><p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Активні послуги</p><div class="grid grid-cols-2 gap-2">
+        <label class="flex items-center gap-2.5 p-3 rounded-xl cursor-pointer"><input type="checkbox" checked class="sr-only"><i class="fa-solid fa-droplet service-option-icon text-sky-600"></i><div class="flex-1"><p class="text-xs font-bold">Вода</p></div></label>
+        <label class="flex items-center gap-2.5 p-3 rounded-xl cursor-pointer"><input type="checkbox" checked class="sr-only"><i class="fa-solid fa-bolt service-option-icon text-amber-600"></i><div class="flex-1"><p class="text-xs font-bold">Світло</p></div></label>
+        <label class="flex items-center gap-2.5 p-3 rounded-xl cursor-pointer"><input type="checkbox" class="sr-only"><i class="fa-solid fa-fire-flame-simple service-option-icon text-orange-600"></i><div class="flex-1"><p class="text-xs font-bold">Газ</p></div></label>
+        <label class="flex items-center gap-2.5 p-3 rounded-xl cursor-pointer"><input type="checkbox" class="sr-only"><i class="fa-solid fa-temperature-three-quarters service-option-icon text-rose-600"></i><div class="flex-1"><p class="text-xs font-bold">Гар. вода</p></div></label>
+      </div></div>
+      <details><summary class="p-4 flex items-center justify-between cursor-pointer"><span><i class="fa-solid fa-coins mr-2 text-brand"></i>Тарифи</span><i class="fa-solid fa-chevron-down text-slate-400 text-[10px]"></i></summary><div class="p-4 grid grid-cols-2 gap-2"><input value="18,75" class="premium-input"><input value="4,32" class="premium-input"></div></details>
+    </section>
+    <section class="premium-card p-4"><p class="text-sm font-black mb-3"><i class="fa-solid fa-hard-drive text-brand mr-2"></i>Дані</p><div class="grid grid-cols-2 gap-2"><button id="exportJsonBtn" class="py-3 text-xs font-bold">Бекап</button><button id="importJsonBtn" class="py-3 text-xs font-bold">Імпорт</button></div></section>
+    <button id="saveSettingsBtn" class="w-full text-white font-bold">Зберегти налаштування</button>
+  </main>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../dist/tailwind.css?v=6.6.0">
+  <link rel="stylesheet" href="../styles/fonts.css?v=6.6.0">
+  <link rel="stylesheet" href="../styles/design-tokens.css?v=6.6.0">
+  <link rel="stylesheet" href="../styles/app-shell.css?v=6.6.0">
+  <link rel="stylesheet" href="../styles/theme.css?v=6.6.0">
+  <title>Dashboard redesign QA</title>
+</head>
+<body id="appScreen" class="p-4">
+  <header class="app-frame pt-5 pb-2 flex justify-between items-center">
+    <div class="flex items-center gap-3" id="addressHeaderTrigger"><div class="flex items-center justify-center text-white"><i class="fa-solid fa-house">⌂</i></div><div><p>Доброго дня <span class="sync-dot synced"></span></p><h2>Покровська 30Б</h2></div></div>
+    <button id="quickActionsBtn" aria-label="Швидкі дії">•••</button>
+  </header>
+  <main class="app-frame">
+    <div id="tabDashboard" class="tab-active space-y-4 pt-2">
+      <section class="dashboard-summary"><div class="overview-topline"><div><p class="summary-label">Доброго дня, Антон!</p><p class="summary-meta">До сплати за <span>липень 2026</span></p></div><span class="overview-period">Цей місяць</span></div><p id="dashCurrentMonth">2 864,10 ₴</p><div id="dashInsight" class="overview-insight"><span>↓</span><span>На 8% менше, ніж торік</span></div><button class="primary-action w-full">＋ Внести показники</button></section>
+      <div id="dashDebtCard"><div class="flex justify-between items-center gap-4"><div><p class="debt-card-label">Непогашений борг</p><p id="dashDebt">2 864,10 ₴</p></div><div class="text-right"><p id="dashDebtMonths">1 міс. з боргом</p></div></div></div>
+      <div class="month-facts"><div class="month-fact"><p>Борг</p><p>2 864 ₴</p></div><div class="month-fact"><p>Дедлайн</p><p>Вода: 20–25</p></div><div class="month-fact"><p>Прогноз</p><p>2 648 ₴</p></div></div>
+      <div id="reminderBanner"><div class="reminder-banner-icon">♧</div><div class="reminder-banner-content"><h4>Час передати показники</h4><p>Вода: 1–5 · Світло: 28–3</p></div><button class="reminder-banner-action">Готово</button></div>
+      <section class="dashboard-chart"><div class="dashboard-chart-head"><p>Витрати</p><p>Останні 8 місяців</p></div><div class="h-28 rounded-xl bg-[#f4f0eb]"></div></section>
+      <div class="dashboard-actions"><button><i>◷</i><span>Історія платежів</span><i>›</i></button><button><i>⌁</i><span>Аналітика</span><i>›</i></button></div>
+    </div>
+  </main>
+</body>
+</html>

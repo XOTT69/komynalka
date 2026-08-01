@@ -2,8 +2,7 @@
 // КОМУНАЛКА Worker v4.1 — з підтримкою спільних тарифів
 // ============================================================
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
+const RESPONSE_HEADERS = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Device-FP',
   'Cache-Control': 'no-store',
@@ -12,9 +11,32 @@ const CORS = {
 };
 
 const ok  = (d, s=200) => new Response(JSON.stringify(d), {
-  status: s, headers: { ...CORS, 'Content-Type': 'application/json' }
+  status: s, headers: { ...RESPONSE_HEADERS, 'Content-Type': 'application/json' }
 });
 const err = (msg, s) => ok({ success: false, error: msg }, s);
+
+const DEFAULT_ALLOWED_ORIGINS = new Set([
+  'https://komynalka.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:4173',
+  'http://localhost:5000',
+]);
+
+function getAllowedOrigins(env) {
+  const configured = String(env.ALLOWED_ORIGINS || '')
+    .split(',').map(origin => origin.trim()).filter(Boolean);
+  return new Set([...DEFAULT_ALLOWED_ORIGINS, ...configured]);
+}
+
+function applyCors(response, req, env) {
+  const origin = req.headers.get('Origin');
+  const headers = new Headers(response.headers);
+  if (origin && getAllowedOrigins(env).has(origin)) {
+    headers.set('Access-Control-Allow-Origin', origin);
+    headers.set('Vary', 'Origin');
+  }
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
 
 function isSupabaseShadowEnabled(env) {
   return env.SUPABASE_SHADOW_WRITES === 'true' && Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
@@ -172,22 +194,24 @@ function getUidLogin(uid) {
 
 export default {
   async fetch(req, env) {
-    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+    if (req.method === 'OPTIONS') return applyCors(new Response(null, { status: 204, headers: RESPONSE_HEADERS }), req, env);
     const url   = new URL(req.url);
     const share = url.searchParams.get('share');
     const ip    = req.headers.get('CF-Connecting-IP') || 'unknown';
     const fp    = (req.headers.get('X-Device-FP') || 'unknown').slice(0, 64);
     try {
       if (url.searchParams.get('health') === '1' && req.method === 'GET') {
-        return ok({ success: true, status: 'ok', timestamp: new Date().toISOString() });
+        return applyCors(ok({ success: true, status: 'ok', timestamp: new Date().toISOString() }), req, env);
       }
-      if (share)                 return doShare(req, env, share, ip);
-      if (req.method === 'GET')  return doGet(req, env, ip, fp);
-      if (req.method === 'POST') return doPost(req, env, ip, fp);
-      return err('Method not allowed', 405);
+      let response;
+      if (share) response = await doShare(req, env, share, ip);
+      else if (req.method === 'GET') response = await doGet(req, env, ip, fp);
+      else if (req.method === 'POST') response = await doPost(req, env, ip, fp);
+      else response = err('Method not allowed', 405);
+      return applyCors(response, req, env);
     } catch (e) {
       console.error('Worker:', e?.message);
-      return err('Internal server error', 500);
+      return applyCors(err('Internal server error', 500), req, env);
     }
   }
 };

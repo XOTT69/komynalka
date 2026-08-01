@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../dist/tailwind.css?v=6.6.0">
+  <link rel="stylesheet" href="../styles/fonts.css?v=6.6.0">
+  <link rel="stylesheet" href="../styles/design-tokens.css?v=6.6.0">
+  <link rel="stylesheet" href="../styles/theme.css?v=6.6.0">
+  <title>Entry redesign QA</title>
+</head>
+<body class="p-4">
+  <main id="tabCalc" class="mx-auto max-w-md space-y-4 pt-2">
+    <section class="hero-gradient p-7 text-white relative overflow-hidden"><div class="relative z-10"><div class="entry-toolbar"><label class="entry-month"><span>Місяць</span><input type="month" value="2026-07"></label><div class="partial-indicator"><i class="partial-dot"></i><i class="partial-dot"></i><i class="partial-dot"></i></div><label class="entry-winter"><input type="checkbox"><span>Зимовий тариф</span></label></div><p class="entry-kicker">Поточний розрахунок</p><h2 id="heroTotal">2 864,10 ₴</h2><div class="entry-comparison">↓ На 8% менше за попередній місяць</div><div class="entry-forecast"><span>Орієнтир на наступний місяць</span><strong>~ 2 648 ₴</strong></div><button class="entry-clear">⌫ Очистити поля</button></div></section>
+    <form id="utilityForm" class="space-y-4"><section id="blockWater" class="premium-card p-5"><div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="bg-blue-500 text-white flex items-center justify-center">💧</div><span>Вода</span></div><span id="waterCostDisplay">778,20 ₴</span></div><div class="relative flex gap-3 items-center input-glow"><div class="flex-1"><label>Попередні</label><input value="1212" inputmode="decimal"></div><span id="wDiffBadge">26 м³</span><div class="flex-1"><label>Поточні</label><input value="1238" inputmode="decimal"></div></div></section><section id="blockElectro" class="premium-card p-5"><div class="flex justify-between items-center mb-5"><div class="flex items-center gap-3"><div class="bg-amber-500 text-white flex items-center justify-center">ϟ</div><span>Світло</span></div><span id="electroCostDisplay">1 085,60 ₴</span></div><div class="relative flex gap-3 items-center input-glow"><div class="flex-1"><label>Попередні</label><input value="5320" inputmode="decimal"></div><span id="dDiffBadge">251 кВт</span><div class="flex-1"><label>Поточні</label><input value="5571" inputmode="decimal"></div></div></section><button id="submitFormBtn" type="button" class="w-full py-4 text-white font-bold">Зберегти показники</button></form>
+  </main>
+</body>
+</html>

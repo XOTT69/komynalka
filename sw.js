@@ -1,6 +1,6 @@
-const CACHE_NAME = 'komunalka-v6.4.1';
+const CACHE_NAME = 'komunalka-v6.6.0';
 const PRECACHE_URLS = [
-  './', './index.html', './dist/tailwind.css?v=6.4.1', './styles/fonts.css?v=6.4.1', './styles/app-shell.css?v=6.4.1', './styles/quiet-ui.css?v=6.4.1', './sync-queue.js?v=6.4.1', './app.js?v=6.4.1', './ui-dialogs.js?v=6.4.1', './export-tools.js?v=6.4.1', './record-card.js?v=6.4.1', './year-report-image.js?v=6.4.1', './ai-chat.js?v=6.4.1',
+  './', './index.html', './dist/tailwind.css?v=6.6.0', './styles/fonts.css?v=6.6.0', './styles/design-tokens.css?v=6.6.0', './styles/app-shell.css?v=6.6.0', './styles/theme.css?v=6.6.0', './sync-queue.js?v=6.6.0', './app.js?v=6.6.0', './ui-dialogs.js?v=6.6.0', './export-tools.js?v=6.6.0', './record-card.js?v=6.6.0', './year-report-image.js?v=6.6.0', './ai-chat.js?v=6.6.0',
   './vendor/firebase/firebase-app-compat.js', './vendor/firebase/firebase-auth-compat.js',
   './vendor/jspdf/jspdf.umd.min.js', './vendor/jspdf/jspdf.plugin.autotable.min.js',
   './vendor/fonts/Roboto-Regular.ttf',
@@ -40,9 +40,7 @@ self.addEventListener('fetch', event => {
     url.hostname.includes('workers.dev') ||
     url.hostname.includes('googleapis.com') ||
     url.hostname.includes('gstatic.com') ||
-    url.hostname.includes('firebaseapp.com') ||
-    url.hostname.includes('google-analytics.com') ||
-    url.hostname.includes('googletagmanager.com')
+    url.hostname.includes('firebaseapp.com')
   ) return;
   if (
     url.hostname.includes('cdnjs.cloudflare.com') ||

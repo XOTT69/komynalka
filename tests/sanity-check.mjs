@@ -85,7 +85,8 @@ const uiDialogs = await readFile(path.join(root, 'ui-dialogs.js'), 'utf8');
 const exportTools = await readFile(path.join(root, 'export-tools.js'), 'utf8');
 const recordCard = await readFile(path.join(root, 'record-card.js'), 'utf8');
 const appShellCss = await readFile(path.join(root, 'styles/app-shell.css'), 'utf8');
-const quietUiCss = await readFile(path.join(root, 'styles/quiet-ui.css'), 'utf8');
+const designTokensCss = await readFile(path.join(root, 'styles/design-tokens.css'), 'utf8');
+const themeCss = await readFile(path.join(root, 'styles/theme.css'), 'utf8');
 const supabaseMigration = await readFile(path.join(root, 'supabase/migrations/202607160001_initial.sql'), 'utf8');
 if (!app.includes(`const APP_VERSION = '${packageJson.version}'`)) fail('app and package versions are out of sync');
 if (!sw.includes(`komunalka-v${packageJson.version}`)) fail('service worker cache and package versions are out of sync');
@@ -144,6 +145,9 @@ if (!(await fileExists('tests/record-card-harness.html'))) fail('record card bro
 if (!(await fileExists('tests/dialog-harness.html'))) fail('dialog browser harness is missing');
 if (!(await fileExists('tests/vendor-harness.html'))) fail('vendor browser harness is missing');
 if (!(await fileExists('tests/reminders-harness.html'))) fail('reminder browser harness is missing');
+if (!(await fileExists('tests/dashboard-redesign-harness.html'))) fail('dashboard redesign browser harness is missing');
+if (!(await fileExists('tests/entry-redesign-harness.html'))) fail('entry redesign browser harness is missing');
+if (!(await fileExists('tests/settings-redesign-harness.html'))) fail('settings redesign browser harness is missing');
 
 const runtimeSources = await Promise.all(['app.js', 'ui-dialogs.js', 'export-tools.js', 'record-card.js', 'ai-chat.js', 'year-report-image.js'].map(file => readFile(path.join(root, file), 'utf8')));
 const combinedRuntime = runtimeSources.join('\n');
@@ -179,7 +183,7 @@ if (/https:\/\/fonts\.(?:googleapis|gstatic)\.com/.test(index)) fail('main app s
 if (!index.includes('dist/tailwind.css')) fail('main app production stylesheet is missing');
 if (!index.includes('styles/fonts.css')) fail('main app self-hosted font stylesheet is missing');
 if (!index.includes('styles/app-shell.css')) fail('responsive application shell stylesheet is missing');
-if (!index.includes('styles/quiet-ui.css')) fail('quiet UI stylesheet is missing');
+if (!index.includes('styles/design-tokens.css') || !index.includes('styles/theme.css')) fail('unified product theme stylesheets are missing');
 if (!index.includes(`<script src="record-card.js?v=${packageJson.version}"></script>`)) fail('versioned record card module is not loaded');
 if (!index.includes(`<script src="ui-dialogs.js?v=${packageJson.version}"></script>`)) fail('versioned dialog module is not loaded');
 if (!index.includes(`<script src="sync-queue.js?v=${packageJson.version}"></script>`)) fail('versioned sync queue module is not loaded');
@@ -189,14 +193,15 @@ const workerSource = await readFile(path.join(root, 'worker.js'), 'utf8');
 if (!workerSource.includes("url.searchParams.get('health') === '1'")) fail('worker health endpoint is missing');
 if (!workerSource.includes("'X-Content-Type-Options': 'nosniff'")) fail('worker hardening response header is missing');
 if (!workerSource.includes('raw.length > 512 * 1024')) fail('worker does not verify streamed request size');
+if (workerSource.includes("'Access-Control-Allow-Origin': '*")) fail('worker still exposes a wildcard CORS origin');
+if (!workerSource.includes('DEFAULT_ALLOWED_ORIGINS') || !workerSource.includes('applyCors(response, req, env)')) fail('worker origin allowlist is missing');
 if (!index.includes(`<script src="export-tools.js?v=${packageJson.version}"></script>`)) fail('versioned export tools module is not loaded');
 if (!(await fileExists('dist/tailwind.css'))) fail('compiled Tailwind stylesheet is missing; run the build');
 for (const id of ['restoreBackupBtn', 'restorePreImportBtn', 'saveTariffTemplateBtn', 'loadTariffTemplateBtn', 'resetTariffsBtn', 'changeLogList', 'forgetDeviceBtn', 'settingWaterWrap', 'settingElectroWrap', 'settingGasWrap']) {
   if (!index.includes(`id="${id}"`)) fail(`index is missing ${id}`);
 }
-if (!index.includes('--surface-base')) fail('clean design-system surface tokens are missing');
-if (!index.includes('Inter Tight')) fail('modern display font is missing');
-if (!index.includes('.tracking-tight{letter-spacing:0!important}')) fail('negative tracking override is missing');
+if (!designTokensCss.includes('--color-primary: #6d5df6') || !designTokensCss.includes('--radius-xl: 28px')) fail('indigo design tokens are incomplete');
+if (!designTokensCss.includes("'Inter Tight'")) fail('modern display font is missing');
 if (app.includes('applyLiquidGlassLevel') || index.includes('liquidGlassRange')) fail('obsolete Liquid Glass controls are still present');
 for (const id of ['monthMiniWidget', 'miniDebt', 'miniDeadline', 'miniForecast', 'paymentStatusInput', 'paidAmountInput', 'tariffPresetSelect', 'familyRoleSelect', 'remGasStart', 'remGasEnd']) {
   if (!index.includes(`id="${id}"`)) fail(`index is missing ${id}`);
@@ -215,7 +220,7 @@ if (/blur\(/.test(appShellCss.match(/\.achievement\.locked\s*\{[^}]*\}/)?.[0] ||
 if (!appShellCss.includes('bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) - 18px)) !important')) fail('mobile dock is not lowered within the iPhone safe area');
 if (!index.includes('id="aiFabBtn" class="hidden col-span-2')) fail('AI assistant is not integrated into the More tools panel');
 if (index.includes('<!-- AI FAB -->') || index.includes('z-[450] w-14 h-14')) fail('obsolete floating AI button is still present');
-if (!quietUiCss.includes('.dashboard-summary') || !quietUiCss.includes('@media (min-width: 900px)')) fail('responsive quiet design system is incomplete');
+if (!themeCss.includes('.dashboard-summary') || !themeCss.includes('@media (max-width: 360px)')) fail('responsive product theme is incomplete');
 if (!index.includes('class="dashboard-summary"')) fail('dashboard does not use the simplified summary');
 if (index.includes('id="donutCanvas"') || app.includes('DonutChart')) fail('removed dashboard donut code is still present');
 const bottomNav = index.slice(index.indexOf('<nav class="fixed'), index.indexOf('</nav>', index.indexOf('<nav class="fixed')));
@@ -235,9 +240,9 @@ const duplicateIds = [...new Set(htmlIds.filter((id, position) => htmlIds.indexO
 if (duplicateIds.length) fail(`index has duplicate ids: ${duplicateIds.join(', ')}`);
 if (index.includes('#tabDashboard>.bg-gradient-to-br')) fail('obsolete dashboard gradient selector can override debt-card contrast');
 if (!index.includes('id="dashDebtCard" class="hidden relative overflow-hidden" aria-labelledby="dashDebtLabel"')) fail('debt card accessibility contract is missing');
-if (!quietUiCss.includes('#dashDebt {') || !quietUiCss.includes('color: #b91c1c !important')) fail('debt amount does not have an explicit high-contrast color');
-if (!index.includes(`styles/quiet-ui.css?v=${packageJson.version}`) || !index.includes(`app.js?v=${packageJson.version}`)) fail('app-shell assets are not versioned against mixed iPhone caches');
-if (!sw.includes(`styles/quiet-ui.css?v=${packageJson.version}`) || !sw.includes('fetch(event.request).then(response =>')) fail('service worker does not cache and refresh versioned app-shell assets consistently');
+if (!themeCss.includes('#dashDebtCard') || !themeCss.includes('var(--color-danger)')) fail('debt card does not have an explicit high-contrast treatment');
+if (!index.includes(`styles/theme.css?v=${packageJson.version}`) || !index.includes(`styles/design-tokens.css?v=${packageJson.version}`) || !index.includes(`app.js?v=${packageJson.version}`)) fail('app-shell assets are not versioned against mixed iPhone caches');
+if (!sw.includes(`styles/theme.css?v=${packageJson.version}`) || !sw.includes(`styles/design-tokens.css?v=${packageJson.version}`) || !sw.includes('fetch(event.request).then(response =>')) fail('service worker does not cache and refresh versioned app-shell assets consistently');
 if (!index.includes('maximum-scale=1.0, user-scalable=no')) fail('mobile viewport zoom is not disabled');
 if (!index.includes('role="status" aria-live="polite"')) fail('toast live region is missing');
 if (!index.includes('rel="noopener noreferrer"')) fail('external blank-target links are not isolated');
