@@ -1,35 +1,10 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "name": "komunalka",
   "builds": [
     {
       "src": "**/*",
       "use": "@vercel/static"
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "mykomunalka.pp.ua"
-        }
-      ],
-      "destination": "https://komynalka.vercel.app/$1",
-      "permanent": false
-    },
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "www.mykomunalka.pp.ua"
-        }
-      ],
-      "destination": "https://komynalka.vercel.app/$1",
-      "permanent": false
     }
   ],
   "headers": [

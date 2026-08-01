@@ -7,6 +7,4 @@ binding = "KV"
 id = "ЗАМІНІТЬ_НА_РЕАЛЬНИЙ_KV_ID"
 
 [vars]
-SUPABASE_SHADOW_WRITES = "false"
-# ADMIN_PASS, GROQ_API_KEY, GEMINI_API_KEY, SUPABASE_URL and
-# SUPABASE_SERVICE_ROLE_KEY must be configured through wrangler secret or Dashboard.
+# ADMIN_PASS, GROQ_API_KEY, GEMINI_API_KEY — встановіть через Dashboard або wrangler secret

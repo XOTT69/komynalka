@@ -2,89 +2,16 @@
 // КОМУНАЛКА Worker v4.1 — з підтримкою спільних тарифів
 // ============================================================
 
-const RESPONSE_HEADERS = {
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Device-FP',
-  'Cache-Control': 'no-store',
-  'X-Content-Type-Options': 'nosniff',
-  'Referrer-Policy': 'no-referrer',
 };
 
 const ok  = (d, s=200) => new Response(JSON.stringify(d), {
-  status: s, headers: { ...RESPONSE_HEADERS, 'Content-Type': 'application/json' }
+  status: s, headers: { ...CORS, 'Content-Type': 'application/json' }
 });
 const err = (msg, s) => ok({ success: false, error: msg }, s);
-
-const DEFAULT_ALLOWED_ORIGINS = new Set([
-  'https://komynalka.vercel.app',
-  'http://localhost:3000',
-  'http://localhost:4173',
-  'http://localhost:5000',
-]);
-
-function getAllowedOrigins(env) {
-  const configured = String(env.ALLOWED_ORIGINS || '')
-    .split(',').map(origin => origin.trim()).filter(Boolean);
-  return new Set([...DEFAULT_ALLOWED_ORIGINS, ...configured]);
-}
-
-function applyCors(response, req, env) {
-  const origin = req.headers.get('Origin');
-  const headers = new Headers(response.headers);
-  if (origin && getAllowedOrigins(env).has(origin)) {
-    headers.set('Access-Control-Allow-Origin', origin);
-    headers.set('Vary', 'Origin');
-  }
-  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
-}
-
-function isSupabaseShadowEnabled(env) {
-  return env.SUPABASE_SHADOW_WRITES === 'true' && Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
-}
-
-function getSupabaseBaseUrl(env) {
-  const url = new URL(String(env.SUPABASE_URL || ''));
-  if (url.protocol !== 'https:') throw new Error('SUPABASE_URL must use HTTPS');
-  return url.origin;
-}
-
-async function supabaseShadowRequest(env, path, init = {}) {
-  const response = await fetch(`${getSupabaseBaseUrl(env)}/rest/v1/${path}`, {
-    ...init,
-    headers: {
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      'Content-Type': 'application/json',
-      ...(init.headers || {}),
-    },
-  });
-  if (!response.ok) throw new Error(`Supabase shadow request failed (${response.status})`);
-  return response;
-}
-
-async function mirrorUserToSupabase(env, login, data) {
-  if (!isSupabaseShadowEnabled(env)) return;
-  const { pass, passHash, ...payload } = data || {};
-  const pass_hash = passHash || pass;
-  await supabaseShadowRequest(env, 'legacy_accounts?on_conflict=login', {
-    method: 'POST',
-    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({
-      login,
-      pass_hash,
-      payload,
-      source_updated_at: data.updatedAt || new Date().toISOString(),
-    }),
-  });
-}
-
-async function deleteUserFromSupabaseShadow(env, login) {
-  if (!isSupabaseShadowEnabled(env)) return;
-  await supabaseShadowRequest(env, `legacy_accounts?login=eq.${encodeURIComponent(login)}`, {
-    method: 'DELETE',
-    headers: { Prefer: 'return=minimal' },
-  });
-}
 
 async function sha256(t) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
@@ -110,11 +37,6 @@ async function saveUser(env, login, data) {
   if (data.passHash && !data.pass)  data.pass = data.passHash;
   if (data.pass && !data.passHash)  data.passHash = data.pass;
   await env.KV.put(login, JSON.stringify(data));
-  try {
-    await mirrorUserToSupabase(env, login, data);
-  } catch (error) {
-    console.error('supabase shadow write:', login, error?.message);
-  }
 }
 
 function normalize(d) {
@@ -194,24 +116,19 @@ function getUidLogin(uid) {
 
 export default {
   async fetch(req, env) {
-    if (req.method === 'OPTIONS') return applyCors(new Response(null, { status: 204, headers: RESPONSE_HEADERS }), req, env);
+    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     const url   = new URL(req.url);
     const share = url.searchParams.get('share');
     const ip    = req.headers.get('CF-Connecting-IP') || 'unknown';
     const fp    = (req.headers.get('X-Device-FP') || 'unknown').slice(0, 64);
     try {
-      if (url.searchParams.get('health') === '1' && req.method === 'GET') {
-        return applyCors(ok({ success: true, status: 'ok', timestamp: new Date().toISOString() }), req, env);
-      }
-      let response;
-      if (share) response = await doShare(req, env, share, ip);
-      else if (req.method === 'GET') response = await doGet(req, env, ip, fp);
-      else if (req.method === 'POST') response = await doPost(req, env, ip, fp);
-      else response = err('Method not allowed', 405);
-      return applyCors(response, req, env);
+      if (share)                 return doShare(req, env, share, ip);
+      if (req.method === 'GET')  return doGet(req, env, ip, fp);
+      if (req.method === 'POST') return doPost(req, env, ip, fp);
+      return err('Method not allowed', 405);
     } catch (e) {
       console.error('Worker:', e?.message);
-      return applyCors(err('Internal server error', 500), req, env);
+      return err('Internal server error', 500);
     }
   }
 };
@@ -242,7 +159,6 @@ async function doGet(req, env, ip, fp) {
       hasGoogle:        normalized.hasGoogle  || false,
       displayName:      normalized.displayName || '',
       createdAt:        normalized.createdAt  || null,
-      updatedAt:        normalized.updatedAt  || null,
       linkedLogin:      login,
     }
   });
@@ -252,11 +168,7 @@ async function doPost(req, env, ip, fp) {
   const cl = parseInt(req.headers.get('content-length') || '0');
   if (cl > 512 * 1024) return err('PAYLOAD_TOO_LARGE', 413);
   let body;
-  try {
-    const raw = await req.text();
-    if (raw.length > 512 * 1024) return err('PAYLOAD_TOO_LARGE', 413);
-    body = JSON.parse(raw);
-  } catch { return err('INVALID_JSON', 400); }
+  try { body = await req.json(); } catch { return err('INVALID_JSON', 400); }
   const action = typeof body.action === 'string' ? body.action : '';
 
   if (action === 'admin_login' || action.startsWith('admin_')) return doAdmin(action, body, env, ip);
@@ -324,15 +236,14 @@ async function doSave(body, env, login, data, ip, fp) {
   }
   const devs = data.knownDevices || [];
   if (!devs.includes(fp)) devs.push(fp);
-  const updatedAt = new Date().toISOString();
   await saveUser(env, login, {
     ...data,
     addresses:        body.addresses,
     currentAddressId: body.currentAddressId || data.currentAddressId,
-    updatedAt,
+    updatedAt:        new Date().toISOString(),
     lastIP: ip, lastDevice: fp, knownDevices: devs.slice(-10),
   });
-  return ok({ success: true, updatedAt, clientMutationId: body.clientMutationId || null });
+  return ok({ success: true });
 }
 
 async function doUpdateName(body, env, login, data) {
@@ -357,11 +268,7 @@ async function doShare(req, env, token, ip) {
   if (req.method === 'POST') {
     if (!await rateLimit(env, `share:${token}:${ip}`, 20, 60000)) return err('RATE_LIMITED', 429);
     let body;
-    try {
-      const rawBody = await req.text();
-      if (rawBody.length > 512 * 1024) return err('PAYLOAD_TOO_LARGE', 413);
-      body = JSON.parse(rawBody);
-    } catch { return err('INVALID_JSON', 400); }
+    try { body = await req.json(); } catch { return err('INVALID_JSON', 400); }
     if (!Array.isArray(body.addresses) || !body.addresses.length) return err('INVALID_DATA', 400);
     const idx = uData.addresses.findIndex(a => a.id === sd.addressId);
     if (idx < 0) return err('ADDRESS_NOT_FOUND', 404);
@@ -681,11 +588,6 @@ async function doAdminPro(body, env, val) {
 async function doAdminDelete(body, env) {
   if (!body.login) return err('NO_LOGIN', 400);
   await env.KV.delete(body.login);
-  try {
-    await deleteUserFromSupabaseShadow(env, body.login);
-  } catch (error) {
-    console.error('supabase shadow delete:', body.login, error?.message);
-  }
   return ok({ success:true });
 }
 

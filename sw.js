@@ -1,21 +1,9 @@
-const CACHE_NAME = 'komunalka-v6.6.0';
-const PRECACHE_URLS = [
-  './', './index.html', './dist/tailwind.css?v=6.6.0', './styles/fonts.css?v=6.6.0', './styles/design-tokens.css?v=6.6.0', './styles/app-shell.css?v=6.6.0', './styles/theme.css?v=6.6.0', './sync-queue.js?v=6.6.0', './app.js?v=6.6.0', './ui-dialogs.js?v=6.6.0', './export-tools.js?v=6.6.0', './record-card.js?v=6.6.0', './year-report-image.js?v=6.6.0', './ai-chat.js?v=6.6.0',
-  './vendor/firebase/firebase-app-compat.js', './vendor/firebase/firebase-auth-compat.js',
-  './vendor/jspdf/jspdf.umd.min.js', './vendor/jspdf/jspdf.plugin.autotable.min.js',
-  './vendor/fonts/Roboto-Regular.ttf',
-  './vendor/fonts/inter/inter-cyrillic-wght-normal.woff2', './vendor/fonts/inter/inter-latin-wght-normal.woff2',
-  './vendor/fonts/inter-tight/inter-tight-cyrillic-wght-normal.woff2', './vendor/fonts/inter-tight/inter-tight-latin-wght-normal.woff2',
-  './vendor/fontawesome/css/all.min.css',
-  './vendor/fontawesome/webfonts/fa-brands-400.woff2', './vendor/fontawesome/webfonts/fa-regular-400.woff2',
-  './vendor/fontawesome/webfonts/fa-solid-900.woff2', './vendor/fontawesome/webfonts/fa-v4compatibility.woff2',
-  './manifest.json', './icon.png', './icon-192.png', './icon-512.png'
-];
+const CACHE_NAME = 'komunalka-v5.0.0';
+const PRECACHE_URLS = ['./', './index.html', './app.js', './year-report-image.js', './ai-chat.js', './manifest.json', './icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(PRECACHE_URLS))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS).catch(() => {}))
   );
 });
 
@@ -40,7 +28,9 @@ self.addEventListener('fetch', event => {
     url.hostname.includes('workers.dev') ||
     url.hostname.includes('googleapis.com') ||
     url.hostname.includes('gstatic.com') ||
-    url.hostname.includes('firebaseapp.com')
+    url.hostname.includes('firebaseapp.com') ||
+    url.hostname.includes('google-analytics.com') ||
+    url.hostname.includes('googletagmanager.com')
   ) return;
   if (
     url.hostname.includes('cdnjs.cloudflare.com') ||
@@ -59,13 +49,16 @@ self.addEventListener('fetch', event => {
     return;
   }
   event.respondWith(
-    fetch(event.request).then(response => {
-      if (response && response.status === 200 && response.type === 'basic') {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
-      }
-      return response;
-    }).catch(() => caches.match(event.request))
+    caches.match(event.request).then(cached => {
+      const fetchPromise = fetch(event.request).then(response => {
+        if (response && response.status === 200 && response.type === 'basic') {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => { try { cache.put(event.request, clone); } catch(e) {} });
+        }
+        return response;
+      }).catch(() => cached);
+      return cached || fetchPromise;
+    })
   );
 });
 
