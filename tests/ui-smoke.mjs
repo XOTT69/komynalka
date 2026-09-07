@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const html = await readFile(path.join(root, 'index.html'), 'utf8');
 const app = await readFile(path.join(root, 'app.js'), 'utf8');
 

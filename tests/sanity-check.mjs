@@ -2,8 +2,9 @@ import { access, readFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const fail = message => {
   console.error(`FAIL: ${message}`);
   process.exitCode = 1;
@@ -61,7 +62,7 @@ if (!app.includes('cloud_tariff_loaded')) fail('cloud provider apply action is n
 if (!app.includes('cloudCommunityTariffsCache')) fail('cloud provider catalog cache is missing');
 if (!app.includes("action: 'vote_tariff'")) fail('cloud provider voting action is missing');
 if (!app.includes('TARIFF_SERVICE_LABELS')) fail('provider service labels are missing');
-if (!app.includes('data.data?.linkedLogin')) fail('Google login does not read linkedLogin from response data');
+if (!app.includes('result.data?.linkedLogin')) fail('Google login does not read linkedLogin from response data');
 if (!app.includes('action:"link_google", login: sessionLogin, pass: sessionPass, uid')) fail('Google linking does not send the current password hash');
 if (!app.includes('familyRole')) fail('family role preferences are missing');
 if (!app.includes('getPaymentStatus')) fail('payment status helpers are missing');

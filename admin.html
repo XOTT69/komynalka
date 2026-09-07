@@ -643,17 +643,21 @@
         }
 
         async function exportFullBackup() {
-            showAdminToast('Завантаження повного бекапу...');
-            const fullData = [];
-            for (const u of allUsers) {
-                try {
-                    const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_user_data', adminToken, login: u.login }) });
-                    const data = await res.json();
-                    if (data.success) fullData.push({ login: u.login, ...data.data });
-                } catch (e) {}
-            }
-            downloadFile(JSON.stringify({ exportDate: new Date().toISOString(), version: '3.2', users: fullData }, null, 2), `komunalka_full_backup_${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
-            showAdminToast(`Бекап: ${fullData.length} юзерів`);
+            showAdminToast('Перевіряю повноту резервної копії…');
+            const fullData=[],kvEntries=[];let cursor,readOnly=true;
+            try {
+                const listing=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_stats',adminToken})});
+                const accounts=await listing.json();if(!listing.ok||!accounts.success||!Array.isArray(accounts.users))throw new Error('Не вдалося отримати повний список акаунтів');
+                for(const user of accounts.users){
+                    const response=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_user_data',adminToken,login:user.login})});
+                    const data=await response.json();if(!response.ok||!data.success)throw new Error('Один з акаунтів не вдалося прочитати. Повторіть експорт.');
+                    fullData.push({login:user.login,...data.data});
+                }
+                do{const response=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_backup_page',adminToken,cursor})});const page=await response.json();if(!response.ok||!page.success||!Array.isArray(page.entries))throw new Error('Не вдалося прочитати повну резервну копію KV');kvEntries.push(...page.entries);readOnly=readOnly&&page.readOnly;cursor=page.cursor;if(!page.listComplete&&!cursor)throw new Error('Неповна сторінка KV');}while(cursor);
+                const manifest={kvKeys:kvEntries.length,accounts:fullData.length,addresses:fullData.reduce((n,u)=>n+(u.addresses?.length||0),0),records:fullData.reduce((n,u)=>n+(u.addresses||[]).reduce((sum,a)=>sum+(a.records?.length||0),0),0)};
+                downloadFile(JSON.stringify({exportDate:new Date().toISOString(),version:'5.1.0',complete:true,readOnly,unrecognizedAccounts:accounts.unrecognizedAccounts||0,manifest,kvEntries,users:fullData},null,2),`komunalka_full_backup_${new Date().toISOString().slice(0,10)}.json`,'application/json');
+                showAdminToast(`Експорт: ${manifest.accounts} акаунтів, ${manifest.records} записів. ${readOnly?'Запис під час копіювання призупинено.':'Для міграції повторіть у режимі лише читання.'}`);
+            }catch(error){showAdminToast('Експорт не завершено: '+error.message);}
         }
 
         async function cleanupEmptyAccounts() {
