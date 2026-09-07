@@ -6,8 +6,8 @@
   function schedule(address,settings={}){
     const p=address.prefs||{};let custom=[];try{custom=JSON.parse(settings.komynalka_custom_reminders||'[]');}catch{}if(!Array.isArray(custom))custom=[];
     const definitions=[['water','Вода','💧','Water',1,5,p.showWater!==false||p.showHotWater===true],['electro','Світло','⚡','Electro',28,3,p.showElectro!==false],['gas','Газ','🔥','Gas',1,5,p.showGas!==false]];
-    const standard=definitions.map(([id,label,emoji,key,start,end,enabled])=>{const saved=custom.find(r=>r.id===id)||{};return{id,label,emoji,enabled,active:saved.active!==false,startDay:day(p[`rem${key}Start`]??saved.startDay??start),endDay:day(p[`rem${key}End`]??saved.endDay??end)};});
-    return [...standard,...custom.filter(r=>r&&r.id&&!definitions.some(d=>d[0]===r.id)).map(r=>({...r,startDay:day(r.startDay),endDay:day(r.endDay),label:String(r.label||'Нагадування').slice(0,100)}))];
+    const standard=definitions.map(([id,label,emoji,key,start,end,enabled])=>{const saved=custom.find(r=>r.id===id)||{};return{...saved,id,label:String(saved.label||label).slice(0,100),emoji:saved.emoji||emoji,enabled,active:saved.active!==false,startDay:day(p[`rem${key}Start`]??saved.startDay??start),endDay:day(p[`rem${key}End`]??saved.endDay??end)};});
+    return [...standard.filter(r=>!r.deleted),...custom.filter(r=>r&&!r.deleted&&r.id&&!definitions.some(d=>d[0]===r.id)).map(r=>({...r,startDay:day(r.startDay),endDay:day(r.endDay),label:String(r.label||'Нагадування').slice(0,100)}))];
   }
   function due(address,settings={},now=new Date()){
     if(address.prefs?.remindersEnabled!==true)return[];

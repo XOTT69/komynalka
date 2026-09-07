@@ -69,3 +69,21 @@ test('a shared address loads its history while the guest form stays read-only',a
   const token='f'.repeat(40),legacy=legacyAccount(hash);const {env,values}=environment({anna:legacy,[`share:${token}`]:{login:'anna',addressId:'home'}});const p=await page(env,{},false,'/?share='+token);
   try{await delay(50);const d=p.w.document;assert.equal(d.getElementById('appScreen').classList.contains('hidden'),false);p.w.switchTab('tabHistory',2);assert.match(d.getElementById('recordsList').textContent,/151/);p.w.switchTab('tabCalc',1);p.w.calculatePreview();assert.equal(d.getElementById('submitFormBtn').disabled,true);d.getElementById('utilityForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));assert.deepEqual(JSON.parse(values.get('anna')),legacy);assert.equal(p.w.localStorage.getItem('komynalka_account_v1:anna'),null);assert.deepEqual(p.errors,[]);}finally{p.close();}
 });
+
+test('reminder date edits and deletion persist without resurrecting defaults or changing history',async()=>{
+  const legacy=legacyAccount(hash),{env}=environment({anna:legacy});const p=await page(env);let stored;
+  try{
+    await p.w.performLogin('anna',password,false);p.w.renderCustomReminders();
+    const card=()=>p.w.document.querySelector('[data-rem-id="water"]');
+    const start=card().querySelector('[data-rem-field="startDay"]');start.value='28';start.dispatchEvent(new p.w.Event('change',{bubbles:true}));
+    const end=card().querySelector('[data-rem-field="endDay"]');end.value='3';end.dispatchEvent(new p.w.Event('change',{bubbles:true}));
+    p.w.renderCustomReminders();assert.equal(card().querySelector('[data-rem-field="startDay"]').value,'28');assert.equal(card().querySelector('[data-rem-field="endDay"]').value,'3');
+    card().querySelector('.rem-del').click();assert.equal(card(),null);
+    p.w.document.getElementById('addCustomReminderBtn').click();assert.equal(card(),null);
+    const custom=p.w.document.querySelector('[data-rem-id^="rem_"]');assert.ok(custom);custom.querySelector('.rem-del').click();assert.equal(p.w.document.querySelector('[data-rem-id^="rem_"]'),null);
+    await p.w.syncToCloud();stored=p.storage();
+    const snapshot=JSON.parse(stored['komynalka_account_v1:anna']);assert.deepEqual(snapshot.local.addresses[0].records,legacy.addresses[0].records);assert.deepEqual(p.errors,[]);
+  }finally{p.close();}
+  const reopened=await page(env,stored,true);
+  try{reopened.w.renderCustomReminders();assert.equal(reopened.w.document.querySelector('[data-rem-id="water"]'),null);assert.equal(reopened.w.document.querySelector('[data-rem-id^="rem_"]'),null);}finally{reopened.close();}
+});

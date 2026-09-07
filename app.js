@@ -1930,10 +1930,12 @@ function showEditingBanner(month) {
 }
 
 // =================== CUSTOM REMINDERS ===================
-function getCustomReminders(){return KomunalkaReminders.schedule({prefs},activeSettings).map(rem=>({...rem,deletable:!['water','electro','gas'].includes(rem.id)}));}
+function getCustomReminders(){return KomunalkaReminders.schedule({prefs},activeSettings);}
 function saveCustomReminders(reminders){
-  for(const [id,key] of [['water','Water'],['electro','Electro'],['gas','Gas']]){const rem=reminders.find(r=>r.id===id);if(rem){prefs[`rem${key}Start`]=rem.startDay;prefs[`rem${key}End`]=rem.endDay;if($('rem'+key+'Start'))$('rem'+key+'Start').value=rem.startDay;if($('rem'+key+'End'))$('rem'+key+'End').value=rem.endDay;}}
-  accountStorage.setItem(CUSTOM_REMINDERS_KEY,JSON.stringify(reminders));checkReminders();
+  for(const [id,key] of [['water','Water'],['electro','Electro'],['gas','Gas']]){const rem=reminders.find(r=>r.id===id&&!r.deleted);if(rem){prefs[`rem${key}Start`]=rem.startDay;prefs[`rem${key}End`]=rem.endDay;if($('rem'+key+'Start'))$('rem'+key+'Start').value=rem.startDay;if($('rem'+key+'End'))$('rem'+key+'End').value=rem.endDay;}}
+  let saved=[];try{saved=JSON.parse(accountStorage.getItem(CUSTOM_REMINDERS_KEY)||'[]');}catch{}
+  const deleted=Array.isArray(saved)?saved.filter(r=>r?.deleted&&!reminders.some(item=>item.id===r.id)):[];
+  accountStorage.setItem(CUSTOM_REMINDERS_KEY,JSON.stringify([...deleted,...reminders]));checkReminders();
 }
 
 function renderCustomReminders() {
@@ -1941,25 +1943,19 @@ function renderCustomReminders() {
   if (!container) return;
   const reminders = getCustomReminders();
   container.innerHTML = reminders.map((rem, idx) => `
-    <div class="flex items-center gap-2 bg-slate-50 dark:bg-black/40 p-2.5 rounded-xl border border-slate-100 dark:border-white/5">
-      <input type="text" value="${escapeAttr(rem.emoji)}" data-rem-idx="${idx}" data-rem-field="emoji"
-        class="rem-field w-10 bg-white dark:bg-[#2c2c2e] rounded-lg text-center text-base outline-none border border-transparent focus:border-brand px-1 py-1.5 transition-colors">
-      <input type="text" value="${escapeAttr(rem.label)}" data-rem-idx="${idx}" data-rem-field="label"
-        class="rem-field flex-1 bg-white dark:bg-[#2c2c2e] rounded-lg text-xs font-bold outline-none px-2.5 py-2 border border-transparent focus:border-brand transition-colors">
-      <div class="flex items-center gap-1 text-[10px] text-slate-400 font-bold">
-        <input type="number" value="${rem.startDay}" min="1" max="31" data-rem-idx="${idx}" data-rem-field="startDay"
-          class="rem-field w-9 bg-white dark:bg-[#2c2c2e] rounded-lg text-center outline-none border border-transparent focus:border-brand py-1.5 font-bold text-xs transition-colors">
-        <span>—</span>
-        <input type="number" value="${rem.endDay}" min="1" max="31" data-rem-idx="${idx}" data-rem-field="endDay"
-          class="rem-field w-9 bg-white dark:bg-[#2c2c2e] rounded-lg text-center outline-none border border-transparent focus:border-brand py-1.5 font-bold text-xs transition-colors">
+    <div class="reminder-card" data-rem-id="${escapeAttr(rem.id)}">
+      <div class="reminder-heading">
+        <input type="text" value="${escapeAttr(rem.emoji)}" aria-label="Значок нагадування" data-rem-idx="${idx}" data-rem-field="emoji" class="rem-field reminder-emoji">
+        <input type="text" value="${escapeAttr(rem.label)}" aria-label="Назва нагадування" data-rem-idx="${idx}" data-rem-field="label" class="rem-field">
+        <label class="reminder-toggle" title="Увімкнути нагадування">
+          <input type="checkbox" ${rem.active ? 'checked' : ''} aria-label="Увімкнути нагадування ${escapeAttr(rem.label)}" data-rem-idx="${idx}" data-rem-field="active" class="rem-field">
+        </label>
       </div>
-      <label class="relative inline-flex items-center cursor-pointer shrink-0">
-        <input type="checkbox" ${rem.active ? 'checked' : ''} data-rem-idx="${idx}" data-rem-field="active"
-          class="rem-field sr-only peer">
-        <div class="w-8 h-4 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors"></div>
-        <div class="absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform shadow-sm peer-checked:translate-x-4"></div>
-      </label>
-      ${rem.deletable !== false ? `<button type="button" class="rem-del w-7 h-7 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-400 flex items-center justify-center text-xs active:scale-90 shrink-0" data-rem-idx="${idx}"><i class="fa-solid fa-trash text-[9px]"></i></button>` : `<div class="w-7 shrink-0"></div>`}
+      <div class="reminder-period">
+        <label>З числа<input type="number" value="${rem.startDay}" min="1" max="31" inputmode="numeric" data-rem-idx="${idx}" data-rem-field="startDay" class="rem-field"></label>
+        <label>По число<input type="number" value="${rem.endDay}" min="1" max="31" inputmode="numeric" data-rem-idx="${idx}" data-rem-field="endDay" class="rem-field"></label>
+        <button type="button" class="rem-del" aria-label="Видалити нагадування ${escapeAttr(rem.label)}" title="Видалити нагадування" data-rem-idx="${idx}"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+      </div>
     </div>
   `).join('');
 
@@ -1969,7 +1965,7 @@ function renderCustomReminders() {
       const idx = parseInt(input.dataset.remIdx);
       const field = input.dataset.remField;
       if (field === 'active') reminders[idx][field] = input.checked;
-      else if (field === 'startDay' || field === 'endDay') reminders[idx][field] = parseInt(input.value) || 1;
+      else if (field === 'startDay' || field === 'endDay') {reminders[idx][field] = Math.max(1,Math.min(31,parseInt(input.value)||1));input.value=reminders[idx][field];}
       else reminders[idx][field] = input.value;
       saveCustomReminders(reminders);
     });
@@ -1977,7 +1973,8 @@ function renderCustomReminders() {
   container.querySelectorAll('.rem-del').forEach(btn => {
     btn.addEventListener('click', () => {
       const reminders = getCustomReminders();
-      reminders.splice(parseInt(btn.dataset.remIdx), 1);
+      const [removed]=reminders.splice(parseInt(btn.dataset.remIdx),1);
+      if(['water','electro','gas'].includes(removed.id))reminders.push({...removed,deleted:true,active:false});
       saveCustomReminders(reminders);
       renderCustomReminders();
       showToast('Нагадування видалено', '🗑');

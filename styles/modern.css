@@ -46,7 +46,7 @@ html.dark button.bg-brand,html.dark button[class*='from-brand'],html.dark #submi
 #monthMiniWidget .grid{grid-template-columns:1fr 1fr}#monthMiniWidget .grid>div:first-child{display:none}#monthMiniWidget .grid>div+div{padding:6px}#miniDeadline,#miniForecast{font-size:.875rem!important}
 #dashServices .service-line{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--ui-line)}#dashServices .service-line:last-child{border:0}#dashServices .service-line span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums}
 .secondary-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.secondary-actions button{padding:16px;text-align:left;color:var(--ui-text)}
-#bottomNav{left:0!important;right:0!important;bottom:0!important;width:100%!important;max-width:none!important;transform:none!important;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))!important;border:0!important;border-top:1px solid var(--ui-line)!important;border-radius:0!important;background:var(--ui-surface)!important;box-shadow:none!important}
+#bottomNav{position:fixed!important;left:0!important;right:0!important;bottom:0!important;width:100%!important;max-width:none!important;transform:none!important;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))!important;border:0!important;border-top:1px solid var(--ui-line)!important;border-radius:0!important;background:var(--ui-surface)!important;box-shadow:none!important}
 #bottomNav>div{max-width:520px!important;margin:auto;padding:0!important;gap:4px}#bottomNav .nav-btn{border-radius:10px;min-height:54px;gap:4px;padding:8px 4px}#bottomNav .nav-btn.text-brand{background:var(--brand-light);color:var(--brand)!important;box-shadow:none}#bottomNav .nav-btn span:not(#debtBadge){font-size:.8125rem!important;font-weight:500}#bottomNav .nav-btn i{font-size:18px}#btnTabAnalytics{display:none}
 .sidebar-brand{display:none}#debtBadge{right:8px;top:0;min-width:18px;height:18px;font-size:.75rem!important;padding:0 4px}
 #aiFabBtn{bottom:calc(100px + env(safe-area-inset-bottom,0px))!important;right:18px!important;left:auto!important;width:48px;height:48px;background:var(--ui-surface)!important;color:var(--brand)!important;border:1px solid var(--ui-line)!important;box-shadow:0 4px 16px rgb(0 0 0 / .08)!important;backdrop-filter:none!important}
@@ -75,3 +75,13 @@ html.dark #bottomNav{background:rgb(32 38 48 / var(--nav-glass-alpha))!important
 #tabHistory .swipe-card [data-toggle-details]{gap:12px;flex-wrap:wrap}#tabHistory .swipe-card .text-2xl{font-size:1.375rem}
 #tabSettings .secondary-actions button{gap:12px}#tabSettings .secondary-actions button>div{gap:10px}
 [data-toggle-details]:focus-visible,#addressHeaderTrigger:focus-visible{outline:3px solid var(--brand);outline-offset:4px;border-radius:8px}
+
+/* Reminder fields keep their own space on narrow screens. */
+.reminder-card{padding:12px;border:1px solid var(--ui-line);border-radius:14px;background:var(--ui-soft)}
+.reminder-heading{display:grid;grid-template-columns:46px minmax(0,1fr) 44px;gap:8px;align-items:center}
+.reminder-heading input[type=text]{width:100%;min-width:0;padding:8px!important}.reminder-heading .reminder-emoji{text-align:center;padding:4px!important}
+.reminder-period{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;gap:10px;align-items:end;margin-top:12px}
+.reminder-period label{display:grid;gap:4px;min-width:0;font-size:.8125rem;color:var(--ui-muted)}
+.reminder-period input[type=number]{width:100%;min-width:0;padding:8px!important;text-align:center;font-variant-numeric:tabular-nums}
+.reminder-toggle{display:flex;align-items:center;justify-content:center;min-height:44px;cursor:pointer}.reminder-toggle input{width:22px;height:22px;accent-color:var(--brand)}
+.rem-del{height:46px;width:44px;border:1px solid var(--ui-line);border-radius:10px;color:var(--ui-danger);background:var(--ui-surface);font-size:16px}
