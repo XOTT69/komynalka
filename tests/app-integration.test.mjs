@@ -6,7 +6,7 @@ import {createHash,webcrypto} from 'node:crypto';
 import worker from '../worker.js';
 import {environment,legacyAccount} from './helpers.mjs';
 const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
-const sources=await Promise.all(['sync-queue.js','data-store.js','reminders.js','pwa-updates.js','push-client.js','app.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
+const sources=await Promise.all(['sync-queue.js','data-store.js','reminders.js','monthly-tasks.js','pwa-updates.js','push-client.js','app.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
 const password='test-password',hash=createHash('sha256').update(password).digest('hex');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function page(env,stored={},offline=false,suffix=""){
@@ -86,4 +86,16 @@ test('reminder date edits and deletion persist without resurrecting defaults or 
   }finally{p.close();}
   const reopened=await page(env,stored,true);
   try{reopened.w.renderCustomReminders();assert.equal(reopened.w.document.querySelector('[data-rem-id="water"]'),null);assert.equal(reopened.w.document.querySelector('[data-rem-id^="rem_"]'),null);}finally{reopened.close();}
+});
+
+test('monthly tasks separate saved readings, provider completion and partial payment',async()=>{
+ const legacy=legacyAccount(hash);const month=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Kyiv'}).slice(0,7);
+ const rec=legacy.addresses[0].records[0];rec.month=month;rec._filled={water:true,electro:false};legacy.addresses[0].prefs={...legacy.addresses[0].prefs,remindersEnabled:true,remWaterStart:1,remWaterEnd:31,showWater:true,showGas:false,showElectro:true};
+ const {env}=environment({anna:legacy}),p=await page(env);
+ try{await p.w.performLogin('anna',password,false);p.w.renderMonthlyTasks();const d=p.w.document;
+ assert.match(d.querySelector('[data-month-task="readings"]').textContent,/1 з 2/);assert.match(d.querySelector('[data-month-task="payment"]').textContent,/101[,.]90/);
+ const done=d.querySelector('[data-transfer-index="0"]');done.click();assert.match(d.querySelector('[data-month-task="transfer"]').textContent,/1 з/);
+ assert.deepEqual(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records,legacy.addresses[0].records);
+ d.querySelector('[data-month-action="payment"]').click();assert.equal(d.getElementById('monthInput').value,month);assert.equal(d.getElementById('dCur').value,'');assert.match(d.getElementById('entryReviewBalance').textContent,/101[,.]90/);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
 });

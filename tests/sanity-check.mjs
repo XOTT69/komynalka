@@ -1,4 +1,5 @@
 import { access, readFile } from 'node:fs/promises';
+import {JSDOM,VirtualConsole} from 'jsdom';
 import { constants } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -86,9 +87,11 @@ if (!index.includes('id="communityTariffStatus"')) fail('community provider publ
 for (const id of ['communityTariffCity', 'communityTariffRegion', 'communityTariffService', 'cloudTariffSearch', 'cloudTariffServiceFilter']) {
   if (!index.includes(`id="${id}"`)) fail(`index is missing provider catalog control ${id}`);
 }
-if (!index.includes('max-width:390px')) fail('floating dock max-width is missing');
-if (!index.includes('bottom:calc(env(safe-area-inset-bottom,0px) + 14px)')) fail('floating dock safe-area offset is missing');
-if (!index.includes('#aiFabBtn{bottom:calc(env(safe-area-inset-bottom,0px) + 104px)')) fail('AI FAB is not offset above dock');
+// Check the resulting cascade, not the removed floating-dock implementation.
+const layout=new JSDOM(index,{virtualConsole:new VirtualConsole()});
+const modern=layout.window.document.createElement('style');modern.textContent=await readFile(path.join(root,'styles/modern.css'),'utf8');layout.window.document.head.append(modern);
+if(layout.window.getComputedStyle(layout.window.document.getElementById('bottomNav')).position!=='fixed')fail('navigation must stay fixed after the full style cascade');
+layout.window.close();
 
 const admin = await readFile(path.join(root, 'admin.html'), 'utf8');
 for (const unsafe of ['onclick="viewUser(', 'onclick="resetPassword(', 'onclick="deleteUser(', 'onclick="givePro(', 'onclick="revokePro(']) {
