@@ -693,8 +693,8 @@ function switchTab(tabId, index) {
   if(tabId==='tabCalc'){fillPreviousReadings();calculatePreview();updateSmartBadges();}
   if(tabId==='tabHistory')renderRecords();
   if(tabId==='tabAnalytics'){renderAnalytics();renderSubsidyCalc();renderAddressCompare();renderCombinedReport();}
-  if(tabId==='tabSettings'){renderSettingsCustomServices();updateDisplayName();renderChangeLog();renderCustomReminders();renderCommunityTariffs();loadCloudCommunityTariffs();initPush();}
-  btnIds.forEach((id,i)=>{const btn=$(id);if(!btn)return;btn.setAttribute('aria-current',i===index?'page':'false');btn.classList.toggle('text-brand',i===index);btn.classList.toggle('text-slate-400',i!==index);btn.classList.toggle('dark:text-slate-500',i!==index);});
+  if(tabId==='tabSettings'){openSettingsPanel();renderSettingsCustomServices();updateDisplayName();renderChangeLog();renderCustomReminders();renderCommunityTariffs();loadCloudCommunityTariffs();initPush();}
+  btnIds.forEach((id,i)=>{const btn=$(id);if(!btn)return;const selected=i===(tabId==='tabAnalytics'&&window.innerWidth<1000?4:index);btn.setAttribute('aria-current',selected?'page':'false');btn.classList.toggle('text-brand',selected);btn.classList.toggle('text-slate-400',!selected);btn.classList.toggle('dark:text-slate-500',!selected);});
   $('swipeContainer')?.scrollTo({top:0,behavior:'smooth'});haptic('tabSwitch');
 }
 
@@ -703,15 +703,16 @@ $('btnTabCalc')?.addEventListener('click',      ()=>switchTab('tabCalc',1));
 $('btnTabHistory')?.addEventListener('click',   ()=>switchTab('tabHistory',2));
 $('btnTabAnalytics')?.addEventListener('click', ()=>switchTab('tabAnalytics',3));
 $('btnTabSettings')?.addEventListener('click',  ()=>switchTab('tabSettings',4));
-$('dashAddBtn')?.addEventListener('click',     ()=>openMonthlyEntry());
+$('dashAddBtn')?.addEventListener('click',runDashboardAction);
+$('overviewAnalyticsLink')?.addEventListener('click',()=>switchTab('tabAnalytics',3));
 $('dashAnalyticsBtn')?.addEventListener('click',()=>switchTab('tabAnalytics',3));
 $('moreAnalyticsBtn')?.addEventListener('click',()=>switchTab('tabAnalytics',3));
 $('dashHistoryBtn')?.addEventListener('click', ()=>switchTab('tabHistory',2));
 
-let touchStartX=0, touchStartY=0;
-$('swipeContainer')?.addEventListener('touchstart',e=>{touchStartX=e.changedTouches[0].screenX;touchStartY=e.changedTouches[0].screenY;},{passive:true});
+let touchStartX=0, touchStartY=0, touchNavigationAllowed=false;
+$('swipeContainer')?.addEventListener('touchstart',e=>{touchNavigationAllowed=!e.target.closest('input,select,textarea,button,a,summary,canvas,.swipe-card,.settings-panel');touchStartX=e.changedTouches[0].screenX;touchStartY=e.changedTouches[0].screenY;},{passive:true});
 $('swipeContainer')?.addEventListener('touchend',e=>{
-  if(isGuest) return;
+  if(isGuest||!touchNavigationAllowed||e.defaultPrevented) return;
   const distX=touchStartX-e.changedTouches[0].screenX, distY=Math.abs(touchStartY-e.changedTouches[0].screenY);
   if(distY>Math.abs(distX)) return;
   const curIdx=tabIds.findIndex(id=>$(id)?.classList.contains('tab-active'));
@@ -888,10 +889,10 @@ function renderMonthlyTasks(){
   const row=(id,icon,title,subtitle,done,button)=>`<div class="month-task ${done?'task-done':''}" data-month-task="${id}"><span class="task-icon" aria-hidden="true"><i class="fa-solid ${done?'fa-check':icon}"></i></span><div class="task-copy"><h4>${title}</h4><p>${escapeHtml(subtitle)}</p></div>${button}</div>`;
   const action=(id,label,disabled=false)=>`<button type="button" class="task-action" data-month-action="${id}" ${disabled?'disabled':''}>${label}</button>`;
   target.innerHTML=row('readings','fa-pen-to-square','Показники',readingText,entryDone,action(input.total?'readings':'settings',input.total?(entryDone?'Переглянути':'Внести'):'Обрати'))+
-    `<details class="monthly-transfers"><summary>${row('transfer','fa-paper-plane','Передача постачальникам',reminders.length?`${reminders.filter(r=>r.done).length} з ${reminders.length} позначено виконаними`:'Налаштуйте дні передачі показників',transfersDone,'<i class="fa-solid fa-chevron-down" aria-hidden="true"></i>')}</summary><div class="transfer-list">${reminders.length?reminders.map((r,i)=>`<div class="transfer-item"><div><strong>${escapeHtml(r.label)}</strong><p>${escapeHtml(period(r))}${r.done?' · Виконано':r.overdue?' · Період минув':''}</p></div><button type="button" class="task-action" data-transfer-index="${i}" ${!canEditData()||(!r.available&&!r.done)?'disabled':''}>${r.done?'Скасувати':r.available?'Виконано':'Ще не час'}</button></div>`).join(''):action('settings','Налаштувати нагадування')}<p class="task-note">Позначайте виконання після передачі показників у кабінеті постачальника.</p></div></details>`+
+    `<details class="monthly-transfers"><summary>${row('transfer','fa-paper-plane','Передача постачальникам',reminders.length?`${reminders.filter(r=>r.done).length} з ${reminders.length} позначено виконаними`:'Налаштуйте дні передачі показників',transfersDone,'<i class="fa-solid fa-chevron-down" aria-hidden="true"></i>')}</summary><div class="transfer-list">${reminders.length?reminders.map((r,i)=>`<div class="transfer-item"><div><strong>${escapeHtml(r.label)}</strong><p>${escapeHtml(period(r))}${r.done?' · Виконано':r.overdue?' · Період минув':''}</p></div><button type="button" class="task-action" data-transfer-index="${i}" ${!canEditData()||(!r.available&&!r.done)?'disabled':''}>${r.done?'Скасувати':r.available?'Виконано':'Ще не час'}</button></div>`).join(''):action('reminders','Налаштувати нагадування')}<p class="task-note">Позначайте виконання після передачі показників у кабінеті постачальника.</p></div></details>`+
     row('payment','fa-wallet','Оплата',paymentText,payDone,action('payment',payDone?'Переглянути':'Позначити оплату',!rec));
   $('monthlyTasksCount').textContent=`${Number(entryDone)+Number(transfersDone)+Number(payDone)} / ${2+Number(reminders.length>0)}`;
-  target.querySelectorAll('[data-month-action]').forEach(button=>button.addEventListener('click',()=>{if(button.dataset.monthAction==='settings'){switchTab('tabSettings',4);return;}openMonthlyEntry(button.dataset.monthAction==='payment'?'paymentStatusInput':({water:'wCur',hotWater:'hwCur',electro:'dCur',gas:'gCur'}[input.services.find(s=>!s.done)?.id]||'monthInput'));}));
+  target.querySelectorAll('[data-month-action]').forEach(button=>button.addEventListener('click',()=>{if(['settings','reminders'].includes(button.dataset.monthAction)){switchTab('tabSettings',4);openSettingsPanel(button.dataset.monthAction==='reminders'?'reminders':'home');return;}openMonthlyEntry(button.dataset.monthAction==='payment'?'paymentStatusInput':({water:'wCur',hotWater:'hwCur',electro:'dCur',gas:'gCur'}[input.services.find(s=>!s.done)?.id]||'monthInput'));}));
   target.querySelectorAll('[data-transfer-index]').forEach(button=>button.addEventListener('click',()=>{
     if(!requireEdit())return;const reminder=reminders[Number(button.dataset.transferIndex)];if(!reminder||(!reminder.available&&!reminder.done))return;
     prefs.reminderCompletions={...prefs.reminderCompletions};if(reminder.done)delete prefs.reminderCompletions[reminder.id];else prefs.reminderCompletions[reminder.id]=reminder.cycle;
@@ -899,7 +900,10 @@ function renderMonthlyTasks(){
   }));
   $('dashMonthStatus').textContent=rec?(entryDone?'Показники за місяць внесено':'Місяць заповнено частково'):'За цей місяць ще немає запису';
   $('dashMonthStatus').classList.toggle('hidden',entryDone);
-  const label=$('dashAddBtn').querySelector('span');if(label)label.textContent=rec?'Продовжити облік місяця':'Внести показники';
+  const next=!entryDone?'readings':reminders.some(r=>r.available&&!r.done)?'transfer':!payDone?'payment':'review';
+  $('dashAddBtn').dataset.action=next;
+  const label=$('dashAddBtn').querySelector('span');if(label)label.textContent=({readings:rec?'Продовжити показники':'Внести показники',transfer:'Передати показники',payment:'Позначити оплату',review:'Переглянути показники'})[next];
+  $('dashboardActionHint').textContent=({readings:'Попередні значення вже підтягуються з історії',transfer:'Відкрийте список послуг і позначте передані',payment:'Збережіть оплату у своєму обліку',review:reminders.some(r=>!r.done)?'Показники внесено й оплату позначено':'Справи за місяць виконано'})[next];
 }
 function renderEntryReview(valid=validateReadingsUI()){
   if(!$('entryReviewTotal'))return;
@@ -1432,10 +1436,11 @@ $('cpConfirmPass')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') 
 
 // =================== SWIPE ===================
 function initSwipe(card,recordId){
-  let startX=0,currentX=0,isSwiping=false;const threshold=80;
-  card.addEventListener('touchstart',e=>{startX=e.touches[0].clientX;isSwiping=true;card.classList.add('swiping');},{passive:true});
-  card.addEventListener('touchmove',e=>{if(!isSwiping)return;currentX=e.touches[0].clientX-startX;const limited=Math.sign(currentX)*Math.min(Math.abs(currentX),120);card.style.transform=`translateX(${limited}px)`;const l=card.querySelector('.swipe-bg-left'),r=card.querySelector('.swipe-bg-right');if(l)l.style.opacity=currentX<-30?'1':'0';if(r)r.style.opacity=currentX>30?'1':'0';},{passive:true});
-  card.addEventListener('touchend',()=>{isSwiping=false;card.classList.remove('swiping');card.style.transform='';const l=card.querySelector('.swipe-bg-left'),r=card.querySelector('.swipe-bg-right');if(l)l.style.opacity='0';if(r)r.style.opacity='0';if(currentX<-threshold){card.style.transform='translateX(-100%)';card.style.opacity='0';setTimeout(()=>deleteRecordById(recordId),300);}else if(currentX>threshold){card.style.transform='translateX(100%)';card.style.opacity='0';setTimeout(()=>togglePaidById(recordId),300);}currentX=0;},{passive:true});
+  let startX=0,startY=0,delta=0,tracking=false;
+  card.addEventListener('touchstart',e=>{if(e.touches.length!==1||e.target.closest('button,input,a'))return;startX=e.touches[0].clientX;startY=e.touches[0].clientY;delta=0;tracking=true;},{passive:true});
+  card.addEventListener('touchmove',e=>{if(!tracking)return;const dx=e.touches[0].clientX-startX,dy=e.touches[0].clientY-startY;if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>8){tracking=false;return;}delta=dx;},{passive:true});
+  card.addEventListener('touchend',e=>{if(tracking&&Math.abs(delta)>80){e.preventDefault();e.stopPropagation();card.querySelector('.details-panel')?.classList.remove('hidden');card.querySelector('[data-toggle-details]')?.setAttribute('aria-expanded','true');const chevron=card.querySelector('.chevron-icon');if(chevron)chevron.style.transform='rotate(180deg)';card.classList.add('swipe-actions-visible');card.querySelector(delta<0?'.rec-del':'.rec-pay')?.scrollIntoView?.({block:'nearest',behavior:'smooth'});haptic('light');}tracking=false;delta=0;},{passive:false});
+  card.addEventListener('touchcancel',()=>{tracking=false;delta=0;},{passive:true});
 }
 
 // =================== RECORDS ===================
@@ -1458,7 +1463,7 @@ function deleteRecordById(id){
 
 function renderRecords(){
   const list=$('recordsList');if(!list) return;
-  if(records.length===0){list.innerHTML=`<div class="text-center py-12"><i class="fa-solid fa-clock-rotate-left text-4xl text-slate-300 dark:text-slate-600 mb-4"></i><p class="text-slate-500 font-medium">Ще немає записів</p><p class="text-xs text-slate-400 mt-1">Додайте перший запис у вкладці "Рахунок"</p></div>`;if($('statsAvg'))$('statsAvg').innerText='0 ₴';if($('statsTotalPaid'))$('statsTotalPaid').innerText='0 ₴';if($('statsMin'))$('statsMin').innerText='0 ₴';if($('statsMax'))$('statsMax').innerText='0 ₴';if($('statsCount'))$('statsCount').innerText='0';renderHistoryChart([]);renderServiceChart();return;}
+  if(records.length===0){list.innerHTML=`<div class="text-center py-12"><i class="fa-solid fa-clock-rotate-left text-4xl text-slate-300 dark:text-slate-600 mb-4"></i><p class="text-slate-500 font-medium">Ще немає записів</p><p class="text-xs text-slate-400 mt-1">Додайте перший запис у вкладці "Показники"</p></div>`;if($('statsAvg'))$('statsAvg').innerText='0 ₴';if($('statsTotalPaid'))$('statsTotalPaid').innerText='0 ₴';if($('statsMin'))$('statsMin').innerText='0 ₴';if($('statsMax'))$('statsMax').innerText='0 ₴';if($('statsCount'))$('statsCount').innerText='0';renderHistoryChart([]);renderServiceChart();return;}
   const totals=records.map(r=>r.total);
   if($('statsAvg'))      $('statsAvg').innerText      =fmt.format(totals.reduce((a,b)=>a+b,0)/totals.length)+' ₴';
   if($('statsTotalPaid'))$('statsTotalPaid').innerText=fmt.format(records.reduce((s,r)=>s+getPaidAmount(r),0))+' ₴';
@@ -2449,7 +2454,7 @@ function createRecordCard(rec) {
     const payBtn = e.target.closest('.rec-pay');     if (payBtn)   { e.stopPropagation(); togglePaidById(recId); return; }
     const shareBtn = e.target.closest('.rec-share'); if (shareBtn) { e.stopPropagation(); shareRecordById(recId); return; }
     const editBtn = e.target.closest('.rec-edit');   if (editBtn)  { e.stopPropagation(); editRecordById(recId); return; }
-    const delBtn = e.target.closest('.rec-del');     if (delBtn)   { e.stopPropagation(); if (requireEdit('У режимі перегляду не можна видаляти записи') && confirm('Видалити?')) deleteRecordById(recId); return; }
+    const delBtn = e.target.closest('.rec-del');     if (delBtn)   { e.stopPropagation(); requestRecordDeletion(recId); return; }
   });
   return card;
 }
@@ -2616,3 +2621,36 @@ function renderCombinedReport() {
 $('addressHeaderTrigger')?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.currentTarget.click();}});
 $('overviewDetails')?.addEventListener('toggle',e=>{if(e.currentTarget.open){dashChart?.setupCanvas();renderDashboard();}});
 $('historyDetails')?.addEventListener('toggle',e=>{if(e.currentTarget.open){historyChart?.setupCanvas();serviceChart?.setupCanvas();renderRecords();}});
+
+// Settings panels keep their existing controls mounted, including unsaved values.
+function openSettingsPanel(name){
+  const panel=name?$('settings-'+name):null;
+  document.querySelectorAll('.settings-panel').forEach(el=>el.classList.toggle('hidden',el!==panel));
+  $('settingsMenu')?.classList.toggle('hidden',Boolean(panel));
+  $('tabSettings')?.querySelector('.page-heading')?.classList.toggle('hidden',Boolean(panel));
+  $('saveSettingsBtn')?.classList.toggle('hidden',!panel||!['home','reminders','account'].includes(name));
+  $('swipeContainer')?.scrollTo({top:0});
+  if(panel)panel.querySelector('h3')?.focus({preventScroll:true});
+}
+document.querySelectorAll('[data-settings-open]').forEach(button=>button.addEventListener('click',()=>openSettingsPanel(button.dataset.settingsOpen)));
+document.querySelectorAll('[data-settings-back]').forEach(button=>button.addEventListener('click',()=>{const name=button.closest('.settings-panel').id.slice(9);openSettingsPanel();document.querySelector(`[data-settings-open="${name}"]`)?.focus({preventScroll:true});}));
+function runDashboardAction(){
+  const action=$('dashAddBtn')?.dataset.action;
+  if(action==='transfer'){const detail=$('monthlyTasksList')?.querySelector('details');if(detail){detail.open=true;detail.scrollIntoView?.({block:'center',behavior:'smooth'});detail.querySelector('summary')?.focus();}return;}
+  openMonthlyEntry(action==='payment'?'paymentStatusInput':undefined);
+}
+let pendingRecordDeletion=null;
+function closeRecordAction(){const dialog=$('recordActionDialog');if(typeof dialog?.close==='function')dialog.close();else dialog?.removeAttribute('open');pendingRecordDeletion=null;}
+function requestRecordDeletion(id){
+  if(!requireEdit('У режимі перегляду не можна видаляти записи'))return;
+  const record=records.find(r=>String(r.id)===String(id));if(!record)return;
+  pendingRecordDeletion={id,owner:sessionLogin,address:currentAddressId};
+  const month=new Date(record.month+'-01T12:00:00').toLocaleDateString('uk-UA',{month:'long',year:'numeric'});
+  $('recordActionDescription').textContent=`${month} · ${fmt.format(record.total)} ₴. Запис буде видалено з обліку цієї адреси. Одразу після видалення його можна відновити.`;
+  const dialog=$('recordActionDialog');if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
+  $('recordActionCancel').focus();
+}
+$('recordActionCancel')?.addEventListener('click',closeRecordAction);
+$('recordActionDialog')?.addEventListener('cancel',()=>{pendingRecordDeletion=null;});
+$('recordActionConfirm')?.addEventListener('click',()=>{const request=pendingRecordDeletion;closeRecordAction();if(request&&request.owner===sessionLogin&&request.address===currentAddressId)deleteRecordById(request.id);});
+$('overviewDetails')?.addEventListener('toggle',()=>{if($('overviewDetails').open){renderDashCanvasChart();renderDonutChart(records.find(r=>r.month===getMonthKey()));}});

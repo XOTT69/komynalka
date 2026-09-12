@@ -99,3 +99,21 @@ test('monthly tasks separate saved readings, provider completion and partial pay
  d.querySelector('[data-month-action="payment"]').click();assert.equal(d.getElementById('monthInput').value,month);assert.equal(d.getElementById('dCur').value,'');assert.match(d.getElementById('entryReviewBalance').textContent,/101[,.]90/);assert.deepEqual(p.errors,[]);
  }finally{p.close();}
 });
+
+test('settings groups retain unsaved fields and every route returns to its menu',async()=>{
+ const {env}=environment({anna:legacyAccount(hash)}),p=await page(env);
+ try{await p.w.performLogin('anna',password,false);const d=p.w.document;p.w.switchTab('tabSettings',4);
+ for(const button of d.querySelectorAll('[data-settings-open]')){button.click();const panel=d.getElementById('settings-'+button.dataset.settingsOpen);assert.equal(panel.classList.contains('hidden'),false);assert.equal(d.getElementById('settingsMenu').classList.contains('hidden'),true);panel.querySelector('[data-settings-back]').click();assert.equal(d.getElementById('settingsMenu').classList.contains('hidden'),false);}
+ p.w.openSettingsPanel('home');d.getElementById('tWater').value='42.75';d.querySelector('#settings-home [data-settings-back]').click();p.w.openSettingsPanel('home');assert.equal(d.getElementById('tWater').value,'42.75');assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+test('horizontal swipes expose record actions without deleting or changing partial payment',async()=>{
+ const legacy=legacyAccount(hash),{env}=environment({anna:legacy}),p=await page(env);
+ try{await p.w.performLogin('anna',password,false);p.w.switchTab('tabHistory',2);const d=p.w.document,card=d.querySelector('.swipe-card');
+ const touch=(type,x,y)=>{const e=new p.w.Event(type,{bubbles:true,cancelable:true});e.touches=[{clientX:x,clientY:y,screenX:x,screenY:y}];e.changedTouches=e.touches;card.dispatchEvent(e);};
+ for(const end of [10,290]){touch('touchstart',150,100);touch('touchmove',end,103);touch('touchend',end,103);assert.equal(card.querySelector('.details-panel').classList.contains('hidden'),false);assert.ok(d.getElementById('tabHistory').classList.contains('tab-active'));}
+ await p.w.syncToCloud();let data=JSON.parse(p.storage()['komynalka_account_v1:anna']).local;assert.deepEqual(data.addresses[0].records,legacy.addresses[0].records);
+ card.querySelector('.rec-del').click();assert.ok(d.getElementById('recordActionDialog').hasAttribute('open'));d.getElementById('recordActionCancel').click();assert.equal(d.querySelectorAll('.swipe-card').length,1);
+ card.querySelector('.rec-del').click();d.getElementById('recordActionConfirm').click();assert.equal(d.querySelectorAll('.swipe-card').length,0);await delay(60);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});

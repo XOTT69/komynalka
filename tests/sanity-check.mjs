@@ -89,7 +89,7 @@ for (const id of ['communityTariffCity', 'communityTariffRegion', 'communityTari
 }
 // Check the resulting cascade, not the removed floating-dock implementation.
 const layout=new JSDOM(index,{virtualConsole:new VirtualConsole()});
-const modern=layout.window.document.createElement('style');modern.textContent=await readFile(path.join(root,'styles/modern.css'),'utf8');layout.window.document.head.append(modern);
+const modern=layout.window.document.createElement('style');modern.textContent=await readFile(path.join(root,'styles/modern.css'),'utf8')+'\n'+await readFile(path.join(root,'styles/workspace.css'),'utf8');layout.window.document.head.append(modern);
 if(layout.window.getComputedStyle(layout.window.document.getElementById('bottomNav')).position!=='fixed')fail('navigation must stay fixed after the full style cascade');
 layout.window.close();
 
