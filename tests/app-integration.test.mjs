@@ -6,7 +6,7 @@ import {createHash,webcrypto} from 'node:crypto';
 import worker from '../worker.js';
 import {environment,legacyAccount} from './helpers.mjs';
 const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
-const sources=await Promise.all(['sync-queue.js','data-store.js','reminders.js','monthly-tasks.js','pwa-updates.js','push-client.js','app.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
+const sources=await Promise.all(['sync-queue.js','data-store.js','reminders.js','monthly-tasks.js','providers.js','pwa-updates.js','push-client.js','app.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
 const password='test-password',hash=createHash('sha256').update(password).digest('hex');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function page(env,stored={},offline=false,suffix=""){
@@ -115,5 +115,38 @@ test('horizontal swipes expose record actions without deleting or changing parti
  await p.w.syncToCloud();let data=JSON.parse(p.storage()['komynalka_account_v1:anna']).local;assert.deepEqual(data.addresses[0].records,legacy.addresses[0].records);
  card.querySelector('.rec-del').click();assert.ok(d.getElementById('recordActionDialog').hasAttribute('open'));d.getElementById('recordActionCancel').click();assert.equal(d.querySelectorAll('.swipe-card').length,1);
  card.querySelector('.rec-del').click();d.getElementById('recordActionConfirm').click();assert.equal(d.querySelectorAll('.swipe-card').length,0);await delay(60);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+
+test('collapsed readings still validate and keyboard navigation preserves the draft without submitting',async()=>{
+ const legacy=legacyAccount(hash),{env}=environment({anna:legacy}),p=await page(env);
+ try{await p.w.performLogin('anna',password,false);p.w.editRecordById(42);const d=p.w.document,before=JSON.stringify(legacy.addresses[0].records);d.getElementById('collapseCompleted').click();assert.equal(d.getElementById('blockWaterDetails').open,false);
+ d.getElementById('wCur').value='1';p.w.calculatePreview();assert.equal(d.getElementById('submitFormBtn').disabled,true);assert.equal(d.getElementById('entryReviewTotal').textContent,'—');d.getElementById('jumpToReview').click();assert.equal(d.getElementById('blockWaterDetails').open,true);assert.equal(d.activeElement.id,'wCur');
+ d.getElementById('wCur').value='130';d.getElementById('wCur').dispatchEvent(new p.w.Event('input',{bubbles:true}));d.getElementById('wCur').dispatchEvent(new p.w.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));await delay(20);assert.equal(JSON.stringify(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records),before);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+test('provider edits persist offline, preserve history and stay out of guest shares',async()=>{
+ const legacy=legacyAccount(hash),token='e'.repeat(40),{env,values}=environment({anna:legacy,[`share:${token}`]:{login:'anna',addressId:'home'}}),p=await page(env);let stored;
+ try{await p.w.performLogin('anna',password,false);p.w.openSettingsPanel('providers');p.w.openProviderEditor('water');const d=p.w.document;
+ d.getElementById('providerName').value='Мій водоканал';d.getElementById('providerAccount').value='001239';d.getElementById('providerWebsite').value='javascript:alert(1)';d.getElementById('providerForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));assert.match(d.getElementById('providerError').textContent,/https/);assert.equal(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.accountSettings?.providerCards,undefined);
+ Object.defineProperty(p.w.navigator,'onLine',{value:false,configurable:true});d.getElementById('providerWebsite').value='https://example.org/account';d.getElementById('providerForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));stored=p.storage();const local=JSON.parse(stored['komynalka_account_v1:anna']);assert.equal(local.local.accountSettings.providerCards['address:home']['service:water'].account,'001239');assert.deepEqual(local.local.addresses[0].records,legacy.addresses[0].records);assert.equal(local.local.addresses[0].name,legacy.addresses[0].name);assert.ok(local.pending);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+ const reopened=await page(env,stored,true);
+ try{reopened.w.openSettingsPanel('providers');assert.match(reopened.w.document.getElementById('providersList').textContent,/001239/);assert.deepEqual(reopened.errors,[]);}finally{reopened.close();}
+ const online=await page(env,stored);
+ try{await online.w.performLogin('anna',password,false);await online.w.syncToCloud();const saved=JSON.parse(values.get('anna'));assert.equal(saved.accountSettings.providerCards['address:home']['service:water'].account,'001239');assert.deepEqual(saved.addresses[0].records,legacy.addresses[0].records);const share=await worker.fetch(new Request('https://worker.test/?share='+token),env);const body=await share.text();assert.equal(body.includes('001239'),false);assert.equal(body.includes('providerCards'),false);assert.deepEqual(online.errors,[]);}finally{online.close();}
+});
+
+test('a failed local provider save keeps the editor and prior data; retry succeeds',async()=>{
+ const {env}=environment({anna:legacyAccount(hash)}),p=await page(env);
+ try{await p.w.performLogin('anna',password,false);p.w.openSettingsPanel('providers');p.w.openProviderEditor('water');const d=p.w.document;d.getElementById('providerAccount').value='0007';const set=p.w.Storage.prototype.setItem;
+ p.w.Storage.prototype.setItem=function(key,value){if(key==='komynalka_account_v1:anna')throw new Error('quota');return set.call(this,key,value);};d.getElementById('providerForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));assert.ok(d.getElementById('providerDialog').hasAttribute('open'));assert.equal(d.getElementById('providerAccount').value,'0007');assert.equal(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.accountSettings?.providerCards,undefined);
+ p.w.Storage.prototype.setItem=set;d.getElementById('providerForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await p.w.syncToCloud();assert.equal(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.accountSettings.providerCards['address:home']['service:water'].account,'0007');assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+test('an open provider editor cannot overwrite a newer card received by sync',async()=>{
+ const {env}=environment({anna:legacyAccount(hash)}),p=await page(env);
+ try{await p.w.performLogin('anna',password,false);p.w.openSettingsPanel('providers');p.w.openProviderEditor('water');const d=p.w.document;d.getElementById('providerAccount').value='old draft';const next=JSON.parse(p.storage()['komynalka_account_v1:anna']).local;next.accountSettings=p.w.KomunalkaProviders.update(next.accountSettings||{},'home','water',{account:'new from sync'});p.w.applySnapshot(next);
+ d.getElementById('providerForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));assert.match(d.getElementById('providerError').textContent,/іншому пристрої/);assert.equal(d.getElementById('providerAccount').value,'old draft');assert.equal(p.w.KomunalkaProviders.get(p.w.accountSnapshot().accountSettings,'home','water').account,'new from sync');assert.deepEqual(p.errors,[]);
  }finally{p.close();}
 });
