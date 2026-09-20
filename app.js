@@ -1,10 +1,10 @@
 // ============================================================
-// КОМУНАЛКА PWA v4.0
+// КОМУНАЛКА PWA
 // ============================================================
 const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
-const APP_VERSION = '5.1.0';
+const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'dev';
 const MAX_ADDRESSES_FREE = 3;
 const LOCAL_BACKUP_KEY = 'komynalka_backup';
 const PRE_IMPORT_BACKUP_KEY = 'komynalka_pre_import_backup';
@@ -12,6 +12,7 @@ const CHANGE_LOG_KEY = 'komynalka_change_log';
 const CUSTOM_TARIFF_TEMPLATE_KEY = 'komynalka_tariff_template';
 const CUSTOM_REMINDERS_KEY = 'komynalka_custom_reminders';
 const COMMUNITY_TARIFF_KEY = 'komynalka_community_tariff';
+const DEVICE_META_PREFIX = 'komynalka_device_meta_v1';
 
 const firebaseConfig = { apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80", authDomain: "pwakomun.firebaseapp.com", projectId: "pwakomun", storageBucket: "pwakomun.firebasestorage.app", messagingSenderId: "4437974770", appId: "1:4437974770:web:bf7d2f7bac35eff5707a6b" };
 firebase.initializeApp(firebaseConfig);
@@ -108,6 +109,23 @@ function setSyncState(state) {
   const labels={synced:'Збережено у хмарі',syncing:'Синхронізація…',pending:'Збережено на пристрої',offline:'Офлайн · дані на пристрої',error:'Не вдалося синхронізувати',conflict:'Потрібно узгодити зміни'};
   const dot=$('syncDotHeader');if(dot)dot.className=`sync-dot ${state}`;
   if($('syncStatusText'))$('syncStatusText').textContent=labels[state]||state;
+  if(state==='synced'&&sessionLogin)writeDeviceMeta({lastSyncedAt:Date.now()});
+  renderDataHealth();
+}
+function deviceMetaKey(){return `${DEVICE_META_PREFIX}:${encodeURIComponent(sessionLogin||initialDeviceLogin||'device')}`;}
+function readDeviceMeta(){try{return JSON.parse(localStorage.getItem(deviceMetaKey())||'{}');}catch{return {};}}
+function writeDeviceMeta(patch){try{localStorage.setItem(deviceMetaKey(),JSON.stringify({...readDeviceMeta(),...patch}));}catch{}renderDataHealth();}
+function formatDeviceTime(value){if(!value)return null;const date=new Date(value);if(Number.isNaN(date.getTime()))return null;return new Intl.DateTimeFormat('uk-UA',{dateStyle:'medium',timeStyle:'short'}).format(date);}
+function renderDataHealth(){
+  const summary=$('dataHealthSummary');if(!summary)return;
+  const labels={synced:'Дані захищені та синхронізовані',syncing:'Надсилаємо зміни у хмару…',pending:'Зміни безпечно збережені на цьому пристрої',offline:'Офлайн: працюємо з локальною копією',error:'Синхронізація потребує уваги',conflict:'Потрібно обрати правильну версію даних'};
+  const state=activeStore?.read?.(),meta=readDeviceMeta();
+  summary.textContent=labels[syncState]||'Стан даних невідомий';
+  if($('dataLastSync'))$('dataLastSync').textContent=formatDeviceTime(meta.lastSyncedAt)||'Ще не синхронізовано';
+  if($('dataLastExport'))$('dataLastExport').textContent=formatDeviceTime(meta.lastExportAt)||'Ще не створено';
+  if($('dataPendingState'))$('dataPendingState').textContent=state?.conflict?'Є конфлікт':state?.pending?'Очікують синхронізації':'Немає';
+  if($('dataAppVersion'))$('dataAppVersion').textContent=APP_VERSION;
+  if($('appVersion'))$('appVersion').textContent=APP_VERSION;
 }
 function accountSnapshot(){return {addresses,currentAddressId,accountSettings:activeSettings};}
 function saveToLocal() {
@@ -336,7 +354,10 @@ function showBroadcastBanner(message, date) {
   const banner = document.createElement('div');
   banner.id = 'broadcastBanner';
   banner.className = 'fixed top-0 left-0 right-0 z-[800] bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-4 flex items-center gap-3 shadow-xl';
-  banner.innerHTML = `<span class="text-lg">📢</span><p class="flex-1 text-sm font-bold">${escapeHtml(message)}</p><button onclick="dismissBroadcast('${escapeHtml(date)}')" class="px-3 py-1.5 bg-white/20 rounded-lg text-xs font-bold active:scale-95">✕</button>`;
+  const icon=document.createElement('span');icon.className='text-lg';icon.textContent='📢';
+  const copy=document.createElement('p');copy.className='flex-1 text-sm font-bold';copy.textContent=String(message||'');
+  const close=document.createElement('button');close.type='button';close.className='px-3 py-1.5 bg-white/20 rounded-lg text-xs font-bold active:scale-95';close.setAttribute('aria-label','Закрити оголошення');close.textContent='✕';close.addEventListener('click',()=>dismissBroadcast(date));
+  banner.append(icon,copy,close);
   document.body.appendChild(banner);
 }
 function dismissBroadcast(date) { localStorage.setItem('k_broadcast_seen', date); $('broadcastBanner')?.remove(); }
@@ -439,7 +460,8 @@ function applyLiquidGlassLevel(value) {
 // =================== WELCOME ===================
 function showWelcome() { if (localStorage.getItem('welcome_done')) return; $('welcomeTooltip')?.classList.remove('hidden'); }
 function dismissWelcome() { localStorage.setItem('welcome_done', '1'); $('welcomeTooltip')?.classList.add('hidden'); }
-window.dismissWelcome = dismissWelcome;
+$('dismissWelcomeBtn')?.addEventListener('click',dismissWelcome);
+$('welcomeTooltip')?.addEventListener('click',e=>{if(e.target===e.currentTarget)dismissWelcome();});
 
 // =================== AUTH ===================
 $('authForm')?.addEventListener('submit', async (e) => { e.preventDefault(); await performLogin($('authLogin').value.trim(), $('authPass').value, false); });
@@ -693,9 +715,13 @@ function switchTab(tabId, index) {
   if(tabId==='tabCalc'){fillPreviousReadings();calculatePreview();updateSmartBadges();}
   if(tabId==='tabHistory')renderRecords();
   if(tabId==='tabAnalytics'){renderAnalytics();renderSubsidyCalc();renderAddressCompare();renderCombinedReport();}
-  if(tabId==='tabSettings'){openSettingsPanel();renderSettingsCustomServices();updateDisplayName();renderChangeLog();renderCustomReminders();renderCommunityTariffs();loadCloudCommunityTariffs();initPush();}
+  if(tabId==='tabSettings'){openSettingsPanel();renderSettingsCustomServices();updateDisplayName();renderChangeLog();renderCustomReminders();renderCommunityTariffs();renderDataHealth();loadCloudCommunityTariffs();initPush();}
   btnIds.forEach((id,i)=>{const btn=$(id);if(!btn)return;const selected=i===(tabId==='tabAnalytics'&&window.innerWidth<1000?4:index);btn.setAttribute('aria-current',selected?'page':'false');btn.classList.toggle('text-brand',selected);btn.classList.toggle('text-slate-400',!selected);btn.classList.toggle('dark:text-slate-500',!selected);});
   $('swipeContainer')?.scrollTo({top:0,behavior:'smooth'});haptic('tabSwitch');
+}
+
+function launchTabFromLocation(){
+  if(window.location.hash==='#calc'&&!isGuest)switchTab('tabCalc',1);
 }
 
 $('btnTabDashboard')?.addEventListener('click', ()=>switchTab('tabDashboard',0));
@@ -708,6 +734,8 @@ $('overviewAnalyticsLink')?.addEventListener('click',()=>switchTab('tabAnalytics
 $('dashAnalyticsBtn')?.addEventListener('click',()=>switchTab('tabAnalytics',3));
 $('moreAnalyticsBtn')?.addEventListener('click',()=>switchTab('tabAnalytics',3));
 $('dashHistoryBtn')?.addEventListener('click', ()=>switchTab('tabHistory',2));
+$('emptyAddReadingBtn')?.addEventListener('click',()=>switchTab('tabCalc',1));
+window.addEventListener('hashchange',launchTabFromLocation);
 
 let touchStartX=0, touchStartY=0, touchNavigationAllowed=false;
 $('swipeContainer')?.addEventListener('touchstart',e=>{touchNavigationAllowed=!e.target.closest('input,select,textarea,button,a,summary,canvas,.swipe-card,.settings-panel');touchStartX=e.changedTouches[0].screenX;touchStartY=e.changedTouches[0].screenY;},{passive:true});
@@ -721,6 +749,9 @@ $('swipeContainer')?.addEventListener('touchend',e=>{
 },{passive:true});
 
 $('quickActionsBtn')?.addEventListener('click',()=>$('quickActionsModal')?.classList.remove('hidden'));
+$('quickActionsModal')?.addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.add('hidden');});
+$('achievementDetailModal')?.addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.add('hidden');});
+$('yearReportModal')?.addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.add('hidden');});
 $('qaExport')?.addEventListener('click',()=>{exportCSV();$('quickActionsModal')?.classList.add('hidden');});
 $('qaPdf')?.addEventListener('click',()=>{generatePDF();$('quickActionsModal')?.classList.add('hidden');});
 $('qaShare')?.addEventListener('click',()=>{shareAllRecords();$('quickActionsModal')?.classList.add('hidden');});
@@ -1515,7 +1546,16 @@ $('sortSelect')?.addEventListener('change',()=>renderRecords());
 
 // =================== EXPORT ===================
 function csvCell(value){let text=String(value??'');if(typeof value==='string'&&/^[=+@\t\r]|^-\D/.test(text))text="'"+text;return /[",\n\r]/.test(text)?`"${text.replace(/"/g,'""')}"`:text;}
-function downloadBlob(content,filename,type){const blob=new Blob([content],{type}),link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=filename;link.click();URL.revokeObjectURL(link.href);}
+function downloadBlob(content,filename,type){const blob=new Blob([content],{type}),link=document.createElement('a'),url=URL.createObjectURL(blob);link.href=url;link.download=filename;link.hidden=true;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+const optionalScriptLoads=new Map();
+function loadOptionalScript(src,ready){
+  if(ready?.())return Promise.resolve();
+  if(optionalScriptLoads.has(src))return optionalScriptLoads.get(src);
+  const promise=new Promise((resolve,reject)=>{const script=document.createElement('script');let timer;const finish=error=>{clearTimeout(timer);error?reject(error):resolve();};script.src=src;script.async=true;script.onload=()=>finish(ready&&!ready()?new Error('OPTIONAL_SCRIPT_NOT_READY'):null);script.onerror=()=>finish(new Error('OPTIONAL_SCRIPT_FAILED'));timer=setTimeout(()=>finish(new Error('OPTIONAL_SCRIPT_TIMEOUT')),15000);document.head.appendChild(script);});
+  optionalScriptLoads.set(src,promise);promise.catch(()=>{if(optionalScriptLoads.get(src)===promise)optionalScriptLoads.delete(src);});return promise;
+}
+function pdfAutoTableReady(){try{return typeof window.jspdf?.jsPDF?.API?.autoTable==='function'||typeof new window.jspdf.jsPDF().autoTable==='function';}catch{return false;}}
+async function ensurePdfTools(){await loadOptionalScript('vendor/jspdf/jspdf.umd.min.js',()=>!!window.jspdf?.jsPDF);await loadOptionalScript('vendor/jspdf/jspdf.plugin.autotable.min.js',pdfAutoTableReady);}
 
 function exportServices(){
   return [
@@ -1536,6 +1576,8 @@ function exportCSV(){
 async function generatePDF(){
   if(!records.length)return showToast('Немає записів','⚠️');
   try{
+    showToast('Готуємо PDF…','⏳');
+    await ensurePdfTools();
     const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape'});
     let hasFont=false;
     try{const resp=await fetch('./vendor/fonts/Roboto-Regular.ttf');if(resp.ok){const bytes=new Uint8Array(await resp.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);doc.addFileToVFS('Roboto.ttf',btoa(binary));doc.addFont('Roboto.ttf','Roboto','normal');doc.setFont('Roboto','normal');hasFont=true;}}catch{}
@@ -1555,7 +1597,8 @@ async function shareAllRecords(){if(!records.length)return showToast('Немає
 $('exportCsvBtn')?.addEventListener('click',exportCSV);
 $('exportPdfBtn')?.addEventListener('click',generatePDF);
 $('shareAllBtn')?.addEventListener('click',shareAllRecords);
-$('exportJsonBtn')?.addEventListener('click',()=>{syncCurrentAddress();downloadBlob(JSON.stringify({version:APP_VERSION,exportDate:new Date().toISOString(),addresses,currentAddressId,accountSettings:activeSettings},null,2),'komunalka_backup.json','application/json;charset=utf-8;');showToast('Бекап','💾');});
+$('exportJsonBtn')?.addEventListener('click',()=>{syncCurrentAddress();downloadBlob(JSON.stringify({version:APP_VERSION,exportDate:new Date().toISOString(),addresses,currentAddressId,accountSettings:activeSettings},null,2),'komunalka_backup.json','application/json;charset=utf-8;');writeDeviceMeta({lastExportAt:Date.now()});showToast('Бекап створено','💾');});
+$('dataSyncNowBtn')?.addEventListener('click',async()=>{if(!activeStore)return showToast('Спочатку увійдіть в акаунт','⚠️');await syncToCloud();renderDataHealth();});
 $('importJsonBtn')?.addEventListener('click',()=>$('importFileInput')?.click());
 
 // =================== IMPORT ===================
@@ -1609,7 +1652,8 @@ function generateYearReport(){
   haptic('success');
 }
 async function shareYearReport(){const year=new Date().getFullYear(),yr=records.filter(r=>r.month.startsWith(String(year)));if(!yr.length)return;const total=yr.reduce((s,r)=>s+r.total,0),avg=total/yr.length,streak=getStreak(records);let t=`📊 Річний звіт ${year}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n═══════════════\n💰 Всього: ${fmt.format(total)} ₴\n📈 Середній: ${fmt.format(avg)} ₴/міс\n📅 Записів: ${yr.length}\n🔥 Серія: ${streak} міс.\n═══════════════\nКомуналка PWA`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
-window.shareYearReport=shareYearReport;
+$('yearReportShareBtn')?.addEventListener('click',shareYearReport);
+$('yearReportCloseBtn')?.addEventListener('click',()=>$('yearReportModal')?.classList.add('hidden'));
 
 // =================== PWA ===================
 let deferredPrompt;
@@ -1867,11 +1911,12 @@ function initAppUI(){
   renderCalcCustomServices();
   setPaymentInputsFromRecord(null);
   fillPreviousReadings();
-  const currentTab=document.querySelector('.tab-active')?.id||'tabDashboard';
+  const currentTab=window.location.hash==='#calc'&&!isGuest?'tabCalc':(document.querySelector('.tab-active')?.id||'tabDashboard');
   switchTab(currentTab,tabIds.indexOf(currentTab));
   calculatePreview();
   updateSmartBadges();
   renderDashboard();
+  renderDataHealth();
 
   const vis=readingInputIds.map(id=>$(id)).filter(el=>el&&el.offsetParent!==null);
   vis.forEach((input,idx,arr)=>{input.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();const next=arr[idx+1];if(next)next.focus();else $('submitFormBtn')?.focus();}});});
@@ -1980,8 +2025,9 @@ function showEditingBanner(month) {
         <p class="text-[10px] text-amber-600/70 dark:text-amber-500/70">Незмінені суми збережуться. Нові показники — за тарифами запису.</p>
       </div>
     </div>
-    <button type="button" onclick="document.getElementById('editingBanner')?.remove()" class="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-600 flex items-center justify-center text-xs active:scale-90">✕</button>
+    <button type="button" class="editing-banner-close w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-600 flex items-center justify-center text-xs active:scale-90" aria-label="Закрити повідомлення про редагування">✕</button>
   </div>`;
+  banner.querySelector('.editing-banner-close')?.addEventListener('click',()=>banner.remove());
   const calcTab = $('tabCalc');
   if (calcTab) calcTab.insertBefore(banner, calcTab.firstChild);
 }

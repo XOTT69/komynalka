@@ -6,16 +6,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Мої Комунальні</title>
     <link rel="manifest" href="manifest.json">
+    <meta name="app-version" content="dev">
     <link rel="preconnect" href="https://komunproga.mikolenko-anton1.workers.dev">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
     <link rel="stylesheet" href="styles/fonts.css">
     <link rel="stylesheet" href="assets/tailwind.css">
     <script src="vendor/firebase/firebase-app-compat.js"></script>
     <script src="vendor/firebase/firebase-auth-compat.js"></script>
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
-    <script src="vendor/jspdf/jspdf.umd.min.js"></script>
-    <script src="vendor/jspdf/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root{--brand:#007aff;--brand-hover:#005bb5;--brand-light:rgba(0,122,255,0.08);--brand-border:rgba(0,122,255,0.2);--success:#34c759;--warning:#ff9500;--danger:#ff3b30;--glass-bg:rgba(255,255,255,0.72);--glass-border:rgba(255,255,255,0.18);--premium-shadow:0 20px 60px -15px rgba(0,0,0,.08),0 4px 12px -2px rgba(0,0,0,.04)}
         html{background:#f2f2f7}html.dark{background:#000;--glass-bg:rgba(28,28,30,0.78);--glass-border:rgba(255,255,255,0.06);--premium-shadow:0 20px 60px -15px rgba(0,0,0,.5),0 4px 12px -2px rgba(0,0,0,.3)}
@@ -91,17 +88,13 @@
 </div>
 
 <!-- Welcome -->
-<div id="welcomeTooltip" class="hidden fixed inset-0 z-[900] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6" onclick="dismissWelcome()">
-  <div class="welcome-tooltip premium-card bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-slate-100 dark:border-white/10" onclick="event.stopPropagation()">
+<div id="welcomeTooltip" class="hidden fixed inset-0 z-[900] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6">
+  <div class="welcome-tooltip premium-card bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 text-center shadow-2xl border border-slate-100 dark:border-white/10">
     <div class="text-6xl mb-4">🏠</div>
     <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-3">Вітаємо в Комуналці!</h2>
-    <p class="text-slate-500 text-sm leading-relaxed mb-6">Вносьте показники води, світла та газу — отримуйте миттєвий розрахунок, графіки та прогнози.</p>
-    <div class="flex gap-2 text-xs text-slate-400 justify-center mb-6">
-      <span class="bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-lg">💧 Вода</span>
-      <span class="bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-lg">⚡ Світло</span>
-      <span class="bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-lg">🔥 Газ</span>
-    </div>
-    <button onclick="dismissWelcome()" class="w-full bg-gradient-to-r from-brand to-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 active:scale-[0.96] text-lg transition-transform">Почати 🚀</button>
+    <p class="text-slate-500 text-sm leading-relaxed mb-5">Налаштуйте облік один раз — далі застосунок підкаже, що зробити цього місяця.</p>
+    <ol class="welcome-steps" aria-label="Перші кроки"><li><span>1</span>Додайте адресу й потрібні послуги</li><li><span>2</span>Перевірте тарифи та постачальників</li><li><span>3</span>Внесіть перші показники</li></ol>
+    <button id="dismissWelcomeBtn" type="button" class="w-full bg-gradient-to-r from-brand to-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 active:scale-[0.96] text-lg transition-transform">Почати</button>
   </div>
 </div>
 
@@ -201,7 +194,7 @@
     <div class="text-5xl mb-4">📝</div>
     <h3 class="font-black text-lg text-slate-900 dark:text-white mb-2">Почніть вести облік</h3>
     <p class="text-sm text-slate-500 mb-5">Виберіть потрібні послуги та внесіть перші показники. Їх можна додавати поступово.</p>
-    <button onclick="switchTab('tabCalc', 1)" class="bg-gradient-to-r from-brand to-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-brand/20 active:scale-95 transition-transform text-sm">Внести показники →</button>
+    <button id="emptyAddReadingBtn" type="button" class="bg-gradient-to-r from-brand to-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-brand/20 active:scale-95 transition-transform text-sm">Внести показники →</button>
   </div>
   <div id="budgetProgressCard" class="premium-card p-5 hidden">
     <div class="flex justify-between items-center mb-3"><div class="flex items-center gap-2"><div class="w-8 h-8 bg-brand-light rounded-xl flex items-center justify-center text-brand text-sm"><i class="fa-solid fa-wallet"></i></div><span class="text-sm font-bold text-slate-900 dark:text-white">Бюджет</span></div><span class="text-sm font-black text-slate-900 dark:text-white" id="budgetPercent">0%</span></div>
@@ -405,7 +398,11 @@
   </div></div></section><section id="settings-reports" class="settings-panel hidden" aria-label="Аналітика та звіти"><button type="button" class="settings-back" data-settings-back=""><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Усі налаштування</button><div class="settings-panel-heading"><h3 tabindex="-1">Аналітика та звіти</h3><p>Витрати, динаміка й досягнення</p></div><div class="settings-panel-content"><button type="button" id="moreAnalyticsBtn" class="premium-card p-4 w-full text-left"><i class="fa-solid fa-chart-line mr-2 text-brand"></i>Аналітика та звіти</button><button id="yearReportBtn" class="w-full premium-card p-4 flex items-center justify-between active:scale-[0.98] transition-transform">
     <div class="flex items-center gap-3"><div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center text-white text-lg shadow-lg shadow-purple-500/20"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> </div><div><p class="font-black text-sm text-slate-900 dark:text-white">Річний звіт</p><p class="text-[10px] text-slate-400">Інфографіка за рік</p></div></div>
     <i class="fa-solid fa-chevron-right text-slate-300"></i>
-  </button></div></section><section id="settings-data" class="settings-panel hidden" aria-label="Дані та резервні копії"><button type="button" class="settings-back" data-settings-back=""><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Усі налаштування</button><div class="settings-panel-heading"><h3 tabindex="-1">Дані та резервні копії</h3><p>Експорт, відновлення й журнал змін</p></div><div class="settings-panel-content"><div class="premium-card p-4">
+  </button></div></section><section id="settings-data" class="settings-panel hidden" aria-label="Дані та резервні копії"><button type="button" class="settings-back" data-settings-back=""><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Усі налаштування</button><div class="settings-panel-heading"><h3 tabindex="-1">Дані та резервні копії</h3><p>Стан синхронізації, експорт і відновлення</p></div><div class="settings-panel-content"><div class="premium-card data-health-card" aria-labelledby="dataHealthTitle">
+    <div class="data-health-heading"><span class="settings-icon"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i></span><div><h4 id="dataHealthTitle">Стан даних</h4><p id="dataHealthSummary" role="status" aria-live="polite">Перевіряємо локальну копію…</p></div></div>
+    <dl class="data-health-grid"><div><dt>Хмарна копія</dt><dd id="dataLastSync">—</dd></div><div><dt>JSON-бекап</dt><dd id="dataLastExport">Ще не створено</dd></div><div><dt>Локальні зміни</dt><dd id="dataPendingState">—</dd></div><div><dt>Версія</dt><dd id="dataAppVersion">—</dd></div></dl>
+    <button id="dataSyncNowBtn" type="button" class="button-secondary data-sync-button"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Синхронізувати зараз</button>
+  </div><div class="premium-card p-4">
     <p class="text-sm font-black text-slate-900 dark:text-white mb-3"><i class="fa-solid fa-hard-drive text-brand mr-2"></i>Дані</p>
     <div class="grid grid-cols-2 gap-2">
       <button id="exportJsonBtn" class="py-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-download text-brand"></i>Бекап</button>
@@ -471,7 +468,7 @@
       </select>
       <p id="familyRoleHint" class="text-[10px] text-slate-400 mt-2">Власник має повний доступ.</p>
     </div><div class="text-center pt-2 space-y-3">
-    <p class="text-[9px] text-slate-400">by <span class="font-bold text-slate-500">Антон Миколенко</span> • v5.1.0</p>
+    <p class="text-[9px] text-slate-400">by <span class="font-bold text-slate-500">Антон Миколенко</span> • v<span id="appVersion">dev</span></p>
     <button type="button" id="logoutBtn" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-2xl py-3.5 border border-red-100 dark:border-red-500/20 active:scale-[0.98] text-sm transition-transform"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Вийти з акаунту</button>
   </div></div></section><section id="settings-help" class="settings-panel hidden" aria-label="Допомога"><button type="button" class="settings-back" data-settings-back=""><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Усі налаштування</button><div class="settings-panel-heading"><h3 tabindex="-1">Допомога</h3><p>Підказки та AI-помічник</p></div><div class="settings-panel-content"><button id="aiFabBtn" class="hidden premium-card p-4 w-full text-left ai-entry" aria-label="AI помічник"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span>AI-помічник</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button><details class="premium-card overflow-hidden">
     <summary class="p-4 flex items-center justify-between cursor-pointer select-none"><span class="text-sm font-bold text-slate-900 dark:text-white"><i class="fa-solid fa-circle-question text-brand mr-2"></i>FAQ</span><i class="fa-solid fa-chevron-down text-slate-400 text-[10px]"></i></summary>
@@ -662,7 +659,7 @@
 </div>
 
 <!-- Quick Actions -->
-<div id="quickActionsModal" class="hidden fixed inset-0 z-[500] bg-black/40 backdrop-blur-sm flex items-start justify-end pt-20 pr-5" onclick="if(event.target===this)this.classList.add('hidden')">
+<div id="quickActionsModal" class="hidden fixed inset-0 z-[500] bg-black/40 backdrop-blur-sm flex items-start justify-end pt-20 pr-5">
   <div class="bg-white dark:bg-[#2c2c2e] rounded-2xl shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden w-56">
     <button id="qaExport" class="w-full px-5 py-3.5 text-left text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 active:bg-slate-100 transition-colors"><i class="fa-solid fa-file-excel text-green-500 w-5"></i>Excel</button>
     <button id="qaPdf" class="w-full px-5 py-3.5 text-left text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 border-t border-slate-100 dark:border-white/5 active:bg-slate-100 transition-colors"><i class="fa-solid fa-file-pdf text-red-500 w-5"></i>PDF</button>
@@ -680,7 +677,7 @@
 </div>
 
 <!-- Achievement Detail Modal -->
-<div id="achievementDetailModal" class="hidden fixed inset-0 z-[1050] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6" onclick="if(event.target===this)this.classList.add('hidden')">
+<div id="achievementDetailModal" class="hidden fixed inset-0 z-[1050] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6">
   <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-xs rounded-[2.5rem] p-8 text-center shadow-2xl border border-slate-100 dark:border-white/10">
     <div class="text-5xl mb-3" id="achDetailEmoji">🏆</div>
     <h3 class="text-lg font-black text-slate-900 dark:text-white mb-2" id="achDetailTitle">Досягнення</h3>
@@ -755,7 +752,7 @@
 </div>
 
 <!-- Year Report Modal -->
-<div id="yearReportModal" class="hidden fixed inset-0 z-[1050] bg-black/60 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+<div id="yearReportModal" class="hidden fixed inset-0 z-[1050] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
   <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm max-h-[85vh] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden flex flex-col">
     <div class="bg-gradient-to-br from-brand to-blue-600 p-6 text-white text-center shrink-0">
       <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest">Річний звіт</p>
@@ -763,8 +760,8 @@
     </div>
     <div class="overflow-y-auto no-scrollbar p-6 space-y-4 flex-1" id="yearReportContent"></div>
     <div class="p-4 border-t border-slate-100 dark:border-white/5 shrink-0 flex gap-3">
-      <button onclick="shareYearReport()" class="flex-1 py-3 bg-brand text-white font-bold rounded-xl text-sm active:scale-[0.98]"><i class="fa-solid fa-share mr-1.5"></i>Поділитись</button>
-      <button onclick="document.getElementById('yearReportModal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-sm active:scale-[0.98]">Закрити</button>
+      <button id="yearReportShareBtn" type="button" class="flex-1 py-3 bg-brand text-white font-bold rounded-xl text-sm active:scale-[0.98]"><i class="fa-solid fa-share mr-1.5"></i>Поділитись</button>
+      <button id="yearReportCloseBtn" type="button" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-sm active:scale-[0.98]">Закрити</button>
     </div>
   </div>
 </div>

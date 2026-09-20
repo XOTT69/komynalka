@@ -24,7 +24,7 @@ npm run worker:check # лише dry-run складання Cloudflare Worker, б
 
 ## Дані й випуск
 
-**Production не оновлюється командою build або demo.** Фонові нагадування та оновлення PWA: [docs/push-and-updates.md](docs/push-and-updates.md). План контрольованого переходу, резервного копіювання та відкату: [docs/release-5.1.0.md](docs/release-5.1.0.md).
+**Production не оновлюється командою build або demo.** Фонові нагадування та оновлення PWA: [docs/push-and-updates.md](docs/push-and-updates.md). Поточний план контрольованого випуску й відкату: [docs/release-5.2.0.md](docs/release-5.2.0.md). Базовий план переходу даних збережено в [docs/release-5.1.0.md](docs/release-5.1.0.md).
 
 ```sh
 npm run backup:verify -- /absolute/path/backup.json --for-migration

@@ -5,6 +5,8 @@ import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 const root=fileURLToPath(new URL('..',import.meta.url));
 process.chdir(root);
+const packageJson=JSON.parse(await readFile('package.json','utf8'));
+const appVersion=String(packageJson.version||'dev');
 execFileSync(process.execPath,['scripts/build-vendor.mjs'],{stdio:'inherit'});
 await rm('dist',{recursive:true,force:true});
 await mkdir('dist/assets',{recursive:true});
@@ -12,11 +14,17 @@ execFileSync(process.execPath,['node_modules/tailwindcss/lib/cli.js','-i','style
 const entries=['index.html','landing.html','admin.html','app.js','ai-chat.js','year-report-image.js','sync-queue.js','reminders.js','monthly-tasks.js','providers.js','pwa-updates.js','push-client.js','manifest.json','icon.png','icon-192.png','icon-512.png','og-image.png','styles','vendor'];
 for(const optional of ['data-store.js','data-model.js']){try{await readFile(optional);entries.push(optional);}catch{}}
 for(const entry of entries)await cp(entry,path.join('dist',entry),{recursive:true});
+const builtIndexPath=path.join('dist','index.html');
+let builtIndex=await readFile(builtIndexPath,'utf8');
+builtIndex=builtIndex.replace('<meta name="app-version" content="dev">',`<meta name="app-version" content="${appVersion}">`).replace('<span id="appVersion">dev</span>',`<span id="appVersion">${appVersion}</span>`);
+await writeFile(builtIndexPath,builtIndex);
 async function files(dir){const result=[];for(const entry of await readdir(dir,{withFileTypes:true})){const name=path.join(dir,entry.name);if(entry.isDirectory())result.push(...await files(name));else result.push(name);}return result;}
 const assets=(await files('dist')).filter(p=>!p.endsWith('admin.html')&&!p.endsWith('landing.html')).sort();
+const optionalOfflinePatterns=[/\/vendor\/jspdf\//,/\/vendor\/fonts\/Roboto-Regular\.ttf$/,/\/vendor\/fontawesome\/webfonts\/.*\.ttf$/,/\/vendor\/fontawesome\/webfonts\/fa-(?:regular|v4compatibility).*\.woff2$/,/\/og-image\.png$/,/\/icon\.png$/,/\/styles\/(?:app-shell|design-tokens|quiet-ui|theme|tailwind)\.css$/];
+const offlineAssets=assets.filter(file=>!optionalOfflinePatterns.some(pattern=>pattern.test(file)));
 const hash=createHash('sha256');hash.update(await readFile('sw.js'));for(const file of assets)hash.update(await readFile(file));
 const buildId=hash.digest('hex').slice(0,12);
 let worker=await readFile('sw.js','utf8');
-worker=worker.replace(/const CACHE_NAME = .*;/,`const CACHE_NAME = 'komunalka-${buildId}';`).replace(/const PRECACHE_URLS = .*;/,`const PRECACHE_URLS = ${JSON.stringify(assets.map(p=>'./'+p.slice(5)))};`);
+worker=worker.replace(/const CACHE_NAME = .*;/,`const CACHE_NAME = 'komunalka-${buildId}';`).replace(/const PRECACHE_URLS = .*;/,`const PRECACHE_URLS = ${JSON.stringify(offlineAssets.map(p=>'./'+p.slice(5)))};`);
 await writeFile('dist/sw.js',worker);
-console.log(`Built ${assets.length} offline assets (${buildId})`);
+console.log(`Built ${assets.length} assets; ${offlineAssets.length} required offline (${appVersion}, ${buildId})`);

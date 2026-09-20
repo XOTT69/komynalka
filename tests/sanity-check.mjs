@@ -32,6 +32,7 @@ const manifest = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'ut
 for (const icon of manifest.icons || []) {
   if (!(await fileExists(icon.src))) fail(`manifest icon is missing: ${icon.src}`);
 }
+if (!manifest.shortcuts?.some(shortcut=>shortcut.url?.endsWith('#calc'))) fail('reading shortcut is missing from the manifest');
 
 const sw = await readFile(path.join(root, 'sw.js'), 'utf8');
 for (const icon of ['icon-192.png', 'icon-512.png']) {
@@ -68,13 +69,18 @@ if (!app.includes('action:"link_google", login: sessionLogin, pass: sessionPass,
 if (!app.includes('familyRole')) fail('family role preferences are missing');
 if (!app.includes('getPaymentStatus')) fail('payment status helpers are missing');
 if (!app.includes('remGasStart')) fail('gas submission calendar is missing');
+if (!app.includes("window.location.hash==='#calc'")) fail('PWA reading shortcut is not routed to the entry screen');
+if (!app.includes('renderDataHealth')) fail('data health status is missing');
+if (!app.includes('ensurePdfTools')) fail('PDF tools are not loaded on demand');
 if (!app.includes('renderMonthMiniWidget')) fail('month mini widget logic is missing');
 if (app.includes('localStorage.clear()')) fail('logout still clears all local storage');
 
 const index = await readFile(path.join(root, 'index.html'), 'utf8');
-for (const id of ['restoreBackupBtn', 'restorePreImportBtn', 'saveTariffTemplateBtn', 'loadTariffTemplateBtn', 'resetTariffsBtn', 'changeLogList', 'forgetDeviceBtn']) {
+for (const id of ['restoreBackupBtn', 'restorePreImportBtn', 'saveTariffTemplateBtn', 'loadTariffTemplateBtn', 'resetTariffsBtn', 'changeLogList', 'forgetDeviceBtn', 'dataHealthSummary', 'dataLastSync', 'dataLastExport', 'dataPendingState', 'dataSyncNowBtn', 'appVersion']) {
   if (!index.includes(`id="${id}"`)) fail(`index is missing ${id}`);
 }
+if (/<script[^>]+vendor\/jspdf/i.test(index)) fail('PDF libraries still block initial page loading');
+if (/\son(?:click|change|input)=/i.test(index)) fail('user app still contains inline event handlers');
 if (!index.includes('--liquid-card-alpha')) fail('Liquid Glass CSS tokens are missing');
 if (!index.includes('--surface-base')) fail('clean design-system surface tokens are missing');
 if (!index.includes('Inter Tight')) fail('modern display font is missing');
