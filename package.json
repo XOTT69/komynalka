@@ -1,6 +1,6 @@
 {
   "name": "komunalka",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "description": "Розумний облік комунальних платежів PWA",
   "scripts": {
     "dev": "node scripts/dev.mjs",

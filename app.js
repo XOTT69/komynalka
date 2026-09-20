@@ -1386,6 +1386,7 @@ $('familyRoleSelect')?.addEventListener('change',(e)=>{prefs.familyRole=e.target
 $('prefReminders')?.addEventListener('change',function(){
   prefs.remindersEnabled = this.checked;
   if($('remindersSettings'))$('remindersSettings').style.display=this.checked?'block':'none';
+  debouncedSync();checkReminders();initPush();
 });
 
 $('saveSettingsBtn')?.addEventListener('click',()=>{
@@ -1665,7 +1666,7 @@ $('installPwaBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return
 // =================== PUSH ===================
 let pushClient=null;
 function renderPushState(state){
-  const messages={unsupported:'Сповіщення недоступні. На iPhone додайте сайт на початковий екран і відкрийте звідти.',unconfigured:'Фонові сповіщення ще не налаштовані на сервері. Нагадування в застосунку працюють.',denied:'Сповіщення заблоковані. Дозвольте їх у налаштуваннях браузера.',available:'Увімкніть сповіщення, щоб отримувати нагадування після закриття застосунку.',connecting:'Підключення сповіщень…',enabled:'Сповіщення на цьому пристрої підключені. Розклад — за збереженими налаштуваннями адрес.',error:'Підключення не підтверджено. Перевірте мережу й повторіть.'};
+  const messages={unsupported:'Сповіщення недоступні. На iPhone додайте сайт на початковий екран і відкрийте звідти.',unconfigured:'Фонові сповіщення ще не налаштовані на сервері. Нагадування в застосунку працюють.',denied:'Сповіщення заблоковані. Дозвольте їх у налаштуваннях браузера.',available:'Увімкніть сповіщення, щоб отримувати нагадування після закриття застосунку.',connecting:'Підключення сповіщень…',enabled:'Сповіщення підключені. Розклад перевірено зараз; далі — щодня о 09:00 за Києвом.',error:'Підключення не підтверджено. Перевірте мережу й повторіть.'};
   const status=$('pushStatus');if(status){status.classList.remove('hidden');status.textContent=messages[state];}
   const button=$('enablePushBtn');if(button){button.classList.toggle('hidden',!['available','connecting','error'].includes(state));button.disabled=state==='connecting';}
   $('disablePushBtn')?.classList.toggle('hidden',state!=='enabled');
@@ -1917,6 +1918,7 @@ function initAppUI(){
   updateSmartBadges();
   renderDashboard();
   renderDataHealth();
+  initPush();
 
   const vis=readingInputIds.map(id=>$(id)).filter(el=>el&&el.offsetParent!==null);
   vis.forEach((input,idx,arr)=>{input.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();const next=arr[idx+1];if(next)next.focus();else $('submitFormBtn')?.focus();}});});

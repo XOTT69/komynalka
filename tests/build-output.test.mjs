@@ -6,6 +6,7 @@ test('production build injects one release version and keeps optional assets out
   const pkg=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'));
   const index=await readFile(new URL('../dist/index.html',import.meta.url),'utf8');
   assert.match(index,new RegExp(`<meta name="app-version" content="${pkg.version.replaceAll('.','\\.')}"`));
+  assert.ok(index.indexOf('id="reminderBanner"')<index.indexOf('id="overviewDetails"'),'active reminder is hidden inside collapsed details');
   assert.equal(index.includes('vendor/jspdf/jspdf.umd.min.js'),false);
   const sw=await readFile(new URL('../dist/sw.js',import.meta.url),'utf8');
   const match=sw.match(/const PRECACHE_URLS = (\[[^;]+\]);/);

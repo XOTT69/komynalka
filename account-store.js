@@ -1,4 +1,4 @@
-import {pushConfigured,validateSubscription,nextReminderRun,deliverReminders} from './push-delivery.js';
+import {pushConfigured,validateSubscription,deliverReminders} from './push-delivery.js';
 /* A serialized authority for each account; the original KV snapshot is retained.
  * All account writers must go through this object after the coordinated cutover.
  */
@@ -26,8 +26,8 @@ export class AccountStore {
           const existing=push.subscriptions.find(e=>e.subscription.endpoint===subscription.endpoint);
           if(!existing&&push.subscriptions.length>=10)return Response.json({error:'PUSH_DEVICE_LIMIT'},{status:400});
           push.subscriptions=push.subscriptions.filter(e=>e.subscription.endpoint!==subscription.endpoint);
-          push.subscriptions.push({...existing,subscription});
-          await this.ctx.storage.put('push',push);await this.ctx.storage.setAlarm(nextReminderRun());
+          push.subscriptions.push({subscription});
+          await this.ctx.storage.put('push',push);await this.ctx.storage.setAlarm(Date.now()+5000);
           return Response.json({success:true});
         }
         if(body.action==='push-unsubscribe'){
@@ -35,7 +35,12 @@ export class AccountStore {
           await this.ctx.storage.put('push',push);if(!push.subscriptions.length)await this.ctx.storage.deleteAlarm();
           return Response.json({success:true});
         }
-        if(body.action==='push-status')return Response.json({success:true,subscribed:pushConfigured(this.env)&&Boolean(await this.ctx.storage.getAlarm())&&push.subscriptions.some(e=>e.subscription.endpoint===body.endpoint)});
+        if(body.action==='push-status'){
+          const subscribed=pushConfigured(this.env)&&push.subscriptions.some(e=>e.subscription.endpoint===body.endpoint);
+          // Opening the app repairs a missing/stale alarm and checks today's window now.
+          if(subscribed)await this.ctx.storage.setAlarm(Date.now()+5000);
+          return Response.json({success:true,subscribed,nextCheckAt:subscribed?await this.ctx.storage.getAlarm():null});
+        }
         return Response.json({error:'INVALID_ACTION'},{status:400});
       }
       if(body.action==='read')return Response.json({value:state.deleted?null:state.value,revision:state.revision});
@@ -52,6 +57,8 @@ export class AccountStore {
         await this.ctx.storage.put({'previous':state,'account':next});
         // KV is a compatibility mirror. It is never the authority after import.
         try{await this.env.KV.put(body.login,JSON.stringify({...body.value,_revision:revision}));}catch{console.error('Account KV mirror failed');}
+        // A reminder edited during today's active window must not wait until tomorrow.
+        const push=await this.ctx.storage.get('push');if(push?.subscriptions?.length)await this.ctx.storage.setAlarm(Date.now()+5000);
         return Response.json({success:true,revision});
       }
       if(body.action==='delete'){
