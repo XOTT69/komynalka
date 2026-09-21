@@ -335,6 +335,22 @@ async function secureFetch(method, params = {}, body = null) {
   return res;
 }
 
+let adminAccessCheck = 0;
+async function refreshAdminEntry() {
+  const link = $('adminPanelLink');
+  if (!link) return;
+  const check = ++adminAccessCheck;
+  const owner = sessionLogin, uid = authUid;
+  link.classList.add('hidden');
+  if (isGuest || !owner || (!uid && !sessionPass)) return;
+  try {
+    const response = await secureFetch('GET', { 'admin-access': 1 });
+    if (!response.ok) return;
+    const result = await response.json();
+    if (check === adminAccessCheck && owner === sessionLogin && uid === authUid && result.success && result.allowed === true) link.classList.remove('hidden');
+  } catch { /* Keep the private entry hidden while offline or unauthenticated. */ }
+}
+
 // =================== BROADCAST ===================
 async function checkBroadcast() {
   try {
@@ -529,7 +545,7 @@ async function performLogin(rawLogin,rawPass,isAlreadyHashed,uid=null){
     if(!addresses.length){addresses=[{id:'default',name:'Мій дім',tariffs:{...defaultTariffs},prefs:{...defaultPrefs},records:[],customServices:KomunalkaData.copy(defaultCustomServices)}];currentAddressId='default';loadCurrentAddress();await syncToCloud();}
     else if(state.conflict)showSyncConflict();else{setSyncState(state.pending?'pending':'synced');if(state.pending)await flushSync();}
     showLegacyRecovery();
-    if(!records.length)showWelcome();checkBroadcast();
+    if(!records.length)showWelcome();checkBroadcast();void refreshAdminEntry();
   }catch(e){sessionLogin=previousLogin;sessionPass=previousPass;authUid=previousUid;if(errEl){errEl.textContent=e.message;errEl.classList.remove('hidden');}}
   finally{if($('authBtnText'))$('authBtnText').textContent='Увійти';$('authSpinner')?.classList.add('hidden');}
 }
@@ -2714,6 +2730,7 @@ function openSettingsPanel(name){
   $('saveSettingsBtn')?.classList.toggle('hidden',!panel||!['home','reminders','account'].includes(name));
   $('swipeContainer')?.scrollTo({top:0});
   if(name==='providers')renderProviders();
+  if(name==='account')void refreshAdminEntry();
   if(panel)panel.querySelector('h3')?.focus({preventScroll:true});
 }
 document.querySelectorAll('[data-settings-open]').forEach(button=>button.addEventListener('click',()=>openSettingsPanel(button.dataset.settingsOpen)));

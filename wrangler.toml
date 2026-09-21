@@ -11,6 +11,7 @@ id = "d16e9ce7ed3e4e688f1d19b33c26c13d"
 # ADMIN_PASS, GROQ_API_KEY, GEMINI_API_KEY — встановіть через Dashboard або wrangler secret
 
 FIREBASE_PROJECT_ID = "pwakomun"
+ADMIN_OWNER_LOGIN = "xott69"
 # VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT — Cloudflare secrets; see docs/push-and-updates.md
 
 [[durable_objects.bindings]]

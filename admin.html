@@ -828,7 +828,7 @@
                 }
                 do{const page=await adminApi('admin_backup_page',{cursor});if(!Array.isArray(page.entries))throw new Error('Не вдалося прочитати повну резервну копію KV');kvEntries.push(...page.entries);readOnly=readOnly&&page.readOnly;cursor=page.cursor;progress.textContent = `Ключі KV: ${kvEntries.length}`;if(!page.listComplete&&!cursor)throw new Error('Неповна сторінка KV');}while(cursor);
                 const manifest={kvKeys:kvEntries.length,accounts:fullData.length,addresses:fullData.reduce((n,u)=>n+(u.addresses?.length||0),0),records:fullData.reduce((n,u)=>n+(u.addresses||[]).reduce((sum,a)=>sum+(a.records?.length||0),0),0)};
-                downloadFile(JSON.stringify({exportDate:new Date().toISOString(),version:'5.3.1',complete:true,readOnly,unrecognizedAccounts:accounts.unrecognizedAccounts||0,manifest,kvEntries,users:fullData},null,2),`komunalka_full_backup_${new Date().toISOString().slice(0,10)}.json`,'application/json');
+                downloadFile(JSON.stringify({exportDate:new Date().toISOString(),version:'5.3.2',complete:true,readOnly,unrecognizedAccounts:accounts.unrecognizedAccounts||0,manifest,kvEntries,users:fullData},null,2),`komunalka_full_backup_${new Date().toISOString().slice(0,10)}.json`,'application/json');
                 progress.textContent = `Готово: ${manifest.kvKeys} ключів KV, ${manifest.accounts} акаунтів. ${readOnly ? 'Копія зроблена в режимі лише читання.' : 'Дані могли змінюватися під час копіювання — для міграції потрібен режим лише читання.'}`;
                 showAdminToast('Резервну копію завантажено');
             }catch(error){progress.textContent = 'Експорт не завершено. Дані на сервері не змінено.';showAdminToast(error.message,'error');}

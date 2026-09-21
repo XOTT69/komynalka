@@ -28,6 +28,20 @@ async function page(env,stored={},offline=false,suffix=""){
   return {w,errors,close:()=>dom.window.close(),storage:()=>Object.fromEntries(Array.from({length:w.localStorage.length},(_,i)=>{const key=w.localStorage.key(i);return[key,w.localStorage.getItem(key)];}))};
 }
 test('actual app login preserves history, account totals and additional legacy fields',async()=>{const legacy=legacyAccount(hash),{env}=environment({anna:legacy});const p=await page(env);try{await p.w.performLogin('anna',password,false);await delay(30);assert.equal(p.w.document.getElementById('appScreen').classList.contains('hidden'),false,p.w.document.getElementById('authError').textContent);const data=JSON.parse(p.w.localStorage.getItem('komynalka_account_v1:anna'));assert.equal(data.local.addresses[0].records[0].total,151.9);assert.equal(data.local.addresses[0].records[0].paidAmount,50);assert.equal(data.local.addresses[0].records[0].customField,'preserve');assert.deepEqual(p.errors,[]);}finally{p.close();}});
+test('the account shows the admin shortcut only after server approval for xott69',async()=>{
+ const {env}=environment({xott69:legacyAccount(hash),anna:legacyAccount(hash)});env.ADMIN_OWNER_LOGIN='xott69';
+ const owner=await page(env),other=await page(env);
+ try{
+  await owner.w.performLogin('xott69',password,false);await delay(30);
+  const ownerLink=owner.w.document.getElementById('adminPanelLink');
+  assert.equal(ownerLink.closest('#settings-account')!==null,true);
+  assert.equal(ownerLink.classList.contains('hidden'),false);
+  assert.equal(ownerLink.getAttribute('href'),'./admin.html');
+  await other.w.performLogin('anna',password,false);await delay(30);
+  assert.equal(other.w.document.getElementById('adminPanelLink').classList.contains('hidden'),true);
+  assert.deepEqual(owner.errors,[]);assert.deepEqual(other.errors,[]);
+ }finally{owner.close();other.close();}
+});
 test('Google popup failures show actionable inline recovery without changing stored accounts',async()=>{
  const {env}=environment({anna:legacyAccount(hash)}),p=await page(env);
  try{

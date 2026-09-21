@@ -132,6 +132,7 @@ const handler = {
     try {
       if(url.searchParams.has('push-config'))return ok({success:true,enabled:Boolean(env.ACCOUNT_STORE)&&pushConfigured(env),publicKey:env.ACCOUNT_STORE&&pushConfigured(env)?env.VAPID_PUBLIC_KEY:null});
       if(url.searchParams.has('health'))return ok({success:true,syncProtocol:env.ACCOUNT_STORE?2:0,readOnly:env.MAINTENANCE_MODE==='read-only'});
+      if(url.searchParams.has('admin-access'))return await doAdminAccess(req,env);
       if (share)                 return await doShare(req, env, share, ip);
       if (req.method === 'GET')  return await doGet(req, env, ip, fp);
       if (req.method === 'POST') return await doPost(req, env, ip, fp);
@@ -142,6 +143,19 @@ const handler = {
     }
   }
 };
+
+async function doAdminAccess(req,env) {
+  const owner=String(env.ADMIN_OWNER_LOGIN||'').trim().toLowerCase();
+  if(!owner)return ok({success:true,allowed:false});
+  const auth=await parseAuth(req,env);
+  if(!auth)return err('NO_AUTH',401);
+  const login=await resolveLogin(env,auth);
+  if(!login)return err('NOT_FOUND',404);
+  const data=await getUser(env,login);
+  if(!data)return err('NOT_FOUND',404);
+  if(auth.type==='login'&&(data.passHash||data.pass)!==auth.passHash)return err('WRONG_PASSWORD',403);
+  return ok({success:true,allowed:login.toLowerCase()===owner});
+}
 
 async function doGet(req, env, ip, fp) {
   const auth = await parseAuth(req,env);
