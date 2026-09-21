@@ -471,14 +471,32 @@ $('togglePassBtn')?.addEventListener('click', () => {
   $('passEyeIcon').className = p.type === 'password' ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
 });
 
+function showGoogleAuthError(error){
+  const code=error?.code||'';
+  const messages={
+    'auth/popup-blocked':'Браузер заблокував вікно Google. Дозвольте спливні вікна або відкрийте застосунок у Safari чи Chrome.',
+    'auth/popup-closed-by-user':'Вхід через Google не завершено: вікно закрилося. Спробуйте ще раз або відкрийте застосунок у Safari чи Chrome.',
+    'auth/operation-not-supported-in-this-environment':'Цей браузер не підтримує вхід через Google. Відкрийте застосунок у Safari чи Chrome.',
+    'auth/unauthorized-domain':'Домен застосунку не дозволений для Google-входу. Зверніться до розробника.',
+    'auth/network-request-failed':'Не вдалося зв’язатися з Google. Перевірте інтернет і спробуйте ще раз.',
+    'auth/account-exists-with-different-credential':'Для цієї адреси вже є інший спосіб входу. Увійдіть попереднім способом.'
+  };
+  const errorElement=$('authError');
+  if(errorElement){errorElement.textContent=messages[code]||`Не вдалося увійти через Google${code?` (${code})`:''}. Спробуйте ще раз або відкрийте застосунок у Safari чи Chrome.`;errorElement.classList.remove('hidden');}
+  $('googleAuthHelp')?.classList.toggle('hidden',['auth/unauthorized-domain','auth/account-exists-with-different-credential'].includes(code));
+}
 $('googleAuthBtn')?.addEventListener('click', async () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
+  const button=$('googleAuthBtn');if(button.disabled)return;
+  $('authError')?.classList.add('hidden');$('googleAuthHelp')?.classList.add('hidden');button.disabled=true;button.setAttribute('aria-busy','true');
   try {
-    const result = await firebase.auth().signInWithPopup(provider);
-    googleUser = result.user;
-    await performLogin(null, null, false, googleUser.uid);
-  } catch(e) { if (e.code !== 'auth/popup-closed-by-user') showToast("Помилка Google", "❌"); }
+    const result=await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    if(!result?.user)throw new Error('Google не повернув обліковий запис');
+    googleUser=result.user;
+    await performLogin(null,null,false,googleUser.uid);
+  } catch(error) { showGoogleAuthError(error); }
+  finally{button.disabled=false;button.removeAttribute('aria-busy');}
 });
+$('googleAuthCopyUrl')?.addEventListener('click',()=>copyProviderText(window.location.origin+window.location.pathname));
 
 async function performLogin(rawLogin,rawPass,isAlreadyHashed,uid=null){
   const errEl=$('authError');errEl?.classList.add('hidden');
@@ -1995,8 +2013,16 @@ async function registerServiceWorker(){
       if(saveDraft())window.location.reload();
     });
     await check();initPush();
-    setInterval(()=>{if(navigator.onLine)registration.update().then(check).catch(()=>{});},1800000);
-    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){check();checkReminders();}});
+    let lastUpdateCheck=0;
+    const refreshRelease=()=>{
+      if(!navigator.onLine){check();return;}
+      const now=Date.now();if(now-lastUpdateCheck<60000){check();return;}
+      lastUpdateCheck=now;registration.update().then(check).catch(()=>check());
+    };
+    refreshRelease();
+    setInterval(refreshRelease,1800000);
+    window.addEventListener('online',refreshRelease);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){refreshRelease();checkReminders();}});
   }catch(e){console.error('SW:',e);}
 }
 window.addEventListener('load',registerServiceWorker);

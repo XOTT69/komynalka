@@ -92,3 +92,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .provider-email-dialog .provider-email-field{margin-top:12px}
 .provider-email-dialog #providerEmailBodyText{min-height:100px}
 .provider-email-dialog .provider-email-footnote{margin-top:12px}
+.google-auth-help{padding:12px 14px;border-radius:14px;background:var(--ui-soft);border:1px solid var(--ui-line);font-size:.8125rem;line-height:1.5;color:var(--ui-muted)}
+.google-auth-help p{margin:0 0 8px}
+.google-auth-help button{min-height:44px;color:var(--brand);font-size:.8125rem;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+#googleAuthBtn:disabled{opacity:.7;cursor:wait}
