@@ -133,12 +133,36 @@ test('provider edits persist offline, preserve history and stay out of guest sha
  const legacy=legacyAccount(hash),token='e'.repeat(40),{env,values}=environment({anna:legacy,[`share:${token}`]:{login:'anna',addressId:'home'}}),p=await page(env);let stored;
  try{await p.w.performLogin('anna',password,false);p.w.openSettingsPanel('providers');p.w.openProviderEditor('water');const d=p.w.document;
  d.getElementById('providerName').value='Мій водоканал';d.getElementById('providerAccount').value='001239';d.getElementById('providerWebsite').value='javascript:alert(1)';d.getElementById('providerForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));assert.match(d.getElementById('providerError').textContent,/https/);assert.equal(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.accountSettings?.providerCards,undefined);
- Object.defineProperty(p.w.navigator,'onLine',{value:false,configurable:true});d.getElementById('providerWebsite').value='https://example.org/account';d.getElementById('providerForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));stored=p.storage();const local=JSON.parse(stored['komynalka_account_v1:anna']);assert.equal(local.local.accountSettings.providerCards['address:home']['service:water'].account,'001239');assert.deepEqual(local.local.addresses[0].records,legacy.addresses[0].records);assert.equal(local.local.addresses[0].name,legacy.addresses[0].name);assert.ok(local.pending);assert.deepEqual(p.errors,[]);
+ Object.defineProperty(p.w.navigator,'onLine',{value:false,configurable:true});d.getElementById('providerWebsite').value='https://example.org/account';d.getElementById('providerEmail').value='water@example.org';d.getElementById('providerForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));stored=p.storage();const local=JSON.parse(stored['komynalka_account_v1:anna']);assert.equal(local.local.accountSettings.providerCards['address:home']['service:water'].account,'001239');assert.equal(local.local.accountSettings.providerCards['address:home']['service:water'].email,'water@example.org');assert.deepEqual(local.local.addresses[0].records,legacy.addresses[0].records);assert.equal(local.local.addresses[0].name,legacy.addresses[0].name);assert.ok(local.pending);assert.deepEqual(p.errors,[]);
  }finally{p.close();}
  const reopened=await page(env,stored,true);
  try{reopened.w.openSettingsPanel('providers');assert.match(reopened.w.document.getElementById('providersList').textContent,/001239/);assert.deepEqual(reopened.errors,[]);}finally{reopened.close();}
  const online=await page(env,stored);
  try{await online.w.performLogin('anna',password,false);await online.w.syncToCloud();const saved=JSON.parse(values.get('anna'));assert.equal(saved.accountSettings.providerCards['address:home']['service:water'].account,'001239');assert.deepEqual(saved.addresses[0].records,legacy.addresses[0].records);const share=await worker.fetch(new Request('https://worker.test/?share='+token),env);const body=await share.text();assert.equal(body.includes('001239'),false);assert.equal(body.includes('providerCards'),false);assert.deepEqual(online.errors,[]);}finally{online.close();}
+});
+
+test('provider email opens a filled draft with separate copy actions and does not mark transfer complete',async()=>{
+ const legacy=legacyAccount(hash);legacy.addresses[0].name='Чабани Покровська 306 кв 7';legacy.addresses[0].records[0].wPrev=267;legacy.addresses[0].records[0].wCur=280;
+ const {env}=environment({anna:legacy}),p=await page(env);
+ try{
+  await p.w.performLogin('anna',password,false);p.w.openSettingsPanel('providers');p.w.openProviderEditor('water');const d=p.w.document;
+  d.getElementById('providerAccount').value='6037';d.getElementById('providerEmail').value='water@example.org';d.getElementById('providerEmailSubject').value='О/р {account}. {address}';d.getElementById('providerEmailBody').value='Показники ліч. Поточні {current}. Попередні {previous}. Різниця {difference}';d.getElementById('providerForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
+  d.getElementById('providerMonth').value='2026-08';p.w.renderProviders();const action=d.querySelector('[data-provider-email="water"]');assert.match(action.textContent,/Підготувати лист/);action.click();
+  assert.ok(d.getElementById('providerEmailDialog').hasAttribute('open'));assert.equal(d.getElementById('providerEmailTo').value,'water@example.org');assert.equal(d.getElementById('providerEmailSubjectText').value,'О/р 6037. Чабани Покровська 306 кв 7');assert.equal(d.getElementById('providerEmailBodyText').value,'Показники ліч. Поточні 280. Попередні 267. Різниця 13');
+  const copied=[];Object.defineProperty(p.w.navigator,'clipboard',{value:{writeText:async text=>copied.push(text)},configurable:true});for(const field of ['to','subject','body']){d.querySelector(`[data-provider-email-copy="${field}"]`).click();await delay(0);}assert.deepEqual(copied,['water@example.org','О/р 6037. Чабани Покровська 306 кв 7','Показники ліч. Поточні 280. Попередні 267. Різниця 13']);
+  const mail=new URL(d.getElementById('providerOpenMail').href);assert.equal(mail.searchParams.get('body'),copied[2]);assert.deepEqual(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records,legacy.addresses[0].records);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+test('current-month water email is one action away from the dashboard transfer list',async()=>{
+ const legacy=legacyAccount(hash),month=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Kyiv'}).slice(0,7);
+ legacy.addresses[0].records[0].month=month;legacy.addresses[0].records[0]._filled={water:true};
+ legacy.accountSettings={...legacy.accountSettings,providerCards:{'address:home':{'service:water':{email:'water@example.org',account:'6037'}}}};
+ const {env}=environment({anna:legacy}),p=await page(env);
+ try{
+  await p.w.performLogin('anna',password,false);p.w.renderMonthlyTasks();const d=p.w.document,action=d.querySelector('[data-email-service="water"]');assert.ok(action);assert.match(action.textContent,/Лист: Вода/);
+  action.click();assert.ok(d.getElementById('providerEmailDialog').hasAttribute('open'));assert.equal(d.getElementById('providerEmailTo').value,'water@example.org');
+  assert.deepEqual(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records,legacy.addresses[0].records);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
 });
 
 test('a failed local provider save keeps the editor and prior data; retry succeeds',async()=>{
