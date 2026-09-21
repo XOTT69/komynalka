@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Комуналка — Адмін v3.2</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <title>Керування · Комуналка</title>
+    <link rel="stylesheet" href="./assets/tailwind.css">
+    <link rel="stylesheet" href="./vendor/fontawesome/css/all.min.css">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; }
         .stat-card { transition: transform .15s; }
@@ -17,6 +17,29 @@
         .toast.show { transform: translateX(0); }
         .toast.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .toast.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        :root { font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; color: #152a44; }
+        body { background: #f4f7fb; }
+        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #85afff; outline-offset: 2px; }
+        button:disabled { opacity: .45; cursor: not-allowed; }
+        .admin-shell { max-width: 1440px; }
+        .admin-surface { border: 1px solid #e2e9f3; border-radius: 18px; box-shadow: 0 5px 24px #1a3a6209; }
+        .tab-btn { border-radius: 12px; transition: background .15s, color .15s; }
+        .tab-btn.active { background: #2559c5; color: white; box-shadow: 0 5px 12px #2559c533; }
+        .stat-card { border-radius: 18px; border-color: #e2e9f3; box-shadow: 0 5px 24px #1a3a6209; text-align: left; min-height: 105px; }
+        .stat-card p:first-child { font-size: 1.9rem; }
+        .badge { font-size: 11px; padding: 4px 8px; }
+        .admin-intro { margin: 0 0 20px; color: #64748b; font-size: 14px; line-height: 1.5; }
+        .admin-empty { padding: 28px; text-align: center; color: #64748b; }
+        .admin-alert { padding: 12px 14px; border-radius: 12px; background: #eff5ff; color: #29518b; font-size: 13px; line-height: 1.5; }
+        .admin-alert.warning { background: #fff5e6; color: #865719; }
+        .admin-alert.danger { background: #fff0f0; color: #a1333b; }
+        #usersTableBody tr:last-child { border-bottom: 0; }
+        @media (max-width: 640px) {
+            .admin-header { align-items: flex-start; flex-direction: column; }
+            .admin-header-actions { width: 100%; justify-content: flex-start; }
+            .stat-card { min-height: 88px; }
+            .stat-card p:first-child { font-size: 1.55rem; }
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -28,12 +51,13 @@
     <div id="loginScreen" class="fixed inset-0 flex items-center justify-center bg-slate-50 z-50">
         <div class="bg-white p-8 rounded-2xl shadow-xl border max-w-sm w-full mx-4">
             <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl">🔒</div>
-                <h1 class="text-xl font-black">Адмін-панель</h1>
-                <p class="text-sm text-slate-500">Комуналка PWA v3.2</p>
+                <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-2xl">К</div>
+                <h1 class="text-xl font-black">Панель керування</h1>
+                <p class="text-sm text-slate-500">Комуналка · доступ адміністратора</p>
             </div>
-            <input type="password" id="adminPass" placeholder="Пароль адміністратора" class="w-full p-4 border rounded-xl mb-4 outline-none focus:ring-2 focus:ring-red-500 font-medium">
-            <button onclick="adminLogin()" id="loginBtn" class="w-full bg-red-500 text-white font-bold py-4 rounded-xl hover:bg-red-600 active:scale-95 transition-all">Увійти</button>
+            <label for="adminPass" class="block text-sm font-bold mb-2">Пароль адміністратора</label>
+            <input type="password" id="adminPass" autocomplete="current-password" placeholder="Введіть пароль" class="w-full p-4 border rounded-xl mb-4 outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+            <button onclick="adminLogin()" id="loginBtn" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 active:scale-95 transition-all">Увійти</button>
             <p id="loginError" class="text-red-500 text-sm text-center mt-3 hidden font-bold"></p>
         </div>
     </div>
@@ -42,33 +66,34 @@
     <div id="adminPanel" class="hidden">
         <!-- Header -->
         <div class="bg-white border-b sticky top-0 z-40 shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 flex justify-between items-center">
+            <div class="admin-shell mx-auto px-4 md:px-6 py-4 flex justify-between items-center admin-header gap-4">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center text-white font-bold">⚡</div>
+                    <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold">К</div>
                     <div>
-                        <h1 class="font-black text-lg">Комуналка Admin</h1>
+                        <h1 class="font-black text-lg">Комуналка · керування</h1>
                         <p class="text-xs text-slate-400" id="lastUpdate">—</p>
                     </div>
                 </div>
-                <div class="flex gap-2 flex-wrap">
+                <div class="flex gap-2 flex-wrap admin-header-actions">
                     <button onclick="loadStats()" class="px-3 py-2 bg-slate-100 rounded-lg text-sm font-bold hover:bg-slate-200 active:scale-95 transition-all"><i class="fa-solid fa-sync mr-1"></i><span class="hidden md:inline">Оновити</span></button>
                     <button onclick="openBroadcast()" class="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold hover:bg-blue-600 active:scale-95 transition-all"><i class="fa-solid fa-bullhorn mr-1"></i><span class="hidden md:inline">Оголошення</span></button>
-                    <button onclick="exportAllData()" class="px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-bold hover:bg-green-600 active:scale-95 transition-all"><i class="fa-solid fa-download mr-1"></i><span class="hidden md:inline">Export</span></button>
+                    <button onclick="exportAllData()" class="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 active:scale-95 transition-all"><i class="fa-solid fa-download mr-1"></i><span class="hidden md:inline">CSV</span></button>
                     <button onclick="adminLogout()" class="px-3 py-2 bg-red-50 text-red-500 rounded-lg text-sm font-bold hover:bg-red-100 active:scale-95 transition-all"><i class="fa-solid fa-sign-out-alt mr-1"></i><span class="hidden md:inline">Вийти</span></button>
                 </div>
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto px-4 md:px-6 py-6">
+        <div class="admin-shell mx-auto px-4 md:px-6 py-6">
+            <div class="mb-5"><h2 class="text-2xl font-black text-slate-900">Огляд сервісу</h2><p class="admin-intro mb-0">Актуальні дані з сервера. Активний користувач — той, у кого є запис за цей місяць.</p></div>
             <!-- Stats Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-7 gap-3 mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
                     <p class="text-2xl font-black text-slate-900" id="statUsers">0</p>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">Юзерів</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Користувачів</p>
                 </div>
                 <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
                     <p class="text-2xl font-black text-green-600" id="statActive">0</p>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">Активні</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">З записом цього місяця</p>
                 </div>
                 <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
                     <p class="text-2xl font-black text-slate-900" id="statRecords">0</p>
@@ -76,7 +101,7 @@
                 </div>
                 <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
                     <p class="text-2xl font-black text-orange-600" id="statRetention">0%</p>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">Retention</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Частка з записом</p>
                 </div>
                 <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
                     <p class="text-2xl font-black text-yellow-600" id="statPro">0</p>
@@ -88,41 +113,48 @@
                 </div>
                 <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
                     <p class="text-2xl font-black text-red-500" id="statSuspicious">0</p>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">⚠️ Підозр.</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Сигнали безпеки</p>
+                </div>
+                <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
+                    <p class="text-2xl font-black text-blue-700" id="statTariffs">0</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">Тарифи спільноти</p>
                 </div>
             </div>
+            <div id="unrecognizedAccountsWarning" class="admin-alert warning hidden mb-5" role="status"></div>
 
             <!-- Tabs -->
             <div class="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
-                <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('users', this)">👥 Юзери</button>
+                <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('users', this)">Користувачі</button>
                 <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('analytics', this)">📊 Аналітика</button>
-                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('security', this)">🔒 Безпека</button>
-                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('settings', this)">⚙️ Сервер</button>
+                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('tariffs', this)">Тарифи <span id="pendingTariffsBadge" class="hidden ml-1 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px]"></span></button>
+                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('security', this)">Безпека</button>
+                <button class="tab-btn px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('settings', this)">Дані й оголошення</button>
             </div>
 
             <!-- Tab: Users -->
             <div id="tabUsers">
+                <p class="admin-intro">Знайдіть користувача, відкрийте його дані та керуйте доступом. Масові дії стосуються лише відмічених рядків.</p>
                 <div class="bg-white p-4 rounded-xl border shadow-sm mb-4">
                     <div class="flex gap-3 items-center flex-wrap">
                         <div class="relative flex-1 min-w-[200px]">
                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                            <input type="text" id="searchUsers" placeholder="Пошук по логіну..." oninput="filterUsers()" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-lg border outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium">
+                            <input type="search" id="searchUsers" placeholder="Пошук за логіном або ім’ям..." oninput="filterUsers()" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-lg border outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium" aria-label="Пошук користувачів">
                         </div>
                         <select id="filterType" onchange="filterUsers()" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
-                            <option value="all">Всі типи</option>
+                            <option value="all">Усі типи входу</option>
                             <option value="google">Google</option>
-                            <option value="login">Login</option>
+                            <option value="login">Логін</option>
                         </select>
                         <select id="filterPro" onchange="filterUsers()" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
-                            <option value="all">Всі</option>
+                            <option value="all">Усі плани</option>
                             <option value="pro">Pro</option>
-                            <option value="free">Free</option>
+                            <option value="free">Без Pro</option>
                         </select>
                         <select id="filterActive" onchange="filterUsers()" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
-                            <option value="all">Всі</option>
-                            <option value="active">Активні</option>
-                            <option value="inactive">Неактивні</option>
-                            <option value="suspicious">⚠️ Підозрілі</option>
+                            <option value="all">Уся активність</option>
+                            <option value="active">Є запис цього місяця</option>
+                            <option value="inactive">Без запису цього місяця</option>
+                            <option value="suspicious">Є сигнали безпеки</option>
                         </select>
                     </div>
                 </div>
@@ -132,23 +164,24 @@
                         <h2 class="font-bold text-lg"><i class="fa-solid fa-users mr-2 text-slate-400"></i>Користувачі</h2>
                         <div class="flex gap-2 items-center">
                             <span class="text-sm text-slate-400" id="usersCount">0</span>
-                            <button onclick="massAction('pro')" class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-lg text-xs font-bold hover:bg-yellow-100 border border-yellow-200"><i class="fa-solid fa-star mr-1"></i>Pro</button>
-                            <button onclick="massAction('delete')" class="px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100 border border-red-200"><i class="fa-solid fa-trash mr-1"></i>Del</button>
+                            <span class="text-xs text-slate-500" id="selectedCount">Вибрано: 0</span>
+                            <button id="bulkProBtn" onclick="massAction('pro')" disabled class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-lg text-xs font-bold hover:bg-yellow-100 border border-yellow-200">Надати Pro</button>
+                            <button id="bulkDeleteBtn" onclick="massAction('delete')" disabled class="px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100 border border-red-200">Видалити вибраних</button>
                         </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead class="bg-slate-50 border-b">
                                 <tr>
-                                    <th class="text-left p-3 font-bold text-slate-500"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                                    <th class="text-left p-3 font-bold text-slate-500"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" aria-label="Вибрати користувачів на сторінці"></th>
                                     <th class="text-left p-3 font-bold text-slate-500 cursor-pointer" onclick="sortUsers('login')">Логін ↕</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Тип</th>
-                                    <th class="text-center p-3 font-bold text-slate-500 cursor-pointer" onclick="sortUsers('records')">Зап. ↕</th>
-                                    <th class="text-center p-3 font-bold text-slate-500">Адр.</th>
+                                    <th class="text-center p-3 font-bold text-slate-500 cursor-pointer" onclick="sortUsers('records')">Записи ↕</th>
+                                    <th class="text-center p-3 font-bold text-slate-500">Адреси</th>
                                     <th class="text-center p-3 font-bold text-slate-500 cursor-pointer" onclick="sortUsers('lastMonth')">Останній ↕</th>
-                                    <th class="text-center p-3 font-bold text-slate-500">Пристр.</th>
+                                    <th class="text-center p-3 font-bold text-slate-500">Пристрої</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Pro</th>
-                                    <th class="text-center p-3 font-bold text-slate-500">●</th>
+                                    <th class="text-center p-3 font-bold text-slate-500">Цей місяць</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Дії</th>
                                 </tr>
                             </thead>
@@ -162,6 +195,24 @@
                             <button onclick="nextPage()" class="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-bold hover:bg-slate-200">Далі →</button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Tab: Tariffs -->
+            <div id="tabTariffs" class="hidden">
+                <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+                    <div><h2 class="text-xl font-black">Тарифи спільноти</h2><p class="admin-intro mb-0">Перевіряйте назву, регіон, автора та значення перед підтвердженням.</p></div>
+                    <button id="refreshTariffs" type="button" class="px-4 py-2 bg-white border rounded-xl text-sm font-bold hover:bg-slate-50" onclick="loadTariffs()">Оновити тарифи</button>
+                </div>
+                <div class="bg-white p-4 rounded-xl border shadow-sm admin-surface">
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <input type="search" id="searchTariffs" oninput="renderTariffs()" placeholder="Пошук за назвою, автором або містом" aria-label="Пошук тарифів" class="flex-1 min-w-[220px] px-3 py-2.5 bg-slate-50 border rounded-lg text-sm">
+                        <select id="filterTariffs" onchange="renderTariffs()" aria-label="Статус тарифів" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold">
+                            <option value="pending">Очікують перевірки</option><option value="all">Усі</option><option value="verified">Підтверджені</option>
+                        </select>
+                    </div>
+                    <p id="tariffsCount" class="text-sm text-slate-500 mb-3">Завантаження…</p>
+                    <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 border-b"><tr><th class="text-left p-3">Назва / регіон</th><th class="text-left p-3">Автор</th><th class="text-left p-3">Тарифи, грн</th><th class="text-left p-3">Оновлено</th><th class="text-left p-3">Статус</th><th class="text-left p-3">Дії</th></tr></thead><tbody id="tariffsTableBody"></tbody></table></div>
                 </div>
             </div>
 
@@ -189,72 +240,52 @@
 
             <!-- Tab: Security -->
             <div id="tabSecurity" class="hidden">
+                <p class="admin-intro">Показники нижче — сигнали з профілів, а не доказ порушення. Деталі захисту перевіряйте у конфігурації Worker.</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="bg-white p-6 rounded-xl border shadow-sm">
                         <h3 class="font-bold mb-4 text-red-600">⚠️ Підозріла активність</h3>
                         <div id="suspiciousUsers" class="space-y-2"></div>
                     </div>
                     <div class="bg-white p-6 rounded-xl border shadow-sm">
-                        <h3 class="font-bold mb-4">🔐 Статус безпеки</h3>
-                        <div class="space-y-3">
-                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-xl border border-green-100">
-                                <span class="text-sm font-bold text-green-700">✓ Rate Limiting</span>
-                                <span class="badge bg-green-100 text-green-700">Active</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-xl border border-green-100">
-                                <span class="text-sm font-bold text-green-700">✓ Auth via Headers</span>
-                                <span class="badge bg-green-100 text-green-700">Active</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-xl border border-green-100">
-                                <span class="text-sm font-bold text-green-700">✓ Device Fingerprint</span>
-                                <span class="badge bg-green-100 text-green-700">Active</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 rounded-xl border" id="encryptionStatus">
-                                <span class="text-sm font-bold">🔒 Encryption at Rest</span>
-                                <span class="badge">—</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-xl border border-green-100">
-                                <span class="text-sm font-bold text-green-700">✓ Dynamic Admin Token</span>
-                                <span class="badge bg-green-100 text-green-700">1h TTL</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-xl border border-green-100">
-                                <span class="text-sm font-bold text-green-700">✓ Payload Validation</span>
-                                <span class="badge bg-green-100 text-green-700">512KB max</span>
-                            </div>
-                        </div>
+                        <h3 class="font-bold mb-4">🔐 Сесія та доступ</h3>
+                        <div class="admin-alert mb-3">Адмінсесія зберігається лише в цій вкладці. Сервер перевіряє токен для кожного запиту.</div>
+                        <p class="text-sm text-slate-600">Залишок сесії: <strong id="securitySessionTimer">—</strong></p>
+                        <p class="text-sm text-slate-600 mt-2">Параметри шифрування та захисту неможливо достовірно визначити з браузера. У цій панелі вони не позначаються як «активні» без перевірки сервера.</p>
                     </div>
                 </div>
             </div>
 
             <!-- Tab: Settings -->
             <div id="tabSettings" class="hidden">
+                <p class="admin-intro">Резервні копії містять приватні дані. Зберігайте файл у захищеному місці. Видалення акаунтів та оголошення діють одразу.</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="bg-white p-6 rounded-xl border shadow-sm">
                         <h3 class="font-bold mb-4">🗄️ Дані</h3>
                         <div class="space-y-3">
                             <button onclick="exportFullBackup()" class="w-full py-3 bg-blue-50 text-blue-700 font-bold rounded-xl border border-blue-200 hover:bg-blue-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-database mr-2"></i>Повний бекап (JSON)</button>
                             <button onclick="exportAllData()" class="w-full py-3 bg-green-50 text-green-700 font-bold rounded-xl border border-green-200 hover:bg-green-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-file-csv mr-2"></i>Експорт юзерів (CSV)</button>
-                            <button onclick="cleanupEmptyAccounts()" class="w-full py-3 bg-orange-50 text-orange-700 font-bold rounded-xl border border-orange-200 hover:bg-orange-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-broom mr-2"></i>Очистити пусті акаунти</button>
+                            <button onclick="cleanupEmptyAccounts()" class="w-full py-3 bg-orange-50 text-orange-700 font-bold rounded-xl border border-orange-200 hover:bg-orange-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-broom mr-2"></i>Переглянути порожні акаунти</button>
+                            <p id="backupProgress" class="text-xs text-slate-500" role="status"></p>
                         </div>
                     </div>
                     <div class="bg-white p-6 rounded-xl border shadow-sm">
-                        <h3 class="font-bold mb-4">📢 Broadcast</h3>
-                        <textarea id="broadcastMsgSettings" rows="3" placeholder="Текст оголошення для всіх юзерів..." class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium mb-3 text-sm"></textarea>
+                        <h3 class="font-bold mb-4">📢 Оголошення для всіх</h3>
+                        <div id="currentBroadcast" class="admin-alert mb-3">Завантаження поточного оголошення…</div>
+                        <textarea id="broadcastMsgSettings" maxlength="500" rows="3" placeholder="Текст оголошення для всіх користувачів..." class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium mb-3 text-sm"></textarea>
                         <button onclick="sendBroadcastFromSettings()" class="w-full py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 active:scale-95 transition-all text-sm"><i class="fa-solid fa-paper-plane mr-2"></i>Надіслати</button>
                     </div>
                     <div class="bg-white p-6 rounded-xl border shadow-sm">
-                        <h3 class="font-bold mb-4">🔍 Пошук юзера</h3>
+                        <h3 class="font-bold mb-4">🔍 Пошук користувача</h3>
                         <div class="flex gap-2">
-                            <input type="text" id="directUserSearch" placeholder="Логін юзера..." class="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium">
-                            <button onclick="directViewUser()" class="px-4 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm active:scale-95">👁</button>
+                            <input type="text" id="directUserSearch" placeholder="Логін користувача..." class="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium">
+                            <button onclick="directViewUser()" class="px-4 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm active:scale-95">Знайти</button>
                         </div>
                     </div>
                     <div class="bg-white p-6 rounded-xl border shadow-sm">
                         <h3 class="font-bold mb-4">ℹ️ Інфо</h3>
                         <div class="space-y-2 text-sm text-slate-600">
-                            <p><strong>Worker:</strong> v3.2 Full Security</p>
-                            <p><strong>KV:</strong> Cloudflare Workers KV</p>
-                            <p><strong>Токен:</strong> <span class="text-xs text-slate-400" id="tokenInfo">—</span></p>
+                            <p><strong>Сховище:</strong> Cloudflare Workers KV</p>
+                            <p><strong>Копія:</strong> усі ключі KV і повні профілі</p>
                             <p><strong>Сесія:</strong> <span id="sessionTimer">—</span></p>
                         </div>
                     </div>
@@ -278,12 +309,24 @@
     <div id="broadcastModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <h3 class="text-xl font-black mb-4">📢 Оголошення</h3>
-            <textarea id="broadcastMsg" rows="4" placeholder="Текст оголошення..." class="w-full p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium mb-4"></textarea>
+            <p class="admin-intro">Нове оголошення замінить поточне для всіх користувачів застосунку.</p>
+            <textarea id="broadcastMsg" maxlength="500" rows="4" placeholder="Текст оголошення..." class="w-full p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium mb-4"></textarea>
             <div class="flex gap-3">
                 <button onclick="sendBroadcast()" class="flex-1 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 active:scale-95 transition-all">Надіслати</button>
                 <button onclick="document.getElementById('broadcastModal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 font-bold rounded-xl hover:bg-slate-200 active:scale-95 transition-all">Скасувати</button>
             </div>
         </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+        <form id="passwordForm" class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <h3 id="passwordModalTitle" class="text-xl font-black mb-2">Новий пароль</h3>
+            <p class="admin-intro">Пароль зміниться одразу. Користувачеві знадобиться новий пароль для наступного входу.</p>
+            <label for="newAdminUserPass" class="block text-sm font-bold mb-2">Новий пароль · щонайменше 8 символів</label>
+            <input id="newAdminUserPass" type="password" autocomplete="new-password" minlength="8" required class="w-full p-3 border rounded-xl mb-4">
+            <div class="flex gap-3"><button type="submit" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl">Змінити пароль</button><button type="button" onclick="closePasswordModal()" class="flex-1 py-3 bg-slate-100 font-bold rounded-xl">Скасувати</button></div>
+        </form>
     </div>
 
     <script>
@@ -295,6 +338,30 @@
         let currentSort = { field: 'records', dir: 'desc' };
         let currentPage = 0;
         const PAGE_SIZE = 50;
+        let allTariffs = [];
+        let statsRequest = null;
+        let sessionInterval = null;
+        let passwordLogin = '';
+
+        async function adminApi(action, payload = {}) {
+            let response;
+            try {
+                response = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, adminToken, ...payload }) });
+            } catch {
+                throw new Error('Немає з’єднання з сервером');
+            }
+            let data;
+            try { data = await response.json(); } catch { throw new Error('Сервер повернув неочікувану відповідь'); }
+            if (response.status === 401 || data.error === 'UNAUTHORIZED') {
+                adminLogout();
+                throw new Error('Сесія закінчилася. Увійдіть знову.');
+            }
+            if (!response.ok || !data.success) {
+                const errors = { MAINTENANCE_READ_ONLY: 'Сервер у режимі лише читання', NOT_FOUND: 'Запис не знайдено', TOO_MANY_ATTEMPTS: 'Забагато спроб. Зачекайте', INCOMPLETE_USER_LIST: 'Список неповний. Спробуйте ще раз' };
+                throw new Error(errors[data.error] || data.error || 'Не вдалося виконати дію');
+            }
+            return data;
+        }
 
         // Auto-login if token exists and not expired
         if (adminToken && (Date.now() - adminLoginTime < 3500000)) {
@@ -307,11 +374,13 @@
             adminToken = '';
         }
 
+        let toastTimer;
         function showAdminToast(msg, type = 'success') {
             const t = document.getElementById('adminToast');
             t.textContent = msg;
             t.className = `toast ${type} show`;
-            setTimeout(() => t.classList.remove('show'), 3000);
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 4500);
         }
 
         function escHtml(str) {
@@ -328,13 +397,18 @@
             const el = document.getElementById('sessionTimer');
             const tokenEl = document.getElementById('tokenInfo');
             if (tokenEl) tokenEl.textContent = adminToken.slice(0, 8) + '...';
-            setInterval(() => {
+            clearInterval(sessionInterval);
+            const updateTimer = () => {
                 const remaining = Math.max(0, 3600 - Math.floor((Date.now() - adminLoginTime) / 1000));
                 const min = Math.floor(remaining / 60);
                 const sec = remaining % 60;
                 if (el) el.textContent = `${min}:${sec.toString().padStart(2, '0')} залишилось`;
+                const securityTimer = document.getElementById('securitySessionTimer');
+                if (securityTimer) securityTimer.textContent = `${min}:${sec.toString().padStart(2, '0')}`;
                 if (remaining <= 0) adminLogout();
-            }, 1000);
+            };
+            updateTimer();
+            sessionInterval = setInterval(updateTimer, 1000);
         }
 
         // =================== AUTH ===================
@@ -343,6 +417,7 @@
             const errEl = document.getElementById('loginError');
             const btn = document.getElementById('loginBtn');
             errEl.classList.add('hidden');
+            if (!pass) { errEl.textContent = 'Введіть пароль'; errEl.classList.remove('hidden'); return; }
             btn.textContent = 'Завантаження...';
             btn.disabled = true;
             try {
@@ -355,10 +430,11 @@
                     sessionStorage.setItem('admin_login_time', String(adminLoginTime));
                     document.getElementById('loginScreen').classList.add('hidden');
                     document.getElementById('adminPanel').classList.remove('hidden');
+                    document.getElementById('adminPass').value = '';
                     loadStats();
                     startSessionTimer();
                 } else {
-                    errEl.textContent = res.status === 429 ? 'Забагато спроб. Зачекайте.' : 'Неправильний пароль';
+                    errEl.textContent = res.status === 429 ? 'Забагато спроб. Зачекайте.' : data.error === 'ADMIN_NOT_CONFIGURED' ? 'Адміндоступ не налаштовано на сервері' : 'Неправильний пароль';
                     errEl.classList.remove('hidden');
                 }
             } catch (e) {
@@ -369,28 +445,40 @@
             btn.disabled = false;
         }
 
-        function adminLogout() { sessionStorage.clear(); adminToken = ''; location.reload(); }
+        function adminLogout() {
+            sessionStorage.removeItem('admin_token');
+            sessionStorage.removeItem('admin_login_time');
+            adminToken = '';
+            clearInterval(sessionInterval);
+            document.getElementById('adminPanel').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('adminPass').value = '';
+        }
 
         // =================== TABS ===================
         function switchAdminTab(tab, btn) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
-            ['tabUsers', 'tabAnalytics', 'tabSecurity', 'tabSettings'].forEach(id => {
+            ['tabUsers', 'tabAnalytics', 'tabTariffs', 'tabSecurity', 'tabSettings'].forEach(id => {
                 document.getElementById(id).classList.toggle('hidden', id !== 'tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
             });
             if (tab === 'analytics') renderAnalytics();
             if (tab === 'security') renderSecurity();
+            if (tab === 'tariffs') loadTariffs();
+            if (tab === 'settings') loadBroadcast();
         }
 
         // =================== DATA LOADING ===================
         async function loadStats() {
             document.getElementById('lastUpdate').textContent = 'Завантаження...';
+            if (statsRequest) return statsRequest;
+            statsRequest = (async () => {
             try {
-                const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_stats', adminToken }) });
-                const data = await res.json();
-                if (!data.success) { if (data.error === 'UNAUTHORIZED') adminLogout(); return; }
+                const data = await adminApi('admin_stats');
                 const { stats, users } = data;
                 allUsers = users;
+                const known = new Set(users.map(u => u.login));
+                for (const login of selectedUsers) if (!known.has(login)) selectedUsers.delete(login);
                 document.getElementById('statUsers').textContent = stats.totalUsers;
                 document.getElementById('statActive').textContent = stats.activeThisMonth;
                 document.getElementById('statRecords').textContent = stats.totalRecords;
@@ -398,22 +486,27 @@
                 document.getElementById('statGoogle').textContent = users.filter(u => u.hasGoogle).length;
                 document.getElementById('statRetention').textContent = stats.totalUsers > 0 ? Math.round((stats.activeThisMonth / stats.totalUsers) * 100) + '%' : '0%';
                 document.getElementById('statSuspicious').textContent = users.filter(u => u.suspicious > 0).length;
+                document.getElementById('statTariffs').textContent = stats.communityTariffs || 0;
+                const warning = document.getElementById('unrecognizedAccountsWarning');
+                warning.classList.toggle('hidden', !(data.unrecognizedAccounts > 0));
+                if (data.unrecognizedAccounts > 0) warning.textContent = `У KV є ${data.unrecognizedAccounts} записів невідомого формату. Вони не включені до списку користувачів і не будуть змінені цією панеллю. Перед міграцією перевірте резервну копію.`;
                 document.getElementById('usersCount').textContent = `${users.length} юзерів`;
                 document.getElementById('lastUpdate').textContent = `Оновлено: ${new Date().toLocaleTimeString('uk-UA')}`;
-                currentPage = 0;
                 renderUsers();
-                showAdminToast('Дані оновлено');
-            } catch (e) { document.getElementById('lastUpdate').textContent = 'Помилка'; showAdminToast('Помилка завантаження', 'error'); }
+            } catch (e) { document.getElementById('lastUpdate').textContent = 'Помилка завантаження'; showAdminToast(e.message, 'error'); }
+            finally { statsRequest = null; }
+            })();
+            return statsRequest;
         }
 
         // =================== USERS TABLE ===================
         function getFilteredUsers() {
-            const q = (document.getElementById('searchUsers')?.value || '').toLowerCase();
+            const q = (document.getElementById('searchUsers')?.value || '').trim().toLocaleLowerCase('uk-UA');
             const typeFilter = document.getElementById('filterType').value;
             const proFilter = document.getElementById('filterPro').value;
             const activeFilter = document.getElementById('filterActive').value;
             let filtered = allUsers.filter(u => {
-                if (q && !u.login.toLowerCase().includes(q)) return false;
+                if (q && !String(u.login).toLocaleLowerCase('uk-UA').includes(q) && !String(u.displayName || '').toLocaleLowerCase('uk-UA').includes(q)) return false;
                 if (typeFilter === 'google' && !u.hasGoogle) return false;
                 if (typeFilter === 'login' && u.hasGoogle) return false;
                 if (proFilter === 'pro' && !u.isPro) return false;
@@ -426,19 +519,22 @@
             // Sort
             filtered.sort((a, b) => {
                 let va = a[currentSort.field], vb = b[currentSort.field];
-                if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb || '').toLowerCase(); }
-                if (currentSort.dir === 'asc') return va > vb ? 1 : -1;
-                return va < vb ? 1 : -1;
+                if (va == null) va = ''; if (vb == null) vb = '';
+                const comparison = typeof va === 'string' ? va.localeCompare(String(vb), 'uk-UA') : Number(va) - Number(vb);
+                return currentSort.dir === 'asc' ? comparison : -comparison;
             });
             return filtered;
         }
 
         function renderUsers() {
             const filtered = getFilteredUsers();
+            currentPage = Math.min(currentPage, Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1));
             const start = currentPage * PAGE_SIZE;
             const pageUsers = filtered.slice(start, start + PAGE_SIZE);
             document.getElementById('usersCount').textContent = `${filtered.length} з ${allUsers.length}`;
-            document.getElementById('pageInfo').textContent = `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} з ${filtered.length}`;
+            document.getElementById('pageInfo').textContent = filtered.length ? `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} з ${filtered.length}` : 'Немає результатів';
+            document.querySelector('button[onclick="prevPage()"]').disabled = currentPage === 0;
+            document.querySelector('button[onclick="nextPage()"]').disabled = start + PAGE_SIZE >= filtered.length;
 
             document.getElementById('usersTableBody').innerHTML = pageUsers.map(u => {
                 const loginAttr = escAttr(u.login);
@@ -446,30 +542,31 @@
                 const proBadge = u.isPro ? '<span class="text-yellow-500">⭐</span>' : `<button class="give-pro badge bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 cursor-pointer" data-login="${loginAttr}">+Pro</button>`;
                 const suspBadge = u.suspicious > 0 ? `<span class="badge bg-red-50 text-red-500 ml-1">⚠${u.suspicious}</span>` : '';
                 return `<tr class="border-b user-row text-xs">
-                    <td class="p-3"><input type="checkbox" class="user-checkbox" data-login="${loginAttr}" onchange="updateSelection()"></td>
-                    <td class="p-3 font-bold text-slate-900 max-w-[180px] truncate" title="${loginAttr}">${escHtml(u.login)}${suspBadge}</td>
+                    <td class="p-3"><input type="checkbox" class="user-checkbox" data-login="${loginAttr}" onchange="updateSelection()" ${selectedUsers.has(u.login) ? 'checked' : ''} aria-label="Вибрати ${loginAttr}"></td>
+                    <td class="p-3 font-bold text-slate-900 max-w-[180px] truncate" title="${loginAttr}">${escHtml(u.login)}${u.displayName ? `<div class="font-normal text-slate-500">${escHtml(u.displayName)}</div>` : ''}${suspBadge}</td>
                     <td class="p-3 text-center">${authBadge}</td>
                     <td class="p-3 text-center font-bold">${u.records || 0}</td>
-                    <td class="p-3 text-center">${u.addresses || 1}</td>
+                    <td class="p-3 text-center">${u.addresses || 0}</td>
                     <td class="p-3 text-center text-slate-400">${escHtml(u.lastMonth || '—')}</td>
                     <td class="p-3 text-center">${Number.isFinite(Number(u.devices)) ? Number(u.devices) : '?'}</td>
                     <td class="p-3 text-center">${proBadge}</td>
-                    <td class="p-3 text-center">${u.activeThisMonth ? '<span class="text-green-500">●</span>' : '<span class="text-slate-300">○</span>'}</td>
+                    <td class="p-3 text-center">${u.activeThisMonth ? '<span class="badge bg-green-50 text-green-700">Є запис</span>' : '<span class="text-slate-400">—</span>'}</td>
                     <td class="p-3 text-center">
                         <div class="flex gap-1 justify-center">
-                            <button data-action="view" data-login="${loginAttr}" class="admin-user-action p-1.5 bg-slate-100 rounded hover:bg-slate-200 active:scale-90" title="Деталі">👁</button>
-                            <button data-action="reset" data-login="${loginAttr}" class="admin-user-action p-1.5 bg-yellow-50 rounded hover:bg-yellow-100 active:scale-90" title="Пароль">🔑</button>
-                            <button data-action="delete" data-login="${loginAttr}" class="admin-user-action p-1.5 bg-red-50 rounded hover:bg-red-100 active:scale-90" title="Видалити">🗑</button>
+                            <button data-action="view" data-login="${loginAttr}" class="admin-user-action px-2 py-1.5 bg-slate-100 rounded hover:bg-slate-200 active:scale-90 font-bold" aria-label="Деталі ${loginAttr}">Деталі</button>
                         </div>
                     </td>
                 </tr>`;
-            }).join('');
+            }).join('') || '<tr><td colspan="10" class="admin-empty">За цими фільтрами користувачів немає</td></tr>';
+            const selectedOnPage = pageUsers.filter(u => selectedUsers.has(u.login)).length;
+            const selectAll = document.getElementById('selectAll');
+            selectAll.checked = pageUsers.length > 0 && selectedOnPage === pageUsers.length;
+            selectAll.indeterminate = selectedOnPage > 0 && selectedOnPage < pageUsers.length;
+            updateSelectionStatus();
             document.querySelectorAll('.give-pro').forEach(btn => btn.addEventListener('click', () => givePro(btn.dataset.login)));
             document.querySelectorAll('.admin-user-action').forEach(btn => btn.addEventListener('click', () => {
                 const login = btn.dataset.login;
                 if (btn.dataset.action === 'view') viewUser(login);
-                if (btn.dataset.action === 'reset') resetPassword(login);
-                if (btn.dataset.action === 'delete') deleteUser(login);
             }));
         }
 
@@ -477,30 +574,39 @@
         function sortUsers(field) { if (currentSort.field === field) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc'; else { currentSort.field = field; currentSort.dir = 'desc'; } renderUsers(); }
         function nextPage() { const max = Math.ceil(getFilteredUsers().length / PAGE_SIZE) - 1; if (currentPage < max) { currentPage++; renderUsers(); } }
         function prevPage() { if (currentPage > 0) { currentPage--; renderUsers(); } }
-        function toggleSelectAll() { const checked = document.getElementById('selectAll').checked; document.querySelectorAll('.user-checkbox').forEach(cb => { cb.checked = checked; }); updateSelection(); }
-        function updateSelection() { selectedUsers.clear(); document.querySelectorAll('.user-checkbox:checked').forEach(cb => selectedUsers.add(cb.dataset.login)); }
+        function toggleSelectAll() { const checked = document.getElementById('selectAll').checked; document.querySelectorAll('.user-checkbox').forEach(cb => { cb.checked = checked; checked ? selectedUsers.add(cb.dataset.login) : selectedUsers.delete(cb.dataset.login); }); updateSelectionStatus(); }
+        function updateSelection() { document.querySelectorAll('.user-checkbox').forEach(cb => cb.checked ? selectedUsers.add(cb.dataset.login) : selectedUsers.delete(cb.dataset.login)); updateSelectionStatus(); }
+        function updateSelectionStatus() {
+            document.getElementById('selectedCount').textContent = `Вибрано: ${selectedUsers.size}`;
+            document.getElementById('bulkProBtn').disabled = selectedUsers.size === 0;
+            document.getElementById('bulkDeleteBtn').disabled = selectedUsers.size === 0;
+        }
 
         // =================== ACTIONS ===================
         async function massAction(type) {
             if (selectedUsers.size === 0) return showAdminToast('Виберіть юзерів', 'error');
+            const logins = [...selectedUsers];
             if (type === 'pro') {
-                if (!confirm(`Видати Pro для ${selectedUsers.size} юзерів?`)) return;
-                for (const login of selectedUsers) { await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_give_pro', adminToken, login }) }); }
-                showAdminToast(`Pro видано ${selectedUsers.size} юзерам`);
+                if (!confirm(`Надати Pro для ${logins.length} користувачів?`)) return;
             } else if (type === 'delete') {
-                if (!confirm(`ВИДАЛИТИ ${selectedUsers.size} юзерів???`)) return;
-                if (!confirm(`Точно???`)) return;
-                for (const login of selectedUsers) { await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_delete_user', adminToken, login }) }); }
-                showAdminToast(`Видалено ${selectedUsers.size} юзерів`);
+                const phrase = `ВИДАЛИТИ ${logins.length}`;
+                if (prompt(`Це назавжди видалить ${logins.length} акаунтів з усіма їхніми даними. Спершу зробіть резервну копію. Для підтвердження введіть: ${phrase}`) !== phrase) return;
+            }
+            let done = 0;
+            const failed = [];
+            for (const login of logins) {
+                try { await adminApi(type === 'pro' ? 'admin_give_pro' : 'admin_delete_user', { login }); done++; }
+                catch { failed.push(login); }
             }
             selectedUsers.clear();
-            loadStats();
+            showAdminToast(`${type === 'pro' ? 'Pro надано' : 'Видалено'}: ${done} з ${logins.length}${failed.length ? '. Помилка для: ' + failed.join(', ') : ''}`, failed.length ? 'error' : 'success');
+            await loadStats();
         }
 
         async function givePro(login) {
             if (!confirm(`Видати Pro для ${login}?`)) return;
-            const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_give_pro', adminToken, login }) });
-            if ((await res.json()).success) { showAdminToast('Pro видано!'); loadStats(); } else showAdminToast('Помилка', 'error');
+            try { await adminApi('admin_give_pro', { login }); showAdminToast('Pro надано'); await loadStats(); document.getElementById('userModal').classList.add('hidden'); }
+            catch (e) { showAdminToast(e.message, 'error'); }
         }
 
         async function viewUser(login) {
@@ -508,9 +614,7 @@
             document.getElementById('modalUserContent').innerHTML = '<p class="text-slate-400 animate-pulse">Завантаження...</p>';
             document.getElementById('userModal').classList.remove('hidden');
             try {
-                const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_user_data', adminToken, login }) });
-                const data = await res.json();
-                if (!data.success) { document.getElementById('modalUserContent').innerHTML = '<p class="text-red-500 font-bold">Помилка завантаження</p>'; return; }
+                const data = await adminApi('admin_user_data', { login });
                 const ud = data.data;
                 const totalRecords = (ud.addresses || []).reduce((s, a) => (a.records?.length || 0) + s, 0);
                 const loginAttr = escAttr(login);
@@ -529,7 +633,7 @@
                     <div class="flex gap-2 flex-wrap">
                         <button data-modal-action="pro" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs font-bold active:scale-95">⭐ Дати Pro</button>
                         <button data-modal-action="revoke" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold active:scale-95">Забрати Pro</button>
-                        <button data-modal-action="reset" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold active:scale-95">🔑 Скинути пароль</button>
+                        ${ud.hasGoogle && !ud.pass && !ud.passHash ? '' : `<button data-modal-action="reset" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold active:scale-95">🔑 Змінити пароль</button>`}
                         <button data-modal-action="delete" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-red-500 text-white rounded-lg text-xs font-bold active:scale-95">🗑 Видалити</button>
                     </div>`;
                 if (ud.addresses) {
@@ -552,32 +656,103 @@
                     if (btn.dataset.modalAction === 'reset') resetPassword(modalLogin);
                     if (btn.dataset.modalAction === 'delete') deleteUser(modalLogin);
                 }));
-            } catch (e) { document.getElementById('modalUserContent').innerHTML = '<p class="text-red-500 font-bold">Помилка мережі</p>'; }
+            } catch (e) { document.getElementById('modalUserContent').textContent = e.message; }
         }
 
         async function revokePro(login) {
             if (!confirm(`Забрати Pro у ${login}?`)) return;
-            await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_revoke_pro', adminToken, login }) });
-            showAdminToast('Pro забрано'); loadStats(); document.getElementById('userModal').classList.add('hidden');
+            try { await adminApi('admin_revoke_pro', { login }); showAdminToast('Pro скасовано'); await loadStats(); document.getElementById('userModal').classList.add('hidden'); }
+            catch (e) { showAdminToast(e.message, 'error'); }
         }
 
-        async function resetPassword(login) {
-            const newPass = prompt(`Новий пароль для ${login} (мін 4 символи):`);
-            if (!newPass || newPass.length < 4) return showAdminToast('Мін 4 символи', 'error');
+        function resetPassword(login) {
+            passwordLogin = login;
+            document.getElementById('passwordModalTitle').textContent = `Новий пароль · ${login}`;
+            document.getElementById('newAdminUserPass').value = '';
+            document.getElementById('passwordModal').classList.remove('hidden');
+            document.getElementById('newAdminUserPass').focus();
+        }
+        function closePasswordModal() {
+            passwordLogin = '';
+            document.getElementById('newAdminUserPass').value = '';
+            document.getElementById('passwordModal').classList.add('hidden');
+        }
+        async function saveNewPassword(event) {
+            event.preventDefault();
+            const login = passwordLogin;
+            const newPass = document.getElementById('newAdminUserPass').value;
+            if (!login || newPass.length < 8) return showAdminToast('Потрібно щонайменше 8 символів', 'error');
             const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(newPass));
             const hash = Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join('');
-            const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_reset_password', adminToken, login, newPass: hash }) });
-            (await res.json()).success ? showAdminToast('Пароль змінено!') : showAdminToast('Помилка', 'error');
+            try { await adminApi('admin_reset_password', { login, newPass: hash }); closePasswordModal(); showAdminToast('Пароль змінено'); }
+            catch (e) { showAdminToast(e.message, 'error'); }
         }
 
         async function deleteUser(login) {
-            if (!confirm(`ВИДАЛИТИ ${login}?`)) return;
-            if (!confirm(`ТОЧНО видалити ${login}??? Це незворотньо!`)) return;
-            const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_delete_user', adminToken, login }) });
-            if ((await res.json()).success) { showAdminToast('Видалено'); loadStats(); document.getElementById('userModal').classList.add('hidden'); }
+            if (prompt(`Це назавжди видалить акаунт ${login} та його дані. Для підтвердження введіть логін:`) !== login) return;
+            try { await adminApi('admin_delete_user', { login }); showAdminToast('Акаунт видалено'); await loadStats(); document.getElementById('userModal').classList.add('hidden'); }
+            catch (e) { showAdminToast(e.message, 'error'); }
         }
 
         function directViewUser() { const login = document.getElementById('directUserSearch').value.trim(); if (login) viewUser(login); }
+
+        // =================== TARIFF MODERATION ===================
+        async function loadTariffs() {
+            const count = document.getElementById('tariffsCount');
+            count.textContent = 'Завантаження тарифів…';
+            try {
+                const data = await adminApi('admin_get_tariffs');
+                allTariffs = Array.isArray(data.tariffs) ? data.tariffs : [];
+                const pending = allTariffs.filter(t => !t.verified).length;
+                const badge = document.getElementById('pendingTariffsBadge');
+                badge.textContent = pending;
+                badge.classList.toggle('hidden', pending === 0);
+                renderTariffs();
+            } catch (e) { count.textContent = e.message; showAdminToast(e.message, 'error'); }
+        }
+
+        function renderTariffs() {
+            const q = document.getElementById('searchTariffs').value.trim().toLocaleLowerCase('uk-UA');
+            const status = document.getElementById('filterTariffs').value;
+            const filtered = allTariffs.filter(t => {
+                if (status === 'pending' && t.verified) return false;
+                if (status === 'verified' && !t.verified) return false;
+                return !q || [t.name, t.city, t.region, t.author, t.login].some(value => String(value || '').toLocaleLowerCase('uk-UA').includes(q));
+            });
+            document.getElementById('tariffsCount').textContent = `${filtered.length} з ${allTariffs.length} тарифів · ${allTariffs.filter(t => !t.verified).length} очікують перевірки`;
+            document.getElementById('tariffsTableBody').innerHTML = filtered.map(t => {
+                const id = escAttr(t.id);
+                const rates = Object.entries({ 'Вода': t.tariffs?.water, 'Гаряча': t.tariffs?.hotWater, 'Електрика': t.tariffs?.electroBase, 'Зима': t.tariffs?.electroWinter, 'Газ': t.tariffs?.gas })
+                    .filter(([, value]) => Number(value) > 0).map(([label, value]) => `${label}: ${Number(value).toLocaleString('uk-UA')}`).join(' · ');
+                const date = t.updatedAt || t.createdAt;
+                return `<tr class="border-b text-xs">
+                    <td class="p-3"><strong>${escHtml(t.name)}</strong><div class="text-slate-500">${escHtml([t.city,t.region].filter(Boolean).join(', ') || 'Регіон не вказано')}</div></td>
+                    <td class="p-3">${escHtml(t.author || 'Анонім')}<div class="text-slate-500">${escHtml(t.login || '—')}</div></td>
+                    <td class="p-3 max-w-[260px] whitespace-normal">${escHtml(rates || '—')}</td>
+                    <td class="p-3">${date && !Number.isNaN(Date.parse(date)) ? new Date(date).toLocaleDateString('uk-UA') : '—'}</td>
+                    <td class="p-3"><span class="badge ${t.verified ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}">${t.verified ? 'Підтверджено' : 'Очікує'}</span></td>
+                    <td class="p-3"><div class="flex gap-1">
+                        <button class="tariff-action px-2 py-1.5 rounded bg-blue-50 text-blue-700 font-bold" data-action="verify" data-id="${id}">${t.verified ? 'Зняти підтвердження' : 'Підтвердити'}</button>
+                        <button class="tariff-action px-2 py-1.5 rounded bg-red-50 text-red-700 font-bold" data-action="delete" data-id="${id}">Видалити</button>
+                    </div></td></tr>`;
+            }).join('') || '<tr><td colspan="6" class="admin-empty">Тарифів за цими умовами немає</td></tr>';
+            document.querySelectorAll('.tariff-action').forEach(button => button.addEventListener('click', () => moderateTariff(button.dataset.action, button.dataset.id)));
+        }
+
+        async function moderateTariff(action, id) {
+            const tariff = allTariffs.find(t => t.id === id);
+            if (!tariff) return;
+            const label = tariff.name || id;
+            if (action === 'delete') {
+                if (prompt(`Видалення тарифу «${label}» незворотне. Введіть ВИДАЛИТИ:`) !== 'ВИДАЛИТИ') return;
+            } else if (!confirm(`${tariff.verified ? 'Зняти підтвердження' : 'Підтвердити'} тариф «${label}»?`)) return;
+            try {
+                await adminApi(action === 'delete' ? 'admin_delete_tariff' : 'admin_verify_tariff', { id, ...(action === 'verify' ? { verified: !tariff.verified } : {}) });
+                showAdminToast(action === 'delete' ? 'Тариф видалено' : 'Статус тарифу оновлено');
+                await loadTariffs();
+                await loadStats();
+            } catch (e) { showAdminToast(e.message, 'error'); }
+        }
 
         // =================== ANALYTICS ===================
         function renderAnalytics() {
@@ -620,15 +795,12 @@
             document.getElementById('suspiciousUsers').innerHTML = suspicious.length ? suspicious.map(u => `<div class="flex justify-between items-center p-3 bg-red-50 rounded-xl border border-red-100"><div><span class="font-bold text-sm">${escHtml(u.login)}</span><span class="ml-2 badge bg-red-100 text-red-600">⚠️ ${u.suspicious} подій</span></div><button data-login="${escAttr(u.login)}" class="security-view-user px-3 py-1 bg-white rounded-lg text-xs font-bold border hover:bg-slate-50 active:scale-95">👁</button></div>`).join('') : '<p class="text-slate-400">Все чисто! Підозрілих немає.</p>';
             document.querySelectorAll('.security-view-user').forEach(btn => btn.addEventListener('click', () => viewUser(btn.dataset.login)));
 
-            // Encryption status
-            const encEl = document.getElementById('encryptionStatus');
-            // We can't directly check from client, show info
-            encEl.innerHTML = `<span class="text-sm font-bold">🔒 Encryption at Rest</span><span class="badge bg-blue-50 text-blue-600">Якщо ENCRYPT_SECRET задано</span>`;
         }
 
         // =================== EXPORT ===================
         function csvCell(value) {
-            const text = String(value ?? '');
+            const raw = String(value ?? '');
+            const text = /^[\s]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
             return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
         }
 
@@ -643,34 +815,36 @@
         }
 
         async function exportFullBackup() {
-            showAdminToast('Перевіряю повноту резервної копії…');
+            const progress = document.getElementById('backupProgress');
+            progress.textContent = 'Читаю список акаунтів…';
             const fullData=[],kvEntries=[];let cursor,readOnly=true;
             try {
-                const listing=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_stats',adminToken})});
-                const accounts=await listing.json();if(!listing.ok||!accounts.success||!Array.isArray(accounts.users))throw new Error('Не вдалося отримати повний список акаунтів');
+                const accounts = await adminApi('admin_stats');
+                if(!Array.isArray(accounts.users))throw new Error('Не вдалося отримати повний список акаунтів');
                 for(const user of accounts.users){
-                    const response=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_user_data',adminToken,login:user.login})});
-                    const data=await response.json();if(!response.ok||!data.success)throw new Error('Один з акаунтів не вдалося прочитати. Повторіть експорт.');
+                    progress.textContent = `Акаунти: ${fullData.length + 1} з ${accounts.users.length}`;
+                    const data=await adminApi('admin_user_data',{login:user.login});
                     fullData.push({login:user.login,...data.data});
                 }
-                do{const response=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_backup_page',adminToken,cursor})});const page=await response.json();if(!response.ok||!page.success||!Array.isArray(page.entries))throw new Error('Не вдалося прочитати повну резервну копію KV');kvEntries.push(...page.entries);readOnly=readOnly&&page.readOnly;cursor=page.cursor;if(!page.listComplete&&!cursor)throw new Error('Неповна сторінка KV');}while(cursor);
+                do{const page=await adminApi('admin_backup_page',{cursor});if(!Array.isArray(page.entries))throw new Error('Не вдалося прочитати повну резервну копію KV');kvEntries.push(...page.entries);readOnly=readOnly&&page.readOnly;cursor=page.cursor;progress.textContent = `Ключі KV: ${kvEntries.length}`;if(!page.listComplete&&!cursor)throw new Error('Неповна сторінка KV');}while(cursor);
                 const manifest={kvKeys:kvEntries.length,accounts:fullData.length,addresses:fullData.reduce((n,u)=>n+(u.addresses?.length||0),0),records:fullData.reduce((n,u)=>n+(u.addresses||[]).reduce((sum,a)=>sum+(a.records?.length||0),0),0)};
-                downloadFile(JSON.stringify({exportDate:new Date().toISOString(),version:'5.1.0',complete:true,readOnly,unrecognizedAccounts:accounts.unrecognizedAccounts||0,manifest,kvEntries,users:fullData},null,2),`komunalka_full_backup_${new Date().toISOString().slice(0,10)}.json`,'application/json');
-                showAdminToast(`Експорт: ${manifest.accounts} акаунтів, ${manifest.records} записів. ${readOnly?'Запис під час копіювання призупинено.':'Для міграції повторіть у режимі лише читання.'}`);
-            }catch(error){showAdminToast('Експорт не завершено: '+error.message);}
+                downloadFile(JSON.stringify({exportDate:new Date().toISOString(),version:'5.3.1',complete:true,readOnly,unrecognizedAccounts:accounts.unrecognizedAccounts||0,manifest,kvEntries,users:fullData},null,2),`komunalka_full_backup_${new Date().toISOString().slice(0,10)}.json`,'application/json');
+                progress.textContent = `Готово: ${manifest.kvKeys} ключів KV, ${manifest.accounts} акаунтів. ${readOnly ? 'Копія зроблена в режимі лише читання.' : 'Дані могли змінюватися під час копіювання — для міграції потрібен режим лише читання.'}`;
+                showAdminToast('Резервну копію завантажено');
+            }catch(error){progress.textContent = 'Експорт не завершено. Дані на сервері не змінено.';showAdminToast(error.message,'error');}
         }
 
         async function cleanupEmptyAccounts() {
-            const empty = allUsers.filter(u => u.records === 0);
-            if (!empty.length) return showAdminToast('Пустих акаунтів немає');
-            if (!confirm(`Видалити ${empty.length} пустих акаунтів (без жодного запису)?`)) return;
-            let deleted = 0;
+            const empty = allUsers.filter(u => u.records === 0 && u.addresses === 0);
+            if (!empty.length) return showAdminToast('Акаунтів без адрес і записів немає');
+            const names = empty.map(u => u.login).join(', ');
+            if (prompt(`Перевірте ${empty.length} акаунтів без адрес і записів: ${names}. Вони можуть містити налаштування чи прив’язку Google. Для видалення введіть ВИДАЛИТИ ПОРОЖНІ:`) !== 'ВИДАЛИТИ ПОРОЖНІ') return;
+            let deleted = 0, failed = 0;
             for (const u of empty) {
-                const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_delete_user', adminToken, login: u.login }) });
-                if ((await res.json()).success) deleted++;
+                try { await adminApi('admin_delete_user', { login: u.login }); deleted++; } catch { failed++; }
             }
-            showAdminToast(`Видалено ${deleted} пустих акаунтів`);
-            loadStats();
+            showAdminToast(`Видалено: ${deleted}. Помилок: ${failed}`, failed ? 'error' : 'success');
+            await loadStats();
         }
 
         function downloadFile(content, filename, type) {
@@ -679,30 +853,39 @@
             a.href = URL.createObjectURL(blob);
             a.download = filename;
             a.click();
-            URL.revokeObjectURL(a.href);
+            setTimeout(() => URL.revokeObjectURL(a.href), 60000);
         }
 
         // =================== BROADCAST ===================
         function openBroadcast() { document.getElementById('broadcastModal').classList.remove('hidden'); }
+        async function loadBroadcast() {
+            const target = document.getElementById('currentBroadcast');
+            try {
+                const data = await adminApi('get_broadcast');
+                target.textContent = data.message ? `${data.message}${data.date ? ' · ' + data.date : ''}` : 'Наразі оголошення немає.';
+            } catch (e) { target.textContent = e.message; }
+        }
+        async function publishBroadcast(msg) {
+            if (!msg) return showAdminToast('Введіть текст оголошення', 'error');
+            if (msg.length > 500) return showAdminToast('Не більше 500 символів', 'error');
+            if (!confirm(`Опублікувати оголошення для всіх користувачів?\n\n${msg}`)) return;
+            try { await adminApi('admin_broadcast', { message: msg }); showAdminToast('Оголошення опубліковано'); await loadBroadcast(); return true; }
+            catch (e) { showAdminToast(e.message, 'error'); return false; }
+        }
         async function sendBroadcast() {
             const msg = document.getElementById('broadcastMsg').value.trim();
-            if (!msg) return showAdminToast('Введіть текст', 'error');
-            const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_broadcast', adminToken, message: msg }) });
-            if ((await res.json()).success) { showAdminToast('Оголошення надіслано!'); document.getElementById('broadcastModal').classList.add('hidden'); document.getElementById('broadcastMsg').value = ''; }
-            else showAdminToast('Помилка', 'error');
+            if (await publishBroadcast(msg)) { document.getElementById('broadcastModal').classList.add('hidden'); document.getElementById('broadcastMsg').value = ''; }
         }
 
         async function sendBroadcastFromSettings() {
             const msg = document.getElementById('broadcastMsgSettings').value.trim();
-            if (!msg) return showAdminToast('Введіть текст', 'error');
-            const res = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'admin_broadcast', adminToken, message: msg }) });
-            if ((await res.json()).success) { showAdminToast('Оголошення надіслано!'); document.getElementById('broadcastMsgSettings').value = ''; }
-            else showAdminToast('Помилка', 'error');
+            if (await publishBroadcast(msg)) document.getElementById('broadcastMsgSettings').value = '';
         }
 
         // =================== KEYBOARD ===================
         document.getElementById('adminPass').addEventListener('keydown', e => { if (e.key === 'Enter') adminLogin(); });
         document.getElementById('directUserSearch')?.addEventListener('keydown', e => { if (e.key === 'Enter') directViewUser(); });
+        document.getElementById('passwordForm').addEventListener('submit', saveNewPassword);
 
         // =================== AUTO-REFRESH ===================
         setInterval(() => { if (adminToken && document.visibilityState === 'visible') loadStats(); }, 300000); // 5 min

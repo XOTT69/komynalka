@@ -182,7 +182,7 @@ async function doPost(req, env, ip, fp) {
   try {body=await readBody(req);}catch(e){return err(e.message,e.message==='PAYLOAD_TOO_LARGE'?413:400);}
   const action = typeof body.action === 'string' ? body.action : '';
 
-  if(env.MAINTENANCE_MODE==='read-only'&&!['admin_login','admin_stats','admin_user_data','admin_backup_page','get_tariffs','get_broadcast','push_status','push_unsubscribe'].includes(action))return err('MAINTENANCE_READ_ONLY',503);
+  if(env.MAINTENANCE_MODE==='read-only'&&!['admin_login','admin_stats','admin_user_data','admin_backup_page','admin_get_tariffs','get_tariffs','get_broadcast','push_status','push_unsubscribe'].includes(action))return err('MAINTENANCE_READ_ONLY',503);
   if (action === 'admin_login' || action.startsWith('admin_')) return doAdmin(action, body, env, ip);
   if (action === 'get_broadcast') return doGetBroadcast(env);
   if(action==='link_google'){const auth=await parseAuth(req,env);if(auth?.type!=='uid'||auth.uid!==body.uid)return err('NO_AUTH',401);return doLinkGoogle(body,env);}
@@ -386,7 +386,8 @@ async function doPublishTariff(body, env, login, ip) {
       ...entry,
       id: previous.id,
       createdAt: previous.createdAt || entry.createdAt,
-      verified: !!previous.verified,
+      // A changed rate must be reviewed again even when the old rate was approved.
+      verified: false,
       votes: Math.max(1, previous.votes || 1),
       voters: Array.isArray(previous.voters) ? previous.voters : [login],
       history: previousSnapshot ? [previousSnapshot, ...history].slice(0, 12) : history.slice(0, 12),
@@ -613,9 +614,11 @@ async function doAdminGetTariffs(env) {
   try {
     const raw = await env.KV.get('community_tariffs');
     if (!raw) return ok({ success: true, tariffs: [] });
-    return ok({ success: true, tariffs: JSON.parse(raw) });
+    const tariffs = JSON.parse(raw);
+    if (!Array.isArray(tariffs)) return err('INVALID_TARIFF_DATA', 503);
+    return ok({ success: true, tariffs });
   } catch(e) {
-    return ok({ success: true, tariffs: [] });
+    return err('INVALID_TARIFF_DATA', 503);
   }
 }
 
@@ -625,6 +628,8 @@ async function doAdminDeleteTariff(body, env) {
   try {
     const raw = await env.KV.get('community_tariffs');
     let list = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(list)) return err('INVALID_TARIFF_DATA', 503);
+    if (!list.some(item => item.id === body.id)) return err('NOT_FOUND', 404);
     list = list.filter(item => item.id !== body.id);
     await env.KV.put('community_tariffs', JSON.stringify(list), { expirationTtl: 86400 * 365 });
     return ok({ success: true });

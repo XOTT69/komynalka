@@ -34,6 +34,20 @@ test('opaque old accounts are preserved and flagged; Google and share aliases ar
   const opaque='synthetic-old-opaque-value';const {env,values}=environment({anna:legacyAccount(hash),encrypted:opaque,google_example:'anna',share_old:{phone:'anna',addressId:'home'},_broadcast:{message:'Test'}});
   const adminToken=createHash('sha256').update(`${env.ADMIN_PASS}:${Math.floor(Date.now()/3600000)}:k_admin`).digest('hex');const res=await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'admin_stats',adminToken})}),env);const data=await res.json();assert.deepEqual(data.users.map(u=>u.login),['anna']);assert.equal(data.unrecognizedAccounts,1);assert.equal((await worker.fetch(req('encrypted'),env)).status,503);assert.equal(values.get('encrypted'),opaque);
 });
+test('an edited community tariff loses approval and corrupt tariff data is never shown as empty',async()=>{
+  const {env,values}=environment({anna:legacyAccount(hash)});
+  const adminToken=createHash('sha256').update(`${env.ADMIN_PASS}:${Math.floor(Date.now()/3600000)}:k_admin`).digest('hex');
+  const publish=async water=>(await worker.fetch(req('anna',{action:'publish_tariff',name:'Міський тариф',author:'Анна',tariffs:{water}}),env)).json();
+  const first=await publish(40);assert.equal(first.success,true);
+  const moderate=async body=>worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({adminToken,...body})}),env);
+  assert.equal((await moderate({action:'admin_verify_tariff',id:first.id})).status,200);
+  assert.equal(JSON.parse(values.get('community_tariffs'))[0].verified,true);
+  assert.equal((await publish(50)).success,true);
+  assert.equal(JSON.parse(values.get('community_tariffs'))[0].verified,false);
+  values.set('community_tariffs','not-json');
+  assert.equal((await moderate({action:'admin_get_tariffs'})).status,503);
+  assert.equal(values.get('community_tariffs'),'not-json');
+});
 test('push subscriptions are authenticated, schedule an alarm and do not alter account history',async()=>{
   const {createECDH,randomBytes}=await import('node:crypto');const key=createECDH('prime256v1');key.generateKeys();const subscription={endpoint:'https://fcm.googleapis.com/fcm/send/local-test',keys:{p256dh:key.getPublicKey().toString('base64url'),auth:randomBytes(16).toString('base64url')}};
   const legacy=legacyAccount(hash),{env,stores,values}=environment({anna:legacy});Object.assign(env,{VAPID_PUBLIC_KEY:'public-test',VAPID_PRIVATE_KEY:'private-test',VAPID_SUBJECT:'https://example.com'});
