@@ -12,6 +12,7 @@ const CHANGE_LOG_KEY = 'komynalka_change_log';
 const CUSTOM_TARIFF_TEMPLATE_KEY = 'komynalka_tariff_template';
 const CUSTOM_REMINDERS_KEY = 'komynalka_custom_reminders';
 const COMMUNITY_TARIFF_KEY = 'komynalka_community_tariff';
+const MAIL_DESTINATION_KEY = 'komynalka_mail_destination';
 const DEVICE_META_PREFIX = 'komynalka_device_meta_v1';
 
 const firebaseConfig = { apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80", authDomain: "pwakomun.firebaseapp.com", projectId: "pwakomun", storageBucket: "pwakomun.firebasestorage.app", messagingSenderId: "4437974770", appId: "1:4437974770:web:bf7d2f7bac35eff5707a6b" };
@@ -1733,6 +1734,38 @@ async function detachPush(){
   if(!('serviceWorker'in navigator))return true;
   try{const reg=await navigator.serviceWorker.getRegistration(),sub=await reg?.pushManager?.getSubscription();if(sub){try{await secureFetch('POST',{}, {action:'push_unsubscribe',endpoint:sub.endpoint});}catch{}if(!await sub.unsubscribe())return false;}localStorage.removeItem('k_push_owner');return true;}catch{return false;}
 }
+let telegramCheck=0;
+async function refreshTelegramState(){
+  if(isGuest||!activeStore)return;
+  const check=++telegramCheck,status=$('telegramStatus');
+  try{
+    const response=await secureFetch('POST',{}, {action:'telegram_status'}),result=await response.json();
+    if(check!==telegramCheck)return;
+    if(!response.ok||!result.success)throw new Error(result.error||'TELEGRAM_STATUS_FAILED');
+    status.textContent=!result.available?'Telegram-бот ще не налаштований на сервері.':result.connected?'Підключено. Нагадування приходитимуть у приватний чат.':'Не підключено. Відкрийте бота й натисніть Start після створення посилання.';
+    $('telegramConnect').classList.toggle('hidden',!result.available||result.connected);
+    $('telegramDisconnect').classList.toggle('hidden',!result.connected);
+  }catch{if(check!==telegramCheck)return;status.textContent='Стан Telegram не вдалося перевірити. Перевірте мережу й відкрийте розділ ще раз.';}
+}
+$('telegramConnect')?.addEventListener('click',async()=>{
+  const button=$('telegramConnect'),status=$('telegramStatus');button.disabled=true;status.textContent='Створюємо приватне посилання…';
+  try{
+    const response=await secureFetch('POST',{}, {action:'telegram_begin'}),result=await response.json();
+    if(!response.ok||!result.success)throw new Error(result.error||'TELEGRAM_CONNECT_FAILED');
+    if(!/^https:\/\/t\.me\/[A-Za-z0-9_]+\?start=[a-f0-9]{32}$/.test(result.url))throw new Error('INVALID_TELEGRAM_LINK');
+    status.textContent='Посилання готове. У боті натисніть Start, потім поверніться сюди.';
+    const link=$('telegramOpenLink');link.href=result.url;link.classList.remove('hidden');
+    window.open(result.url,'_blank','noopener,noreferrer');
+  }catch(error){status.textContent=error.message==='TELEGRAM_WEBHOOK_CONFLICT'?'Цей бот уже використовує інший сервіс. Потрібен окремий бот для Комуналки.':'Не вдалося підключити Telegram. Перевірте мережу й повторіть.';}
+  finally{button.disabled=false;}
+});
+$('telegramDisconnect')?.addEventListener('click',async()=>{
+  const button=$('telegramDisconnect');button.disabled=true;
+  try{const response=await secureFetch('POST',{}, {action:'telegram_unlink'}),result=await response.json();if(!response.ok||!result.success)throw new Error('UNLINK_FAILED');await refreshTelegramState();showToast('Telegram відключено','✓');}
+  catch{$('telegramStatus').textContent='Не вдалося відключити. Перевірте мережу й повторіть.';}
+  finally{button.disabled=false;}
+});
+window.addEventListener('focus',()=>{if(!$('settings-reminders')?.classList.contains('hidden'))void refreshTelegramState();});
 setTimeout(initPush,1000);
 window.addEventListener('online',initPush);
 
@@ -2730,6 +2763,7 @@ function openSettingsPanel(name){
   $('saveSettingsBtn')?.classList.toggle('hidden',!panel||!['home','reminders','account'].includes(name));
   $('swipeContainer')?.scrollTo({top:0});
   if(name==='providers')renderProviders();
+  if(name==='reminders')void refreshTelegramState();
   if(name==='account')void refreshAdminEntry();
   if(panel)panel.querySelector('h3')?.focus({preventScroll:true});
 }
@@ -2820,9 +2854,19 @@ $('providerClear')?.addEventListener('click',()=>{for(const id of ['providerName
 $('providerMonth')?.addEventListener('change',renderProviders);
 $('providerReminderSettings')?.addEventListener('click',()=>openSettingsPanel('reminders'));
 function updateProviderMailLink(){
-  const link=$('providerOpenMail');if(!link)return;
-  try{link.href=KomunalkaProviders.mailto({to:$('providerEmailTo').value,subject:$('providerEmailSubjectText').value,body:$('providerEmailBodyText').value});link.removeAttribute('aria-disabled');}
-  catch{link.removeAttribute('href');link.setAttribute('aria-disabled','true');}
+  const link=$('providerOpenMail'),copy=$('providerCopyFullMail'),choice=$('providerMailDestination'),help=$('providerMailDestinationHelp');
+  if(!link||!choice)return;
+  const destination=choice.value;
+  link.classList.toggle('hidden',destination==='copy');copy?.classList.toggle('hidden',destination!=='copy');
+  help.textContent=destination==='gmail'?'Відкриється нова вкладка Gmail із заповненими полями. Увійдіть у Gmail, якщо потрібно.':destination==='copy'?'Лист залишиться тут. Скопіюйте все або кожне поле окремо.':'Відкриється поштовий застосунок, вибраний за замовчуванням на пристрої. На iPhone це може бути Apple Mail.';
+  if(destination==='copy')return;
+  const draft={to:$('providerEmailTo').value,subject:$('providerEmailSubjectText').value,body:$('providerEmailBodyText').value};
+  try{
+    link.href=destination==='gmail'?KomunalkaProviders.gmail(draft):KomunalkaProviders.mailto(draft);
+    link.textContent=destination==='gmail'?'Відкрити Gmail':'Відкрити пошту';
+    if(destination==='gmail'){link.target='_blank';link.rel='noopener noreferrer';}else{link.removeAttribute('target');link.removeAttribute('rel');}
+    link.removeAttribute('aria-disabled');
+  }catch{link.removeAttribute('href');link.setAttribute('aria-disabled','true');}
 }
 function openProviderEmail(id,month=$('providerMonth')?.value||getMonthKey()){
   if(isGuest)return;
@@ -2833,18 +2877,32 @@ function openProviderEmail(id,month=$('providerMonth')?.value||getMonthKey()){
   if(!draft){showToast('Спочатку збережіть показники за обраний місяць','⚠️');return;}
   $('providerEmailContext').textContent=`${service.label} · ${month} · ${address.name||'Поточна адреса'}`;
   $('providerEmailTo').value=draft.to;$('providerEmailSubjectText').value=draft.subject;$('providerEmailBodyText').value=draft.body;
+  const savedDestination=localStorage.getItem(MAIL_DESTINATION_KEY);
+  $('providerMailDestination').value=['system','gmail','copy'].includes(savedDestination)?savedDestination:'system';
+  $('providerCopyStatus').classList.add('hidden');
   $('providerEmailNotice').classList.toggle('hidden',!draft.needsReview);
   $('providerEmailNotice').textContent=draft.needsReview?'Попередній показник не був введений. Перевірте його в листі перед надсиланням.':'';
   updateProviderMailLink();const dialog=$('providerEmailDialog');if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
 }
 for(const id of ['providerEmailTo','providerEmailSubjectText','providerEmailBodyText'])$(id)?.addEventListener('input',()=>{if(id==='providerEmailSubjectText')$(id).value=$(id).value.replace(/[\r\n]+/g,' ');updateProviderMailLink();});
+$('providerMailDestination')?.addEventListener('change',e=>{localStorage.setItem(MAIL_DESTINATION_KEY,e.target.value);updateProviderMailLink();});
 document.querySelectorAll('[data-provider-email-copy]').forEach(button=>button.addEventListener('click',()=>{
   const target={to:'providerEmailTo',subject:'providerEmailSubjectText',body:'providerEmailBodyText'}[button.dataset.providerEmailCopy];
-  if(target)copyProviderText($(target).value);
+  if(target)copyProviderText($(target).value,button,'Скопійовано');
 }));
+$('providerCopyFullMail')?.addEventListener('click',event=>{
+  const text=`Кому: ${$('providerEmailTo').value}\nТема: ${$('providerEmailSubjectText').value}\n\n${$('providerEmailBodyText').value}`;
+  copyProviderText(text,event.currentTarget,'Увесь лист скопійовано');
+});
 $('providerEmailClose')?.addEventListener('click',()=>{const dialog=$('providerEmailDialog');if(typeof dialog.close==='function')dialog.close();else dialog.removeAttribute('open');});
-async function copyProviderText(text){
-  try{await navigator.clipboard.writeText(text);showToast('Скопійовано','✓');}
+async function copyProviderText(text,button=null,label='Скопійовано'){
+  try{
+    await navigator.clipboard.writeText(text);
+    const status=$('providerCopyStatus');
+    if(status&&($('providerEmailDialog')?.open||$('providerEmailDialog')?.hasAttribute('open'))){status.textContent=label+' ✓';status.classList.remove('hidden');}
+    if(button){const original=button.dataset.originalCopyLabel||button.textContent;button.dataset.originalCopyLabel=original;button.textContent='Скопійовано ✓';button.dataset.copied='true';setTimeout(()=>{button.textContent=original;delete button.dataset.copied;},2200);}
+    else showToast(label,'✓');
+  }
   catch{const dialog=$('providerCopyDialog');$('providerCopyText').value=text;if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');$('providerCopyText').focus();$('providerCopyText').select();}
 }
 $('providerCopyClose')?.addEventListener('click',()=>{const dialog=$('providerCopyDialog');if(typeof dialog.close==='function')dialog.close();else dialog.removeAttribute('open');});

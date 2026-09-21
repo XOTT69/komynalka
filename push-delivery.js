@@ -1,4 +1,5 @@
 import {buildPushPayload} from '@block65/webcrypto-web-push';
+import {sendTelegram} from './telegram.js';
 import './reminders.js';
 const R=globalThis.KomunalkaReminders;
 export const pushConfigured=env=>Boolean(env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_KEY&&env.VAPID_SUBJECT);
@@ -21,11 +22,11 @@ export async function sendReminder(env,subscription,message){
   const response=await fetch(subscription.endpoint,{...payload,redirect:'error',signal:AbortSignal.timeout(7000)});
   return response.status;
 }
-export async function deliverReminders(ctx,env,send=sendReminder,now=new Date()){
-  const push=await ctx.storage.get('push')||{subscriptions:[]};if(!push.subscriptions.length)return;
+export async function deliverReminders(ctx,env,send=sendReminder,now=new Date(),sendTg=sendTelegram){
+  const push=await ctx.storage.get('push')||{subscriptions:[]},telegram=await ctx.storage.get('telegram');if(!push.subscriptions.length&&!telegram?.chatId)return;
   // Set the next alarm before I/O; failures do not permanently stop the schedule.
   await ctx.storage.setAlarm(nextReminderRun(+now));
-  if(!pushConfigured(env)||env.MAINTENANCE_MODE==='read-only')return;
+  if(env.MAINTENANCE_MODE==='read-only')return;
   const state=await ctx.storage.get('account');if(!state?.value||state.deleted)return;
   const date=R.calendar(now);if(date.hour<9||date.hour>=21)return;
   const today=`${R.monthKey(date.year,date.month)}-${String(date.day).padStart(2,'0')}`;
@@ -35,10 +36,19 @@ export async function deliverReminders(ctx,env,send=sendReminder,now=new Date())
   const message={title:'Комуналка · нагадування',body:`Час передати показники: ${labels.join(', ').slice(0,300)}. Відкрийте застосунок, щоб позначити передані.`,tag:`komunalka-reminder-${today}`};
   let retry=false;
   const subscriptions=await Promise.all(push.subscriptions.map(async entry=>{
+    if(!pushConfigured(env))return entry;
     if(entry.lastDay===today)return entry;
     try{const status=await send(env,entry.subscription,message);if(status===404||status===410)return null;if(status>=200&&status<300)return{...entry,lastDay:today};retry=true;return entry;}catch{retry=true;return entry;}
   }));
   await ctx.storage.put('push',{subscriptions:subscriptions.filter(Boolean)});
-  if(!subscriptions.some(Boolean))await ctx.storage.deleteAlarm();
-  else if(retry)await ctx.storage.setAlarm(+now+30*60000);
+  if(telegram?.chatId&&env.TG_BOT_TOKEN&&telegram.lastDay!==today){
+    try{
+      const text=`Комуналка · нагадування\nЧас передати показники: ${labels.join(', ').slice(0,250)}.\nВідкрийте застосунок і позначте передані: https://komynalka.vercel.app/`;
+      const status=await sendTg(env,telegram.chatId,text);
+      if(status>=200&&status<300)await ctx.storage.put('telegram',{...telegram,lastDay:today});
+      else retry=true;
+    }catch{retry=true;}
+  }
+  if(retry)await ctx.storage.setAlarm(+now+30*60000);
+  else if(!subscriptions.some(Boolean)&&!telegram?.chatId)await ctx.storage.deleteAlarm();
 }

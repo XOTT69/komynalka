@@ -70,5 +70,13 @@
     return {to,subject,body,needsReview:values.some(value=>!value.previous)};
   }
   function mailto(draft){return `mailto:${encodeURIComponent(email(draft.to)).replace('%40','@')}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`;}
-  global.KomunalkaProviders=Object.freeze({services,website,email,get,update,readings,emailDraft,mailto});
+  function gmail(draft){
+    const url=new URL('https://mail.google.com/mail/');
+    url.searchParams.set('view','cm');url.searchParams.set('fs','1');
+    url.searchParams.set('to',email(draft.to));
+    url.searchParams.set('su',String(draft.subject||''));
+    url.searchParams.set('body',String(draft.body||''));
+    return url.href;
+  }
+  global.KomunalkaProviders=Object.freeze({services,website,email,get,update,readings,emailDraft,mailto,gmail});
 })(globalThis);

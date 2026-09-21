@@ -25,6 +25,7 @@ test('the sample water email uses saved readings, account and address without ch
  const card=P.get(settings,'home','water'),service=P.services(address).find(item=>item.id==='water'),draft=P.emailDraft(address,service,card,'2026-09');
  assert.deepEqual(draft,{to:'water@example.org',subject:'О/р 6037. Чабани Покровська 306 кв 7',body:'Показники ліч. Поточні 280. Попередні 267. Різниця 13',needsReview:false});
  const link=new URL(P.mailto(draft));assert.equal(link.protocol,'mailto:');assert.equal(link.searchParams.get('subject'),draft.subject);assert.equal(link.searchParams.get('body'),draft.body);
+ const gmail=new URL(P.gmail(draft));assert.equal(gmail.origin,'https://mail.google.com');assert.equal(gmail.searchParams.get('to'),draft.to);assert.equal(gmail.searchParams.get('su'),draft.subject);assert.equal(gmail.searchParams.get('body'),draft.body);
  assert.equal(P.emailDraft(address,service,card,'2026-08'),null);assert.deepEqual(address,before);
 });
 test('email drafts retain explicit zero, separate electricity zones and flag missing previous readings',()=>{

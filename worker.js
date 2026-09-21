@@ -1,4 +1,5 @@
 import {pushConfigured} from './push-delivery.js';
+import {handleTelegramWebhook,prepareBot,randomLinkToken} from './telegram.js';
 import {verifyFirebaseToken} from './auth-token.js';
 export {AccountStore} from './account-store.js';
 // ============================================================
@@ -130,6 +131,7 @@ const handler = {
     const ip    = req.headers.get('CF-Connecting-IP') || 'unknown';
     const fp    = (req.headers.get('X-Device-FP') || 'unknown').slice(0, 64);
     try {
+      if(url.pathname==='/telegram')return req.method==='POST'?handleTelegramWebhook(req,env,accountRequest):err('Method not allowed',405);
       if(url.searchParams.has('push-config'))return ok({success:true,enabled:Boolean(env.ACCOUNT_STORE)&&pushConfigured(env),publicKey:env.ACCOUNT_STORE&&pushConfigured(env)?env.VAPID_PUBLIC_KEY:null});
       if(url.searchParams.has('health'))return ok({success:true,syncProtocol:env.ACCOUNT_STORE?2:0,readOnly:env.MAINTENANCE_MODE==='read-only'});
       if(url.searchParams.has('admin-access'))return await doAdminAccess(req,env);
@@ -239,6 +241,24 @@ async function doPost(req, env, ip, fp) {
   }
 
   switch (action) {
+    case 'telegram_status':{
+      if(!env.TG_BOT_TOKEN)return ok({success:true,available:false,connected:false});
+      const {chatId,...status}=await accountRequest(env,login,{action:'telegram-status'});
+      return ok({...status,available:true});
+    }
+    case 'telegram_begin':{
+      if(!env.TG_BOT_TOKEN)return err('TELEGRAM_NOT_CONFIGURED',503);
+      let username;try{username=await prepareBot(env,req.url);}catch(e){return err(e.message,503);}
+      const ticket=randomLinkToken();
+      await accountRequest(env,login,{action:'telegram-begin',ticket});
+      await env.KV.put(`tg-link:${ticket}`,login,{expirationTtl:600});
+      return ok({success:true,url:`https://t.me/${username}?start=${ticket}`});
+    }
+    case 'telegram_unlink':{
+      const result=await accountRequest(env,login,{action:'telegram-unlink'});
+      if(result.previousChatId)await env.KV.delete(`tg-chat:${result.previousChatId}`);
+      return ok({success:true});
+    }
     case 'push_subscribe':return ok(await accountRequest(env,login,{action:'push-subscribe',subscription:body.subscription}));
     case 'push_unsubscribe':return ok(await accountRequest(env,login,{action:'push-unsubscribe',endpoint:body.endpoint}));
     case 'push_status':return ok(await accountRequest(env,login,{action:'push-status',endpoint:body.endpoint}));
@@ -605,7 +625,9 @@ async function doAdminPro(body, env, val) {
 
 async function doAdminDelete(body, env) {
   if (!body.login) return err('NO_LOGIN', 400);
+  const telegram=await accountRequest(env,body.login,{action:'telegram-status'}).catch(()=>null);
   await accountRequest(env,body.login,{action:'delete'});
+  if(telegram?.chatId)await env.KV.delete(`tg-chat:${telegram.chatId}`);
   return ok({ success:true });
 }
 
