@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import worker from '../worker.js';
-import {webhookSecret} from '../telegram.js';
+import {prepareBot,webhookSecret} from '../telegram.js';
 import {deliverReminders} from '../push-delivery.js';
 import {environment,legacyAccount} from './helpers.mjs';
 const hash=createHash('sha256').update('test-password').digest('hex');
@@ -32,5 +32,35 @@ test('Telegram requires an authenticated account and private webhook, links once
   await deliverReminders(ctx,env,async()=>assert.fail('No push subscription'),now,async()=>{delivered++;return 200;});assert.equal(delivered,1,'relinking the same chat must not duplicate today’s reminder');
   assert.equal((await worker.fetch(incoming('/stop',secret),env)).status,200);assert.equal(values.has('tg-chat:12345'),false);assert.equal((await(await worker.fetch(account('anna','telegram_status'),env)).json()).connected,false);assert.deepEqual(JSON.parse(values.get('anna')),legacy);
   assert.equal(calls.some(call=>call.url.endsWith('/setWebhook')),true);
+ }finally{globalThis.fetch=originalFetch;}
+});
+test('bot API works when the Worker runtime has no AbortSignal.timeout',async()=>{
+ const originalFetch=globalThis.fetch,originalTimeout=AbortSignal.timeout;
+ Object.defineProperty(AbortSignal,'timeout',{configurable:true,value:undefined});
+ globalThis.fetch=async(url)=>Response.json({ok:true,result:String(url).endsWith('/getMe')?{username:'KomunalkaBot'}:{url:''}});
+ try{
+  const result=await prepareBot({TG_BOT_TOKEN:'123456:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh'},'https://test.workers.dev/');
+  assert.equal(result,'KomunalkaBot');
+ }finally{globalThis.fetch=originalFetch;Object.defineProperty(AbortSignal,'timeout',{configurable:true,value:originalTimeout});}
+});
+test('Telegram API redirects are not followed with the bot token',async()=>{
+ const originalFetch=globalThis.fetch;
+ globalThis.fetch=async(_url,options)=>{assert.equal(options.redirect,'manual');return new Response(null,{status:302,headers:{Location:'https://example.com/'}});};
+ try{await assert.rejects(()=>prepareBot({TG_BOT_TOKEN:'123456:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefg2'},'https://test.workers.dev/'),/TELEGRAM_REDIRECT_BLOCKED/);}
+ finally{globalThis.fetch=originalFetch;}
+});
+test('an existing webhook is preserved until its owner approves moving the bot',async()=>{
+ const originalFetch=globalThis.fetch,calls=[];
+ globalThis.fetch=async(url,options)=>{assert.equal(options.redirect,'manual');const method=String(url).split('/').at(-1);calls.push(method);return Response.json({ok:true,result:method==='getMe'?{username:'KomunProgaBot'}:{url:'https://other.example/telegram'}});};
+ try{await assert.rejects(()=>prepareBot({TG_BOT_TOKEN:'123456:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefg3'},'https://test.workers.dev/'),/TELEGRAM_WEBHOOK_CONFLICT/);assert.deepEqual(calls,['getMe','getWebhookInfo']);}
+ finally{globalThis.fetch=originalFetch;}
+});
+test('only the signed-in owner may repoint an existing Telegram bot',async()=>{
+ const originalFetch=globalThis.fetch,calls=[];
+ globalThis.fetch=async(url,options)=>{const method=String(url).split('/').at(-1);calls.push(method);return Response.json({ok:true,result:method==='getMe'?{username:'KomunProgaBot'}:method==='getWebhookInfo'?{url:'https://old.example/telegram'}:true});};
+ const {env}=environment({xott69:legacyAccount(hash),anna:legacyAccount(hash)});env.TG_BOT_TOKEN='123456:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefg4';env.ADMIN_OWNER_LOGIN='xott69';
+ try{
+  const other=await worker.fetch(account('anna','telegram_begin'),env);assert.equal(other.status,503);assert.equal((await other.json()).error,'TELEGRAM_WEBHOOK_CONFLICT');assert.equal(calls.includes('setWebhook'),false);
+  const owner=await worker.fetch(account('xott69','telegram_begin'),env);assert.equal(owner.status,200);assert.match((await owner.json()).url,/^https:\/\/t\.me\/KomunProgaBot\?start=/);assert.equal(calls.filter(method=>method==='setWebhook').length,1);
  }finally{globalThis.fetch=originalFetch;}
 });

@@ -248,7 +248,8 @@ async function doPost(req, env, ip, fp) {
     }
     case 'telegram_begin':{
       if(!env.TG_BOT_TOKEN)return err('TELEGRAM_NOT_CONFIGURED',503);
-      let username;try{username=await prepareBot(env,req.url);}catch(e){return err(e.message,503);}
+      const owner=String(env.ADMIN_OWNER_LOGIN||'').trim().toLowerCase();
+      let username;try{username=await prepareBot(env,req.url,{allowConflict:Boolean(owner)&&login.toLowerCase()===owner});}catch(e){return err(e.message,503);}
       const ticket=randomLinkToken();
       await accountRequest(env,login,{action:'telegram-begin',ticket});
       await env.KV.put(`tg-link:${ticket}`,login,{expirationTtl:600});

@@ -19,7 +19,10 @@ export function nextReminderRun(now=Date.now()){
 }
 export async function sendReminder(env,subscription,message){
   const payload=await buildPushPayload({data:JSON.stringify(message),options:{ttl:3600,urgency:'normal'}},subscription,{subject:env.VAPID_SUBJECT,publicKey:env.VAPID_PUBLIC_KEY,privateKey:env.VAPID_PRIVATE_KEY});
-  const response=await fetch(subscription.endpoint,{...payload,redirect:'error',signal:AbortSignal.timeout(7000)});
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),7000);
+  let response;
+  try{response=await fetch(subscription.endpoint,{...payload,redirect:'manual',signal:controller.signal});}
+  finally{clearTimeout(timer);}
   return response.status;
 }
 export async function deliverReminders(ctx,env,send=sendReminder,now=new Date(),sendTg=sendTelegram){

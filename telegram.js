@@ -2,19 +2,23 @@
 const tokenPattern=/^[A-Za-z0-9_-]{32}$/;
 const botRequest=async(env,method,payload)=>{
   if(!env.TG_BOT_TOKEN)throw new Error('TELEGRAM_NOT_CONFIGURED');
-  const response=await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/${method}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),redirect:'error',signal:AbortSignal.timeout(8000)});
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+  let response;
+  try{response=await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/${method}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),redirect:'manual',signal:controller.signal});}
+  finally{clearTimeout(timer);}
+  if(response.status>=300&&response.status<400)throw new Error('TELEGRAM_REDIRECT_BLOCKED');
   const result=await response.json();if(!response.ok||!result.ok)throw new Error(`TELEGRAM_${method.toUpperCase()}_FAILED`);return result.result;
 };
 export async function webhookSecret(env){
   const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(`komunalka-telegram-webhook:${env.TG_BOT_TOKEN}`));
   return Array.from(new Uint8Array(bytes),byte=>byte.toString(16).padStart(2,'0')).join('');
 }
-export async function prepareBot(env,workerUrl){
+export async function prepareBot(env,workerUrl,{allowConflict=false}={}){
   const bot=await botRequest(env,'getMe',{});
   if(!bot.username)throw new Error('TELEGRAM_BOT_USERNAME_MISSING');
   const target=new URL('/telegram',workerUrl).href;
   const current=await botRequest(env,'getWebhookInfo',{});
-  if(current.url&&current.url!==target)throw new Error('TELEGRAM_WEBHOOK_CONFLICT');
+  if(current.url&&current.url!==target&&!allowConflict)throw new Error('TELEGRAM_WEBHOOK_CONFLICT');
   await botRequest(env,'setWebhook',{url:target,secret_token:await webhookSecret(env),allowed_updates:['message'],drop_pending_updates:false});
   return bot.username;
 }
