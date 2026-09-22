@@ -10,3 +10,12 @@ test('transfer period matches the push cycle across December and short months',(
  a.prefs.reminderCompletions={electro:r.cycle};assert.equal(M.reminders(a,{},new Date('2027-01-02T10:00Z'))[0].done,true);assert.equal(M.reminders({...a,prefs:{...a.prefs,reminderCompletions:{}}},{},new Date('2027-01-02T10:00Z'))[0].done,false);
  const feb=M.reminders({prefs:{remindersEnabled:true,showWater:true,showElectro:false,showGas:false,remWaterStart:31,remWaterEnd:31}},{},new Date('2027-02-28T10:00Z'))[0];assert.equal(feb.start.slice(0,10),'2027-02-28');assert.equal(feb.available,true);
 });
+test('next action opens the prepared letter only when readings are saved and transfer is due',()=>{
+ const input={total:1,done:0,services:[{id:'water',label:'Вода',done:false}]};
+ const due={id:'water',label:'Вода',end:'2026-09-25T12:00:00.000Z',available:true,done:false};
+ assert.equal(M.nextAction(input,[due],100,['water']).kind,'readings');
+ input.done=1;input.services[0].done=true;
+ assert.deepEqual(M.nextAction(input,[due],100,['water']),{kind:'email',reminder:due,serviceId:'water'});
+ assert.equal(M.nextAction(input,[{...due,available:false}],100,['water']).kind,'payment');
+ assert.equal(M.nextAction(input,[{...due,done:true}],0,['water']).kind,'review');
+});

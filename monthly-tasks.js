@@ -19,5 +19,19 @@
       return {...rem,start:start.toISOString(),end:end.toISOString(),cycle,done:address.prefs.reminderCompletions?.[rem.id]===cycle,available:today>=start,overdue:today>end};
     });
   }
-  global.KomunalkaMonth=Object.freeze({readings,reminders});
+  function nextAction(input,items,outstanding,emailIds=[]){
+    if(input.total===0)return {kind:'setup'};
+    const missing=input.services.find(service=>!service.done);
+    if(missing)return {kind:'readings',serviceId:missing.id};
+    const pending=items.filter(item=>!item.done).sort((a,b)=>a.end.localeCompare(b.end));
+    const active=pending.find(item=>item.available);
+    if(active){
+      const emailId=emailIds.find(id=>id===active.id||(active.id==='water'&&id==='hotWater'));
+      return {kind:emailId?'email':'transfer',reminder:active,serviceId:emailId||null};
+    }
+    if(outstanding>0)return {kind:'payment'};
+    if(pending.length)return {kind:'transfer',reminder:pending[0],serviceId:null};
+    return {kind:'review'};
+  }
+  global.KomunalkaMonth=Object.freeze({readings,reminders,nextAction});
 })(globalThis);

@@ -23,6 +23,12 @@ test('Telegram requires an authenticated account and private webhook, links once
   assert.equal((await(await worker.fetch(account('anna','telegram_status'),env)).json()).connected,true);
   assert.equal(values.has(`tg-link:${token}`),false);assert.equal(values.get('tg-chat:12345'),'anna');
   assert.deepEqual(JSON.parse(values.get('anna')),legacy);
+  assert.equal((await worker.fetch(new Request('https://test.workers.dev/',{method:'POST',body:JSON.stringify({action:'telegram_test'})}),env)).status,401);
+  const tested=await worker.fetch(account('anna','telegram_test'),env);assert.equal(tested.status,200);assert.ok((await tested.json()).sentAt>0);
+  const again=await worker.fetch(account('anna','telegram_test'),env);assert.equal(again.status,429);assert.equal((await again.json()).error,'TEST_RATE_LIMITED');
+  assert.ok((await(await worker.fetch(account('anna','telegram_status'),env)).json()).lastTestAt>0);
+  assert.equal(calls.filter(call=>call.url.endsWith('/sendMessage')).length>=2,true);
+  assert.deepEqual(JSON.parse(values.get('anna')),legacy);
   const state=stores.get('anna');state.get('account').value.addresses[0].prefs={showWater:true,showElectro:false,showGas:false,remindersEnabled:true,remWaterStart:20,remWaterEnd:25};
   const storage={get:async k=>structuredClone(state.get(k)),put:async(k,v)=>state.set(k,structuredClone(v)),setAlarm:async v=>state.set('__alarm',v),deleteAlarm:async()=>state.delete('__alarm')};
   const ctx={storage},now=new Date('2026-09-21T06:00:00Z');let delivered=0;

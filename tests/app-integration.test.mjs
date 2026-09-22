@@ -132,7 +132,7 @@ test('settings groups retain unsaved fields and every route returns to its menu'
  const {env}=environment({anna:legacyAccount(hash)}),p=await page(env);
  try{await p.w.performLogin('anna',password,false);const d=p.w.document;p.w.switchTab('tabSettings',4);
  for(const button of d.querySelectorAll('[data-settings-open]')){button.click();const panel=d.getElementById('settings-'+button.dataset.settingsOpen);assert.equal(panel.classList.contains('hidden'),false);assert.equal(d.getElementById('settingsMenu').classList.contains('hidden'),true);panel.querySelector('[data-settings-back]').click();assert.equal(d.getElementById('settingsMenu').classList.contains('hidden'),false);}
- p.w.openSettingsPanel('home');d.getElementById('tWater').value='42.75';d.querySelector('#settings-home [data-settings-back]').click();p.w.openSettingsPanel('home');assert.equal(d.getElementById('tWater').value,'42.75');assert.deepEqual(p.errors,[]);
+ p.w.openSettingsPanel('home');d.getElementById('tWater').value='42.75';d.querySelector('#settings-home [data-settings-back]').click();p.w.openSettingsPanel('home');assert.equal(d.getElementById('tWater').value,'42.75');await delay(30);assert.deepEqual(p.errors,[]);
  }finally{p.close();}
 });
 test('horizontal swipes expose record actions without deleting or changing partial payment',async()=>{
@@ -183,12 +183,26 @@ test('provider email opens a filled draft with separate copy actions and does no
 test('current-month water email is one action away from the dashboard transfer list',async()=>{
  const legacy=legacyAccount(hash),month=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Kyiv'}).slice(0,7);
  legacy.addresses[0].records[0].month=month;legacy.addresses[0].records[0]._filled={water:true};
+ legacy.addresses[0].prefs={...legacy.addresses[0].prefs,remindersEnabled:true,remWaterStart:1,remWaterEnd:31,showElectro:false,showGas:false};
  legacy.accountSettings={...legacy.accountSettings,providerCards:{'address:home':{'service:water':{email:'water@example.org',account:'6037'}}}};
  const {env}=environment({anna:legacy}),p=await page(env);
  try{
   await p.w.performLogin('anna',password,false);p.w.renderMonthlyTasks();const d=p.w.document,action=d.querySelector('[data-email-service="water"]');assert.ok(action);assert.match(action.textContent,/Лист: Вода/);
-  action.click();assert.ok(d.getElementById('providerEmailDialog').hasAttribute('open'));assert.equal(d.getElementById('providerEmailTo').value,'water@example.org');
+  assert.match(d.querySelector('[data-transfer-index="0"]').closest('.transfer-item').textContent,/лист готовий/);
+  assert.equal(d.getElementById('dashAddBtn').dataset.action,'email');assert.match(d.getElementById('dashNextActionMeta').textContent,/Вода.*до/);
+  d.getElementById('dashAddBtn').click();assert.ok(d.getElementById('providerEmailDialog').hasAttribute('open'));assert.equal(d.getElementById('providerEmailTo').value,'water@example.org');
+  d.getElementById('providerEmailDialog').removeAttribute('open');action.click();assert.ok(d.getElementById('providerEmailDialog').hasAttribute('open'));
   assert.deepEqual(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records,legacy.addresses[0].records);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+test('reminder overview names the next Kyiv day and never claims a disconnected channel will deliver',async()=>{
+ const legacy=legacyAccount(hash);legacy.addresses[0].prefs={...legacy.addresses[0].prefs,remindersEnabled:true,remWaterStart:20,remWaterEnd:25,showElectro:false,showGas:false};
+ const {env}=environment({anna:legacy}),p=await page(env);
+ try{await p.w.performLogin('anna',password,false);p.w.openSettingsPanel('reminders');await delay(30);const d=p.w.document;
+ assert.match(d.getElementById('reminderNextDate').textContent,/09:00/);assert.match(d.getElementById('reminderNextServices').textContent,/Вода/);
+ assert.match(d.getElementById('reminderChannelsText').textContent,/Підключіть PWA або Telegram/);
+ assert.equal(d.getElementById('testTelegramBtn').classList.contains('hidden'),true);
+ assert.deepEqual(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records,legacy.addresses[0].records);assert.deepEqual(p.errors,[]);
  }finally{p.close();}
 });
 

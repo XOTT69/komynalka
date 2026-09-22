@@ -953,10 +953,17 @@ function renderMonthlyTasks(){
   const readingText=input.total?`${input.done} з ${input.total} послуг внесено${missing.length?' · Залишилось: '+missing.join(', '):''}`:'Виберіть послуги в налаштуваннях';
   const paymentText=!rec?'Спочатку внесіть показники':rec.total===0?'За цей місяць немає нарахувань':payDone?'Оплату позначено в застосунку':`Залишилось ${fmt.format(getOutstandingAmount(rec))} ₴${getPaidAmount(rec)>0?' · частково сплачено':''}`;
   const period=rem=>{const f=date=>new Date(date).toLocaleDateString('uk-UA',{day:'numeric',month:'short',timeZone:'UTC'});return `${f(rem.start)} — ${f(rem.end)}`;};
+  const transferStage=rem=>{
+    if(rem.done)return 'Передано · підтверджено вами';
+    const related=input.services.filter(service=>service.id===rem.id||(rem.id==='water'&&service.id==='hotWater'));
+    if(related.some(service=>!service.done))return 'Спочатку збережіть показники';
+    if(emailServices.some(service=>service.id===rem.id||(rem.id==='water'&&service.id==='hotWater')))return 'Показники збережено · лист готовий';
+    return related.length?'Показники збережено · очікує передачі':'Очікує виконання';
+  };
   const row=(id,icon,title,subtitle,done,button)=>`<div class="month-task ${done?'task-done':''}" data-month-task="${id}"><span class="task-icon" aria-hidden="true"><i class="fa-solid ${done?'fa-check':icon}"></i></span><div class="task-copy"><h4>${title}</h4><p>${escapeHtml(subtitle)}</p></div>${button}</div>`;
   const action=(id,label,disabled=false)=>`<button type="button" class="task-action" data-month-action="${id}" ${disabled?'disabled':''}>${label}</button>`;
   target.innerHTML=row('readings','fa-pen-to-square','Показники',readingText,entryDone,action(input.total?'readings':'settings',input.total?(entryDone?'Переглянути':'Внести'):'Обрати'))+
-    `<details class="monthly-transfers"><summary>${row('transfer','fa-paper-plane','Передача постачальникам',reminders.length?`${reminders.filter(r=>r.done).length} з ${reminders.length} позначено виконаними`:'Налаштуйте дні передачі показників',transfersDone,'<i class="fa-solid fa-chevron-down" aria-hidden="true"></i>')}</summary><div class="transfer-list">${reminders.length?reminders.map((r,i)=>`<div class="transfer-item"><div><strong>${escapeHtml(r.label)}</strong><p>${escapeHtml(period(r))}${r.done?' · Виконано':r.overdue?' · Період минув':''}</p></div><button type="button" class="task-action" data-transfer-index="${i}" ${!canEditData()||(!r.available&&!r.done)?'disabled':''}>${r.done?'Скасувати':r.available?'Виконано':'Ще не час'}</button></div>`).join(''):action('reminders','Налаштувати нагадування')}${emailServices.map(service=>`<button type="button" class="task-action transfer-email-action" data-email-service="${escapeAttr(service.id)}"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Лист: ${escapeHtml(service.label)}</button>`).join('')}${action('providers','Постачальники та кабінети')}<p class="task-note">Позначайте виконання після передачі показників у кабінеті постачальника.</p></div></details>`+
+    `<details class="monthly-transfers"><summary>${row('transfer','fa-paper-plane','Передача постачальникам',reminders.length?`${reminders.filter(r=>r.done).length} з ${reminders.length} позначено виконаними`:'Налаштуйте дні передачі показників',transfersDone,'<i class="fa-solid fa-chevron-down" aria-hidden="true"></i>')}</summary><div class="transfer-list">${reminders.length?reminders.map((r,i)=>`<div class="transfer-item"><div><strong>${escapeHtml(r.label)}</strong><p>${escapeHtml(period(r))}${r.done?' · Виконано':r.overdue?' · Період минув':''}</p><p class="transfer-stage ${r.done?'is-done':''}">${escapeHtml(transferStage(r))}</p></div><button type="button" class="task-action" data-transfer-index="${i}" ${!canEditData()||(!r.available&&!r.done)?'disabled':''}>${r.done?'Скасувати':r.available?'Передано':'Ще не час'}</button></div>`).join(''):action('reminders','Налаштувати нагадування')}${emailServices.map(service=>`<button type="button" class="task-action transfer-email-action" data-email-service="${escapeAttr(service.id)}"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Лист: ${escapeHtml(service.label)}</button>`).join('')}${action('providers','Постачальники та кабінети')}<p class="task-note">Лист відкривається як чернетка. Позначайте «Передано» лише після фактичного надсилання.</p></div></details>`+
     row('payment','fa-wallet','Оплата',paymentText,payDone,action('payment',payDone?'Переглянути':'Позначити оплату',!rec));
   $('monthlyTasksCount').textContent=`${Number(entryDone)+Number(transfersDone)+Number(payDone)} / ${2+Number(reminders.length>0)}`;
   target.querySelectorAll('[data-month-action]').forEach(button=>button.addEventListener('click',()=>{if(['settings','reminders','providers'].includes(button.dataset.monthAction)){switchTab('tabSettings',4);if(button.dataset.monthAction==='providers')$('providerMonth').value=getMonthKey();openSettingsPanel(button.dataset.monthAction==='settings'?'home':button.dataset.monthAction);return;}openMonthlyEntry(button.dataset.monthAction==='payment'?'paymentStatusInput':({water:'wCur',hotWater:'hwCur',electro:'dCur',gas:'gCur'}[input.services.find(s=>!s.done)?.id]||'monthInput'));}));
@@ -968,10 +975,13 @@ function renderMonthlyTasks(){
   target.querySelectorAll('[data-email-service]').forEach(button=>button.addEventListener('click',()=>openProviderEmail(button.dataset.emailService,month)));
   $('dashMonthStatus').textContent=rec?(entryDone?'Показники за місяць внесено':'Місяць заповнено частково'):'За цей місяць ще немає запису';
   $('dashMonthStatus').classList.toggle('hidden',entryDone);
-  const next=!entryDone?'readings':reminders.some(r=>r.available&&!r.done)?'transfer':!payDone?'payment':'review';
-  $('dashAddBtn').dataset.action=next;
-  const label=$('dashAddBtn').querySelector('span');if(label)label.textContent=({readings:rec?'Продовжити показники':'Внести показники',transfer:'Передати показники',payment:'Позначити оплату',review:'Переглянути показники'})[next];
-  $('dashboardActionHint').textContent=({readings:'Попередні значення вже підтягуються з історії',transfer:'Відкрийте список послуг і позначте передані',payment:'Збережіть оплату у своєму обліку',review:reminders.some(r=>!r.done)?'Показники внесено й оплату позначено':'Справи за місяць виконано'})[next];
+  const next=KomunalkaMonth.nextAction(input,reminders,rec?getOutstandingAmount(rec):0,emailServices.map(service=>service.id));
+  $('dashAddBtn').dataset.action=next.kind;$('dashAddBtn').dataset.service=next.serviceId||'';
+  const label=$('dashAddBtn').querySelector('span');if(label)label.textContent=({setup:'Обрати послуги',readings:rec?'Продовжити показники':'Внести показники',email:'Підготувати лист',transfer:'Передати показники',payment:'Позначити оплату',review:'Переглянути показники'})[next.kind];
+  const icon=$('dashAddBtn').querySelector('i');if(icon)icon.className=`fa-solid ${({setup:'fa-gear',readings:'fa-pen-to-square',email:'fa-envelope',transfer:'fa-paper-plane',payment:'fa-wallet',review:'fa-check'})[next.kind]}`;
+  const end=next.reminder?new Date(next.reminder.end).toLocaleDateString('uk-UA',{day:'numeric',month:'long',timeZone:'UTC'}):'';
+  $('dashNextActionMeta').textContent=next.reminder?`${next.reminder.overdue?'Період минув':'Наступна дія'} · ${next.reminder.label} · до ${end}`:next.kind==='readings'?'Наступна дія · '+(input.services.find(service=>!service.done)?.label||'показники'):next.kind==='payment'?'Наступна дія · оплата':next.kind==='setup'?'Почніть із потрібних послуг':'Справи за місяць виконано';
+  $('dashboardActionHint').textContent=({setup:'Налаштування збережуться для цієї адреси',readings:'Попередні значення вже підтягуються з історії',email:'Лист готовий до перевірки. Передачу підтвердите після надсилання.',transfer:'Відкрийте список послуг і позначте фактично передані',payment:'Збережіть оплату у своєму обліку',review:reminders.length?'Показники внесено, передача й оплата позначені':'Показники та оплата за місяць збережені'})[next.kind];
 }
 function renderEntryReview(valid=validateReadingsUI()){
   if(!$('entryReviewTotal'))return;
@@ -1456,8 +1466,23 @@ function renderCalcCustomServices(){const c=$('customServicesContainer');if(!c)r
 function getMonthKey() {
   const date=KomunalkaReminders.calendar();return KomunalkaReminders.monthKey(date.year,date.month);
 }
+let pushConnectionState='unknown',telegramConnectionState='unknown';
+function renderReminderOverview(){
+  const title=$('reminderNextDate');if(!title)return;
+  const next=KomunalkaReminders.nextDelivery({id:currentAddressId,prefs},activeSettings);
+  if(!prefs.remindersEnabled){title.textContent='Нагадування вимкнені';$('reminderNextServices').textContent='Увімкніть їх, щоб бачити наступний день передачі.';}
+  else if(!next){title.textContent='Активних днів немає';$('reminderNextServices').textContent='Перевірте дні та послуги нижче.';}
+  else{
+    const today=KomunalkaReminders.calendar(),todayKey=`${KomunalkaReminders.monthKey(today.year,today.month)}-${String(today.day).padStart(2,'0')}`;
+    const date=new Date(next.date+'T12:00:00Z').toLocaleDateString('uk-UA',{day:'numeric',month:'long',timeZone:'UTC'});
+    title.textContent=`${next.date===todayKey?'Сьогодні, ':''}${date} · 09:00`;
+    $('reminderNextServices').textContent=[...new Set(next.items.map(item=>item.label))].join(', ');
+  }
+  const channels=[pushConnectionState==='enabled'?'PWA':'',telegramConnectionState==='connected'?'Telegram':''].filter(Boolean);
+  $('reminderChannelsText').textContent=channels.length?`Надійде через ${channels.join(' і ')} · час Києва`:'Підключіть PWA або Telegram для фонових повідомлень';
+}
 function currentReminderItems(){return KomunalkaReminders.due({id:currentAddressId,prefs},activeSettings);}
-function checkReminders(){checkRemindersExtended();}
+function checkReminders(){checkRemindersExtended();renderReminderOverview();}
 $('reminderDismissBtn')?.addEventListener('click',()=>{
   if(!requireEdit())return;
   prefs.reminderCompletions={...prefs.reminderCompletions};
@@ -1709,11 +1734,17 @@ $('installPwaBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return
 
 // =================== PUSH ===================
 let pushClient=null;
-function renderPushState(state){
+let pushDeliveryInfo=null;
+const reminderDayLabel=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))?new Date(value+'T12:00:00Z').toLocaleDateString('uk-UA',{day:'numeric',month:'long',timeZone:'UTC'}):'';
+function renderPushState(state,details=null){
+  pushConnectionState=state;if(details)pushDeliveryInfo=details;
   const messages={unsupported:'Сповіщення недоступні. На iPhone додайте сайт на початковий екран і відкрийте звідти.',unconfigured:'Фонові сповіщення ще не налаштовані на сервері. Нагадування в застосунку працюють.',denied:'Сповіщення заблоковані. Дозвольте їх у налаштуваннях браузера.',available:'Увімкніть сповіщення, щоб отримувати нагадування після закриття застосунку.',connecting:'Підключення сповіщень…',enabled:'Сповіщення підключені. Розклад перевірено зараз; далі — щодня о 09:00 за Києвом.',error:'Підключення не підтверджено. Перевірте мережу й повторіть.'};
-  const status=$('pushStatus');if(status){status.classList.remove('hidden');status.textContent=messages[state];}
+  const last=state==='enabled'&&reminderDayLabel(pushDeliveryInfo?.lastReminderDay)?` Останнє успішне нагадування: ${reminderDayLabel(pushDeliveryInfo.lastReminderDay)}.`:'';
+  const status=$('pushStatus');if(status){status.classList.remove('hidden');status.textContent=messages[state]+last;}
   const button=$('enablePushBtn');if(button){button.classList.toggle('hidden',!['available','connecting','error'].includes(state));button.disabled=state==='connecting';}
   $('disablePushBtn')?.classList.toggle('hidden',state!=='enabled');
+  $('testPushBtn')?.classList.toggle('hidden',state!=='enabled');
+  renderReminderOverview();
 }
 async function pushRegistration(){
   const reg=await navigator.serviceWorker.getRegistration();if(!reg?.active||!reg.pushManager)throw new Error('PUSH_NOT_READY');return reg;
@@ -1730,6 +1761,17 @@ async function initPush(){
 }
 $('enablePushBtn')?.addEventListener('click',async()=>{if(pushClient&&await pushClient.enable())localStorage.setItem('k_push_owner',sessionLogin);});
 $('disablePushBtn')?.addEventListener('click',async()=>{if(pushClient&&await pushClient.disable())localStorage.removeItem('k_push_owner');});
+$('testPushBtn')?.addEventListener('click',async()=>{
+  const button=$('testPushBtn'),status=$('pushTestStatus');button.disabled=true;status.classList.remove('hidden');status.textContent='Надсилаємо тест…';
+  try{
+    const reg=await pushRegistration(),subscription=await reg.pushManager.getSubscription();if(!subscription)throw new Error('PUSH_NOT_CONNECTED');
+    const response=await secureFetch('POST',{}, {action:'push_test',endpoint:subscription.endpoint}),result=await response.json();
+    if(!response.ok||!result.success)throw new Error(result.error||'PUSH_TEST_FAILED');
+    pushDeliveryInfo={...pushDeliveryInfo,lastTestAt:result.sentAt};
+    status.textContent='Push-сервіс прийняв тест. Перевірте сповіщення на цьому пристрої.';
+  }catch(error){status.textContent=error.message==='TEST_RATE_LIMITED'?'Повторний тест доступний через хвилину.':error.message==='PUSH_NOT_CONNECTED'?'Підключення пристрою застаріло. Увімкніть сповіщення знову.':'Не вдалося надіслати тест. Перевірте мережу й повторіть.';}
+  finally{button.disabled=false;}
+});
 async function detachPush(){
   if(!('serviceWorker'in navigator))return true;
   try{const reg=await navigator.serviceWorker.getRegistration(),sub=await reg?.pushManager?.getSubscription();if(sub){try{await secureFetch('POST',{}, {action:'push_unsubscribe',endpoint:sub.endpoint});}catch{}if(!await sub.unsubscribe())return false;}localStorage.removeItem('k_push_owner');return true;}catch{return false;}
@@ -1742,11 +1784,20 @@ async function refreshTelegramState(){
     const response=await secureFetch('POST',{}, {action:'telegram_status'}),result=await response.json();
     if(check!==telegramCheck)return;
     if(!response.ok||!result.success)throw new Error(result.error||'TELEGRAM_STATUS_FAILED');
-    status.textContent=!result.available?'Telegram-бот ще не налаштований на сервері.':result.connected?'Підключено. Нагадування приходитимуть у приватний чат.':'Не підключено. Відкрийте бота й натисніть Start після створення посилання.';
+    telegramConnectionState=result.connected?'connected':'disconnected';
+    const last=reminderDayLabel(result.lastReminderDay);
+    status.textContent=!result.available?'Telegram-бот ще не налаштований на сервері.':result.connected?`Підключено до приватного чату.${last?' Останнє успішне нагадування: '+last+'.':''}`:'Не підключено. Відкрийте бота й натисніть Start після створення посилання.';
     $('telegramConnect').classList.toggle('hidden',!result.available||result.connected);
     $('telegramDisconnect').classList.toggle('hidden',!result.connected);
-  }catch{if(check!==telegramCheck)return;status.textContent='Стан Telegram не вдалося перевірити. Перевірте мережу й відкрийте розділ ще раз.';}
+    $('testTelegramBtn').classList.toggle('hidden',!result.connected);renderReminderOverview();
+  }catch{if(check!==telegramCheck)return;telegramConnectionState='unknown';status.textContent='Стан Telegram не вдалося перевірити. Перевірте мережу й відкрийте розділ ще раз.';$('testTelegramBtn').classList.add('hidden');renderReminderOverview();}
 }
+$('testTelegramBtn')?.addEventListener('click',async()=>{
+  const button=$('testTelegramBtn'),status=$('telegramTestStatus');button.disabled=true;status.classList.remove('hidden');status.textContent='Надсилаємо тест у чат…';
+  try{const response=await secureFetch('POST',{}, {action:'telegram_test'}),result=await response.json();if(!response.ok||!result.success)throw new Error(result.error||'TELEGRAM_TEST_FAILED');status.textContent='Telegram прийняв тест. Перевірте свій чат.';}
+  catch(error){status.textContent=error.message==='TEST_RATE_LIMITED'?'Повторний тест доступний через хвилину.':error.message==='TELEGRAM_NOT_CONNECTED'?'Чат більше не підключений. Підключіть Telegram знову.':'Не вдалося надіслати тест. Перевірте мережу й повторіть.';}
+  finally{button.disabled=false;}
+});
 $('telegramConnect')?.addEventListener('click',async()=>{
   const button=$('telegramConnect'),status=$('telegramStatus');button.disabled=true;status.textContent='Створюємо приватне посилання…';
   try{
@@ -2763,7 +2814,7 @@ function openSettingsPanel(name){
   $('saveSettingsBtn')?.classList.toggle('hidden',!panel||!['home','reminders','account'].includes(name));
   $('swipeContainer')?.scrollTo({top:0});
   if(name==='providers')renderProviders();
-  if(name==='reminders')void refreshTelegramState();
+  if(name==='reminders'){renderReminderOverview();void initPush();void refreshTelegramState();}
   if(name==='account')void refreshAdminEntry();
   if(panel)panel.querySelector('h3')?.focus({preventScroll:true});
 }
@@ -2771,6 +2822,8 @@ document.querySelectorAll('[data-settings-open]').forEach(button=>button.addEven
 document.querySelectorAll('[data-settings-back]').forEach(button=>button.addEventListener('click',()=>{const name=button.closest('.settings-panel').id.slice(9);openSettingsPanel();document.querySelector(`[data-settings-open="${name}"]`)?.focus({preventScroll:true});}));
 function runDashboardAction(){
   const action=$('dashAddBtn')?.dataset.action;
+  if(action==='setup'){switchTab('tabSettings',4);openSettingsPanel('home');return;}
+  if(action==='email'){openProviderEmail($('dashAddBtn').dataset.service,getMonthKey());return;}
   if(action==='transfer'){const detail=$('monthlyTasksList')?.querySelector('details');if(detail){detail.open=true;detail.scrollIntoView?.({block:'center',behavior:'smooth'});detail.querySelector('summary')?.focus();}return;}
   openMonthlyEntry(action==='payment'?'paymentStatusInput':undefined);
 }

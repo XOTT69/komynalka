@@ -11,3 +11,11 @@ test('deleted built-in and custom reminders stay absent from the UI schedule and
   assert.equal(R.schedule(address(),settings).some(r=>r.id==='water'||r.id==='removed'),false);
   assert.deepEqual(R.due(address(),settings,new Date('2026-09-02T07:00Z')).map(r=>r.id),['extra']);
 });
+test('next reminder date follows Kyiv time and skips a completed cycle',()=>{
+  const a=address({remWaterStart:20,remWaterEnd:25});
+  assert.equal(R.nextDelivery(a,{},new Date('2026-09-20T05:00:00Z')).date,'2026-09-20');
+  assert.equal(R.nextDelivery(a,{},new Date('2026-09-20T06:00:00Z')).date,'2026-09-21');
+  a.prefs.reminderCompletions={water:'2026-09'};
+  assert.equal(R.nextDelivery(a,{},new Date('2026-09-20T05:00:00Z')).date,'2026-10-20');
+  assert.equal(R.nextDelivery(address({remindersEnabled:false}),{},new Date('2026-09-20T05:00:00Z')),null);
+});

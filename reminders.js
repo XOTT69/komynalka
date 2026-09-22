@@ -20,5 +20,16 @@
       return[{...rem,cycle,addressId:address.id}];
     });
   }
-  global.KomunalkaReminders=Object.freeze({calendar,schedule,due,monthKey});
+  function nextDelivery(address,settings={},now=new Date()){
+    if(address.prefs?.remindersEnabled!==true)return null;
+    const local=calendar(now);
+    for(let offset=0;offset<=62;offset++){
+      if(offset===0&&local.hour>=9)continue;
+      const date=new Date(Date.UTC(local.year,local.month-1,local.day+offset,12));
+      const items=due(address,settings,date);
+      if(items.length)return {date:`${monthKey(date.getUTCFullYear(),date.getUTCMonth()+1)}-${String(date.getUTCDate()).padStart(2,'0')}`,items};
+    }
+    return null;
+  }
+  global.KomunalkaReminders=Object.freeze({calendar,schedule,due,nextDelivery,monthKey});
 })(globalThis);

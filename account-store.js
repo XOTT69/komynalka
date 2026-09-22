@@ -1,4 +1,5 @@
-import {pushConfigured,validateSubscription,deliverReminders} from './push-delivery.js';
+import {pushConfigured,validateSubscription,deliverReminders,sendReminder} from './push-delivery.js';
+import {sendTelegram} from './telegram.js';
 /* A serialized authority for each account; the original KV snapshot is retained.
  * All account writers must go through this object after the coordinated cutover.
  */
@@ -22,7 +23,7 @@ export class AccountStore {
         const telegram=await this.ctx.storage.get('telegram')||{};
         if(body.action==='telegram-status'){
           if(telegram.chatId)await this.ctx.storage.setAlarm(Date.now()+5000);
-          return Response.json({success:true,connected:Boolean(telegram.chatId),chatId:telegram.chatId||null,chatLabel:telegram.chatId?telegram.chatLabel||'Приватний чат':null});
+          return Response.json({success:true,connected:Boolean(telegram.chatId),chatId:telegram.chatId||null,chatLabel:telegram.chatId?telegram.chatLabel||'Приватний чат':null,lastReminderDay:telegram.lastDay||null,lastTestAt:telegram.lastTestAt||null});
         }
         if(body.action==='telegram-begin'){
           if(!/^[a-f0-9]{32}$/.test(body.ticket))return Response.json({error:'INVALID_TOKEN'},{status:400});
@@ -41,6 +42,16 @@ export class AccountStore {
           await this.ctx.storage.delete('telegram');
           const push=await this.ctx.storage.get('push');if(!push?.subscriptions?.length)await this.ctx.storage.deleteAlarm();
           return Response.json({success:true,previousChatId:telegram.chatId||null});
+        }
+        if(body.action==='telegram-test'){
+          if(!telegram.chatId||!this.env.TG_BOT_TOKEN)return Response.json({error:'TELEGRAM_NOT_CONNECTED'},{status:409});
+          const now=Date.now();
+          if(now-(telegram.testAttemptAt||0)<60000)return Response.json({error:'TEST_RATE_LIMITED'},{status:429});
+          await this.ctx.storage.put('telegram',{...telegram,testAttemptAt:now});
+          const status=await sendTelegram(this.env,telegram.chatId,'Комуналка · тестове повідомлення. Нагадування до цього чату підключені.');
+          if(status<200||status>=300)return Response.json({error:'TELEGRAM_TEST_FAILED'},{status:502});
+          await this.ctx.storage.put('telegram',{...telegram,testAttemptAt:now,lastTestAt:now});
+          return Response.json({success:true,sentAt:now});
         }
         return Response.json({error:'INVALID_ACTION'},{status:400});
       }
@@ -63,10 +74,26 @@ export class AccountStore {
           return Response.json({success:true});
         }
         if(body.action==='push-status'){
-          const subscribed=pushConfigured(this.env)&&push.subscriptions.some(e=>e.subscription.endpoint===body.endpoint);
+          const entry=push.subscriptions.find(e=>e.subscription.endpoint===body.endpoint);
+          const subscribed=pushConfigured(this.env)&&Boolean(entry);
           // Opening the app repairs a missing/stale alarm and checks today's window now.
           if(subscribed)await this.ctx.storage.setAlarm(Date.now()+5000);
-          return Response.json({success:true,subscribed,nextCheckAt:subscribed?await this.ctx.storage.getAlarm():null});
+          return Response.json({success:true,subscribed,nextCheckAt:subscribed?await this.ctx.storage.getAlarm():null,lastReminderDay:entry?.lastDay||null,lastTestAt:entry?.lastTestAt||null});
+        }
+        if(body.action==='push-test'){
+          if(!pushConfigured(this.env))return Response.json({error:'PUSH_NOT_CONFIGURED'},{status:503});
+          const entry=push.subscriptions.find(e=>e.subscription.endpoint===body.endpoint);
+          if(!entry)return Response.json({error:'PUSH_NOT_CONNECTED'},{status:409});
+          const now=Date.now();
+          if(now-(entry.testAttemptAt||0)<60000)return Response.json({error:'TEST_RATE_LIMITED'},{status:429});
+          entry.testAttemptAt=now;
+          await this.ctx.storage.put('push',push);
+          let status;try{status=await sendReminder(this.env,entry.subscription,{title:'Комуналка · тест',body:'Тестове сповіщення від Комуналки. Підключення перевірено.',tag:`komunalka-test-${now}`});}catch{status=503;}
+          if(status===404||status===410){push.subscriptions=push.subscriptions.filter(e=>e!==entry);await this.ctx.storage.put('push',push);if(!push.subscriptions.length&&!(await this.ctx.storage.get('telegram'))?.chatId)await this.ctx.storage.deleteAlarm();return Response.json({error:'PUSH_NOT_CONNECTED'},{status:409});}
+          if(status<200||status>=300)return Response.json({error:'PUSH_TEST_FAILED'},{status:502});
+          entry.lastTestAt=now;
+          await this.ctx.storage.put('push',push);
+          return Response.json({success:true,sentAt:now});
         }
         return Response.json({error:'INVALID_ACTION'},{status:400});
       }

@@ -141,7 +141,8 @@ const handler = {
       return err('Method not allowed', 405);
     } catch (e) {
       console.error('Worker:', e?.message);
-      return err(e.status===409?'CONFLICT':e.message==='ACCOUNT_STORE_NOT_CONFIGURED'?'SERVER_UPDATE_REQUIRED':'Internal server error',e.status||503);
+      const clientError=['PUSH_NOT_CONNECTED','TELEGRAM_NOT_CONNECTED','TEST_RATE_LIMITED','PUSH_TEST_FAILED','TELEGRAM_TEST_FAILED'];
+      return err(clientError.includes(e.message)?e.message:e.status===409?'CONFLICT':e.message==='ACCOUNT_STORE_NOT_CONFIGURED'?'SERVER_UPDATE_REQUIRED':'Internal server error',e.status||503);
     }
   }
 };
@@ -260,9 +261,11 @@ async function doPost(req, env, ip, fp) {
       if(result.previousChatId)await env.KV.delete(`tg-chat:${result.previousChatId}`);
       return ok({success:true});
     }
+    case 'telegram_test':return ok(await accountRequest(env,login,{action:'telegram-test'}));
     case 'push_subscribe':return ok(await accountRequest(env,login,{action:'push-subscribe',subscription:body.subscription}));
     case 'push_unsubscribe':return ok(await accountRequest(env,login,{action:'push-unsubscribe',endpoint:body.endpoint}));
     case 'push_status':return ok(await accountRequest(env,login,{action:'push-status',endpoint:body.endpoint}));
+    case 'push_test':return ok(await accountRequest(env,login,{action:'push-test',endpoint:body.endpoint}));
     case 'change_password':  return doChangePass(body, env, login, userData);
     case 'update_name':      return doUpdateName(body, env, login, userData);
     case 'generate_share':   return doGenerateShare(body, env, login, userData);

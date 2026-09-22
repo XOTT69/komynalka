@@ -8,7 +8,7 @@ import {demoAccount,demoPassHash} from './demo-data.mjs';
 const demo=process.argv.includes('--demo'),port=demo?4174:4173;
 execFileSync(process.execPath,['scripts/build.mjs'],{stdio:'inherit'});
 const root=path.resolve('dist'),{env}=environment({demo:demoAccount});
-env.ALLOWED_ORIGINS='http://127.0.0.1:4174';
+env.ALLOWED_ORIGINS='http://127.0.0.1:4174,http://localhost:4174';
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.ttf':'font/ttf'};
 createServer(async(req,res)=>{
   try{
@@ -22,7 +22,7 @@ createServer(async(req,res)=>{
     if(file!==root&&!file.startsWith(root+path.sep)){res.writeHead(403);return res.end();}
     if((await stat(file)).isDirectory())file=path.join(file,'index.html');
     let data=await readFile(file);
-    if(demo&&path.basename(file)==='app.js')data=Buffer.from(data.toString().replace(/https:\/\/komunproga\.mikolenko-anton1\.workers\.dev/g,`http://127.0.0.1:${port}/__demo/api`));
+    if(demo&&path.basename(file)==='app.js')data=Buffer.from(data.toString().replace(/https:\/\/komunproga\.mikolenko-anton1\.workers\.dev/g,'/__demo/api'));
     if(demo&&path.basename(file)==='sw.js'){res.writeHead(404);return res.end();}
     if(demo&&path.basename(file)==='index.html'){
       let html=data.toString().replace(/<script async src="https:\/\/www.googletagmanager[^>]*><\/script>/g,'');

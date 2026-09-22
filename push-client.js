@@ -9,7 +9,7 @@
         if(permission.current()==='denied'){report('denied');return false;}
         if(!sub||permission.current()!=='granted'){report('available');return false;}
         const result=await request('status',{endpoint:sub.endpoint});
-        report(result.subscribed?'enabled':'available');return Boolean(result.subscribed);
+        report(result.subscribed?'enabled':'available',result);return Boolean(result.subscribed);
       }catch{report('error');return false;}
     }
     async function enable(){

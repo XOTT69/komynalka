@@ -69,3 +69,22 @@ test('push subscriptions are authenticated, schedule an alarm and do not alter a
   assert.equal((await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'push_subscribe',subscription})}),env)).status,401);
   await worker.fetch(req('anna',{action:'push_unsubscribe',endpoint:subscription.endpoint}),env);assert.equal(stores.get('anna').has('__alarm'),false);
 });
+test('push test reaches only the signed-in account’s subscribed device, with a cooldown and no account edits',async()=>{
+  const {createECDH,randomBytes}=await import('node:crypto');
+  const keys=()=>{const key=createECDH('prime256v1');key.generateKeys();return{public:key.getPublicKey().toString('base64url'),private:key.getPrivateKey().toString('base64url')};};
+  const user=keys(),vapid=keys(),subscription={endpoint:'https://fcm.googleapis.com/fcm/send/own-device',keys:{p256dh:user.public,auth:randomBytes(16).toString('base64url')}};
+  const legacy=legacyAccount(hash),{env,values}=environment({anna:legacy,bob:legacyAccount(hash)});
+  Object.assign(env,{VAPID_PUBLIC_KEY:vapid.public,VAPID_PRIVATE_KEY:vapid.private,VAPID_SUBJECT:'https://example.com'});
+  const originalFetch=globalThis.fetch;let delivered=0;
+  globalThis.fetch=async(url,options)=>{assert.equal(String(url),subscription.endpoint);assert.equal(options.redirect,'manual');delivered++;return new Response(null,{status:201});};
+  try{
+    assert.equal((await worker.fetch(req('anna',{action:'push_subscribe',subscription}),env)).status,200);
+    const alien=await worker.fetch(req('bob',{action:'push_test',endpoint:subscription.endpoint}),env);assert.equal(alien.status,409);assert.equal((await alien.json()).error,'PUSH_NOT_CONNECTED');
+    assert.equal((await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'push_test',endpoint:subscription.endpoint})}),env)).status,401);
+    assert.equal((await worker.fetch(req('anna',{action:'push_test',endpoint:subscription.endpoint+'-other'}),env)).status,409);
+    const sent=await worker.fetch(req('anna',{action:'push_test',endpoint:subscription.endpoint}),env);assert.equal(sent.status,200);assert.ok((await sent.json()).sentAt>0);
+    const again=await worker.fetch(req('anna',{action:'push_test',endpoint:subscription.endpoint}),env);assert.equal(again.status,429);assert.equal((await again.json()).error,'TEST_RATE_LIMITED');
+    assert.ok((await(await worker.fetch(req('anna',{action:'push_status',endpoint:subscription.endpoint}),env)).json()).lastTestAt>0);
+    assert.equal(delivered,1);assert.deepEqual(JSON.parse(values.get('anna')),legacy);
+  }finally{globalThis.fetch=originalFetch;}
+});
