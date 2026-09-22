@@ -6,6 +6,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Мої Комунальні</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192.png">
     <meta name="app-version" content="dev">
     <link rel="preconnect" href="https://komunproga.mikolenko-anton1.workers.dev">
     <link rel="stylesheet" href="styles/fonts.css">
@@ -67,17 +68,19 @@
     <link rel="apple-touch-icon" href="icon.png">
     <meta property="og:title" content="Комуналка — розумний облік комунальних">
     <meta property="og:description" content="PWA для обліку води, світла, газу. Безкоштовно.">
+    <meta property="og:image" content="https://komynalka.vercel.app/og-image.png">
     <meta name="description" content="Безкоштовний PWA для обліку комунальних платежів.">
     <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-2M3D2QY6MZ"></script>
     <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-2M3D2QY6MZ');</script>
 <link rel="stylesheet" href="styles/modern.css">
-<link rel="stylesheet" href="styles/workspace.css"></head>
+<link rel="stylesheet" href="styles/workspace.css">
+<link rel="stylesheet" href="styles/brand.css"></head>
 <body class="text-slate-800 dark:text-slate-200 transition-colors duration-300 selection:bg-brand-light">
 
 <!-- Splash -->
 <div id="splashScreen" class="fixed inset-0 z-[2000] bg-apple-light dark:bg-apple-darker flex items-center justify-center transition-opacity duration-500">
   <div class="text-center">
-    <div class="w-20 h-20 bg-gradient-to-br from-brand to-blue-600 rounded-[1.5rem] flex items-center justify-center mx-auto mb-4 shadow-2xl shadow-brand/40 text-white text-4xl animate-pulse"><i class="fa-solid fa-bolt"></i></div>
+    <img class="brand-logo brand-logo--splash" src="icon-192.png" alt="" width="80" height="80">
     <p class="text-sm font-bold text-slate-400">Завантаження...</p>
   </div>
 </div>
@@ -102,7 +105,7 @@
 <div id="authScreen" class="absolute inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-apple-light dark:bg-apple-darker overflow-y-auto">
   <div class="w-full max-w-sm py-10">
     <div class="text-center mb-10">
-      <div class="w-24 h-24 bg-gradient-to-br from-brand to-blue-600 rounded-[2.25rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-brand/40 text-white text-5xl"><i class="fa-solid fa-bolt"></i></div>
+      <img class="brand-logo brand-logo--auth" src="icon-192.png" alt="" width="80" height="80">
       <h1 class="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Комуналка<span class="text-brand">.</span></h1>
       <p class="text-slate-500 font-medium text-sm">Розумний облік комунальних</p>
     </div>
@@ -154,7 +157,7 @@
   <!-- Header -->
   <header class="mx-auto w-full flex justify-between items-center z-20 shrink-0">
     <div class="flex items-center gap-3 cursor-pointer group" id="addressHeaderTrigger" role="button" tabindex="0" aria-label="Обрати адресу">
-      <div class="w-12 h-12 bg-gradient-to-br from-brand to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-brand/20 text-xl group-active:scale-90 transition-transform"><i class="fa-solid fa-house"></i></div>
+      <img class="brand-logo brand-logo--header group-active:scale-90 transition-transform" src="icon-192.png" alt="" width="40" height="40">
       <div>
         <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.15em] flex items-center gap-1.5">
           <span id="userGreeting">Привіт!</span>
@@ -595,7 +598,7 @@
 
   <!-- Bottom Nav -->
   <nav class="fixed bottom-0 left-0 right-0 w-full shrink-0 z-40 glass border-t border-slate-200 dark:border-white/10 pb-5" id="bottomNav">
-    <p class="sidebar-brand">⌂ Комуналка</p><div class="max-w-md mx-auto flex justify-around items-center px-4 pt-2.5 pb-1.5">
+    <p class="sidebar-brand"><img src="icon-192.png" alt="" width="28" height="28">Комуналка</p><div class="max-w-md mx-auto flex justify-around items-center px-4 pt-2.5 pb-1.5">
       <button id="btnTabDashboard" aria-label="Огляд" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-brand active:scale-[0.92] transition-transform"><i class="fa-solid fa-house text-[20px]" aria-hidden="true"></i><span class="text-[9px] font-bold">Огляд</span></button>
       <button id="btnTabCalc" aria-label="Показники" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform"><i class="fa-solid fa-calculator text-[20px]" aria-hidden="true"></i><span class="text-[9px] font-bold">Показники</span></button>
       <button id="btnTabHistory" aria-label="Історія" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 dark:text-slate-500 active:scale-[0.92] transition-transform relative"><i class="fa-solid fa-clock-rotate-left text-[20px]" aria-hidden="true"></i><span class="text-[9px] font-bold">Історія</span><span id="debtBadge" class="hidden absolute -top-1 right-1/4 w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-lg badge-pulse" aria-label="Борг">0</span></button>

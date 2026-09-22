@@ -16,6 +16,7 @@ npm run dev          # http://127.0.0.1:4173, клієнт для чинного
 
 ```sh
 npm run build        # самодостатній каталог dist; локальні JS, CSS, шрифти та PWA-кеш
+npm run brand:icons  # PNG-іконки й прев’ю з brand-*.svg
 npm run check        # синтаксис, перевірка наявних функцій і поведінкові тести
 npm run worker:check # лише dry-run складання Cloudflare Worker, без публікації
 ```

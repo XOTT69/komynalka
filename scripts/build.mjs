@@ -11,7 +11,7 @@ execFileSync(process.execPath,['scripts/build-vendor.mjs'],{stdio:'inherit'});
 await rm('dist',{recursive:true,force:true});
 await mkdir('dist/assets',{recursive:true});
 execFileSync(process.execPath,['node_modules/tailwindcss/lib/cli.js','-i','styles/tailwind.css','-o','dist/assets/tailwind.css','--minify'],{stdio:'inherit'});
-const entries=['index.html','landing.html','admin.html','app.js','ai-chat.js','year-report-image.js','sync-queue.js','reminders.js','monthly-tasks.js','providers.js','pwa-updates.js','push-client.js','manifest.json','icon.png','icon-192.png','icon-512.png','og-image.png','styles','vendor'];
+const entries=['index.html','landing.html','admin.html','app.js','ai-chat.js','year-report-image.js','sync-queue.js','reminders.js','monthly-tasks.js','providers.js','pwa-updates.js','push-client.js','manifest.json','icon.png','icon-192.png','icon-512.png','badge-96.png','og-image.png','styles','vendor'];
 for(const optional of ['data-store.js','data-model.js']){try{await readFile(optional);entries.push(optional);}catch{}}
 for(const entry of entries)await cp(entry,path.join('dist',entry),{recursive:true});
 const builtIndexPath=path.join('dist','index.html');

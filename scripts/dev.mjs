@@ -9,7 +9,7 @@ const demo=process.argv.includes('--demo'),port=demo?4174:4173;
 execFileSync(process.execPath,['scripts/build.mjs'],{stdio:'inherit'});
 const root=path.resolve('dist'),{env}=environment({demo:demoAccount});
 env.ALLOWED_ORIGINS='http://127.0.0.1:4174';
-const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.woff2':'font/woff2','.ttf':'font/ttf'};
+const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.ttf':'font/ttf'};
 createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://127.0.0.1:${port}`);

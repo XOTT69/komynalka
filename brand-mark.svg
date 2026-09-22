@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Комуналка">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3477e8"/>
+      <stop offset="1" stop-color="#204fb4"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#tile)" d="M0 0h1024v1024H0z"/>
+  <path fill="#fff" d="M512 246c-12 0-24 4-34 12L256 438c-22 18-25 50-7 71 18 21 50 24 71 7l11-9v223c0 23 19 42 42 42h278c23 0 42-19 42-42V507l11 9c21 17 53 14 71-7 18-21 15-53-7-71L546 258c-10-8-22-12-34-12Z"/>
+  <path fill="#2459bf" d="M512 457c-17 25-69 89-69 137 0 38 31 69 69 69s69-31 69-69c0-48-52-112-69-137Z"/>
+</svg>
