@@ -11,6 +11,8 @@ test('production build injects one release version and keeps optional assets out
   assert.ok(index.indexOf('id="reminderBanner"')<index.indexOf('id="overviewDetails"'),'active reminder is hidden inside collapsed details');
   assert.equal(index.includes('vendor/jspdf/jspdf.umd.min.js'),false);
   const sw=await readFile(new URL('../dist/sw.js',import.meta.url),'utf8');
+  assert.match(sw,/\.\/consumption-insights\.js/);
+  assert.equal(await readFile(new URL('../dist/consumption-insights.js',import.meta.url),'utf8').then(Boolean),true);
   const match=sw.match(/const PRECACHE_URLS = (\[[^;]+\]);/);
   assert.ok(match,'built service worker has no precache manifest');
   const assets=JSON.parse(match[1]);

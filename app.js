@@ -210,12 +210,24 @@ function getPaymentLabel(rec) {
   return 'Нараховано';
 }
 
-function setRecordPayment(rec, status, amount) {
+function formatPaymentDate(value){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return '';
+  const date=new Date(value+'T12:00:00');return Number.isFinite(date.getTime())?date.toLocaleDateString('uk-UA',{day:'numeric',month:'long',year:'numeric'}):'';
+}
+
+function kyivDateKey(date=new Date()){
+  const parts=KomunalkaReminders.calendar(date);return `${KomunalkaReminders.monthKey(parts.year,parts.month)}-${String(parts.day).padStart(2,'0')}`;
+}
+
+function setRecordPayment(rec, status, amount, details={}) {
   const total = Math.max(0, normalizeNumber(rec?.total));
   rec.paymentStatus = status === 'paid' || status === 'partial' ? status : 'charged';
   rec.paidAmount = rec.paymentStatus === 'paid' ? total : rec.paymentStatus === 'partial' ? clampMoney(amount, total) : 0;
   rec.paid = rec.paymentStatus === 'paid';
   if (rec.paymentStatus === 'partial' && rec.paidAmount <= 0) rec.paymentStatus = 'charged';
+  if(rec.paymentStatus==='charged'){delete rec.paymentDate;delete rec.paymentReference;return;}
+  if(Object.prototype.hasOwnProperty.call(details,'paymentDate')){const date=String(details.paymentDate||'');if(/^\d{4}-\d{2}-\d{2}$/.test(date))rec.paymentDate=date;else delete rec.paymentDate;}
+  if(Object.prototype.hasOwnProperty.call(details,'paymentReference')){const reference=String(details.paymentReference||'').trim().slice(0,120);if(reference)rec.paymentReference=reference;else delete rec.paymentReference;}
 }
 
 function getFamilyRole() {
@@ -998,6 +1010,19 @@ function renderEntryReview(valid=validateReadingsUI()){
   $('entryReviewStatus').textContent=!valid?'Поточні показники мають бути не меншими за попередні.':historic?'Ви оновлюєте наявний запис. Історичні суми зберігаються для незмінених показників.':'Можна зберегти частину послуг, а решту додати пізніше.';
   $('entryReviewStatus').classList.toggle('review-error',!valid);
   $('entryReviewLines').innerHTML=valid?base.map(([label,key])=>`<div class="review-line"><span>${label}</span><strong>${fmt.format(currentCalc[key]||0)} ₴</strong></div>`).join(''):'';
+  const insightTarget=$('entryInsights');
+  if(insightTarget){
+    const entered=id=>$(id)?.value.trim()!=='';
+    const current={
+      water:prefs.showWater&&entered('wCur')?Math.max(0,getV('wCur')-getV('wPrev')):null,
+      hotWater:prefs.showHotWater&&entered('hwCur')?Math.max(0,getV('hwCur')-getV('hwPrev')):null,
+      electro:prefs.showElectro&&(entered('dCur')||(prefs.electroTwoZone&&entered('nCur')))?Math.max(0,getV('dCur')-getV('dPrev'))+(prefs.electroTwoZone?Math.max(0,getV('nCur')-getV('nPrev')):0):null,
+      gas:prefs.showGas&&entered('gCur')?Math.max(0,getV('gCur')-getV('gPrev')):null,
+    };
+    const insights=valid?KomunalkaInsights.compare(records,month,current).filter(item=>item.tone!=='normal'):[];
+    insightTarget.innerHTML=insights.map(item=>`<div class="entry-insight is-${item.tone}"><i class="fa-solid ${item.tone==='high'?'fa-arrow-trend-up':'fa-arrow-trend-down'}" aria-hidden="true"></i><div><strong>${escapeHtml(item.label)}: ${fmt.format(item.value)} ${escapeHtml(item.unit)}</strong><p>${escapeHtml(item.detail)} Середнє — ${fmt.format(item.average)} ${escapeHtml(item.unit)}.</p></div></div>`).join('');
+    insightTarget.classList.toggle('hidden',insights.length===0);
+  }
   for(const [id,value] of [['entryReviewTotal',currentCalc.total],['entryReviewPaid',paid],['entryReviewBalance',Math.max(0,currentCalc.total-paid)]])$(id).textContent=valid?fmt.format(value)+' ₴':'—';
   const rate=(id,text)=>{if($(id))$(id).textContent=historic&&!historic.tariffSnapshot?'Тариф старого запису не збережено. Незмінені показники зберігають історичну суму.':text;};
   rate('blockWaterRate',`Тариф: ${fmt.format(t.water)} ₴ / м³`);rate('blockHotWaterRate',`Тариф: ${fmt.format(t.hotWater)} ₴ / м³`);rate('blockGasRate',`Тариф: ${fmt.format(t.gas)} ₴ / м³`);
@@ -1204,7 +1229,8 @@ function getSaveAnomalyWarning(total, month) {
 function getPaymentInputData(total = currentCalc.total) {
   const status = $('paymentStatusInput')?.value || 'charged';
   const paidAmount = status === 'paid' ? total : status === 'partial' ? clampMoney($('paidAmountInput')?.value, total) : 0;
-  return { paymentStatus: status === 'paid' || status === 'partial' ? status : 'charged', paidAmount, paid: status === 'paid' };
+  const active=status==='paid'||status==='partial';
+  return { paymentStatus: active?status:'charged', paidAmount, paid: status === 'paid', paymentDate:active&&/^\d{4}-\d{2}-\d{2}$/.test($('paymentDateInput')?.value||'')?$('paymentDateInput').value:'', paymentReference:active?String($('paymentReferenceInput')?.value||'').trim().slice(0,120):'' };
 }
 
 function setPaymentInputsFromRecord(rec = null) {
@@ -1214,11 +1240,16 @@ function setPaymentInputsFromRecord(rec = null) {
     $('paidAmountInput').value = status === 'partial' ? getPaidAmount(rec).toFixed(2) : '';
     $('paidAmountInput').style.display = status === 'partial' ? 'block' : 'none';
   }
+  if($('paymentDateInput'))$('paymentDateInput').value=/^\d{4}-\d{2}-\d{2}$/.test(rec?.paymentDate||'')?rec.paymentDate:'';
+  if($('paymentReferenceInput'))$('paymentReferenceInput').value=rec?.paymentReference||'';
+  $('paymentDetails')?.classList.toggle('hidden',status==='charged');
 }
 
 readingInputIds.forEach(id=>{const el=$(id);if(el) el.addEventListener('input',debouncedCalculate);});
-$('paymentStatusInput')?.addEventListener('change',()=>{if($('paidAmountInput')){$('paidAmountInput').style.display=$('paymentStatusInput').value==='partial'?'block':'none';if($('paymentStatusInput').value!=='partial')$('paidAmountInput').value='';}renderEntryReview();});
+$('paymentStatusInput')?.addEventListener('change',()=>{const active=$('paymentStatusInput').value!=='charged';if($('paidAmountInput')){$('paidAmountInput').style.display=$('paymentStatusInput').value==='partial'?'block':'none';if($('paymentStatusInput').value!=='partial')$('paidAmountInput').value='';}$('paymentDetails')?.classList.toggle('hidden',!active);if(active&&$('paymentDateInput')&&!$('paymentDateInput').value)$('paymentDateInput').value=kyivDateKey();if(!active){if($('paymentDateInput'))$('paymentDateInput').value='';if($('paymentReferenceInput'))$('paymentReferenceInput').value='';}renderEntryReview();});
 $('paidAmountInput')?.addEventListener('input',()=>renderEntryReview());
+$('paymentDateInput')?.addEventListener('input',()=>renderEntryReview());
+$('paymentReferenceInput')?.addEventListener('input',()=>renderEntryReview());
 $('isWinterInput')?.addEventListener('change',calculatePreview);
 $('monthInput')?.addEventListener('change',()=>{if(!saveDraft())return;fillPreviousReadings();calculatePreview();updateSmartBadges();});
 if($('monthInput')) $('monthInput').value=`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
@@ -1228,7 +1259,7 @@ const DRAFT_KEY='komunalka_draft';
 function saveDraft(){
   if(!activeStore||isGuest||!draftContext||!draftDirty)return true;
   try{
-    const draft={month:draftContext.month,isWinter:$('isWinterInput')?.checked,paymentStatus:$('paymentStatusInput')?.value,paidAmount:$('paidAmountInput')?.value,note:$('recordNote')?.value||''};
+    const draft={month:draftContext.month,isWinter:$('isWinterInput')?.checked,paymentStatus:$('paymentStatusInput')?.value,paidAmount:$('paidAmountInput')?.value,paymentDate:$('paymentDateInput')?.value||'',paymentReference:$('paymentReferenceInput')?.value||'',note:$('recordNote')?.value||''};
     readingInputIds.forEach(id=>{if($(id))draft[id]=$(id).value;});
     customServices.forEach(srv=>{if($(`custom_${srv.id}`))draft[`custom_${srv.id}`]=$(`custom_${srv.id}`).value;});
     activeStore.saveDraft(draftContext.address,draftContext.month,draft);draftDirty=false;
@@ -1257,7 +1288,10 @@ function loadDraft(){
     if($('isWinterInput')&&draft.isWinter!==undefined)$('isWinterInput').checked=draft.isWinter;
     if(draft.paymentStatus&&$('paymentStatusInput'))$('paymentStatusInput').value=draft.paymentStatus;
     if(draft.paidAmount!==undefined&&$('paidAmountInput'))$('paidAmountInput').value=draft.paidAmount;
+    if(draft.paymentDate!==undefined&&$('paymentDateInput'))$('paymentDateInput').value=draft.paymentDate;
+    if(draft.paymentReference!==undefined&&$('paymentReferenceInput'))$('paymentReferenceInput').value=draft.paymentReference;
     if($('paidAmountInput'))$('paidAmountInput').style.display=$('paymentStatusInput')?.value==='partial'?'block':'none';
+    $('paymentDetails')?.classList.toggle('hidden',$('paymentStatusInput')?.value==='charged');
     if($('draftStatus'))$('draftStatus').textContent='Відновлено вашу чернетку';
   }catch(e){if($('draftStatus'))$('draftStatus').textContent='Чернетка потребує перевірки. Оригінал збережено.';}
 }
@@ -1289,6 +1323,7 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
   const existingIdx=records.findIndex(r=>r.month===month);
   const paymentData=getPaymentInputData(currentCalc.total);
   const newData={id:Date.now(),month,isWinter:Boolean($('isWinterInput')?.checked),wPrev:hasWater?getV('wPrev'):0,wCur:hasWater?getV('wCur'):0,hwPrev:hasHotWater?getV('hwPrev'):0,hwCur:hasHotWater?getV('hwCur'):0,dPrev:hasElectro?getV('dPrev'):0,dCur:hasElectro?getV('dCur'):0,nPrev:(hasElectro&&prefs.electroTwoZone)?getV('nPrev'):(records[existingIdx]?.nPrev||0),nCur:(hasElectro&&prefs.electroTwoZone)?getV('nCur'):(records[existingIdx]?.nCur||0),gPrev:hasGas?getV('gPrev'):0,gCur:hasGas?getV('gCur'):0,customData:cData,note:$('recordNote')?.value?.trim()||'',waterCost:hasWater?currentCalc.waterCost:0,hotWaterCost:hasHotWater?currentCalc.hotWaterCost:0,electroCost:hasElectro?currentCalc.electroCost:0,gasCost:hasGas?currentCalc.gasCost:0,customCost:currentCalc.customCost,total:currentCalc.total,...paymentData,tariffSnapshot:createTariffSnapshot(),_filled:{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas,custom:hasCustom},_enteredPrevious:{wPrev:hasWater&&entered('wPrev'),hwPrev:hasHotWater&&entered('hwPrev'),dPrev:hasElectro&&entered('dPrev'),nPrev:hasElectro&&prefs.electroTwoZone&&entered('nPrev'),gPrev:hasGas&&entered('gPrev')}};
+  setRecordPayment(newData,paymentData.paymentStatus,paymentData.paidAmount,paymentData);
   if(existingIdx>=0){
     const existing=records[existingIdx];
     const merged={...existing,...newData,id:existing.id};
@@ -1302,7 +1337,7 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
     merged.total=(merged.waterCost||0)+(merged.hotWaterCost||0)+(merged.electroCost||0)+(merged.gasCost||0)+(merged.customCost||0);
     if(['waterCost','hotWaterCost','electroCost','gasCost','customCost'].every(key=>Number(merged[key]??0)===Number(existing[key]??0)))merged.total=existing.total;
     else merged.total=Math.round(merged.total*100)/100;
-    setRecordPayment(merged, paymentData.paymentStatus, paymentData.paidAmount);
+    setRecordPayment(merged, paymentData.paymentStatus, paymentData.paidAmount, paymentData);
     merged.note=newData.note;
     records[existingIdx]=merged; addChangeLog('record_updated', { month, total: merged.total }); showToast('Запис оновлено на пристрої');
   } else { records.push(newData); addChangeLog('record_created', { month, total: newData.total }); showToast('Запис додано на пристрої'); }
@@ -1568,7 +1603,7 @@ function initSwipe(card,recordId){
 
 // =================== RECORDS ===================
 function findRecordIndex(id){return records.findIndex(r=>String(r.id)===String(id));}
-function togglePaidById(id){if(!requireEdit('У режимі перегляду не можна змінювати оплату'))return;const idx=findRecordIndex(id);if(idx<0)return;const nextStatus=isRecordPaid(records[idx])?'charged':'paid';setRecordPayment(records[idx],nextStatus,nextStatus==='paid'?records[idx].total:0);addChangeLog('record_paid_toggled',{month:records[idx].month,paid:records[idx].paid,status:records[idx].paymentStatus});renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();}
+function togglePaidById(id){if(!requireEdit('У режимі перегляду не можна змінювати оплату'))return;const idx=findRecordIndex(id);if(idx<0)return;const nextStatus=isRecordPaid(records[idx])?'charged':'paid';setRecordPayment(records[idx],nextStatus,nextStatus==='paid'?records[idx].total:0,nextStatus==='paid'?{paymentDate:kyivDateKey(),paymentReference:''}:{});addChangeLog('record_paid_toggled',{month:records[idx].month,paid:records[idx].paid,status:records[idx].paymentStatus});renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();}
 function deleteRecordById(id){
   if(!requireEdit('У режимі перегляду не можна видаляти записи'))return;
   const idx=findRecordIndex(id);
@@ -2565,6 +2600,7 @@ applyTariffPreset = function(presetId) {
 function createRecordCard(rec) {
   const card = document.createElement('div');
   const recPaid = isRecordPaid(rec), paymentStatus = getPaymentStatus(rec), paidAmount = getPaidAmount(rec), outstanding = getOutstandingAmount(rec);
+  const paymentDateLabel=formatPaymentDate(rec.paymentDate),paymentReference=String(rec.paymentReference||'').trim().slice(0,120);
   card.className = `premium-card swipe-card p-5 relative overflow-hidden cursor-pointer select-none ${recPaid ? '' : 'ring-1 ring-orange-400/20'}`;
   const dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', { month: 'long' });
   const [rY, rM] = rec.month.split('-');
@@ -2639,6 +2675,7 @@ function createRecordCard(rec) {
           ${showG ? `<div class="flex justify-between"><span class="font-bold">🔥 Газ</span><span class="font-black">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.gPrev}→${rec.gCur}</span><span class="text-orange-500">+${rec.gCur-rec.gPrev} м³</span></div>` : ''}
           ${showC ? `<div class="flex justify-between"><span class="font-bold">📦 Інше</span><span class="font-black">${fmt.format(rec.customCost)} ₴</span></div>${rec.customData ? Object.values(rec.customData).filter(s=>s.val>0).map(s=>`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${escapeHtml(s.name)}</span><span class="text-purple-500">${fmt.format(s.val)} ₴</span></div>`).join('') : ''}` : ''}
           ${paymentStatus === 'partial' ? `<div class="flex justify-between text-[11px] font-bold text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-500/10 px-3 py-2 rounded-xl"><span>💳 Сплачено частково</span><span>${fmt.format(paidAmount)} ₴ / борг ${fmt.format(outstanding)} ₴</span></div>` : ''}
+          ${paymentStatus !== 'charged' && (paymentDateLabel || paymentReference) ? `<div class="payment-history-meta"><i class="fa-solid fa-receipt" aria-hidden="true"></i><div><strong>Підтвердження оплати</strong>${paymentDateLabel?`<span>${escapeHtml(paymentDateLabel)}</span>`:''}${paymentReference?`<span>${escapeHtml(paymentReference)}</span>`:''}</div></div>` : ''}
           ${rec.note ? `<div class="mt-3 p-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs text-slate-500 italic"><i class="fa-solid fa-sticky-note mr-1"></i>${escapeHtml(rec.note)}</div>` : ''}
         </div>
       </div>
