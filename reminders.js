@@ -1,7 +1,8 @@
 /* Shared calendar rules for the UI and background delivery. */
 (function(global){
-  const calendar=(now=new Date())=>Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(now).filter(p=>p.type!=='literal').map(p=>[p.type,Number(p.value)]));
+  const calendar=(now=new Date())=>Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now).filter(p=>p.type!=='literal').map(p=>[p.type,Number(p.value)]));
   const monthKey=(year,month)=>`${year}-${String(month).padStart(2,'0')}`;
+  const notificationTime=settings=>/^([01]\d|2[0-3]):[0-5]\d$/.test(settings?.reminderTime)?settings.reminderTime:'09:00';
   const day=value=>Math.max(1,Math.min(31,Math.trunc(Number(value)||1)));
   function schedule(address,settings={}){
     const p=address.prefs||{};let custom=[];try{custom=JSON.parse(settings.komynalka_custom_reminders||'[]');}catch{}if(!Array.isArray(custom))custom=[];
@@ -22,14 +23,14 @@
   }
   function nextDelivery(address,settings={},now=new Date()){
     if(address.prefs?.remindersEnabled!==true)return null;
-    const local=calendar(now);
+    const local=calendar(now),time=notificationTime(settings),[hour,minute]=time.split(':').map(Number);
     for(let offset=0;offset<=62;offset++){
-      if(offset===0&&local.hour>=9)continue;
+      if(offset===0&&(local.hour*60+local.minute)>=hour*60+minute)continue;
       const date=new Date(Date.UTC(local.year,local.month-1,local.day+offset,12));
       const items=due(address,settings,date);
-      if(items.length)return {date:`${monthKey(date.getUTCFullYear(),date.getUTCMonth()+1)}-${String(date.getUTCDate()).padStart(2,'0')}`,items};
+      if(items.length)return {date:`${monthKey(date.getUTCFullYear(),date.getUTCMonth()+1)}-${String(date.getUTCDate()).padStart(2,'0')}`,time,items};
     }
     return null;
   }
-  global.KomunalkaReminders=Object.freeze({calendar,schedule,due,nextDelivery,monthKey});
+  global.KomunalkaReminders=Object.freeze({calendar,schedule,due,nextDelivery,notificationTime,monthKey});
 })(globalThis);

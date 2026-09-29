@@ -200,8 +200,9 @@ test('reminder overview names the next Kyiv day and never claims a disconnected 
  const {env}=environment({anna:legacy}),p=await page(env);
  try{await p.w.performLogin('anna',password,false);p.w.openSettingsPanel('reminders');await delay(30);const d=p.w.document;
  assert.match(d.getElementById('reminderNextDate').textContent,/09:00/);assert.match(d.getElementById('reminderNextServices').textContent,/Вода/);
- assert.match(d.getElementById('reminderChannelsText').textContent,/Підключіть PWA або Telegram/);
+ assert.match(d.getElementById('reminderChannelsText').textContent,/Підключіть Push або Telegram/);
  assert.equal(d.getElementById('testTelegramBtn').classList.contains('hidden'),true);
+ const time=d.getElementById('reminderTime');time.value='18:35';time.dispatchEvent(new p.w.Event('input',{bubbles:true}));time.dispatchEvent(new p.w.Event('change',{bubbles:true}));assert.match(d.getElementById('reminderNextDate').textContent,/18:35/);assert.equal(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.accountSettings.reminderTime,'18:35');
  assert.deepEqual(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records,legacy.addresses[0].records);assert.deepEqual(p.errors,[]);
  }finally{p.close();}
 });

@@ -1391,6 +1391,7 @@ function applyPreferences() {
   if($('prefElectroTwoZone'))$('prefElectroTwoZone').checked=prefs.electroTwoZone;
   if($('prefElectroWinter')) $('prefElectroWinter').checked =prefs.electroWinter;
   if($('prefReminders')){$('prefReminders').checked=prefs.remindersEnabled;if($('remindersSettings'))$('remindersSettings').style.display=prefs.remindersEnabled?'block':'none';}
+  if($('reminderTime'))$('reminderTime').value=KomunalkaReminders.notificationTime(activeSettings);
   if($('remWaterStart'))   $('remWaterStart').value  =prefs.remWaterStart  ||1;
   if($('remWaterEnd'))     $('remWaterEnd').value    =prefs.remWaterEnd    ||5;
   if($('remElectroStart')) $('remElectroStart').value=prefs.remElectroStart||28;
@@ -1442,6 +1443,14 @@ $('prefReminders')?.addEventListener('change',function(){
   if($('remindersSettings'))$('remindersSettings').style.display=this.checked?'block':'none';
   debouncedSync();checkReminders();initPush();
 });
+$('reminderTime')?.addEventListener('input',function(){
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(this.value))return;
+  activeSettings={...activeSettings,reminderTime:this.value};renderReminderOverview();
+});
+$('reminderTime')?.addEventListener('change',function(){
+  const value=KomunalkaReminders.notificationTime({reminderTime:this.value});this.value=value;activeSettings={...activeSettings,reminderTime:value};
+  debouncedSync();renderReminderOverview();showToast(`Нагадування о ${value}`,'🕘');
+});
 
 $('saveSettingsBtn')?.addEventListener('click',()=>{
   tariffs={water:parseFloat($('tWater')?.value)||defaultTariffs.water,hotWater:parseFloat($('tHotWater')?.value)||defaultTariffs.hotWater,electroBase:parseFloat($('tElectroBase')?.value)||defaultTariffs.electroBase,electroWinter:parseFloat($('tElectroWinter')?.value)||defaultTariffs.electroWinter,winterLimit:2000,nightCoef:0.5,gas:parseFloat($('tGas')?.value)||defaultTariffs.gas};
@@ -1469,17 +1478,17 @@ function getMonthKey() {
 let pushConnectionState='unknown',telegramConnectionState='unknown';
 function renderReminderOverview(){
   const title=$('reminderNextDate');if(!title)return;
-  const next=KomunalkaReminders.nextDelivery({id:currentAddressId,prefs},activeSettings);
+  const time=KomunalkaReminders.notificationTime(activeSettings),next=KomunalkaReminders.nextDelivery({id:currentAddressId,prefs},activeSettings);
   if(!prefs.remindersEnabled){title.textContent='Нагадування вимкнені';$('reminderNextServices').textContent='Увімкніть їх, щоб бачити наступний день передачі.';}
   else if(!next){title.textContent='Активних днів немає';$('reminderNextServices').textContent='Перевірте дні та послуги нижче.';}
   else{
     const today=KomunalkaReminders.calendar(),todayKey=`${KomunalkaReminders.monthKey(today.year,today.month)}-${String(today.day).padStart(2,'0')}`;
     const date=new Date(next.date+'T12:00:00Z').toLocaleDateString('uk-UA',{day:'numeric',month:'long',timeZone:'UTC'});
-    title.textContent=`${next.date===todayKey?'Сьогодні, ':''}${date} · 09:00`;
+    title.textContent=`${next.date===todayKey?'Сьогодні, ':''}${date} · ${next.time}`;
     $('reminderNextServices').textContent=[...new Set(next.items.map(item=>item.label))].join(', ');
   }
   const channels=[pushConnectionState==='enabled'?'PWA':'',telegramConnectionState==='connected'?'Telegram':''].filter(Boolean);
-  $('reminderChannelsText').textContent=channels.length?`Надійде через ${channels.join(' і ')} · час Києва`:'Підключіть PWA або Telegram для фонових повідомлень';
+  $('reminderChannelsText').textContent=channels.length?`Надійде через ${channels.join(' і ')} · ${time}, час Києва`:`Підключіть Push або Telegram · вибрано ${time}`;
 }
 function currentReminderItems(){return KomunalkaReminders.due({id:currentAddressId,prefs},activeSettings);}
 function checkReminders(){checkRemindersExtended();renderReminderOverview();}
@@ -1738,12 +1747,14 @@ let pushDeliveryInfo=null;
 const reminderDayLabel=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))?new Date(value+'T12:00:00Z').toLocaleDateString('uk-UA',{day:'numeric',month:'long',timeZone:'UTC'}):'';
 function renderPushState(state,details=null){
   pushConnectionState=state;if(details)pushDeliveryInfo=details;
-  const messages={unsupported:'Сповіщення недоступні. На iPhone додайте сайт на початковий екран і відкрийте звідти.',unconfigured:'Фонові сповіщення ще не налаштовані на сервері. Нагадування в застосунку працюють.',denied:'Сповіщення заблоковані. Дозвольте їх у налаштуваннях браузера.',available:'Увімкніть сповіщення, щоб отримувати нагадування після закриття застосунку.',connecting:'Підключення сповіщень…',enabled:'Сповіщення підключені. Розклад перевірено зараз; далі — щодня о 09:00 за Києвом.',error:'Підключення не підтверджено. Перевірте мережу й повторіть.'};
+  const time=KomunalkaReminders.notificationTime(activeSettings),messages={unsupported:'На iPhone додайте застосунок на початковий екран і відкрийте звідти.',unconfigured:'Push ще не налаштований на сервері. Нагадування в застосунку працюють.',denied:'Push заблокований у налаштуваннях браузера.',available:'Увімкніть Push, щоб отримувати нагадування після закриття застосунку.',connecting:'Підключаємо цей пристрій…',enabled:`Підключено · сповіщення о ${time} за Києвом.`,error:'Підключення не підтверджено. Перевірте мережу й повторіть.'};
   const last=state==='enabled'&&reminderDayLabel(pushDeliveryInfo?.lastReminderDay)?` Останнє успішне нагадування: ${reminderDayLabel(pushDeliveryInfo.lastReminderDay)}.`:'';
   const status=$('pushStatus');if(status){status.classList.remove('hidden');status.textContent=messages[state]+last;}
   const button=$('enablePushBtn');if(button){button.classList.toggle('hidden',!['available','connecting','error'].includes(state));button.disabled=state==='connecting';}
   $('disablePushBtn')?.classList.toggle('hidden',state!=='enabled');
   $('testPushBtn')?.classList.toggle('hidden',state!=='enabled');
+  $('pushChannelDot')?.classList.toggle('is-connected',state==='enabled');
+  $('pushChannelDot')?.classList.toggle('is-error',['denied','error'].includes(state));
   renderReminderOverview();
 }
 async function pushRegistration(){
@@ -1789,8 +1800,8 @@ async function refreshTelegramState(){
     status.textContent=!result.available?'Telegram-бот ще не налаштований на сервері.':result.connected?`Підключено до приватного чату.${last?' Останнє успішне нагадування: '+last+'.':''}`:'Не підключено. Відкрийте бота й натисніть Start після створення посилання.';
     $('telegramConnect').classList.toggle('hidden',!result.available||result.connected);
     $('telegramDisconnect').classList.toggle('hidden',!result.connected);
-    $('testTelegramBtn').classList.toggle('hidden',!result.connected);renderReminderOverview();
-  }catch{if(check!==telegramCheck)return;telegramConnectionState='unknown';status.textContent='Стан Telegram не вдалося перевірити. Перевірте мережу й відкрийте розділ ще раз.';$('testTelegramBtn').classList.add('hidden');renderReminderOverview();}
+    $('testTelegramBtn').classList.toggle('hidden',!result.connected);$('telegramChannelDot')?.classList.toggle('is-connected',result.connected);$('telegramChannelDot')?.classList.remove('is-error');renderReminderOverview();
+  }catch{if(check!==telegramCheck)return;telegramConnectionState='unknown';status.textContent='Стан Telegram не вдалося перевірити. Перевірте мережу й відкрийте розділ ще раз.';$('testTelegramBtn').classList.add('hidden');$('telegramChannelDot')?.classList.remove('is-connected');$('telegramChannelDot')?.classList.add('is-error');renderReminderOverview();}
 }
 $('testTelegramBtn')?.addEventListener('click',async()=>{
   const button=$('testTelegramBtn'),status=$('telegramTestStatus');button.disabled=true;status.classList.remove('hidden');status.textContent='Надсилаємо тест у чат…';

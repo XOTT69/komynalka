@@ -12,9 +12,15 @@ export function validateSubscription(value){
   if(!key(value.keys?.p256dh,65)||!key(value.keys?.auth,16))throw new Error('INVALID_PUSH_KEYS');
   return {endpoint:value.endpoint,expirationTime:value.expirationTime??null,keys:{p256dh:value.keys.p256dh,auth:value.keys.auth}};
 }
-export function nextReminderRun(now=Date.now()){
-  // Checking UTC instants against Kyiv handles daylight saving without a fixed offset.
-  for(let t=Math.ceil((now+1)/900000)*900000;t<now+36*3600000;t+=900000){const date=R.calendar(new Date(t));if(date.hour===9&&new Date(t).getUTCMinutes()===0)return t;}
+export function nextReminderRun(now=Date.now(),time='09:00'){
+  // Search Kyiv wall-clock minutes so DST changes and user-selected minutes stay correct.
+  const [hour,minute]=R.notificationTime({reminderTime:time}).split(':').map(Number),target=hour*60+minute,current=R.calendar(new Date(now)),currentDay=`${R.monthKey(current.year,current.month)}-${current.day}`;
+  for(let t=Math.ceil((now+1)/60000)*60000;t<now+49*3600000;t+=60000){
+    const date=R.calendar(new Date(t)),day=`${R.monthKey(date.year,date.month)}-${date.day}`,minutes=date.hour*60+date.minute;
+    if(day===currentDay&&(current.hour*60+current.minute)>=target)continue;
+    const previous=R.calendar(new Date(t-60000)),previousDay=`${R.monthKey(previous.year,previous.month)}-${previous.day}`;
+    if(minutes>=target&&(previousDay!==day||previous.hour*60+previous.minute<target))return t;
+  }
   return now+24*3600000;
 }
 export async function sendReminder(env,subscription,message){
@@ -27,11 +33,12 @@ export async function sendReminder(env,subscription,message){
 }
 export async function deliverReminders(ctx,env,send=sendReminder,now=new Date(),sendTg=sendTelegram){
   const push=await ctx.storage.get('push')||{subscriptions:[]},telegram=await ctx.storage.get('telegram');if(!push.subscriptions.length&&!telegram?.chatId)return;
+  const state=await ctx.storage.get('account'),time=R.notificationTime(state?.value?.accountSettings||{});
   // Set the next alarm before I/O; failures do not permanently stop the schedule.
-  await ctx.storage.setAlarm(nextReminderRun(+now));
+  await ctx.storage.setAlarm(nextReminderRun(+now,time));
   if(env.MAINTENANCE_MODE==='read-only')return;
-  const state=await ctx.storage.get('account');if(!state?.value||state.deleted)return;
-  const date=R.calendar(now);if(date.hour<9||date.hour>=21)return;
+  if(!state?.value||state.deleted)return;
+  const date=R.calendar(now),[hour,minute]=time.split(':').map(Number);if(date.hour*60+date.minute<hour*60+minute)return;
   const today=`${R.monthKey(date.year,date.month)}-${String(date.day).padStart(2,'0')}`;
   const addresses=state.value.addresses||[{id:'default',prefs:state.value.prefs||{}}];
   const reminders=addresses.flatMap(a=>R.due(a,state.value.accountSettings||{},now));if(!reminders.length)return;

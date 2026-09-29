@@ -19,3 +19,10 @@ test('next reminder date follows Kyiv time and skips a completed cycle',()=>{
   assert.equal(R.nextDelivery(a,{},new Date('2026-09-20T05:00:00Z')).date,'2026-10-20');
   assert.equal(R.nextDelivery(address({remindersEnabled:false}),{},new Date('2026-09-20T05:00:00Z')),null);
 });
+test('next reminder preview uses the validated account time',()=>{
+  const a=address({remWaterStart:20,remWaterEnd:25}),settings={reminderTime:'07:15'};
+  assert.equal(R.nextDelivery(a,settings,new Date('2026-09-20T04:14:00Z')).date,'2026-09-20');
+  assert.equal(R.nextDelivery(a,settings,new Date('2026-09-20T04:15:00Z')).date,'2026-09-21');
+  assert.equal(R.nextDelivery(a,settings,new Date('2026-09-20T04:14:00Z')).time,'07:15');
+  assert.equal(R.notificationTime({reminderTime:'99:80'}),'09:00');
+});

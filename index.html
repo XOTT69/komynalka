@@ -379,24 +379,34 @@
       <span class="text-sm font-black text-slate-900 dark:text-white"><i class="fa-solid fa-bell text-brand mr-2"></i>Нагадування</span>
       <label for="prefReminders" class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="prefReminders" class="sr-only peer" aria-label="Нагадування для цієї адреси"><div class="w-11 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-brand transition-colors"></div><div class="absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform shadow-sm peer-checked:translate-x-5"></div></label>
     </div>
-    <div id="remindersSettings" class="hidden px-4 pb-4 space-y-3 border-t border-slate-100 dark:border-white/5 pt-3">
-      <div class="reminder-next" role="status" aria-live="polite"><span>Найближчий день передачі</span><strong id="reminderNextDate">Перевіряємо розклад…</strong><p id="reminderNextServices"></p><small id="reminderChannelsText">Сповіщення о 09:00 за Києвом</small></div>
-      <button id="enablePushBtn" class="w-full py-2.5 bg-brand-light text-brand font-bold rounded-xl text-xs border border-brand-border active:scale-[0.98] hidden"><i class="fa-solid fa-bell" aria-hidden="true"></i> Увімкнути сповіщення</button>
-      <button id="disablePushBtn" type="button" class="hidden w-full py-2.5 text-slate-500">Вимкнути сповіщення на цьому пристрої</button>
-      <button id="testPushBtn" type="button" class="button-secondary hidden">Надіслати тест на цей пристрій</button>
-      <p class="text-xs text-slate-500">Нагадування надходять о 09:00 за Києвом у вибрані дні. «Вже передав» вимикає їх для поточного періоду й адреси.</p>
-      <p id="pushStatus" class="text-[10px] text-slate-400 text-center hidden"></p>
-      <p id="pushTestStatus" class="reminder-test-status hidden" role="status" aria-live="polite"></p>
-      <div class="telegram-setup" id="telegramSetup">
-        <div class="telegram-setup-heading"><span class="settings-icon"><i class="fa-brands fa-telegram" aria-hidden="true"></i></span><div><strong>Telegram</strong><p>Додаткові нагадування у приватний чат</p></div></div>
-        <p id="telegramStatus" role="status" aria-live="polite">Перевіряємо підключення…</p>
-        <button id="telegramConnect" type="button" class="button-primary hidden">Підключити Telegram</button>
-        <button id="testTelegramBtn" type="button" class="button-secondary hidden">Надіслати тест у Telegram</button>
-        <a id="telegramOpenLink" class="button-secondary hidden" href="#" target="_blank" rel="noopener noreferrer">Відкрити бота ще раз</a>
-        <button id="telegramDisconnect" type="button" class="button-secondary hidden">Відключити Telegram</button>
-        <p id="telegramTestStatus" class="reminder-test-status hidden" role="status" aria-live="polite"></p>
-        <p class="telegram-setup-note">Після натискання відкрийте бота й натисніть Start. Посилання діє 10 хвилин. Для відписки можна також надіслати боту /stop.</p>
-      </div>
+    <div id="remindersSettings" class="hidden reminder-workspace border-t border-slate-100 dark:border-white/5">
+      <section class="reminder-schedule-card" aria-labelledby="reminderScheduleTitle">
+        <div class="reminder-section-heading"><span class="settings-icon"><i class="fa-solid fa-clock" aria-hidden="true"></i></span><div><h4 id="reminderScheduleTitle">Коли нагадувати</h4><p>Один час для Push і Telegram</p></div></div>
+        <label class="reminder-time-field" for="reminderTime"><span><strong>Час сповіщення</strong><small>За київським часом</small></span><input type="time" id="reminderTime" value="09:00" step="60" aria-describedby="reminderTimeHint"></label>
+        <p id="reminderTimeHint" class="reminder-time-hint"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> Синхронізується між вашими пристроями</p>
+        <div class="reminder-next" role="status" aria-live="polite"><span>Наступне сповіщення</span><strong id="reminderNextDate">Перевіряємо розклад…</strong><p id="reminderNextServices"></p><small id="reminderChannelsText">Перевіряємо канали…</small></div>
+      </section>
+      <section class="reminder-section" aria-labelledby="reminderChannelsTitle">
+        <div class="reminder-group-title"><div><span>Канали доставки</span><h4 id="reminderChannelsTitle">Куди надсилати</h4></div><small>Можна обрати обидва</small></div>
+        <div class="reminder-channel-grid">
+          <article class="reminder-channel-card" id="pushSetup">
+            <div class="reminder-channel-heading"><span class="settings-icon"><i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i></span><div><strong>Цей пристрій</strong><p>Системне Push-сповіщення</p></div><span class="channel-dot" id="pushChannelDot" aria-hidden="true"></span></div>
+            <p id="pushStatus" class="reminder-channel-status hidden" role="status" aria-live="polite"></p>
+            <div class="reminder-channel-actions"><button id="enablePushBtn" type="button" class="button-primary hidden"><i class="fa-solid fa-bell" aria-hidden="true"></i> Увімкнути Push</button><button id="testPushBtn" type="button" class="button-secondary hidden">Надіслати тест</button><button id="disablePushBtn" type="button" class="reminder-text-action hidden">Відключити цей пристрій</button></div>
+            <p id="pushTestStatus" class="reminder-test-status hidden" role="status" aria-live="polite"></p>
+          </article>
+          <article class="reminder-channel-card telegram-setup" id="telegramSetup">
+            <div class="reminder-channel-heading telegram-setup-heading"><span class="settings-icon"><i class="fa-brands fa-telegram" aria-hidden="true"></i></span><div><strong>Telegram</strong><p>Повідомлення у приватний чат</p></div><span class="channel-dot" id="telegramChannelDot" aria-hidden="true"></span></div>
+            <p id="telegramStatus" class="reminder-channel-status" role="status" aria-live="polite">Перевіряємо підключення…</p>
+            <div class="reminder-channel-actions"><button id="telegramConnect" type="button" class="button-primary hidden">Підключити Telegram</button><button id="testTelegramBtn" type="button" class="button-secondary hidden">Надіслати тест</button><a id="telegramOpenLink" class="button-secondary hidden" href="#" target="_blank" rel="noopener noreferrer">Відкрити бота</a><button id="telegramDisconnect" type="button" class="reminder-text-action hidden">Відключити Telegram</button></div>
+            <p id="telegramTestStatus" class="reminder-test-status hidden" role="status" aria-live="polite"></p>
+            <p class="telegram-setup-note">Посилання діє 10 хвилин. Для відписки можна також надіслати боту /stop.</p>
+          </article>
+        </div>
+      </section>
+      <section class="reminder-section reminder-rules" aria-labelledby="reminderRulesTitle">
+        <div class="reminder-group-title"><div><span>Розклад послуг</span><h4 id="reminderRulesTitle">Що нагадувати</h4></div><small>Для цієї адреси</small></div>
+        <p class="reminder-rules-note"><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>Після фактичної передачі натисніть «Вже передав» — повідомлення зупиняться до наступного періоду.</span></p>
       <!-- Приховані legacy inputs (використовуються в saveSettings) -->
       <input type="number" id="remWaterStart" class="sr-only" min="1" max="31" value="1">
       <input type="number" id="remWaterEnd" class="sr-only" min="1" max="31" value="5">
@@ -405,11 +415,11 @@
       <input type="number" id="remGasStart" class="sr-only" min="1" max="31" value="1">
       <input type="number" id="remGasEnd" class="sr-only" min="1" max="31" value="5">
       <!-- Кастомні нагадування -->
-      <div>
-        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Мої нагадування</p>
+      <div class="reminder-list-wrap">
         <div id="customRemindersList" class="space-y-2"></div>
-        <button id="addCustomReminderBtn" type="button" class="w-full mt-2 py-2 bg-brand-light text-brand font-bold rounded-xl text-[10px] border border-brand-border active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-plus"></i>Додати нагадування</button>
+        <button id="addCustomReminderBtn" type="button" class="reminder-add"><i class="fa-solid fa-plus" aria-hidden="true"></i> Додати своє нагадування</button>
       </div>
+      </section>
     </div>
   </div></div></section><section id="settings-reports" class="settings-panel hidden" aria-label="Аналітика та звіти"><button type="button" class="settings-back" data-settings-back=""><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Усі налаштування</button><div class="settings-panel-heading"><h3 tabindex="-1">Аналітика та звіти</h3><p>Витрати, динаміка й досягнення</p></div><div class="settings-panel-content"><button type="button" id="moreAnalyticsBtn" class="premium-card p-4 w-full text-left"><i class="fa-solid fa-chart-line mr-2 text-brand"></i>Аналітика та звіти</button><button id="yearReportBtn" class="w-full premium-card p-4 flex items-center justify-between active:scale-[0.98] transition-transform">
     <div class="flex items-center gap-3"><div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center text-white text-lg shadow-lg shadow-purple-500/20"><i class="fa-solid fa-chart-line" aria-hidden="true"></i> </div><div><p class="font-black text-sm text-slate-900 dark:text-white">Річний звіт</p><p class="text-[10px] text-slate-400">Інфографіка за рік</p></div></div>

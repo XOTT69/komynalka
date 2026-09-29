@@ -45,7 +45,7 @@ export async function handleTelegramWebhook(req,env,accountRequest){
     const owner=await env.KV.get(`tg-chat:${chatId}`);
     if(owner&&owner!==login){await sendTelegram(env,chatId,'Цей чат уже прив’язаний до іншого акаунта Комуналки. Спочатку надішліть /stop.');return new Response('OK');}
     const result=await accountRequest(env,login,{action:'telegram-confirm',ticket,chatId});
-    if(result.success){await env.KV.put(`tg-chat:${chatId}`,login);await env.KV.delete(`tg-link:${ticket}`);if(result.previousChatId&&result.previousChatId!==chatId)await env.KV.delete(`tg-chat:${result.previousChatId}`);await sendTelegram(env,chatId,'Telegram підключено. Нагадування надходитимуть о 09:00 за Києвом у вибрані дні. Вимкнути: /stop або в застосунку.');}
+    if(result.success){await env.KV.put(`tg-chat:${chatId}`,login);await env.KV.delete(`tg-link:${ticket}`);if(result.previousChatId&&result.previousChatId!==chatId)await env.KV.delete(`tg-chat:${result.previousChatId}`);await sendTelegram(env,chatId,'Telegram підключено. Нагадування надходитимуть у вибраний вами час за Києвом. Вимкнути: /stop або в застосунку.');}
     else await sendTelegram(env,chatId,'Посилання застаріло. Створіть нове в Комуналці.');
   }
   return new Response('OK');
