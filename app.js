@@ -37,7 +37,7 @@ let displayName  = localStorage.getItem('k_display_name') || '';
 let currentFilter = 'all';
 let syncState = 'synced';
 const defaultTariffs = { water: 30.38, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
-const defaultPrefs   = { showWater: true, showHotWater: false, showElectro: true, showGas: true, electroTwoZone: true, electroWinter: true, remindersEnabled: false, remWaterStart: 1, remWaterEnd: 5, remElectroStart: 28, remElectroEnd: 3, remGasStart: 1, remGasEnd: 5, familyRole: 'owner' };
+const defaultPrefs   = { showWater: true, showHotWater: false, showElectro: true, showGas: true, electroTwoZone: true, electroWinter: true, selectedTariffPreset: '', remindersEnabled: false, remWaterStart: 1, remWaterEnd: 5, remElectroStart: 28, remElectroEnd: 3, remGasStart: 1, remGasEnd: 5, familyRole: 'owner' };
 const TARIFF_PRESETS = [
   { id: 'kyiv-typical', name: 'Київ / типовий постачальник', tariffs: { water: 30.38, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 } },
   { id: 'lviv-typical', name: 'Львів / типовий постачальник', tariffs: { water: 32.64, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 } },
@@ -496,6 +496,20 @@ $('welcomeTooltip')?.addEventListener('click',e=>{if(e.target===e.currentTarget)
 
 // =================== AUTH ===================
 $('authForm')?.addEventListener('submit', async (e) => { e.preventDefault(); await performLogin($('authLogin').value.trim(), $('authPass').value, false); });
+$('preAuthFeedbackOpen')?.addEventListener('click',()=>{const dialog=$('preAuthFeedbackDialog'),status=$('preAuthFeedbackStatus');status.textContent='';status.className='hidden';if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');$('preAuthFeedbackMessage')?.focus();});
+$('preAuthFeedbackCancel')?.addEventListener('click',()=>{const dialog=$('preAuthFeedbackDialog');if(typeof dialog.close==='function')dialog.close();else dialog.removeAttribute('open');});
+$('preAuthFeedbackForm')?.addEventListener('submit',async event=>{
+  event.preventDefault();const status=$('preAuthFeedbackStatus'),button=$('preAuthFeedbackSubmit'),message=$('preAuthFeedbackMessage')?.value.trim()||'',contact=$('preAuthFeedbackContact')?.value.trim()||'';
+  const report=(text,ok=false)=>{status.textContent=text;status.className=ok?'success':'error';};
+  if(message.length<10){report('Опишіть проблему трохи детальніше — щонайменше 10 символів.');return;}
+  button.disabled=true;button.textContent='Надсилання…';
+  try{
+    const response=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','X-Device-FP':DEVICE_FP},cache:'no-store',body:JSON.stringify({action:'feedback_public_submit',category:$('preAuthFeedbackCategory')?.value||'other',message,contact,website:$('preAuthFeedbackWebsite')?.value||'',appVersion:APP_VERSION})}),result=await response.json();
+    if(!response.ok||!result.success)throw new Error(result.error||'FEEDBACK_FAILED');
+    $('preAuthFeedbackMessage').value='';$('preAuthFeedbackContact').value='';report('Дякуємо! Повідомлення надійшло адміністратору.',true);$('preAuthFeedbackCancel').textContent='Закрити';
+  }catch(error){report(error.message==='FEEDBACK_RATE_LIMITED'?'Ліміт — 3 повідомлення на добу. Спробуйте пізніше.':navigator.onLine?'Не вдалося надіслати. Спробуйте ще раз.':'Немає інтернету. Підключіться й повторіть.');}
+  finally{button.disabled=false;button.textContent='Надіслати';}
+});
 $('togglePassBtn')?.addEventListener('click', () => {
   const p = $('authPass');
   p.type = p.type === 'password' ? 'text' : 'password';
@@ -1457,10 +1471,20 @@ function fillTariffInputs(nextTariffs) {
   if($('tGas'))           $('tGas').value           =nextTariffs.gas;
 }
 
+function setSelectedTariffPreset(presetId = '') {
+  const value = String(presetId || '');
+  prefs.selectedTariffPreset = value;
+  const select = $('tariffPresetSelect');
+  if (!select) return;
+  select.value = Array.from(select.options).some(option => option.value === value) ? value : '';
+}
+
 function renderTariffPresets() {
   const select = $('tariffPresetSelect');
   if (!select) return;
+  const selected = String(prefs.selectedTariffPreset || select.value || '');
   select.innerHTML = '<option value="">Обрати місто / постачальника</option>' + TARIFF_PRESETS.map(preset => `<option value="${escapeAttr(preset.id)}">${escapeHtml(preset.name)}</option>`).join('');
+  setSelectedTariffPreset(selected);
 }
 
 function applyTariffPreset(presetId) {
@@ -1479,6 +1503,12 @@ function applyPreferences() {
   if($('prefGas'))           $('prefGas').checked           =prefs.showGas;
   if($('prefElectroTwoZone'))$('prefElectroTwoZone').checked=prefs.electroTwoZone;
   if($('prefElectroWinter')) $('prefElectroWinter').checked =prefs.electroWinter;
+  for (const [inputId, statusId] of [['prefElectroTwoZone','prefElectroTwoZoneStatus'],['prefElectroWinter','prefElectroWinterStatus']]) {
+    const input=$(inputId),status=$(statusId),label=input?.closest('.electricity-mode-toggle');
+    if (!input) continue;
+    if (status) status.textContent=input.checked?'Увімкнено':'Вимкнено';
+    label?.setAttribute('aria-label',`${label.querySelector('strong')?.textContent || ''}: ${input.checked?'увімкнено':'вимкнено'}`);
+  }
   if($('prefReminders')){$('prefReminders').checked=prefs.remindersEnabled;if($('remindersSettings'))$('remindersSettings').style.display=prefs.remindersEnabled?'block':'none';}
   if($('reminderTime'))$('reminderTime').value=KomunalkaReminders.notificationTime(activeSettings);
   if($('remWaterStart'))   $('remWaterStart').value  =prefs.remWaterStart  ||1;
@@ -1519,11 +1549,12 @@ $('saveTariffTemplateBtn')?.addEventListener('click',()=>{
   showToast('Шаблон тарифів збережено','💾');
 });
 $('loadTariffTemplateBtn')?.addEventListener('click',()=>{
-  try{const tpl=JSON.parse(accountStorage.getItem(CUSTOM_TARIFF_TEMPLATE_KEY)||'null');if(!tpl)return showToast('Шаблон не знайдено','⚠️');fillTariffInputs({...defaultTariffs,...tpl});addChangeLog('tariff_template_loaded');renderChangeLog();showToast('Шаблон застосовано','✅');}
+  try{const tpl=JSON.parse(accountStorage.getItem(CUSTOM_TARIFF_TEMPLATE_KEY)||'null');if(!tpl)return showToast('Шаблон не знайдено','⚠️');fillTariffInputs({...defaultTariffs,...tpl});setSelectedTariffPreset('');addChangeLog('tariff_template_loaded');renderChangeLog();showToast('Шаблон застосовано','✅');}
   catch(e){showToast('Шаблон пошкоджено','❌');}
 });
-$('resetTariffsBtn')?.addEventListener('click',()=>{fillTariffInputs(defaultTariffs);addChangeLog('tariffs_reset');renderChangeLog();showToast('Базові тарифи','✅');});
-$('tariffPresetSelect')?.addEventListener('change',(e)=>{applyTariffPreset(e.target.value);e.target.value='';});
+$('resetTariffsBtn')?.addEventListener('click',()=>{fillTariffInputs(defaultTariffs);setSelectedTariffPreset('');addChangeLog('tariffs_reset');renderChangeLog();showToast('Базові тарифи','✅');});
+$('tariffPresetSelect')?.addEventListener('change',(e)=>{const presetId=e.target.value;if(!presetId)return;applyTariffPreset(presetId);setSelectedTariffPreset(presetId);});
+['tWater','tHotWater','tElectroBase','tElectroWinter','tGas'].forEach(id=>$(id)?.addEventListener('input',()=>setSelectedTariffPreset('')));
 $('familyRoleSelect')?.addEventListener('change',(e)=>{prefs.familyRole=e.target.value;updateFamilyRoleHint();});
 
 ['prefWater','prefHotWater','prefElectro','prefGas','prefElectroTwoZone','prefElectroWinter'].forEach(id=>{$(id)?.addEventListener('change',()=>{prefs.showWater=$('prefWater')?.checked??prefs.showWater;prefs.showHotWater=$('prefHotWater')?.checked??prefs.showHotWater;prefs.showElectro=$('prefElectro')?.checked??prefs.showElectro;prefs.showGas=$('prefGas')?.checked??prefs.showGas;prefs.electroTwoZone=$('prefElectroTwoZone')?.checked??prefs.electroTwoZone;prefs.electroWinter=$('prefElectroWinter')?.checked??prefs.electroWinter;applyPreferences();renderCalcCustomServices();calculatePreview();updateSmartBadges();});});
@@ -2478,11 +2509,13 @@ function renderCommunityTariffs() {
       if (!item) return;
       fillTariffInputs({ ...defaultTariffs, ...item.tariffs });
       renderTariffPresets();
+      setSelectedTariffPreset(`comm_${item.id}`);
       showToast(`Тариф "${item.name}" застосовано`, '✅');
     });
   });
   container.querySelectorAll('.comm-del').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (prefs.selectedTariffPreset === `comm_${btn.dataset.commId}`) setSelectedTariffPreset('');
       deleteCommunityTariff(btn.dataset.commId);
       renderCommunityTariffs();
       renderTariffPresets();
@@ -2517,13 +2550,14 @@ $('saveCommunityTariffBtn')?.addEventListener('click', async () => {
     return;
   }
   setCommunityTariffStatus('Зберігаю локально і публікую для інших користувачів...', 'info');
-  saveCommunityTariff(name, tariffData, metadata);
+  const savedTariffId = saveCommunityTariff(name, tariffData, metadata);
   if (nameInput) nameInput.value = '';
   if ($('communityTariffCity')) $('communityTariffCity').value = '';
   if ($('communityTariffRegion')) $('communityTariffRegion').value = '';
   if ($('communityTariffService')) $('communityTariffService').value = 'all';
   renderCommunityTariffs();
   renderTariffPresets();
+  setSelectedTariffPreset(`comm_${savedTariffId}`);
   addChangeLog('community_tariff_saved', { provider: name.trim() });
   renderChangeLog();
   try {
@@ -2574,9 +2608,10 @@ function renderCloudCommunityTariffs() {
       if (!item || !isValidCommunityTariff(item.tariffs)) return showToast('Помилка тарифу', '❌');
       const tariffData = { ...defaultTariffs, ...item.tariffs };
       fillTariffInputs(tariffData);
-      saveCommunityTariff(item.name, tariffData, item);
+      const savedTariffId = saveCommunityTariff(item.name, tariffData, item);
       renderCommunityTariffs();
       renderTariffPresets();
+      setSelectedTariffPreset(`comm_${savedTariffId}`);
       addChangeLog('cloud_tariff_loaded', { provider: item.name });
       renderChangeLog();
       setCommunityTariffStatus(`Постачальника "${item.name}" додано у ваші шаблони.`, 'success');
@@ -2627,6 +2662,7 @@ $('cloudTariffServiceFilter')?.addEventListener('change', renderCloudCommunityTa
 function renderTariffPresetsExtended() {
   const select = $('tariffPresetSelect');
   if (!select) return;
+  const selected = String(prefs.selectedTariffPreset || select.value || '');
   const community = getCommunityTariffs();
   let html = '<option value="">Обрати місто / постачальника</option>';
   if (community.length) {
@@ -2638,6 +2674,7 @@ function renderTariffPresetsExtended() {
   html += TARIFF_PRESETS.map(p => `<option value="${escapeAttr(p.id)}">${escapeHtml(p.name)}</option>`).join('');
   if (community.length) html += '</optgroup>';
   select.innerHTML = html;
+  setSelectedTariffPreset(selected);
 }
 
 // Перевизначаємо renderTariffPresets через присвоєння (не через function declaration,

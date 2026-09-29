@@ -39,6 +39,15 @@ test('authenticated feedback is private, validated and manageable from admin wit
   const listed=await(await admin({action:'admin_feedback_list'})).json();assert.equal(listed.feedback.length,1);assert.equal(listed.feedback[0].message,stored.message);
   assert.equal((await admin({action:'admin_feedback_update',id:stored.id,status:'done'})).status,200);assert.equal(JSON.parse(values.get(key)).status,'done');
 });
+test('pre-login feedback accepts login failures without account access and resists simple spam',async()=>{
+  const {env,values}=environment();const send=body=>worker.fetch(new Request('https://test.workers.dev',{method:'POST',headers:{'Content-Type':'application/json','CF-Connecting-IP':'203.0.113.9'},body:JSON.stringify({action:'feedback_public_submit',...body})}),env);
+  assert.equal((await send({category:'google',message:'Google повертає мене назад на екран входу',contact:'guest@example.com'})).status,200);
+  let entries=[...values.entries()].filter(([key])=>key.startsWith('feedback:'));assert.equal(entries.length,1);const item=JSON.parse(entries[0][1]);assert.equal(item.source,'pre_auth');assert.equal(item.login,'');assert.equal(item.category,'google');assert.equal(JSON.stringify(item).includes('203.0.113.9'),false);
+  assert.equal((await send({category:'google',message:'valid message from a bot',website:'filled-by-bot'})).status,200);assert.equal([...values.keys()].filter(key=>key.startsWith('feedback:')).length,1);
+  assert.equal((await send({category:'invalid',message:'Досить довге повідомлення'})).status,400);
+  for(let i=0;i<2;i++)assert.equal((await send({category:'login',message:`Не можу увійти у свій акаунт ${i}`})).status,200);
+  assert.equal((await send({category:'login',message:'Четверте повідомлення за день'})).status,429);
+});
 
 test('a committed account remains discoverable and exportable when its KV mirror fails',async()=>{
   const {env,values}=environment();const put=env.KV.put;env.KV.put=async(key,value)=>{if(key==='anna')throw new Error('mirror unavailable');return put(key,value);};

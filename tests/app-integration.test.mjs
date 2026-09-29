@@ -145,6 +145,21 @@ test('settings groups retain unsaved fields and every route returns to its menu'
  p.w.openSettingsPanel('home');d.getElementById('tWater').value='42.75';d.querySelector('#settings-home [data-settings-back]').click();p.w.openSettingsPanel('home');assert.equal(d.getElementById('tWater').value,'42.75');await delay(30);assert.deepEqual(p.errors,[]);
  }finally{p.close();}
 });
+test('selected provider stays visible per address and electricity modes expose clear states',async()=>{
+ const legacy=legacyAccount(hash);legacy.accountSettings={komynalka_community_tariff:JSON.stringify([{id:'custom_chabany',name:'Чабани',tariffs:{water:56.7,hotWater:0,electroBase:4.32,electroWinter:2.64,gas:7.96},city:'Чабани',region:'Київська',serviceType:'all'}])};
+ const {env}=environment({anna:legacy}),p=await page(env);
+ try{
+  await p.w.performLogin('anna',password,false);const d=p.w.document;p.w.openSettingsPanel('home');
+  const select=d.getElementById('tariffPresetSelect');select.value='comm_custom_chabany';select.dispatchEvent(new p.w.Event('change',{bubbles:true}));
+  assert.equal(select.value,'comm_custom_chabany');assert.equal(select.selectedOptions[0].textContent,'Чабани');assert.equal(d.getElementById('tWater').value,'56.7');
+  const twoZone=d.getElementById('prefElectroTwoZone'),winter=d.getElementById('prefElectroWinter');
+  assert.equal(d.getElementById('prefElectroTwoZoneStatus').textContent,'Увімкнено');assert.equal(twoZone.closest('label').getAttribute('aria-label'),'Двозонний: увімкнено');
+  twoZone.checked=false;twoZone.dispatchEvent(new p.w.Event('change',{bubbles:true}));assert.equal(d.getElementById('prefElectroTwoZoneStatus').textContent,'Вимкнено');assert.equal(twoZone.closest('label').getAttribute('aria-label'),'Двозонний: вимкнено');
+  winter.checked=false;winter.dispatchEvent(new p.w.Event('change',{bubbles:true}));assert.equal(d.getElementById('prefElectroWinterStatus').textContent,'Вимкнено');
+  d.getElementById('saveSettingsBtn').click();await delay(40);const saved=JSON.parse(p.storage()['komynalka_account_v1:anna']).local;assert.equal(saved.addresses[0].prefs.selectedTariffPreset,'comm_custom_chabany');
+  p.w.renderTariffPresets();assert.equal(select.selectedOptions[0].textContent,'Чабани');assert.deepEqual(saved.addresses[0].records,legacy.addresses[0].records);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
 test('horizontal swipes expose record actions without deleting or changing partial payment',async()=>{
  const legacy=legacyAccount(hash),{env}=environment({anna:legacy}),p=await page(env);
  try{await p.w.performLogin('anna',password,false);p.w.switchTab('tabHistory',2);const d=p.w.document,card=d.querySelector('.swipe-card');
@@ -244,6 +259,9 @@ test('custom service archive hides daily controls, preserves history and restore
 
 test('feedback is sent from inside the app without exposing account records',async()=>{
  const legacy=legacyAccount(hash),{env,values}=environment({anna:legacy}),p=await page(env);try{await p.w.performLogin('anna',password,false);const d=p.w.document;p.w.openSettingsPanel('help');d.getElementById('feedbackType').value='idea';d.getElementById('feedbackMessage').value='Додайте зручний сімейний доступ';d.getElementById('feedbackContact').value='anna@example.com';d.getElementById('feedbackForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await delay(30);assert.match(d.getElementById('feedbackStatus').textContent,/Дякуємо/);const key=[...values.keys()].find(name=>name.startsWith('feedback:'));const feedback=JSON.parse(values.get(key));assert.equal(feedback.login,'anna');assert.equal(feedback.type,'idea');assert.equal('addresses' in feedback,false);assert.deepEqual(JSON.parse(values.get('anna')).addresses,legacy.addresses);assert.deepEqual(p.errors,[]);}finally{p.close();}
+});
+test('a visitor can report a login problem before authentication',async()=>{
+ const {env,values}=environment(),p=await page(env);try{const d=p.w.document,dialog=d.getElementById('preAuthFeedbackDialog');assert.equal(dialog.closest('#appScreen'),null);d.getElementById('preAuthFeedbackOpen').click();assert.ok(dialog.hasAttribute('open'));assert.equal(dialog.closest('.hidden'),null);d.getElementById('preAuthFeedbackCategory').value='registration';d.getElementById('preAuthFeedbackMessage').value='Не вдається створити новий профіль';d.getElementById('preAuthFeedbackContact').value='guest@example.com';d.getElementById('preAuthFeedbackForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await delay(30);assert.match(d.getElementById('preAuthFeedbackStatus').textContent,/Дякуємо/);const key=[...values.keys()].find(name=>name.startsWith('feedback:')),feedback=JSON.parse(values.get(key));assert.equal(feedback.source,'pre_auth');assert.equal(feedback.category,'registration');assert.equal(values.has('guest@example.com'),false);assert.deepEqual(p.errors,[]);}finally{p.close();}
 });
 
 test('a failed local provider save keeps the editor and prior data; retry succeeds',async()=>{

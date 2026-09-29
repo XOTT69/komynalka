@@ -22,7 +22,7 @@ function setup(users = []) {
       : body.action === 'admin_get_tariffs'
         ? { success: true, tariffs: [{ id: 'tariff-1', name: '<img src=x onerror=alert(1)>', author: 'Автор', city: 'Київ', tariffs: { water: 42 }, verified: false }] }
         : body.action === 'admin_feedback_list'
-          ? { success: true, feedback: [{ id: '1759220000000-abcdefgh', type: 'problem', status: 'new', login: 'anna', contact: 'anna@example.com', message: '<img src=x onerror=alert(1)> Не працює нагадування', createdAt: '2026-09-30T09:00:00.000Z', appVersion: '5.10.0' }] }
+          ? { success: true, feedback: [{ id: '1759220000000-abcdefgh', type: 'problem', category: 'google', source: 'pre_auth', status: 'new', login: '', contact: 'anna@example.com', message: '<img src=x onerror=alert(1)> Не працює нагадування', createdAt: '2026-09-30T09:00:00.000Z', appVersion: '5.10.0' }] }
         : body.action === 'get_broadcast'
           ? { success: true, message: 'Поточне оголошення', date: '2026-09-21' }
           : { success: true };
@@ -74,6 +74,7 @@ test('feedback inbox escapes messages and updates their workflow status', async(
     await ui.window.loadFeedback();
     assert.equal(ui.window.document.querySelector('#feedbackList img'),null);
     assert.match(ui.window.document.getElementById('feedbackList').textContent,/<img src=x onerror=alert\(1\)>/);
+    assert.match(ui.window.document.getElementById('feedbackList').textContent,/До входу.*Гість.*Google-вхід/);
     const select=ui.window.document.querySelector('.feedback-status');select.value='done';select.dispatchEvent(new ui.window.Event('change'));
     await new Promise(resolve=>setTimeout(resolve,0));
     assert.equal(ui.calls.some(call=>call.action==='admin_feedback_update'&&call.status==='done'),true);

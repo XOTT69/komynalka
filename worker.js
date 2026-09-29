@@ -203,6 +203,7 @@ async function doPost(req, env, ip, fp) {
   if (action === 'admin_login' || action.startsWith('admin_')) return doAdmin(action, body, env, ip);
   if (action === 'get_broadcast') return doGetBroadcast(env);
   if(action==='link_google'){const auth=await parseAuth(req,env);if(auth?.type!=='uid'||auth.uid!==body.uid)return err('NO_AUTH',401);return doLinkGoogle(body,env);}
+  if(action==='feedback_public_submit')return doPublicFeedbackSubmit(body,env,ip);
 
   // ═══ Публічні дії (без суворої автентифікації) ═══
   // get_tariffs — доступний для всіх авторизованих
@@ -301,6 +302,18 @@ async function doFeedbackSubmit(body,env,login){
   if(!await rateLimit(env,`feedback:${login}`,5,86400000))return err('FEEDBACK_RATE_LIMITED',429);
   const id=`${Date.now()}-${randomLinkToken().slice(0,12)}`,createdAt=new Date().toISOString();
   await env.KV.put(`feedback:${id}`,JSON.stringify({id,type,message,contact,login,createdAt,status:'new',appVersion}));
+  return ok({success:true,id});
+}
+
+async function doPublicFeedbackSubmit(body,env,ip){
+  if(String(body.website||'').trim())return ok({success:true});
+  const category=String(body.category||''),message=String(body.message||'').trim(),contact=String(body.contact||'').trim(),appVersion=String(body.appVersion||'').slice(0,40);
+  if(!['login','registration','google','other'].includes(category)||message.length<10||message.length>1500)return err('INVALID_FEEDBACK',400);
+  if(contact&&(contact.length>254||!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(contact)))return err('INVALID_CONTACT',400);
+  const ipKey=(await sha256(String(ip||'unknown'))).slice(0,24);
+  if(!await rateLimit(env,`feedback-public:${ipKey}`,3,86400000))return err('FEEDBACK_RATE_LIMITED',429);
+  const id=`${Date.now()}-${randomLinkToken().slice(0,12)}`,createdAt=new Date().toISOString();
+  await env.KV.put(`feedback:${id}`,JSON.stringify({id,type:'problem',category,source:'pre_auth',message,contact,login:'',createdAt,status:'new',appVersion}));
   return ok({success:true,id});
 }
 
