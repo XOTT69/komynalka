@@ -6,6 +6,7 @@ const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFr
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'dev';
 const MAX_ADDRESSES_FREE = 3;
+const MAX_ADDRESSES_TOTAL = 10;
 const LOCAL_BACKUP_KEY = 'komynalka_backup';
 const PRE_IMPORT_BACKUP_KEY = 'komynalka_pre_import_backup';
 const CHANGE_LOG_KEY = 'komynalka_change_log';
@@ -660,21 +661,32 @@ $('authPass')?.addEventListener('input', function() {
 setTimeout(() => { if ($('authScreen') && !$('authScreen').classList.contains('hidden')) $('authLogin')?.focus(); }, 800);
 
 // =================== ADDRESS ===================
-function loadCurrentAddress() {
-  if(!saveDraft())return;
+function loadCurrentAddress(skipDraftSave=false) {
+  if(!skipDraftSave&&!saveDraft())return false;
   if (!addresses || addresses.length === 0) {
     const backup = loadFromLocal();
     if (backup) { addresses = backup.addresses || []; currentAddressId = backup.currentAddressId || 'default'; }
   }
-  if (!addresses.length) return;
+  if (!addresses.length) return false;
+  currentAddressId = KomunalkaAddresses.current(addresses, currentAddressId);
   const addr = addresses.find(a => String(a.id) === String(currentAddressId)) || addresses[0];
   currentAddressId = addr.id;
   tariffs        = { ...defaultTariffs,  ...(addr.tariffs  || {}) };
   prefs          = { ...defaultPrefs,    ...(addr.prefs    || {}) };
   records        = addr.records        || [];
   customServices = addr.customServices || [...defaultCustomServices];
-  if ($('currentAddressDisplay')) $('currentAddressDisplay').innerText = addr.name + (isGuest ? ' (Гість)' : '');
+  if ($('currentAddressDisplay')) $('currentAddressDisplay').textContent = addr.name + (isGuest ? ' (Гість)' : '');
   initAppUI();renderProviders();
+  return true;
+}
+
+function selectAddress(id) {
+  if(!saveDraft()){showToast('Спочатку збережіть чернетку на пристрої','⚠️');return false;}
+  syncCurrentAddress();
+  const nextId=KomunalkaAddresses.current(addresses,id);
+  if(nextId===null)return false;
+  currentAddressId=nextId;
+  return loadCurrentAddress(true);
 }
 
 function syncCurrentAddress() {
@@ -690,31 +702,66 @@ $('addressModal')?.addEventListener('click', (e) => { if (e.target === $('addres
 
 $('addAddressBtn')?.addEventListener('click', () => {
   if(!requireEdit('У режимі перегляду не можна додавати об’єкти'))return;
-  if (addresses.length >= MAX_ADDRESSES_FREE) { showToast(`Максимум ${MAX_ADDRESSES_FREE} адреси`, '⚠️'); closeAddressModal(); return; }
+  if (KomunalkaAddresses.active(addresses).length >= MAX_ADDRESSES_FREE) { showToast(`Максимум ${MAX_ADDRESSES_FREE} активні адреси`, '⚠️'); return; }
+  if (addresses.length >= MAX_ADDRESSES_TOTAL) { showToast('В архіві вже забагато адрес. Видаліть непотрібну назавжди.', '⚠️'); return; }
   const name = prompt("Назва об'єкту:");
   if (name && name.trim()) {
+    if(!saveDraft()){showToast('Адресу не додано: чернетка ще не збережена','⚠️');return;}
     syncCurrentAddress();
     const newId = 'addr_' + Date.now();
     addresses.push({ id: newId, name: name.trim(), tariffs:{...defaultTariffs}, prefs:{...defaultPrefs}, records:[], customServices:[{ id:"s1", name:"Квартплата", defaultSum:"" }] });
     currentAddressId = newId;
-    loadCurrentAddress(); syncToCloud(); closeAddressModal(); showToast("Додано"); checkNewAchievements();
+    loadCurrentAddress(true); syncToCloud(); closeAddressModal(); showToast("Додано"); checkNewAchievements();
   }
 });
 
 function renderAddressModal() {
   const list = $('addressListModal'); if (!list) return;
-  list.innerHTML = addresses.map(a => `<div class="flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-95 cursor-pointer ${String(a.id)===String(currentAddressId)?'bg-brand border-brand text-white shadow-lg shadow-brand/20':'bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200'}" data-addr-id="${escapeAttr(a.id)}"><span class="font-bold text-lg truncate pr-2 flex-1">${escapeHtml(a.name)}</span><div class="flex gap-1.5 shrink-0"><button class="addr-edit p-2 rounded-xl shadow-sm ${String(a.id)===String(currentAddressId)?'bg-white/20 text-white':'bg-white dark:bg-[#2c2c2e] text-slate-400'}" data-id="${escapeAttr(a.id)}"><i class="fa-solid fa-pen"></i></button>${a.id!==currentAddressId&&addresses.length>1?`<button class="addr-del p-2 text-slate-400 bg-white dark:bg-[#2c2c2e] rounded-xl shadow-sm" data-id="${escapeAttr(a.id)}"><i class="fa-solid fa-trash"></i></button>`:''}</div></div>`).join('');
+  const active = KomunalkaAddresses.active(addresses), archived = KomunalkaAddresses.archived(addresses);
+  const summary = $('addressModalSummary');
+  if (summary) summary.textContent = `${active.length} ${active.length===1?'активна':'активні'}${archived.length?` · ${archived.length} в архіві`:''}`;
+  const activeCards = active.map(a => `<div class="address-card ${String(a.id)===String(currentAddressId)?'is-current':''}" data-addr-id="${escapeAttr(a.id)}" role="button" tabindex="0" aria-label="Відкрити адресу ${escapeAttr(a.name)}"><span class="address-card-icon"><i class="fa-solid fa-location-dot" aria-hidden="true"></i></span><span class="address-card-copy"><strong>${escapeHtml(a.name)}</strong><small>${String(a.id)===String(currentAddressId)?'Відкрита зараз':'Торкніться, щоб відкрити'}</small></span><span class="address-card-actions"><button type="button" class="addr-edit" data-id="${escapeAttr(a.id)}" aria-label="Перейменувати ${escapeAttr(a.name)}"><i class="fa-solid fa-pen" aria-hidden="true"></i></button><button type="button" class="addr-archive" data-id="${escapeAttr(a.id)}" aria-label="Архівувати ${escapeAttr(a.name)}" ${active.length<=1?'disabled':''}><i class="fa-solid fa-box-archive" aria-hidden="true"></i></button></span></div>`).join('');
+  const archivedCards = archived.map(a => `<div class="address-card is-archived" data-archived-id="${escapeAttr(a.id)}"><span class="address-card-icon"><i class="fa-solid fa-box-archive" aria-hidden="true"></i></span><span class="address-card-copy"><strong>${escapeHtml(a.name)}</strong><small>Історію та налаштування збережено</small></span><span class="address-card-actions"><button type="button" class="addr-restore" data-id="${escapeAttr(a.id)}" aria-label="Відновити ${escapeAttr(a.name)}"><i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i></button><button type="button" class="addr-del" data-id="${escapeAttr(a.id)}" aria-label="Видалити ${escapeAttr(a.name)} назавжди"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></span></div>`).join('');
+  list.innerHTML = `<section class="address-section"><div class="address-section-title"><span>Активні</span><small>${active.length} з ${MAX_ADDRESSES_FREE}</small></div><div class="address-card-list">${activeCards}</div></section>${archived.length?`<section class="address-section address-archive-section"><div class="address-section-title"><span>Архів</span><small>Нагадування призупинено</small></div><div class="address-card-list">${archivedCards}</div></section>`:''}`;
   list.querySelectorAll('[data-addr-id]').forEach(el => {
-    el.addEventListener('click', (e) => {
-      if (e.target.closest('.addr-edit') || e.target.closest('.addr-del')) return;
-      syncCurrentAddress(); currentAddressId = el.dataset.addrId; loadCurrentAddress(); syncToCloud(); closeAddressModal();
-    });
+    const open = (e) => {
+      if (e.target.closest('.addr-edit') || e.target.closest('.addr-archive')) return;
+      if(selectAddress(el.dataset.addrId)){syncToCloud();closeAddressModal();}
+    };
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){e.preventDefault();open(e);} });
   });
   list.querySelectorAll('.addr-edit').forEach(btn => {
-    btn.addEventListener('click', (e) => { e.stopPropagation(); if(!requireEdit('У режимі перегляду не можна перейменовувати об’єкти'))return; const addr = addresses.find(a => String(a.id)===btn.dataset.id); const name = prompt("Нова назва:", addr.name); if (name&&name.trim()) { addr.name=name.trim(); renderAddressModal(); if (btn.dataset.id===String(currentAddressId)) $('currentAddressDisplay').innerText=addr.name; syncToCloud(); } });
+    btn.addEventListener('click', (e) => { e.stopPropagation(); if(!requireEdit('У режимі перегляду не можна перейменовувати об’єкти'))return; const addr = addresses.find(a => String(a.id)===btn.dataset.id); const name = prompt("Нова назва:", addr.name); if (name&&name.trim()) { addr.name=name.trim(); saveToLocal(); renderAddressModal(); if (btn.dataset.id===String(currentAddressId)) $('currentAddressDisplay').textContent=addr.name; syncToCloud(); } });
+  });
+  list.querySelectorAll('.addr-archive').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); if(!requireEdit('У режимі перегляду не можна архівувати адреси')||btn.disabled)return;
+      if(!saveDraft()){showToast('Адресу не архівовано: чернетка ще не збережена','⚠️');return;}
+      syncCurrentAddress(); const previous=KomunalkaData.copy(addresses),previousId=currentAddressId;
+      try{addresses=KomunalkaAddresses.archive(addresses,btn.dataset.id);currentAddressId=KomunalkaAddresses.current(addresses,currentAddressId);if(String(previousId)!==String(currentAddressId))loadCurrentAddress(true);if(!saveToLocal())throw new Error('LOCAL_SAVE_FAILED');syncToCloud();renderAddressModal();showToast('Адресу переміщено в архів','📦');}
+      catch(error){addresses=previous;currentAddressId=previousId;loadCurrentAddress(true);if(error.message==='LAST_ACTIVE_ADDRESS')showToast('Залиште хоча б одну активну адресу','⚠️');}
+    });
+  });
+  list.querySelectorAll('.addr-restore').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); if(!requireEdit('У режимі перегляду не можна відновлювати адреси'))return;
+      if(KomunalkaAddresses.active(addresses).length>=MAX_ADDRESSES_FREE){showToast(`Максимум ${MAX_ADDRESSES_FREE} активні адреси`,'⚠️');return;}
+      const previous=KomunalkaData.copy(addresses);
+      try{addresses=KomunalkaAddresses.restore(addresses,btn.dataset.id);if(!saveToLocal())throw new Error('LOCAL_SAVE_FAILED');syncToCloud();renderAddressModal();showToast('Адресу відновлено');}
+      catch{addresses=previous;showToast('Не вдалося відновити адресу','❌');}
+    });
   });
   list.querySelectorAll('.addr-del').forEach(btn => {
-    btn.addEventListener('click', (e) => { e.stopPropagation(); if(!requireEdit('У режимі перегляду не можна видаляти об’єкти'))return; if (confirm("Видалити?")) { addresses=addresses.filter(a=>String(a.id)!==btn.dataset.id); if (String(currentAddressId)===btn.dataset.id) { currentAddressId=addresses[0].id; loadCurrentAddress(); } syncToCloud(); renderAddressModal(); } });
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); if(!requireEdit('У режимі перегляду не можна видаляти об’єкти'))return;
+      const item=addresses.find(a=>String(a.id)===btn.dataset.id);if(!item)return;
+      const typed=prompt(`Щоб видалити адресу назавжди, введіть її назву:\n${item.name}`);
+      if(typed?.trim()!==item.name){if(typed!==null)showToast('Назва не збігається. Дані не видалено.','⚠️');return;}
+      const previous=KomunalkaData.copy(addresses),index=addresses.findIndex(a=>String(a.id)===btn.dataset.id);
+      try{addresses=KomunalkaAddresses.removeArchived(addresses,btn.dataset.id);if(!saveToLocal())throw new Error('LOCAL_SAVE_FAILED');syncToCloud();renderAddressModal();showActionToast('Адресу видалено','Відновити',()=>{addresses.splice(Math.min(index,addresses.length),0,item);saveToLocal();syncToCloud();renderAddressModal();showToast('Адресу повернено');},'🗑️');}
+      catch{addresses=previous;showToast('Не вдалося видалити адресу','❌');}
+    });
   });
 }
 
@@ -727,7 +774,7 @@ const ACHIEVEMENTS = [
   { id:'all_paid',      emoji:'✅', title:'Чистий рахунок',  desc:'Все оплачено',                check:(r)=>r.length>0&&r.every(rec=>isRecordPaid(rec)) },
   { id:'records_10',    emoji:'📊', title:'Аналітик',        desc:'10+ записів',                 check:(r)=>r.length>=10 },
   { id:'saver',         emoji:'💰', title:'Економ',          desc:'Знизили витрати 3 міс',       check:(r)=>checkSaverAchievement(r) },
-  { id:'multi_address', emoji:'🏘️', title:'Мультивласник',  desc:'2+ адреси',                   check:()=>addresses.length>=2 },
+  { id:'multi_address', emoji:'🏘️', title:'Мультивласник',  desc:'2+ адреси',                   check:()=>KomunalkaAddresses.active(addresses).length>=2 },
   { id:'budget_master', emoji:'🎯', title:'Бюджетник',       desc:'Не перевищили бюджет 3 міс', check:(r)=>checkBudgetAchievement(r) },
   { id:'night_owl',     emoji:'🦉', title:'Нічна сова',      desc:'70%+ нічне споживання',      check:(r)=>checkNightOwl(r) },
 ];
@@ -2765,12 +2812,13 @@ document.addEventListener('input', (e) => {
 function renderAddressCompare() {
   const container = $('addressCompareContent');
   if (!container) return;
-  if (addresses.length < 2) {
+  const visibleAddresses=KomunalkaAddresses.active(addresses);
+  if (visibleAddresses.length < 2) {
     container.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-3">Додайте 2+ адреси для порівняння</p>';
     return;
   }
   syncCurrentAddress();
-  const addrData = addresses.map(addr => {
+  const addrData = visibleAddresses.map(addr => {
     const recs = addr.records || [];
     const total = recs.reduce((s,r) => s + r.total, 0);
     const avg = recs.length ? total / recs.length : 0;
@@ -2810,11 +2858,12 @@ function renderCombinedReport() {
   const container = $('combinedReportContent');
   if (!container) return;
   syncCurrentAddress();
-  if (addresses.length < 2) {
+  const visibleAddresses=KomunalkaAddresses.active(addresses);
+  if (visibleAddresses.length < 2) {
     container.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-3">Додайте 2+ адреси для зведеного звіту</p>';
     return;
   }
-  const allRecs = addresses.flatMap(a => (a.records || []).map(r => ({ ...r, addrName: a.name })));
+  const allRecs = visibleAddresses.flatMap(a => (a.records || []).map(r => ({ ...r, addrName: a.name })));
   if (!allRecs.length) {
     container.innerHTML = '<p class="text-[10px] text-slate-400 text-center py-3">Немає записів</p>';
     return;

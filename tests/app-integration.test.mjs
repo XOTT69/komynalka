@@ -6,7 +6,7 @@ import {createHash,webcrypto} from 'node:crypto';
 import worker from '../worker.js';
 import {environment,legacyAccount} from './helpers.mjs';
 const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
-const sources=await Promise.all(['sync-queue.js','data-store.js','reminders.js','monthly-tasks.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','app.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
+const sources=await Promise.all(['sync-queue.js','data-store.js','addresses.js','reminders.js','monthly-tasks.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','app.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
 const password='test-password',hash=createHash('sha256').update(password).digest('hex');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function page(env,stored={},offline=false,suffix=""){
@@ -216,6 +216,21 @@ test('reminder overview names the next Kyiv day and never claims a disconnected 
  assert.equal(d.getElementById('testTelegramBtn').classList.contains('hidden'),true);
  const time=d.getElementById('reminderTime');time.value='18:35';time.dispatchEvent(new p.w.Event('input',{bubbles:true}));time.dispatchEvent(new p.w.Event('change',{bubbles:true}));assert.match(d.getElementById('reminderNextDate').textContent,/18:35/);assert.equal(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.accountSettings.reminderTime,'18:35');
  assert.deepEqual(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records,legacy.addresses[0].records);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+test('address archive preserves data, pauses daily use and restores the complete address',async()=>{
+ const legacy=legacyAccount(hash),second={id:'office',name:'Офіс',tariffs:{water:47.2,futureTariff:123},prefs:{remindersEnabled:true,showWater:true},records:[{id:77,month:'2026-09',total:901,customProof:'keep'}],customServices:[{id:'rent',name:'Оренда',defaultSum:'800'}],futureField:{keep:true}};
+ legacy.addresses.push(second);const {env}=environment({anna:legacy}),p=await page(env);
+ try{
+  await p.w.performLogin('anna',password,false);p.w.openAddressModal();const d=p.w.document;
+  d.querySelector('.addr-archive[data-id="office"]').click();await delay(20);
+  let saved=JSON.parse(p.storage()['komynalka_account_v1:anna']).local,archived=saved.addresses.find(a=>a.id==='office');
+  assert.ok(archived.archivedAt);assert.deepEqual(archived.records,second.records);assert.deepEqual(archived.futureField,{keep:true});assert.match(d.getElementById('addressModalSummary').textContent,/1.*архіві/);assert.equal(d.querySelector('[data-addr-id="office"]'),null);
+  d.querySelector('.addr-restore[data-id="office"]').click();await delay(20);
+  saved=JSON.parse(p.storage()['komynalka_account_v1:anna']).local;const restored=saved.addresses.find(a=>a.id==='office');assert.equal('archivedAt' in restored,false);assert.deepEqual(restored.records,second.records);assert.deepEqual(restored.futureField,{keep:true});
+  d.querySelector('.addr-archive[data-id="home"]').click();await delay(20);saved=JSON.parse(p.storage()['komynalka_account_v1:anna']).local;assert.equal(saved.currentAddressId,'office');assert.ok(saved.addresses.find(a=>a.id==='home').archivedAt);assert.equal(d.getElementById('currentAddressDisplay').textContent,'Офіс');
+  p.w.prompt=()=> 'не та назва';d.querySelector('.addr-del[data-id="home"]').click();assert.ok(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses.some(a=>a.id==='home'));
+  p.w.prompt=()=> 'Мій дім';d.querySelector('.addr-del[data-id="home"]').click();assert.equal(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses.some(a=>a.id==='home'),false);d.getElementById('toastActionBtn').click();assert.ok(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses.find(a=>a.id==='home').archivedAt);await delay(100);assert.deepEqual(p.errors,[]);
  }finally{p.close();}
 });
 

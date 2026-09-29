@@ -14,7 +14,7 @@
     return [...standard.filter(r=>!r.deleted),...custom.filter(r=>r&&!r.deleted&&r.id&&!definitions.some(d=>d[0]===r.id)).map(r=>({...r,startDay:day(r.startDay),endDay:day(r.endDay),label:String(r.label||'Нагадування').slice(0,100)}))];
   }
   function due(address,settings={},now=new Date()){
-    if(address.prefs?.remindersEnabled!==true)return[];
+    if(address?.archivedAt||address?.prefs?.remindersEnabled!==true)return[];
     const date=calendar(now),days=new Date(Date.UTC(date.year,date.month,0)).getUTCDate();
     const today=`${monthKey(date.year,date.month)}-${String(date.day).padStart(2,'0')}`,snoozed=snoozeUntil(settings,address.id);if(snoozed&&today<snoozed)return[];
     return schedule(address,settings).flatMap(rem=>{
@@ -26,7 +26,7 @@
     });
   }
   function nextDelivery(address,settings={},now=new Date()){
-    if(address.prefs?.remindersEnabled!==true)return null;
+    if(address?.archivedAt||address?.prefs?.remindersEnabled!==true)return null;
     const local=calendar(now),time=notificationTime(settings),[hour,minute]=time.split(':').map(Number);
     for(let offset=0;offset<=62;offset++){
       if(offset===0&&(local.hour*60+local.minute)>=hour*60+minute)continue;

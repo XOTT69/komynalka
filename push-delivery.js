@@ -40,7 +40,7 @@ export async function deliverReminders(ctx,env,send=sendReminder,now=new Date(),
   if(!state?.value||state.deleted)return;
   const date=R.calendar(now),[hour,minute]=time.split(':').map(Number);if(date.hour*60+date.minute<hour*60+minute)return;
   const today=`${R.monthKey(date.year,date.month)}-${String(date.day).padStart(2,'0')}`;
-  const addresses=state.value.addresses||[{id:'default',prefs:state.value.prefs||{}}];
+  const addresses=(state.value.addresses||[{id:'default',prefs:state.value.prefs||{}}]).filter(address=>!address?.archivedAt);
   const reminders=addresses.flatMap(a=>R.due(a,state.value.accountSettings||{},now));if(!reminders.length)return;
   const labels=[...new Set(reminders.map(r=>r.label))];
   const message={title:'Комуналка · нагадування',body:`Час передати показники: ${labels.join(', ').slice(0,300)}. Відкрийте застосунок, щоб позначити передані.`,tag:`komunalka-reminder-${today}`};

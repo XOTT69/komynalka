@@ -671,9 +671,9 @@
 <div id="addressModal" class="hidden fixed inset-0 z-[500] bg-apple-darker/60 dark:bg-black/60 backdrop-blur-md flex items-end justify-center">
   <div class="bg-white dark:bg-apple-dark w-full max-w-md rounded-t-[2.5rem] p-6 pb-[max(env(safe-area-inset-bottom),2rem)] spring-modal translate-y-full shadow-[0_-20px_40px_rgba(0,0,0,.15)]" id="addressModalContent">
     <div class="w-12 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-6"></div>
-    <h3 class="font-black text-2xl text-slate-900 dark:text-white mb-4">🏡 Мої об'єкти</h3>
-    <div id="addressListModal" class="space-y-3 mb-4 max-h-[50vh] overflow-y-auto no-scrollbar"></div>
-    <button id="addAddressBtn" class="w-full py-4 bg-brand-light hover:bg-brand-border text-brand font-bold rounded-2xl transition-colors mb-2 active:scale-[0.98]">+ Додати адресу</button>
+    <div class="address-modal-heading"><span class="settings-icon"><i class="fa-solid fa-house" aria-hidden="true"></i></span><div><h3>Мої адреси</h3><p id="addressModalSummary">Ваші активні та архівні адреси</p></div></div>
+    <div id="addressListModal" class="mb-4 max-h-[52vh] overflow-y-auto no-scrollbar" aria-live="polite"></div>
+    <button id="addAddressBtn" class="address-add-button"><i class="fa-solid fa-plus" aria-hidden="true"></i> Додати адресу</button>
     <button id="closeAddressModalBtn" class="w-full py-4 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-[0.98]">Закрити</button>
   </div>
 </div>
@@ -803,6 +803,7 @@
 
 <script src="sync-queue.js"></script>
 <script src="data-store.js"></script>
+<script src="addresses.js"></script>
 <script src="reminders.js"></script><script src="monthly-tasks.js"></script>
 <script src="pwa-updates.js"></script>
 <script src="push-client.js"></script>

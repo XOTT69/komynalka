@@ -35,3 +35,9 @@ test('snoozing one address hides only today and preserves unrelated account sett
   assert.deepEqual(settings.future,{keep:true});
   assert.throws(()=>R.snooze({},'home','tomorrow'));
 });
+test('archived addresses keep their schedule but never produce reminders',()=>{
+  const a={...address({remWaterStart:1,remWaterEnd:31}),archivedAt:'2026-09-29T10:00:00.000Z'};
+  assert.equal(R.schedule(a,{}).some(item=>item.id==='water'),true);
+  assert.deepEqual(R.due(a,{},new Date('2026-09-29T07:00:00Z')),[]);
+  assert.equal(R.nextDelivery(a,{},new Date('2026-09-29T07:00:00Z')),null);
+});
