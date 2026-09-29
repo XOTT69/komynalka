@@ -13,7 +13,7 @@ const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=
 createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://127.0.0.1:${port}`);
-    if(demo&&url.pathname==='/__demo/api'){
+    if(demo&&url.pathname.replace(/\/$/,'')==='/__demo/api'){
       const chunks=[];for await(const chunk of req)chunks.push(chunk);
       const request=new Request('https://local.invalid'+url.search,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:Buffer.concat(chunks)}:{})});
       const response=await worker.fetch(request,env);res.writeHead(response.status,Object.fromEntries(response.headers));return res.end(Buffer.from(await response.arrayBuffer()));
@@ -23,6 +23,7 @@ createServer(async(req,res)=>{
     if((await stat(file)).isDirectory())file=path.join(file,'index.html');
     let data=await readFile(file);
     if(demo&&path.basename(file)==='app.js')data=Buffer.from(data.toString().replace(/https:\/\/komunproga\.mikolenko-anton1\.workers\.dev/g,'/__demo/api'));
+    if(demo&&path.basename(file)==='admin.html')data=Buffer.from(data.toString().replace(/https:\/\/komunproga\.mikolenko-anton1\.workers\.dev/g,'/__demo/api'));
     if(demo&&path.basename(file)==='sw.js'){res.writeHead(404);return res.end();}
     if(demo&&path.basename(file)==='index.html'){
       let html=data.toString().replace(/<script async src="https:\/\/www.googletagmanager[^>]*><\/script>/g,'');

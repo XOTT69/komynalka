@@ -79,3 +79,13 @@ test('feedback inbox escapes messages and updates their workflow status', async(
     assert.equal(ui.calls.some(call=>call.action==='admin_feedback_update'&&call.status==='done'),true);
   }finally{ui.close();}
 });
+
+test('admin navigation returns to the signed-in app and remembers the working section', async()=>{
+  const ui=setup();try{
+    await ui.window.loadStats();
+    const {document,sessionStorage}=ui.window,headerLink=document.getElementById('backToApp'),loginLink=document.querySelector('.login-back');
+    assert.equal(new URL(headerLink.href).pathname,'/index.html');assert.equal(new URL(loginLink.href).pathname,'/index.html');assert.equal(headerLink.target,'');
+    const analyticsTab=document.querySelector('[data-admin-tab="analytics"]');ui.window.switchAdminTab('analytics',analyticsTab);assert.equal(sessionStorage.getItem('admin_tab'),'analytics');assert.equal(analyticsTab.getAttribute('aria-selected'),'true');assert.equal(document.getElementById('tabAnalytics').classList.contains('hidden'),false);
+    ui.window.switchAdminTab('not-valid');assert.equal(sessionStorage.getItem('admin_tab'),'users');assert.equal(document.querySelector('[data-admin-tab="users"]').getAttribute('aria-selected'),'true');
+  }finally{ui.close();}
+});
