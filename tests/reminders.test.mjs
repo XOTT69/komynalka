@@ -26,3 +26,12 @@ test('next reminder preview uses the validated account time',()=>{
   assert.equal(R.nextDelivery(a,settings,new Date('2026-09-20T04:14:00Z')).time,'07:15');
   assert.equal(R.notificationTime({reminderTime:'99:80'}),'09:00');
 });
+test('snoozing one address hides only today and preserves unrelated account settings',()=>{
+  const a=address({remWaterStart:20,remWaterEnd:25}),now=new Date('2026-09-20T07:00:00Z');
+  const settings=R.snooze({future:{keep:true}},'home','2026-09-21');
+  assert.equal(R.due(a,settings,now).length,0);
+  assert.equal(R.due(a,settings,new Date('2026-09-21T07:00:00Z')).length,1);
+  assert.equal(R.due({...a,id:'other'},settings,now).length,1);
+  assert.deepEqual(settings.future,{keep:true});
+  assert.throws(()=>R.snooze({},'home','tomorrow'));
+});

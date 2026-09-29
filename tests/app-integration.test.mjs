@@ -69,6 +69,13 @@ test('PWA reading shortcut opens entry and the data center reports sync and back
   const legacy=legacyAccount(hash),{env}=environment({anna:legacy}),p=await page(env,{},false,'/#calc');
   try{await p.w.performLogin('anna',password,false);await delay(30);const d=p.w.document;assert.equal(d.querySelector('.tab-active').id,'tabCalc');p.w.switchTab('tabSettings',4);p.w.openSettingsPanel('data');assert.match(d.getElementById('dataHealthSummary').textContent,/синхронізовані/i);assert.notEqual(d.getElementById('dataLastSync').textContent,'Ще не синхронізовано');let backup='';p.w.downloadBlob=value=>{backup=value;};d.getElementById('exportJsonBtn').click();assert.match(backup,/"addresses"/);assert.notEqual(d.getElementById('dataLastExport').textContent,'Ще не створено');assert.deepEqual(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records,legacy.addresses[0].records);assert.deepEqual(p.errors,[]);}finally{p.close();}
 });
+test('PWA reminder and payment shortcuts open their exact workflow; snooze preserves history',async()=>{
+  const legacy=legacyAccount(hash);legacy.addresses[0].prefs={...legacy.addresses[0].prefs,remindersEnabled:true,remWaterStart:1,remWaterEnd:31,showWater:true,showElectro:false,showGas:false};
+  const before=structuredClone(legacy.addresses[0].records),{env}=environment({anna:legacy}),reminders=await page(env,{},false,'/#reminders');
+  try{await reminders.w.performLogin('anna',password,false);await delay(30);const d=reminders.w.document;assert.equal(d.querySelector('.tab-active').id,'tabSettings');assert.equal(d.getElementById('settings-reminders').classList.contains('hidden'),false);d.getElementById('reminderSnoozeBtn').click();await delay(10);const saved=JSON.parse(reminders.storage()['komynalka_account_v1:anna']).local;assert.match(saved.accountSettings.reminderSnoozes['address:home'],/^\d{4}-\d{2}-\d{2}$/);assert.deepEqual(saved.addresses[0].records,before);assert.deepEqual(reminders.errors,[]);}finally{reminders.close();}
+  const payment=await page(env,{},false,'/#payment');
+  try{await payment.w.performLogin('anna',password,false);await delay(30);assert.equal(payment.w.document.querySelector('.tab-active').id,'tabCalc');assert.equal(payment.w.document.getElementById('monthInput').value,new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Kyiv'}).slice(0,7));assert.deepEqual(payment.errors,[]);}finally{payment.close();}
+});
 test('CSV and real PDF libraries retain cents, historical services and partial payments',async()=>{
   const legacy=legacyAccount(hash);legacy.addresses[0].prefs.showWater=false;const {env}=environment({anna:legacy});const p=await page(env);
   try{await p.w.performLogin('anna',password,false);let csv='';p.w.downloadBlob=text=>{csv=text;};p.w.exportCSV();assert.match(csv,/Вода/);assert.match(csv,/151\.90,50\.00,101\.90/);assert.equal(p.w.csvCell('=1+1'),"'=1+1");
@@ -192,6 +199,8 @@ test('current-month water email is one action away from the dashboard transfer l
   assert.equal(d.getElementById('dashAddBtn').dataset.action,'email');assert.match(d.getElementById('dashNextActionMeta').textContent,/Вода.*до/);
   d.getElementById('dashAddBtn').click();assert.ok(d.getElementById('providerEmailDialog').hasAttribute('open'));assert.equal(d.getElementById('providerEmailTo').value,'water@example.org');
   d.getElementById('providerEmailDialog').removeAttribute('open');action.click();assert.ok(d.getElementById('providerEmailDialog').hasAttribute('open'));
+  d.getElementById('providerMarkSent').click();await delay(10);const saved=JSON.parse(p.storage()['komynalka_account_v1:anna']).local;
+  assert.ok(saved.accountSettings.providerDeliveries['address:home']['service:water'][month].sentAt);assert.equal(saved.addresses[0].prefs.reminderCompletions.water,month);assert.match(d.getElementById('providerDeliveryStatus').textContent,/Надіслано/);
   assert.deepEqual(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records,legacy.addresses[0].records);assert.deepEqual(p.errors,[]);
  }finally{p.close();}
 });

@@ -3,6 +3,9 @@
   const calendar=(now=new Date())=>Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Kyiv',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now).filter(p=>p.type!=='literal').map(p=>[p.type,Number(p.value)]));
   const monthKey=(year,month)=>`${year}-${String(month).padStart(2,'0')}`;
   const notificationTime=settings=>/^([01]\d|2[0-3]):[0-5]\d$/.test(settings?.reminderTime)?settings.reminderTime:'09:00';
+  const snoozeKey=id=>'address:'+String(id??'default');
+  const snoozeUntil=(settings,id)=>{const value=settings?.reminderSnoozes?.[snoozeKey(id)];return /^\d{4}-\d{2}-\d{2}$/.test(value)?value:'';};
+  function snooze(settings,id,until){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(until||'')))throw new Error('INVALID_SNOOZE');return{...(settings||{}),reminderSnoozes:{...(settings?.reminderSnoozes||{}),[snoozeKey(id)]:until}};}
   const day=value=>Math.max(1,Math.min(31,Math.trunc(Number(value)||1)));
   function schedule(address,settings={}){
     const p=address.prefs||{};let custom=[];try{custom=JSON.parse(settings.komynalka_custom_reminders||'[]');}catch{}if(!Array.isArray(custom))custom=[];
@@ -13,6 +16,7 @@
   function due(address,settings={},now=new Date()){
     if(address.prefs?.remindersEnabled!==true)return[];
     const date=calendar(now),days=new Date(Date.UTC(date.year,date.month,0)).getUTCDate();
+    const today=`${monthKey(date.year,date.month)}-${String(date.day).padStart(2,'0')}`,snoozed=snoozeUntil(settings,address.id);if(snoozed&&today<snoozed)return[];
     return schedule(address,settings).flatMap(rem=>{
       const start=Math.min(rem.startDay,days),end=Math.min(rem.endDay,days),wrap=rem.startDay>rem.endDay;
       if(!rem.active||rem.enabled===false||!(wrap?date.day>=start||date.day<=end:date.day>=start&&date.day<=end))return[];
@@ -32,5 +36,5 @@
     }
     return null;
   }
-  global.KomunalkaReminders=Object.freeze({calendar,schedule,due,nextDelivery,notificationTime,monthKey});
+  global.KomunalkaReminders=Object.freeze({calendar,schedule,due,nextDelivery,notificationTime,snoozeUntil,snooze,monthKey});
 })(globalThis);

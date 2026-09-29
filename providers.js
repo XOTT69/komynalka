@@ -78,5 +78,17 @@
     url.searchParams.set('body',String(draft.body||''));
     return url.href;
   }
-  global.KomunalkaProviders=Object.freeze({services,website,email,get,update,readings,emailDraft,mailto,gmail});
+  function delivery(settings,address,id,month){
+    if(!/^\d{4}-\d{2}$/.test(String(month||'')))return null;
+    const value=settings?.providerDeliveries?.[addressKey(address)]?.[serviceKey(id)]?.[month];
+    return object(value)&&typeof value.sentAt==='string'?value:null;
+  }
+  function markDelivered(settings,address,id,month,sentAt=new Date().toISOString()){
+    const period=String(month||''),stamp=String(sentAt||'');
+    if(!/^\d{4}-\d{2}$/.test(period)||!/^\d{4}-\d{2}-\d{2}T/.test(stamp)||!Number.isFinite(Date.parse(stamp)))throw new Error('INVALID_DELIVERY');
+    const all=settings?.providerDeliveries,group=all?.[addressKey(address)],service=group?.[serviceKey(id)];
+    if((all!==undefined&&!object(all))||(group!==undefined&&!object(group))||(service!==undefined&&!object(service)))throw new Error('INVALID_DELIVERY_DATA');
+    return {...(settings||{}),providerDeliveries:{...(all||{}),[addressKey(address)]:{...(group||{}),[serviceKey(id)]:{...(service||{}),[period]:{...(object(service?.[period])?service[period]:{}),sentAt:stamp}}}}};
+  }
+  global.KomunalkaProviders=Object.freeze({services,website,email,get,update,readings,emailDraft,mailto,gmail,delivery,markDelivered});
 })(globalThis);

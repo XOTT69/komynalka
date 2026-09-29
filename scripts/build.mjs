@@ -18,6 +18,10 @@ const builtIndexPath=path.join('dist','index.html');
 let builtIndex=await readFile(builtIndexPath,'utf8');
 builtIndex=builtIndex.replace('<meta name="app-version" content="dev">',`<meta name="app-version" content="${appVersion}">`).replace('<span id="appVersion">dev</span>',`<span id="appVersion">${appVersion}</span>`);
 await writeFile(builtIndexPath,builtIndex);
+const builtAdminPath=path.join('dist','admin.html');
+let builtAdmin=await readFile(builtAdminPath,'utf8');
+builtAdmin=builtAdmin.replace('<meta name="app-version" content="dev">',`<meta name="app-version" content="${appVersion}">`);
+await writeFile(builtAdminPath,builtAdmin);
 async function files(dir){const result=[];for(const entry of await readdir(dir,{withFileTypes:true})){const name=path.join(dir,entry.name);if(entry.isDirectory())result.push(...await files(name));else result.push(name);}return result;}
 const assets=(await files('dist')).filter(p=>!p.endsWith('admin.html')&&!p.endsWith('landing.html')).sort();
 const optionalOfflinePatterns=[/\/vendor\/jspdf\//,/\/vendor\/fonts\/Roboto-Regular\.ttf$/,/\/vendor\/fontawesome\/webfonts\/.*\.ttf$/,/\/vendor\/fontawesome\/webfonts\/fa-(?:regular|v4compatibility).*\.woff2$/,/\/og-image\.png$/,/\/icon\.png$/,/\/styles\/(?:app-shell|design-tokens|quiet-ui|theme|tailwind)\.css$/];

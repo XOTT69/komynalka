@@ -141,3 +141,42 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .reminder-add{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;border:1px dashed var(--brand-border);border-radius:14px;background:var(--brand-light);color:var(--brand);font-size:.875rem;font-weight:750}
 @media(max-width:640px){.reminder-channel-grid{grid-template-columns:1fr}.reminder-schedule-card,.reminder-section{padding:16px}.reminder-time-field{padding:13px 14px}.reminder-time-field input[type=time]{width:110px}.reminder-group-title{align-items:flex-start}.reminder-channel-status,.telegram-setup #telegramStatus{min-height:0}}
 @media(max-width:360px){.reminder-time-field{align-items:flex-start;flex-direction:column}.reminder-time-field input[type=time]{width:100%}}
+
+/* Calm comfort layer: soft color cues, clear hierarchy and restrained depth. */
+#appScreen>header{background:color-mix(in srgb,var(--ui-bg) 90%,transparent);border-bottom:1px solid color-mix(in srgb,var(--ui-line) 72%,transparent)}
+.brand-logo--header{box-shadow:0 7px 18px rgb(61 82 128 / .13)!important}
+#quickActionsBtn{background:var(--ui-surface)!important;color:var(--brand)!important;border-color:var(--ui-line)!important}
+.dashboard-summary{background:linear-gradient(145deg,#607fc0 0%,#526fab 100%)!important;color:#fff!important;border:0!important;box-shadow:0 18px 42px rgb(67 88 136 / .19)!important}
+.dashboard-summary .summary-label,.dashboard-summary .month-status,.dashboard-summary .dashboard-action-hint{color:rgb(255 255 255 / .78)!important}
+.dashboard-summary #dashBalance,.dashboard-summary .summary-split p:last-child{color:#fff!important}
+.dashboard-summary .summary-split{border-color:rgb(255 255 255 / .22)}
+.dashboard-summary .dashboard-next-meta{background:rgb(255 255 255 / .13);color:#fff}
+.dashboard-summary #dashAddBtn{background:#fff!important;color:#4e6ba8!important;box-shadow:0 8px 20px rgb(40 57 96 / .16)!important}
+.summary-symbol{background:rgb(255 255 255 / .12)!important;color:rgb(255 255 255 / .88)!important}
+.monthly-tasks{box-shadow:0 10px 30px rgb(53 65 91 / .045)}
+.month-progress{height:7px;margin:2px 0 7px;overflow:hidden;border-radius:999px;background:var(--ui-soft)}
+.month-progress>span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#7fa8d4,#7db29c);transition:width .45s var(--motion-standard,cubic-bezier(.32,.72,0,1))}
+.month-progress-text{margin:0 0 3px;color:var(--ui-muted);font-size:.8125rem;line-height:1.45}
+.task-icon{background:var(--brand-light);color:var(--brand)}.task-done .task-icon{background:var(--ui-success-soft);color:var(--ui-success)}
+.task-action{background:var(--brand-light);border-color:transparent;color:var(--brand)}
+.task-action:hover{background:var(--brand-border)}
+.service-water{--service-color:var(--service-water)}.service-hotwater{--service-color:var(--service-hot-water)}.service-electro{--service-color:var(--service-electricity)}.service-gas{--service-color:var(--service-gas)}
+.meter-card{border-left:3px solid color-mix(in srgb,var(--service-color,var(--brand)) 62%,var(--ui-line))!important}
+.meter-heading .w-11{background:color-mix(in srgb,var(--service-color,var(--brand)) 13%,var(--ui-surface))!important;color:var(--service-color,var(--brand))!important}
+.settings-icon{background:var(--brand-light)!important;color:var(--brand)!important}
+.settings-link:hover{background:color-mix(in srgb,var(--brand-light) 48%,var(--ui-surface))}
+.provider-card{box-shadow:0 7px 22px rgb(53 65 91 / .035)}
+.provider-delivery-confirm{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding:13px 14px;border:1px solid var(--ui-line);border-radius:14px;background:var(--ui-success-soft)}
+.provider-delivery-confirm>span{display:flex;align-items:center;gap:10px;min-width:0;color:var(--ui-success)}
+.provider-delivery-confirm>span>span{display:grid;min-width:0}.provider-delivery-confirm strong{color:var(--ui-text);font-size:.8125rem}.provider-delivery-confirm small{color:var(--ui-muted);font-size:.75rem;overflow-wrap:anywhere}
+.provider-delivery-confirm button{flex-shrink:0;min-height:40px;padding:8px 10px;border-radius:10px;background:var(--ui-surface);border:1px solid color-mix(in srgb,var(--ui-success) 28%,var(--ui-line));color:var(--ui-success);font-size:.75rem;font-weight:700}
+.provider-delivery-confirm.is-sent button{background:var(--ui-success);color:var(--ui-surface);border-color:var(--ui-success)}
+.provider-sent-state{display:inline-flex;align-items:center;gap:6px;color:var(--ui-success);font-weight:650}
+#bottomNav{box-shadow:0 -8px 28px rgb(53 65 91 / .055)!important}
+#bottomNav .nav-btn.text-brand{background:var(--brand-light)!important}
+.overview-link{background:color-mix(in srgb,var(--brand-light) 68%,var(--ui-surface));border-color:var(--brand-border)}
+#analyticsCard{display:grid;gap:16px}#analyticsCard>.bg-gradient-to-br{background:linear-gradient(145deg,#7588bd 0%,#5f72aa 100%)!important;border:0!important;border-radius:20px!important;box-shadow:0 16px 36px rgb(70 81 125 / .16)!important}#analyticsCard>.premium-card{margin:0!important}
+.reminder-banner-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.reminder-banner-actions button{min-height:44px;padding:10px 12px;border-radius:11px;font-size:.8125rem;font-weight:700}.reminder-banner-actions button:first-child{background:var(--brand-light);color:var(--brand)}.reminder-banner-actions button:last-child{background:var(--brand);color:#fff}
+html.dark .dashboard-summary{background:linear-gradient(145deg,#3a4c70 0%,#303e5d 100%)!important;box-shadow:none!important}
+html.dark .dashboard-summary #dashAddBtn{background:#e9effb!important;color:#344b78!important}
+@media(max-width:520px){.provider-delivery-confirm{align-items:stretch;flex-direction:column}.provider-delivery-confirm button{width:100%}.reminder-banner-actions{grid-template-columns:1fr}}

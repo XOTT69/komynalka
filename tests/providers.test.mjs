@@ -14,6 +14,15 @@ test('provider changes on independent addresses and concurrent history edits mer
  const remote=structuredClone(base);remote.accountSettings=P.update(remote.accountSettings,'other','gas',{account:'456'});remote.addresses[0].records[0].note='updated';
  const merged=D.merge(base,local,remote);assert.deepEqual(merged.conflicts,[]);assert.equal(merged.value.addresses[0].records[0].note,'updated');assert.equal(P.get(merged.value.accountSettings,'home','water').account,'123');assert.equal(P.get(merged.value.accountSettings,'other','gas').account,'456');
 });
+test('delivery confirmation is additive, month-specific and preserves provider settings',()=>{
+ const settings=P.update({futureField:{keep:true}},'home','water',{name:'Водоканал',account:'00123',email:'water@example.org'}),before=structuredClone(settings),sentAt='2026-09-29T12:30:00.000Z';
+ const next=P.markDelivered(settings,'home','water','2026-09',sentAt);
+ assert.deepEqual(P.delivery(next,'home','water','2026-09'),{sentAt});
+ assert.equal(P.delivery(next,'home','water','2026-08'),null);
+ assert.equal(P.get(next,'home','water').account,'00123');assert.deepEqual(next.futureField,{keep:true});assert.deepEqual(settings,before);
+ assert.throws(()=>P.markDelivered(settings,'home','water','bad-month',sentAt));
+ assert.throws(()=>P.markDelivered({providerDeliveries:'corrupt'},'home','water','2026-09',sentAt));
+});
 test('copying readings uses only the selected saved month and retains explicit zeros',()=>{
  const a={prefs:{showWater:true,showElectro:true,electroTwoZone:true},records:[{month:'2026-09',wCur:0,dCur:14,nCur:8,_filled:{water:true,electro:false}}]};const before=structuredClone(a);
  assert.equal(P.readings(a,'water','2026-09'),'Вода: 0 м³');assert.equal(P.readings(a,'water','2026-08'),null);assert.equal(P.readings(a,'electro','2026-09'),null);assert.equal(P.readings(a,'custom:s1','2026-09'),null);assert.deepEqual(a,before);

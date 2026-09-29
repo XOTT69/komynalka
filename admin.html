@@ -3,30 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="app-version" content="dev">
     <title>Керування · Комуналка</title>
     <link rel="icon" type="image/png" href="./icon-192.png">
     <link rel="stylesheet" href="./assets/tailwind.css">
     <link rel="stylesheet" href="./vendor/fontawesome/css/all.min.css">
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f7fb; }
         .stat-card { transition: transform .15s; }
         .stat-card:hover { transform: translateY(-2px); }
-        .tab-btn.active { background: #007aff; color: white; }
+        .tab-btn.active { background: #5675bb; color: white; }
         .user-row:hover { background: #f8fafc; }
         .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
         .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 12px; font-weight: 700; font-size: 14px; z-index: 9999; transition: all .3s; transform: translateX(120%); }
         .toast.show { transform: translateX(0); }
         .toast.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .toast.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        :root { font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; color: #152a44; }
-        body { background: #f4f7fb; }
-        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #85afff; outline-offset: 2px; }
+        :root { font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; color: #273247; --admin-brand:#5675bb; --admin-brand-soft:#edf2fd; --admin-line:#e1e7f0; --admin-muted:#69768b; --admin-success:#4f806d; --admin-success-soft:#eaf6f1; }
+        body { background: radial-gradient(circle at 15% 0,#edf1ff 0,transparent 34%),radial-gradient(circle at 92% 4%,#f8eff4 0,transparent 30%),#f5f7fb; }
+        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #9eb4df; outline-offset: 2px; }
         button:disabled { opacity: .45; cursor: not-allowed; }
         .admin-shell { max-width: 1440px; }
-        .admin-surface { border: 1px solid #e2e9f3; border-radius: 18px; box-shadow: 0 5px 24px #1a3a6209; }
+        .admin-surface { border: 1px solid var(--admin-line); border-radius: 20px; box-shadow: 0 10px 30px #35415b0d; }
         .tab-btn { border-radius: 12px; transition: background .15s, color .15s; }
-        .tab-btn.active { background: #2559c5; color: white; box-shadow: 0 5px 12px #2559c533; }
-        .stat-card { border-radius: 18px; border-color: #e2e9f3; box-shadow: 0 5px 24px #1a3a6209; text-align: left; min-height: 105px; }
+        .tab-btn.active { background: var(--admin-brand); color: white; box-shadow: 0 7px 16px #5675bb2b; }
+        .stat-card { border-radius: 20px; border-color: var(--admin-line); box-shadow: 0 10px 30px #35415b0d; text-align: left; min-height: 105px; }
         .stat-card p:first-child { font-size: 1.9rem; }
         .badge { font-size: 11px; padding: 4px 8px; }
         .admin-intro { margin: 0 0 20px; color: #64748b; font-size: 14px; line-height: 1.5; }
@@ -35,6 +36,10 @@
         .admin-alert.warning { background: #fff5e6; color: #865719; }
         .admin-alert.danger { background: #fff0f0; color: #a1333b; }
         #usersTableBody tr:last-child { border-bottom: 0; }
+        .system-strip { display:flex; gap:10px; flex-wrap:wrap; margin:0 0 20px; }
+        .system-chip { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:8px 12px; border:1px solid var(--admin-line); border-radius:999px; background:#fff; color:var(--admin-muted); font-size:12px; font-weight:700; box-shadow:0 5px 18px #35415b0a; }
+        .system-chip i { color:var(--admin-brand); }.system-chip.is-ok i{color:var(--admin-success)}.system-chip.is-warning{background:#fff6e9;color:#8a6138}.system-chip.is-warning i{color:#9a7046}.system-chip.is-error{background:#fff0f1;color:#9f505a}.system-chip.is-error i{color:#b85e69}
+        .bg-blue-500,.bg-blue-600,.bg-blue-700{background-color:var(--admin-brand)!important}.text-blue-600,.text-blue-700{color:var(--admin-brand)!important}.bg-blue-50{background-color:var(--admin-brand-soft)!important}.border-blue-200{border-color:#cad7f1!important}
         @media (max-width: 640px) {
             .admin-header { align-items: flex-start; flex-direction: column; }
             .admin-header-actions { width: 100%; justify-content: flex-start; }
@@ -86,6 +91,7 @@
 
         <div class="admin-shell mx-auto px-4 md:px-6 py-6">
             <div class="mb-5"><h2 class="text-2xl font-black text-slate-900">Огляд сервісу</h2><p class="admin-intro mb-0">Актуальні дані з сервера. Активний користувач — той, у кого є запис за цей місяць.</p></div>
+            <div class="system-strip" aria-label="Стан системи"><span id="systemApi" class="system-chip"><i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>API перевіряється</span><span id="systemStorage" class="system-chip"><i class="fa-solid fa-database" aria-hidden="true"></i>Сховище перевіряється</span><span id="systemProtocol" class="system-chip"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>Синхронізація</span></div>
             <!-- Stats Cards -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <div class="stat-card bg-white p-4 rounded-xl border shadow-sm text-center">
@@ -332,6 +338,7 @@
 
     <script>
         const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
+        const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'dev';
         let adminToken = sessionStorage.getItem('admin_token') || '';
         let adminLoginTime = parseInt(sessionStorage.getItem('admin_login_time') || '0');
         let allUsers = [];
@@ -472,6 +479,7 @@
         // =================== DATA LOADING ===================
         async function loadStats() {
             document.getElementById('lastUpdate').textContent = 'Завантаження...';
+            refreshSystemHealth();
             if (statsRequest) return statsRequest;
             statsRequest = (async () => {
             try {
@@ -498,6 +506,20 @@
             finally { statsRequest = null; }
             })();
             return statsRequest;
+        }
+
+        async function refreshSystemHealth() {
+            const api=document.getElementById('systemApi'),storage=document.getElementById('systemStorage'),protocol=document.getElementById('systemProtocol');
+            try {
+                const response=await fetch(WORKER_URL+'/?health=1',{cache:'no-store'}),data=await response.json();
+                if(!response.ok||!data.success)throw new Error('HEALTH_FAILED');
+                api.className='system-chip is-ok';api.innerHTML='<i class="fa-solid fa-circle-check" aria-hidden="true"></i>API працює';
+                storage.className='system-chip '+(data.readOnly?'is-warning':'is-ok');storage.innerHTML=`<i class="fa-solid ${data.readOnly?'fa-lock':'fa-database'}" aria-hidden="true"></i>${data.readOnly?'Лише читання':'KV доступний для запису'}`;
+                protocol.className='system-chip is-ok';protocol.innerHTML=`<i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>Синхронізація v${Number(data.syncProtocol)||'—'}`;
+            } catch {
+                for(const el of [api,storage,protocol])el.className='system-chip is-error';
+                api.innerHTML='<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>API недоступний';storage.textContent='Стан KV невідомий';protocol.textContent='Стан синхронізації невідомий';
+            }
         }
 
         // =================== USERS TABLE ===================
@@ -829,7 +851,7 @@
                 }
                 do{const page=await adminApi('admin_backup_page',{cursor});if(!Array.isArray(page.entries))throw new Error('Не вдалося прочитати повну резервну копію KV');kvEntries.push(...page.entries);readOnly=readOnly&&page.readOnly;cursor=page.cursor;progress.textContent = `Ключі KV: ${kvEntries.length}`;if(!page.listComplete&&!cursor)throw new Error('Неповна сторінка KV');}while(cursor);
                 const manifest={kvKeys:kvEntries.length,accounts:fullData.length,addresses:fullData.reduce((n,u)=>n+(u.addresses?.length||0),0),records:fullData.reduce((n,u)=>n+(u.addresses||[]).reduce((sum,a)=>sum+(a.records?.length||0),0),0)};
-                downloadFile(JSON.stringify({exportDate:new Date().toISOString(),version:'5.3.2',complete:true,readOnly,unrecognizedAccounts:accounts.unrecognizedAccounts||0,manifest,kvEntries,users:fullData},null,2),`komunalka_full_backup_${new Date().toISOString().slice(0,10)}.json`,'application/json');
+                downloadFile(JSON.stringify({exportDate:new Date().toISOString(),version:APP_VERSION,complete:true,readOnly,unrecognizedAccounts:accounts.unrecognizedAccounts||0,manifest,kvEntries,users:fullData},null,2),`komunalka_full_backup_${new Date().toISOString().slice(0,10)}.json`,'application/json');
                 progress.textContent = `Готово: ${manifest.kvKeys} ключів KV, ${manifest.accounts} акаунтів. ${readOnly ? 'Копія зроблена в режимі лише читання.' : 'Дані могли змінюватися під час копіювання — для міграції потрібен режим лише читання.'}`;
                 showAdminToast('Резервну копію завантажено');
             }catch(error){progress.textContent = 'Експорт не завершено. Дані на сервері не змінено.';showAdminToast(error.message,'error');}
