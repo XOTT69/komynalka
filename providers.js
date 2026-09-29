@@ -5,7 +5,7 @@
   const definitions=[['water','Вода','showWater','droplet'],['hotWater','Гаряча вода','showHotWater','temperature-half'],['electro','Світло','showElectro','bolt'],['gas','Газ','showGas','fire-flame-simple']];
   function services(address){
     const p=address.prefs||{};
-    return [...definitions.filter(([, ,pref])=>p[pref]===true||(p[pref]===undefined&&pref!=='showHotWater')).map(([id,label,,icon])=>({id,label,icon,meter:true})),...(address.customServices||[]).map(s=>({id:'custom:'+String(s.id),label:s.name||'Інша послуга',icon:'layer-group',meter:false}))];
+    return [...definitions.filter(([, ,pref])=>p[pref]===true||(p[pref]===undefined&&pref!=='showHotWater')).map(([id,label,,icon])=>({id,label,icon,meter:true})),...(address.customServices||[]).filter(s=>!s.archivedAt).map(s=>({id:'custom:'+String(s.id),label:s.name||'Інша послуга',icon:'layer-group',meter:false}))];
   }
   function website(value){
     const raw=String(value||'').trim();if(!raw)return '';

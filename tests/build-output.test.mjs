@@ -15,6 +15,7 @@ test('production build injects one release version and keeps optional assets out
   assert.match(sw,/\.\/addresses\.js/);
   assert.equal(await readFile(new URL('../dist/consumption-insights.js',import.meta.url),'utf8').then(Boolean),true);
   assert.equal(await readFile(new URL('../dist/addresses.js',import.meta.url),'utf8').then(Boolean),true);
+  assert.equal(await readFile(new URL('../dist/service-archive.js',import.meta.url),'utf8').then(Boolean),true);
   const match=sw.match(/const PRECACHE_URLS = (\[[^;]+\]);/);
   assert.ok(match,'built service worker has no precache manifest');
   const assets=JSON.parse(match[1]);

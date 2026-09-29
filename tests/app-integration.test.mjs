@@ -6,7 +6,7 @@ import {createHash,webcrypto} from 'node:crypto';
 import worker from '../worker.js';
 import {environment,legacyAccount} from './helpers.mjs';
 const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
-const sources=await Promise.all(['sync-queue.js','data-store.js','addresses.js','reminders.js','monthly-tasks.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','app.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
+const sources=await Promise.all(['sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','app.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
 const password='test-password',hash=createHash('sha256').update(password).digest('hex');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function page(env,stored={},offline=false,suffix=""){
@@ -232,6 +232,18 @@ test('address archive preserves data, pauses daily use and restores the complete
   p.w.prompt=()=> 'не та назва';d.querySelector('.addr-del[data-id="home"]').click();assert.ok(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses.some(a=>a.id==='home'));
   p.w.prompt=()=> 'Мій дім';d.querySelector('.addr-del[data-id="home"]').click();assert.equal(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses.some(a=>a.id==='home'),false);d.getElementById('toastActionBtn').click();assert.ok(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses.find(a=>a.id==='home').archivedAt);await delay(100);assert.deepEqual(p.errors,[]);
  }finally{p.close();}
+});
+
+test('custom service archive hides daily controls, preserves history and restores the full configuration',async()=>{
+ const legacy=legacyAccount(hash),service={id:'rent',name:'Оренда',defaultSum:'800',futureField:{keep:true}};legacy.addresses[0].customServices=[service];legacy.addresses[0].records[0]={...legacy.addresses[0].records[0],customData:{rent:{name:'Оренда',val:800}},customCost:800,total:951.9};
+ const {env}=environment({anna:legacy}),p=await page(env);try{await p.w.performLogin('anna',password,false);p.w.openSettingsPanel('home');p.w.renderSettingsCustomServices();const d=p.w.document;
+ d.querySelector('.cs-archive[data-id="rent"]').click();await delay(30);let saved=JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0];assert.ok(saved.customServices[0].archivedAt);assert.deepEqual(saved.customServices[0].futureField,{keep:true});assert.equal(saved.records[0].customData.rent.val,800);assert.equal(d.getElementById('custom_rent'),null);assert.equal(p.w.KomunalkaProviders.services(saved).some(item=>item.id==='custom:rent'),false);assert.equal(p.w.KomunalkaMonth.readings(saved,'2026-08').services.some(item=>item.id==='rent'),false);
+ d.querySelector('.cs-restore[data-id="rent"]').click();await delay(30);saved=JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0];assert.equal(saved.customServices[0].archivedAt,undefined);assert.deepEqual(saved.customServices[0].futureField,{keep:true});assert.ok(d.getElementById('custom_rent'));assert.equal(saved.records[0].customData.rent.val,800);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+
+test('feedback is sent from inside the app without exposing account records',async()=>{
+ const legacy=legacyAccount(hash),{env,values}=environment({anna:legacy}),p=await page(env);try{await p.w.performLogin('anna',password,false);const d=p.w.document;p.w.openSettingsPanel('help');d.getElementById('feedbackType').value='idea';d.getElementById('feedbackMessage').value='Додайте зручний сімейний доступ';d.getElementById('feedbackContact').value='anna@example.com';d.getElementById('feedbackForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await delay(30);assert.match(d.getElementById('feedbackStatus').textContent,/Дякуємо/);const key=[...values.keys()].find(name=>name.startsWith('feedback:'));const feedback=JSON.parse(values.get(key));assert.equal(feedback.login,'anna');assert.equal(feedback.type,'idea');assert.equal('addresses' in feedback,false);assert.deepEqual(JSON.parse(values.get('anna')).addresses,legacy.addresses);assert.deepEqual(p.errors,[]);}finally{p.close();}
 });
 
 test('a failed local provider save keeps the editor and prior data; retry succeeds',async()=>{

@@ -25,6 +25,21 @@ test('private admin entry is visible only to the authenticated owner',async()=>{
 test('admin listing paginates all keys and includes Google-only accounts',async()=>{const seed={anna:legacyAccount(hash),uid_google:{...legacyAccount(hash),pass:undefined}};for(let i=0;i<1001;i++)seed[`rl:${String(i).padStart(4,'0')}`]='1';const {env}=environment(seed);const adminToken=createHash('sha256').update(`${env.ADMIN_PASS}:${Math.floor(Date.now()/3600000)}:k_admin`).digest('hex');const res=await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'admin_stats',adminToken})}),env);assert.deepEqual((await res.json()).users.map(u=>u.login).sort(),['anna','uid_google']);});
 test('request body limit applies without Content-Length; CORS is not wildcard',async()=>{const {env}=environment();const large=new Request('https://test.workers.dev',{method:'POST',body:' '.repeat(513*1024)});assert.equal((await worker.fetch(large,env)).status,413);const preflight=await worker.fetch(new Request('https://test.workers.dev',{method:'OPTIONS',headers:{Origin:'https://komynalka.vercel.app'}}),env);assert.equal(preflight.headers.get('Access-Control-Allow-Origin'),'https://komynalka.vercel.app');assert.equal((await worker.fetch(new Request('https://test.workers.dev',{headers:{Origin:'https://unknown.example'}}),env)).status,403);});
 
+test('authenticated feedback is private, validated and manageable from admin without changing utility data',async()=>{
+  const legacy=legacyAccount(hash),{env,values}=environment({anna:legacy});
+  const before=values.get('anna');
+  assert.equal((await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'feedback_submit',type:'idea',message:'Корисна ідея для застосунку'})}),env)).status,401);
+  assert.equal((await worker.fetch(req('anna',{action:'feedback_submit',type:'wrong',message:'Достатньо довге повідомлення'}),env)).status,400);
+  const sent=await worker.fetch(req('anna',{action:'feedback_submit',type:'problem',message:'Не бачу нагадування у потрібний день',contact:'anna@example.com',appVersion:'5.10.0'}),env);assert.equal(sent.status,200);
+  assert.equal(values.get('anna'),before);
+  const key=[...values.keys()].find(name=>name.startsWith('feedback:'));assert.ok(key);
+  const stored=JSON.parse(values.get(key));assert.equal(stored.login,'anna');assert.equal(stored.status,'new');assert.equal('addresses' in stored,false);
+  const adminToken=createHash('sha256').update(`${env.ADMIN_PASS}:${Math.floor(Date.now()/3600000)}:k_admin`).digest('hex');
+  const admin=body=>worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({adminToken,...body})}),env);
+  const listed=await(await admin({action:'admin_feedback_list'})).json();assert.equal(listed.feedback.length,1);assert.equal(listed.feedback[0].message,stored.message);
+  assert.equal((await admin({action:'admin_feedback_update',id:stored.id,status:'done'})).status,200);assert.equal(JSON.parse(values.get(key)).status,'done');
+});
+
 test('a committed account remains discoverable and exportable when its KV mirror fails',async()=>{
   const {env,values}=environment();const put=env.KV.put;env.KV.put=async(key,value)=>{if(key==='anna')throw new Error('mirror unavailable');return put(key,value);};
   const snapshot=legacyAccount(hash);const response=await worker.fetch(req('anna',{addresses:snapshot.addresses,currentAddressId:'home',baseRevision:0,clientMutationId:'new-account'}),env);assert.equal(response.status,200);assert.equal(values.has('anna'),false);assert.equal((await(await worker.fetch(req('anna'),env)).json()).data.addresses[0].records[0].total,151.9);
