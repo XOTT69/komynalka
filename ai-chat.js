@@ -103,9 +103,24 @@ ${recLines}
       const payload={action:'ai_chat',messages:apiMessages,max_tokens:AI_MAX_TOKENS,temperature:0.4};
       const res=await secureFetch('POST',{},payload,{signal:this.abort.signal});
       if (res.status === 429) throw new Error('Забагато запитів. Зачекайте хвилину. ⏳');
-      if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error || `HTTP ${res.status}`); }
+      if (!res.ok) {
+        const e = await res.json().catch(()=>({}));
+        const providerMessage = e.error === 'AI_PROVIDERS_FAILED'
+          ? 'AI-провайдер тимчасово недоступний. Спробуйте ще раз за хвилину.'
+          : e.error === 'AI_NOT_CONFIGURED'
+            ? 'AI ще не налаштований адміністратором.'
+            : e.error;
+        throw new Error(providerMessage || `HTTP ${res.status}`);
+      }
       const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Помилка AI');
+      if (!data.success) {
+        const providerMessage = data.error === 'AI_PROVIDERS_FAILED'
+          ? 'AI-провайдер тимчасово недоступний. Спробуйте ще раз за хвилину.'
+          : data.error === 'AI_NOT_CONFIGURED'
+            ? 'AI ще не налаштований адміністратором.'
+            : data.error;
+        throw new Error(providerMessage || 'Помилка AI');
+      }
       const reply = data.choices?.[0]?.message?.content?.trim();
       if (!reply) throw new Error('Порожня відповідь');
       this._addMsg('assistant', reply);

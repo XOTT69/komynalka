@@ -586,29 +586,49 @@ async function doAiChat(body, env, login) {
   if (!safe.length) return err('NO_VALID_MESSAGES', 400);
   const tk = Math.min(Math.max(1, Math.floor(Number(max_tokens)||400)), 500);
   const tp = Math.max(0, Math.min(Number(temperature)||0.4, 1));
-  if (env.GROQ_API_KEY) {
+  const attempts = [];
+  const callProvider = async (name, url, key, payload) => {
+    if (!key) return null;
     try {
-      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${env.GROQ_API_KEY}` },
-        body: JSON.stringify({ model:'llama-3.1-8b-instant', messages:safe, max_completion_tokens:tk, temperature:tp }),
+        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${key}` },
+        body: JSON.stringify(payload),
         signal: AbortSignal.timeout(20000),
       });
-      if (r.ok) return ok({ ...await r.json(), success:true });
-    } catch(e) { console.error('Groq:', e?.message); }
+      if (response.ok) return { ...await response.json(), success:true, ...(name === 'gemini' ? {_fallback:'gemini'} : {}) };
+      const detail = (await response.text().catch(() => '')).slice(0, 240);
+      attempts.push(`${name}:${response.status}`);
+      console.error(`${name} provider returned ${response.status}`, detail);
+    } catch (error) {
+      attempts.push(`${name}:network`);
+      console.error(`${name} provider failed`, error?.message);
+    }
+    return null;
+  };
+
+  // Groq retired llama-3.1-8b-instant on 16 Aug 2026. Keep the current
+  // production model here so existing GROQ_API_KEY secrets keep working.
+  const groq = await callProvider(
+    'groq',
+    'https://api.groq.com/openai/v1/chat/completions',
+    env.GROQ_API_KEY,
+    { model:'openai/gpt-oss-20b', messages:safe, max_completion_tokens:tk, temperature:tp },
+  );
+  if (groq) return ok(groq);
+
+  // Gemini's OpenAI-compatible endpoint may expose different model aliases
+  // per project, so retry the stable 2.5 alias if the newest alias is absent.
+  for (const model of ['gemini-3.8-flash', 'gemini-2.5-flash']) {
+    const gemini = await callProvider(
+      'gemini',
+      'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      env.GEMINI_API_KEY,
+      { model, messages:safe, max_tokens:tk, temperature:tp },
+    );
+    if (gemini) return ok(gemini);
   }
-  if (env.GEMINI_API_KEY) {
-    try {
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${env.GEMINI_API_KEY}` },
-        body: JSON.stringify({ model:'gemini-2.0-flash', messages:safe, max_tokens:tk, temperature:tp }),
-        signal: AbortSignal.timeout(20000),
-      });
-      if (r.ok) return ok({ ...await r.json(), success:true, _fallback:'gemini' });
-    } catch(e) { console.error('Gemini:', e?.message); }
-  }
-  return err('AI_PROVIDERS_FAILED', 502);
+  return err(env.GROQ_API_KEY || env.GEMINI_API_KEY ? 'AI_PROVIDERS_FAILED' : 'AI_NOT_CONFIGURED', 502);
 }
 
 // ═══════════════════════════════════════════════════════
