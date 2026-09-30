@@ -111,6 +111,10 @@
     </div>
     <div class="premium-card bg-white dark:bg-apple-dark p-8 rounded-[2.5rem] shadow-premium border border-slate-100 dark:border-white/5 relative overflow-hidden">
       <form id="authForm" class="space-y-4 relative z-10">
+        <div class="auth-mode-switch" role="tablist" aria-label="Спосіб входу">
+          <button type="button" id="authModeLogin" class="active" role="tab" aria-selected="true">Увійти</button>
+          <button type="button" id="authModeRegister" role="tab" aria-selected="false">Створити акаунт</button>
+        </div>
         <div>
           <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 tracking-wider">Логін</label>
           <input type="text" id="authLogin" aria-label="Логін" placeholder="Ваш логін" required="" autocapitalize="none" autocorrect="off" autocomplete="username" spellcheck="false" class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-base font-bold outline-none text-slate-900 dark:text-white">
@@ -130,6 +134,11 @@
             <p id="passStrText" class="text-[9px] font-bold mt-1 text-slate-400"></p>
           </div>
         </div>
+        <div id="authConfirmWrap" class="hidden">
+          <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-2 tracking-wider">Повторіть пароль</label>
+          <input type="password" id="authPassConfirm" aria-label="Повторіть пароль" placeholder="••••••••" autocomplete="new-password" class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-base font-bold outline-none text-slate-900 dark:text-white">
+          <p class="text-[10px] text-slate-400 mt-2 ml-2">Щонайменше 8 символів. Дані акаунта зберігатимуться у хмарі.</p>
+        </div>
         <p id="authError" class="text-red-500 text-sm hidden text-center font-bold bg-red-50 dark:bg-red-500/10 p-3 rounded-xl" role="alert"></p>
         <button type="submit" id="authSubmitBtn" class="w-full bg-gradient-to-r from-brand to-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand/30 active:scale-[0.96] text-lg mt-6 flex items-center justify-center gap-2 transition-all">
           <span id="authBtnText">Увійти</span>
@@ -147,8 +156,9 @@
         <div id="googleAuthHelp" class="google-auth-help hidden"><p>Якщо Google не відкривається тут, скопіюйте адресу й відкрийте застосунок у Safari або Chrome.</p><button type="button" id="googleAuthCopyUrl">Скопіювати адресу сайту</button></div>
       </form>
     </div>
-    <p class="text-center text-[11px] text-slate-400 mt-6 font-medium">Немає акаунту? Введіть новий логін та пароль.</p>
+    <p id="authModeHint" class="text-center text-[11px] text-slate-400 mt-6 font-medium">Введіть дані свого наявного акаунта.</p>
     <button type="button" id="preAuthFeedbackOpen" class="preauth-feedback-open"><i class="fa-regular fa-message" aria-hidden="true"></i><span><strong>Не можете увійти?</strong><small>Повідомити про проблему</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+    <p class="text-center mt-4"><a href="./privacy.html" class="text-[11px] font-bold text-slate-500 underline underline-offset-4">Приватність і використання даних</a></p>
   </div>
 </div>
 
@@ -440,6 +450,7 @@
     <p class="text-sm font-black text-slate-900 dark:text-white mb-3"><i class="fa-solid fa-hard-drive text-brand mr-2"></i>Дані</p>
     <div class="grid grid-cols-2 gap-2">
       <button id="exportJsonBtn" class="py-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-download text-brand"></i>Бекап</button>
+      <button id="exportAccountBtn" class="py-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-box-archive text-brand"></i>Усі мої дані</button>
       <button id="importJsonBtn" class="py-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-upload text-brand"></i>Імпорт</button>
       <button id="restoreBackupBtn" class="py-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-clock-rotate-left text-brand"></i>Відновити</button>
       <button id="restorePreImportBtn" class="py-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-transparent active:scale-[0.98] flex items-center justify-center gap-1.5"><i class="fa-solid fa-rotate-left text-orange-500"></i>До імпорту</button>
@@ -456,9 +467,9 @@
         <p class="font-black text-lg text-slate-900 dark:text-white truncate" id="userDisplayName">—</p>
         <p class="text-[10px] text-slate-400 font-medium" id="accountLoginDisplay">—</p>
       </div>
-      <div class="flex flex-col gap-1.5">
-        <button id="changePassBtn" class="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400 text-xs active:scale-90 transition-transform" title="Змінити пароль"><i class="fa-solid fa-key"></i></button>
-        <button id="btnLinkGoogle" type="button" class="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400 text-xs active:scale-90 transition-transform" title="Google"><i class="fa-brands fa-google"></i></button>
+      <div class="flex flex-col gap-1.5 items-end">
+        <button id="changePassBtn" class="min-h-9 px-3 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center gap-2 text-slate-500 text-xs font-bold active:scale-95 transition-transform" title="Змінити пароль"><i class="fa-solid fa-key"></i><span id="accountPasswordStatus">Пароль</span></button>
+        <button id="btnLinkGoogle" type="button" class="min-h-9 px-3 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center gap-2 text-slate-500 text-xs font-bold active:scale-95 transition-transform" title="Google"><i class="fa-brands fa-google"></i><span>Google</span></button>
       </div>
     </div>
     <!-- Редагування імені -->
@@ -475,6 +486,10 @@
     <span class="flex-1"><strong class="block text-sm text-slate-900 dark:text-white">Адмінпанель</strong><small class="block text-xs text-slate-500 dark:text-slate-400">Користувачі, тарифи та резервні копії</small></span>
     <i class="fa-solid fa-chevron-right text-slate-400" aria-hidden="true"></i>
   </a><div class="premium-card p-4">
+    <div class="flex items-center gap-3 mb-3"><span class="settings-icon"><i class="fa-solid fa-link" aria-hidden="true"></i></span><div><p class="text-sm font-black text-slate-900 dark:text-white">Гостьові посилання</p><p class="text-[10px] text-slate-400">Створюйте й відкликайте доступ до поточної адреси</p></div></div>
+    <div class="flex gap-2"><select id="shareExpiryDays" class="premium-input flex-1 px-3 py-2 text-xs font-bold" aria-label="Строк гостьового доступу"><option value="1">1 день</option><option value="7">7 днів</option><option value="30" selected>30 днів</option><option value="90">90 днів</option></select><button id="createManagedShareBtn" type="button" class="button-primary px-4">Створити</button></div>
+    <div id="shareLinksList" class="share-links-list mt-3" aria-live="polite"><p class="text-xs text-slate-400">Відкрийте розділ, щоб перевірити активні посилання.</p></div>
+  </div><div class="premium-card p-4">
     <div class="theme-controls">
       <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Тема</p>
       <div class="flex bg-slate-100 dark:bg-black/50 p-1 rounded-xl">
@@ -505,7 +520,7 @@
         <option value="view">Перегляд</option>
       </select>
       <p id="familyRoleHint" class="text-[10px] text-slate-400 mt-2">Власник має повний доступ.</p>
-    </div><div class="text-center pt-2 space-y-3">
+  </div><div class="premium-card p-4 space-y-3"><a href="./privacy.html" class="button-secondary w-full flex items-center justify-center gap-2"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i>Приватність і дані</a><button type="button" id="deleteAccountBtn" class="w-full py-3 bg-red-50 text-red-600 dark:bg-red-500/10 rounded-xl text-xs font-bold border border-red-100 dark:border-red-500/20"><i class="fa-solid fa-user-xmark mr-2" aria-hidden="true"></i>Видалити акаунт і хмарні дані</button></div><div class="text-center pt-2 space-y-3">
     <p class="text-[9px] text-slate-400">by <span class="font-bold text-slate-500">Антон Миколенко</span> • v<span id="appVersion">dev</span></p>
     <button type="button" id="logoutBtn" class="w-full bg-red-50 text-red-500 dark:bg-red-500/10 font-bold rounded-2xl py-3.5 border border-red-100 dark:border-red-500/20 active:scale-[0.98] text-sm transition-transform"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Вийти з акаунту</button>
   </div></div></section><section id="settings-help" class="settings-panel hidden" aria-label="Допомога"><button type="button" class="settings-back" data-settings-back=""><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Усі налаштування</button><div class="settings-panel-heading"><h3 tabindex="-1">Допомога</h3><p>Підказки та AI-помічник</p></div><div class="settings-panel-content"><button id="aiFabBtn" class="hidden premium-card p-4 w-full text-left ai-entry" aria-label="AI помічник"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span>AI-помічник</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button><details class="premium-card overflow-hidden">
@@ -532,7 +547,7 @@
       <p class="text-xs font-bold text-slate-900 dark:text-white">Поділитись</p>
       <p class="text-[9px] text-slate-400">з друзями</p>
     </button>
-    <a href="https://send.monobank.ua/jar/58RYPiLjdS" target="_blank" class="premium-card p-4 active:scale-[0.98] transition-transform text-center block">
+    <a href="https://send.monobank.ua/jar/58RYPiLjdS" target="_blank" rel="noopener noreferrer" class="premium-card p-4 active:scale-[0.98] transition-transform text-center block">
       <div class="w-10 h-10 bg-pink-50 dark:bg-pink-500/10 rounded-xl flex items-center justify-center text-pink-500 mx-auto mb-2"><i class="fa-solid fa-heart"></i></div>
       <p class="text-xs font-bold text-slate-900 dark:text-white">Підтримати</p>
       <p class="text-[9px] text-slate-400">каву ☕</p>
@@ -654,8 +669,8 @@
         <div><p class="font-black text-slate-900 dark:text-white text-base">AI-помічник</p><p class="text-[10px] text-slate-400 font-medium">Аналізую ваші комунальні · 20 запитів/год</p></div>
       </div>
       <div class="flex gap-2">
-        <button id="aiClearBtn" title="Очистити чат" class="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400 text-xs active:scale-90 transition-transform hover:bg-red-50 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>
-        <button id="aiCloseBtn" class="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400 font-bold active:scale-90 transition-transform text-sm">✕</button>
+        <button id="aiClearBtn" aria-label="Очистити чат" title="Очистити чат" class="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400 text-xs active:scale-90 transition-transform hover:bg-red-50 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>
+        <button id="aiCloseBtn" data-dialog-close aria-label="Закрити AI-помічник" class="w-9 h-9 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center text-slate-400 font-bold active:scale-90 transition-transform text-sm">✕</button>
       </div>
     </div>
     <div id="aiChatToast" class="opacity-0 transition-opacity duration-500 text-center text-[10px] font-bold text-slate-400 py-1 shrink-0 pointer-events-none"></div>
@@ -675,19 +690,19 @@
         <textarea id="aiInput" placeholder="Запитайте про витрати..." rows="1" class="flex-1 bg-transparent outline-none resize-none text-sm font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 leading-relaxed py-1.5 max-h-24" style="scrollbar-width:none;" aria-label="Повідомлення AI"></textarea>
         <button id="aiSendBtn" class="w-9 h-9 bg-gradient-to-br from-violet-500 to-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/30 active:scale-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 mb-0.5"><i class="fa-solid fa-paper-plane text-xs"></i></button>
       </div>
-      <p class="text-[9px] text-slate-300 dark:text-slate-600 text-center mt-1.5 font-medium">AI може помилятися · дані на вашому пристрої</p>
+      <p class="text-[9px] text-slate-400 dark:text-slate-500 text-center mt-1.5 font-medium">AI може помилятися · підсумки передаються зовнішньому AI лише після вашої згоди</p>
     </div>
   </div>
 </div>
 
 <!-- Address Modal -->
-<div id="addressModal" class="hidden fixed inset-0 z-[500] bg-apple-darker/60 dark:bg-black/60 backdrop-blur-md flex items-end justify-center">
+<div id="addressModal" role="dialog" aria-modal="true" aria-labelledby="addressModalTitle" class="hidden fixed inset-0 z-[500] bg-apple-darker/60 dark:bg-black/60 backdrop-blur-md flex items-end justify-center">
   <div class="bg-white dark:bg-apple-dark w-full max-w-md rounded-t-[2.5rem] p-6 pb-[max(env(safe-area-inset-bottom),2rem)] spring-modal translate-y-full shadow-[0_-20px_40px_rgba(0,0,0,.15)]" id="addressModalContent">
     <div class="w-12 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-6"></div>
-    <div class="address-modal-heading"><span class="settings-icon"><i class="fa-solid fa-house" aria-hidden="true"></i></span><div><h3>Мої адреси</h3><p id="addressModalSummary">Ваші активні та архівні адреси</p></div></div>
+    <div class="address-modal-heading"><span class="settings-icon"><i class="fa-solid fa-house" aria-hidden="true"></i></span><div><h3 id="addressModalTitle">Мої адреси</h3><p id="addressModalSummary">Ваші активні та архівні адреси</p></div></div>
     <div id="addressListModal" class="mb-4 max-h-[52vh] overflow-y-auto no-scrollbar" aria-live="polite"></div>
     <button id="addAddressBtn" class="address-add-button"><i class="fa-solid fa-plus" aria-hidden="true"></i> Додати адресу</button>
-    <button id="closeAddressModalBtn" class="w-full py-4 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-[0.98]">Закрити</button>
+    <button id="closeAddressModalBtn" data-dialog-close class="w-full py-4 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-[0.98]">Закрити</button>
   </div>
 </div>
 
@@ -739,20 +754,20 @@
 </div>
 
 <!-- Change Password Modal -->
-<div id="changePassModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
+<div id="changePassModal" role="dialog" aria-modal="true" aria-labelledby="changePassTitle" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
   <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-white/10">
     <div class="text-center mb-6">
       <div class="w-14 h-14 bg-brand-light rounded-2xl flex items-center justify-center text-brand text-2xl mx-auto mb-3"><i class="fa-solid fa-key"></i></div>
-      <h3 class="text-xl font-black text-slate-900 dark:text-white">Змінити пароль</h3>
+      <h3 id="changePassTitle" class="text-xl font-black text-slate-900 dark:text-white">Змінити пароль</h3>
     </div>
     <div class="space-y-3">
-      <div>
+      <div id="cpOldPassWrap">
         <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-1 tracking-wider">Поточний пароль</label>
         <input type="password" id="cpOldPass" placeholder="••••••••" autocomplete="current-password" class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl p-3.5 text-sm font-bold outline-none text-slate-900 dark:text-white">
       </div>
       <div>
         <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-1 tracking-wider">Новий пароль</label>
-        <input type="password" id="cpNewPass" placeholder="Мін 4 символи" autocomplete="new-password" class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl p-3.5 text-sm font-bold outline-none text-slate-900 dark:text-white">
+        <input type="password" id="cpNewPass" placeholder="Мінімум 8 символів" autocomplete="new-password" class="premium-input w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl p-3.5 text-sm font-bold outline-none text-slate-900 dark:text-white">
       </div>
       <div>
         <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5 ml-1 tracking-wider">Підтвердіть пароль</label>
@@ -765,17 +780,17 @@
         <span id="cpBtnText">Змінити</span>
         <i id="cpSpinner" class="fa-solid fa-spinner fa-spin hidden ml-2"></i>
       </button>
-      <button id="cpCancelBtn" class="flex-1 py-3.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-95 transition-transform">Скасувати</button>
+      <button id="cpCancelBtn" data-dialog-close class="flex-1 py-3.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-95 transition-transform">Скасувати</button>
     </div>
   </div>
 </div>
 
 <!-- Link Account Modal (замість prompt) -->
-<div id="linkAccountModal" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
+<div id="linkAccountModal" role="dialog" aria-modal="true" aria-labelledby="linkAccountTitle" class="hidden fixed inset-0 z-[600] bg-black/60 backdrop-blur-md flex items-center justify-center p-6">
   <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-white/10">
     <div class="text-center mb-6">
       <div class="text-4xl mb-3">🔗</div>
-      <h3 class="text-xl font-black text-slate-900 dark:text-white">Прив'язати акаунт</h3>
+      <h3 id="linkAccountTitle" class="text-xl font-black text-slate-900 dark:text-white">Прив'язати акаунт</h3>
       <p class="text-xs text-slate-500 mt-2">Введіть логін та пароль існуючого акаунту</p>
     </div>
     <div class="space-y-3">
@@ -794,13 +809,13 @@
         <span id="laBtnText">Прив'язати</span>
         <i id="laSpinner" class="fa-solid fa-spinner fa-spin hidden ml-2"></i>
       </button>
-      <button id="laCancelBtn" class="flex-1 py-3.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-95 transition-transform">Скасувати</button>
+      <button id="laCancelBtn" data-dialog-close class="flex-1 py-3.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-2xl active:scale-95 transition-transform">Скасувати</button>
     </div>
   </div>
 </div>
 
 <!-- Year Report Modal -->
-<div id="yearReportModal" class="hidden fixed inset-0 z-[1050] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+<div id="yearReportModal" role="dialog" aria-modal="true" aria-labelledby="yearReportYear" class="hidden fixed inset-0 z-[1050] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
   <div class="bg-white dark:bg-[#1c1c1e] w-full max-w-sm max-h-[85vh] rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/10 overflow-hidden flex flex-col">
     <div class="bg-gradient-to-br from-brand to-blue-600 p-6 text-white text-center shrink-0">
       <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest">Річний звіт</p>
@@ -809,9 +824,24 @@
     <div class="overflow-y-auto no-scrollbar p-6 space-y-4 flex-1" id="yearReportContent"></div>
     <div class="p-4 border-t border-slate-100 dark:border-white/5 shrink-0 flex gap-3">
       <button id="yearReportShareBtn" type="button" class="flex-1 py-3 bg-brand text-white font-bold rounded-xl text-sm active:scale-[0.98]"><i class="fa-solid fa-share mr-1.5"></i>Поділитись</button>
-      <button id="yearReportCloseBtn" type="button" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-sm active:scale-[0.98]">Закрити</button>
+      <button id="yearReportCloseBtn" data-dialog-close type="button" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 font-bold rounded-xl text-sm active:scale-[0.98]">Закрити</button>
     </div>
   </div>
+</div>
+
+<dialog id="deleteAccountDialog" class="action-dialog" aria-labelledby="deleteAccountTitle">
+  <form id="deleteAccountForm">
+    <div class="dialog-mark danger"><i class="fa-solid fa-user-xmark" aria-hidden="true"></i></div><h2 id="deleteAccountTitle">Видалити акаунт?</h2>
+    <p>Адреси, записи, нагадування, Telegram, push і гостьові посилання буде видалено з хмари. Спочатку завантажте резервну копію.</p>
+    <label for="deleteAccountConfirm">Введіть свій логін <strong id="deleteAccountLoginHint"></strong></label><input id="deleteAccountConfirm" type="text" autocomplete="off">
+    <div id="deleteAccountPasswordWrap"><label for="deleteAccountPassword">Поточний пароль</label><input id="deleteAccountPassword" type="password" autocomplete="current-password"></div>
+    <p id="deleteAccountError" class="error hidden" role="alert"></p>
+    <div class="dialog-actions"><button type="button" id="deleteAccountCancel" class="button-secondary">Скасувати</button><button type="submit" id="deleteAccountConfirmBtn" class="button-danger">Видалити назавжди</button></div>
+  </form>
+</dialog>
+
+<div id="appDialog" class="hidden fixed inset-0 z-[1200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-5" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle" tabindex="-1">
+  <div class="premium-card w-full max-w-sm p-6"><div id="appDialogIcon" class="dialog-mark">✓</div><h2 id="appDialogTitle" class="text-xl font-black text-center text-slate-900 dark:text-white">Підтвердження</h2><p id="appDialogMessage" class="text-sm text-slate-500 text-center mt-2"></p><input id="appDialogInput" class="hidden premium-input w-full mt-4 p-3" type="text"><textarea id="appDialogTextarea" class="hidden premium-input w-full mt-4 p-3" rows="6" readonly></textarea><div class="dialog-actions mt-5"><button type="button" id="appDialogCancelBtn" class="button-secondary">Скасувати</button><button type="button" id="appDialogConfirmBtn" class="button-primary">Підтвердити</button></div></div>
 </div>
 
 <script src="sync-queue.js"></script>
@@ -820,7 +850,7 @@
 <script src="reminders.js"></script><script src="monthly-tasks.js"></script>
 <script src="pwa-updates.js"></script>
 <script src="push-client.js"></script>
-<dialog id="recordActionDialog" class="action-dialog" aria-labelledby="recordActionTitle" aria-describedby="recordActionDescription"><div class="dialog-mark"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></div><h2 id="recordActionTitle">Видалити запис?</h2><p id="recordActionDescription"></p><div class="dialog-actions"><button type="button" id="recordActionCancel" class="button-secondary">Скасувати</button><button type="button" id="recordActionConfirm" class="button-danger">Видалити</button></div></dialog><script src="providers.js"></script><script src="consumption-insights.js"></script><dialog id="providerDialog" class="action-dialog provider-dialog" aria-labelledby="providerDialogTitle"><form id="providerForm"><div class="provider-form-heading"><span class="settings-icon"><i class="fa-solid fa-address-card" aria-hidden="true"></i></span><div><h2 id="providerDialogTitle">Постачальник</h2><p id="providerDialogAddress"></p></div></div><section class="provider-form-section"><h3>Основні дані</h3><p>Назва, особовий рахунок і швидкий перехід в кабінет.</p><label for="providerName">Назва постачальника</label><input id="providerName" type="text" maxlength="100" placeholder="Назва з квитанції"><label for="providerAccount">Особовий рахунок</label><input id="providerAccount" type="text" maxlength="80" placeholder="Номер рахунку" autocomplete="off"><label for="providerWebsite">Посилання на кабінет</label><input id="providerWebsite" type="text" inputmode="url" maxlength="2048" placeholder="https://…" autocapitalize="none" autocomplete="off"></section><section class="provider-form-section"><h3>Контакти для передачі</h3><p>Email потрібен для готового листа з показниками.</p><label for="providerContact">Телефон або примітка</label><input id="providerContact" type="text" maxlength="160" placeholder="Телефон або примітка"><label for="providerEmail">Email для показників</label><input id="providerEmail" type="email" inputmode="email" maxlength="254" placeholder="vodokanal@example.com" autocomplete="off"></section><details id="providerEmailSettings" class="provider-email-settings"><summary>Власна тема й текст листа <span>Необов’язково</span></summary><p>Можна залишити порожнім — застосунок складе лист сам. Для свого зразка використовуйте поля в дужках.</p><label for="providerEmailSubject">Тема листа</label><input id="providerEmailSubject" type="text" maxlength="240" placeholder="О/р {account}. {address}"><label for="providerEmailBody">Текст листа</label><textarea id="providerEmailBody" maxlength="1500" rows="4" placeholder="Показники ліч. Поточні {current}. Попередні {previous}. Різниця {difference}"></textarea><p class="provider-email-tokens">Доступно: {account}, {address}, {service}, {month}, {current}, {previous}, {difference}, {readings}. Для двозонного лічильника — {readings}.</p></details><p id="providerError" role="alert"></p><button type="button" id="providerClear" class="provider-clear">Очистити поля</button><div class="dialog-actions"><button type="button" id="providerCancel" class="button-secondary">Скасувати</button><button type="submit" id="providerSave" class="button-primary">Зберегти</button></div></form></dialog><dialog id="providerEmailDialog" class="action-dialog provider-email-dialog" aria-labelledby="providerEmailTitle"><div class="provider-email-header"><span class="settings-icon"><i class="fa-solid fa-envelope" aria-hidden="true"></i></span><div><h2 id="providerEmailTitle">Готовий лист</h2><p id="providerEmailContext">Показники за місяць</p></div></div><p id="providerEmailNotice" class="provider-email-notice hidden" role="status"></p><div class="provider-mail-destination"><label for="providerMailDestination">Куди відкрити лист</label><select id="providerMailDestination"><option value="system">Apple Mail / системна пошта</option><option value="gmail">Gmail у браузері</option><option value="copy">Не відкривати — лише скопіювати</option></select><p id="providerMailDestinationHelp">Відкриється поштовий застосунок, вибраний за замовчуванням на пристрої.</p></div><div class="provider-email-field"><label for="providerEmailTo">1 · Кому</label><div><input id="providerEmailTo" type="email" inputmode="email" autocomplete="off"><button type="button" data-provider-email-copy="to" aria-label="Скопіювати email">Копіювати</button></div></div><div class="provider-email-field"><label for="providerEmailSubjectText">2 · Тема</label><div><textarea id="providerEmailSubjectText" rows="2"></textarea><button type="button" data-provider-email-copy="subject" aria-label="Скопіювати тему">Копіювати</button></div></div><div class="provider-email-field"><label for="providerEmailBodyText">3 · Текст</label><textarea id="providerEmailBodyText" rows="5"></textarea><button type="button" data-provider-email-copy="body" aria-label="Скопіювати текст листа">Копіювати текст</button></div><p id="providerCopyStatus" class="provider-copy-status hidden" role="status" aria-live="polite"></p><p class="provider-email-footnote">Чернетка вже заповнена. Перевірте цифри й натисніть «Надіслати» у пошті.</p><div class="provider-delivery-confirm"><span><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span><strong>Лист уже надіслано?</strong><small id="providerDeliveryStatus">Позначте після відправлення у пошті</small></span></span><button type="button" id="providerMarkSent">Позначити надісланим</button></div><div class="dialog-actions"><button type="button" id="providerEmailClose" class="button-secondary">Закрити</button><a id="providerOpenMail" class="button-primary" href="#">Відкрити лист</a><button type="button" id="providerCopyFullMail" class="button-primary hidden">Скопіювати весь лист</button></div></dialog><dialog id="providerCopyDialog" class="action-dialog" aria-labelledby="providerCopyTitle"><h2 id="providerCopyTitle">Скопіюйте текст</h2><textarea id="providerCopyText" readonly="" aria-label="Текст для копіювання" rows="5"></textarea><button type="button" id="providerCopyClose" class="button-secondary">Закрити</button></dialog><script src="app.js"></script>
+<dialog id="recordActionDialog" class="action-dialog" aria-labelledby="recordActionTitle" aria-describedby="recordActionDescription"><div class="dialog-mark"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></div><h2 id="recordActionTitle">Видалити запис?</h2><p id="recordActionDescription"></p><div class="dialog-actions"><button type="button" id="recordActionCancel" class="button-secondary">Скасувати</button><button type="button" id="recordActionConfirm" class="button-danger">Видалити</button></div></dialog><script src="providers.js"></script><script src="consumption-insights.js"></script><dialog id="providerDialog" class="action-dialog provider-dialog" aria-labelledby="providerDialogTitle"><form id="providerForm"><div class="provider-form-heading"><span class="settings-icon"><i class="fa-solid fa-address-card" aria-hidden="true"></i></span><div><h2 id="providerDialogTitle">Постачальник</h2><p id="providerDialogAddress"></p></div></div><section class="provider-form-section"><h3>Основні дані</h3><p>Назва, особовий рахунок і швидкий перехід в кабінет.</p><label for="providerName">Назва постачальника</label><input id="providerName" type="text" maxlength="100" placeholder="Назва з квитанції"><label for="providerAccount">Особовий рахунок</label><input id="providerAccount" type="text" maxlength="80" placeholder="Номер рахунку" autocomplete="off"><label for="providerWebsite">Посилання на кабінет</label><input id="providerWebsite" type="text" inputmode="url" maxlength="2048" placeholder="https://…" autocapitalize="none" autocomplete="off"></section><section class="provider-form-section"><h3>Контакти для передачі</h3><p>Email потрібен для готового листа з показниками.</p><label for="providerContact">Телефон або примітка</label><input id="providerContact" type="text" maxlength="160" placeholder="Телефон або примітка"><label for="providerEmail">Email для показників</label><input id="providerEmail" type="email" inputmode="email" maxlength="254" placeholder="vodokanal@example.com" autocomplete="off"></section><details id="providerEmailSettings" class="provider-email-settings"><summary>Власна тема й текст листа <span>Необов’язково</span></summary><p>Можна залишити порожнім — застосунок складе лист сам. Для свого зразка використовуйте поля в дужках.</p><label for="providerEmailSubject">Тема листа</label><input id="providerEmailSubject" type="text" maxlength="240" placeholder="О/р {account}. {address}"><label for="providerEmailBody">Текст листа</label><textarea id="providerEmailBody" maxlength="1500" rows="4" placeholder="Показники ліч. Поточні {current}. Попередні {previous}. Різниця {difference}"></textarea><p class="provider-email-tokens">Доступно: {account}, {address}, {service}, {month}, {current}, {previous}, {difference}, {readings}. Для двозонного лічильника — {readings}.</p></details><p id="providerError" role="alert"></p><button type="button" id="providerClear" class="provider-clear">Очистити поля</button><div class="dialog-actions"><button type="button" id="providerCancel" class="button-secondary">Скасувати</button><button type="submit" id="providerSave" class="button-primary">Зберегти</button></div></form></dialog><dialog id="providerEmailDialog" class="action-dialog provider-email-dialog" aria-labelledby="providerEmailTitle"><div class="provider-email-header"><span class="settings-icon"><i class="fa-solid fa-envelope" aria-hidden="true"></i></span><div><h2 id="providerEmailTitle">Готовий лист</h2><p id="providerEmailContext">Показники за місяць</p></div></div><p id="providerEmailNotice" class="provider-email-notice hidden" role="status"></p><div class="provider-mail-destination"><label for="providerMailDestination">Куди відкрити лист</label><select id="providerMailDestination"><option value="system">Apple Mail / системна пошта</option><option value="gmail">Gmail у браузері</option><option value="copy">Не відкривати — лише скопіювати</option></select><p id="providerMailDestinationHelp">Відкриється поштовий застосунок, вибраний за замовчуванням на пристрої.</p></div><div class="provider-email-field"><label for="providerEmailTo">1 · Кому</label><div><input id="providerEmailTo" type="email" inputmode="email" autocomplete="off"><button type="button" data-provider-email-copy="to" aria-label="Скопіювати email">Копіювати</button></div></div><div class="provider-email-field"><label for="providerEmailSubjectText">2 · Тема</label><div><textarea id="providerEmailSubjectText" rows="2"></textarea><button type="button" data-provider-email-copy="subject" aria-label="Скопіювати тему">Копіювати</button></div></div><div class="provider-email-field"><label for="providerEmailBodyText">3 · Текст</label><textarea id="providerEmailBodyText" rows="5"></textarea><button type="button" data-provider-email-copy="body" aria-label="Скопіювати текст листа">Копіювати текст</button></div><p id="providerCopyStatus" class="provider-copy-status hidden" role="status" aria-live="polite"></p><p class="provider-email-footnote">Чернетка вже заповнена. Перевірте цифри й натисніть «Надіслати» у пошті.</p><div class="provider-delivery-confirm"><span><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span><strong>Лист уже надіслано?</strong><small id="providerDeliveryStatus">Позначте після відправлення у пошті</small></span></span><button type="button" id="providerMarkSent">Позначити надісланим</button></div><div class="dialog-actions"><button type="button" id="providerEmailClose" class="button-secondary">Закрити</button><a id="providerOpenMail" class="button-primary" href="#">Відкрити лист</a><button type="button" id="providerCopyFullMail" class="button-primary hidden">Скопіювати весь лист</button></div></dialog><dialog id="providerCopyDialog" class="action-dialog" aria-labelledby="providerCopyTitle"><h2 id="providerCopyTitle">Скопіюйте текст</h2><textarea id="providerCopyText" readonly="" aria-label="Текст для копіювання" rows="5"></textarea><button type="button" id="providerCopyClose" class="button-secondary">Закрити</button></dialog><script src="app.js"></script><script src="ui-dialogs.js"></script>
 <script src="year-report-image.js"></script>
 <script src="ai-chat.js"></script>
 

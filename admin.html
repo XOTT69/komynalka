@@ -360,6 +360,7 @@
         const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'dev';
         let adminToken = sessionStorage.getItem('admin_token') || '';
         let adminLoginTime = parseInt(sessionStorage.getItem('admin_login_time') || '0');
+        let adminExpiresAt = parseInt(sessionStorage.getItem('admin_expires_at') || '0');
         let allUsers = [];
         let selectedUsers = new Set();
         let currentSort = { field: 'records', dir: 'desc' };
@@ -392,7 +393,7 @@
         }
 
         // Auto-login if token exists and not expired
-        if (adminToken && (Date.now() - adminLoginTime < 3500000)) {
+        if (adminToken && adminExpiresAt > Date.now()) {
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('adminPanel').classList.remove('hidden');
             loadStats();
@@ -400,6 +401,7 @@
             restoreAdminTab();
         } else {
             sessionStorage.removeItem('admin_token');
+            sessionStorage.removeItem('admin_expires_at');
             adminToken = '';
         }
 
@@ -428,7 +430,7 @@
             if (tokenEl) tokenEl.textContent = adminToken.slice(0, 8) + '...';
             clearInterval(sessionInterval);
             const updateTimer = () => {
-                const remaining = Math.max(0, 3600 - Math.floor((Date.now() - adminLoginTime) / 1000));
+                const remaining = Math.max(0, Math.ceil((adminExpiresAt-Date.now())/1000));
                 const min = Math.floor(remaining / 60);
                 const sec = remaining % 60;
                 if (el) el.textContent = `${min}:${sec.toString().padStart(2, '0')} залишилось`;
@@ -455,8 +457,10 @@
                 if (data.success && data.token) {
                     adminToken = data.token;
                     adminLoginTime = Date.now();
+                    adminExpiresAt = Number(data.expiresAt)||adminLoginTime+3600000;
                     sessionStorage.setItem('admin_token', adminToken);
                     sessionStorage.setItem('admin_login_time', String(adminLoginTime));
+                    sessionStorage.setItem('admin_expires_at', String(adminExpiresAt));
                     document.getElementById('loginScreen').classList.add('hidden');
                     document.getElementById('adminPanel').classList.remove('hidden');
                     document.getElementById('adminPass').value = '';
@@ -476,9 +480,12 @@
         }
 
         function adminLogout() {
+            const tokenToRevoke=adminToken;if(tokenToRevoke)fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_logout',adminToken:tokenToRevoke}),keepalive:true}).catch(()=>{});
             sessionStorage.removeItem('admin_token');
             sessionStorage.removeItem('admin_login_time');
+            sessionStorage.removeItem('admin_expires_at');
             adminToken = '';
+            adminExpiresAt = 0;
             clearInterval(sessionInterval);
             document.getElementById('adminPanel').classList.add('hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
@@ -683,7 +690,7 @@
                     <div class="flex gap-2 flex-wrap">
                         <button data-modal-action="pro" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-yellow-500 text-white rounded-lg text-xs font-bold active:scale-95">⭐ Дати Pro</button>
                         <button data-modal-action="revoke" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold active:scale-95">Забрати Pro</button>
-                        ${ud.hasGoogle && !ud.pass && !ud.passHash ? '' : `<button data-modal-action="reset" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold active:scale-95">🔑 Змінити пароль</button>`}
+                        <button data-modal-action="reset" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold active:scale-95">🔑 ${ud.hasPassword ? 'Змінити' : 'Створити'} пароль</button>
                         <button data-modal-action="delete" data-login="${loginAttr}" class="admin-modal-action px-3 py-2 bg-red-500 text-white rounded-lg text-xs font-bold active:scale-95">🗑 Видалити</button>
                     </div>`;
                 if (ud.addresses) {
@@ -732,9 +739,7 @@
             const login = passwordLogin;
             const newPass = document.getElementById('newAdminUserPass').value;
             if (!login || newPass.length < 8) return showAdminToast('Потрібно щонайменше 8 символів', 'error');
-            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(newPass));
-            const hash = Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join('');
-            try { await adminApi('admin_reset_password', { login, newPass: hash }); closePasswordModal(); showAdminToast('Пароль змінено'); }
+            try { await adminApi('admin_reset_password', { login, newPass }); closePasswordModal(); showAdminToast('Пароль змінено, старі сесії завершено'); }
             catch (e) { showAdminToast(e.message, 'error'); }
         }
 

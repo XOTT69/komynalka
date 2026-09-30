@@ -66,6 +66,9 @@ test('tariff moderation is visible, escapes provider text and current broadcast 
     ui.window.resetPassword('user');
     assert.equal(ui.window.document.getElementById('newAdminUserPass').type, 'password');
     assert.equal(ui.window.document.getElementById('passwordModal').classList.contains('hidden'), false);
+    ui.window.document.getElementById('newAdminUserPass').value='StrongPass9';
+    await ui.window.saveNewPassword({preventDefault(){}});
+    assert.equal(ui.calls.some(call=>call.action==='admin_reset_password'&&call.newPass==='StrongPass9'),true);
   } finally { ui.close(); }
 });
 

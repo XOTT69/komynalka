@@ -65,7 +65,7 @@ if (!app.includes('cloudCommunityTariffsCache')) fail('cloud provider catalog ca
 if (!app.includes("action: 'vote_tariff'")) fail('cloud provider voting action is missing');
 if (!app.includes('TARIFF_SERVICE_LABELS')) fail('provider service labels are missing');
 if (!app.includes('result.data?.linkedLogin')) fail('Google login does not read linkedLogin from response data');
-if (!app.includes('action:"link_google", login: sessionLogin, pass: sessionPass, uid')) fail('Google linking does not send the current password hash');
+if (!app.includes('action:"link_google", login: lgn, password:pss, uid: googleUser.uid')) fail('Google linking does not send password through the verified linking flow');
 if (!app.includes('familyRole')) fail('family role preferences are missing');
 if (!app.includes('getPaymentStatus')) fail('payment status helpers are missing');
 if (!app.includes('remGasStart')) fail('gas submission calendar is missing');
@@ -76,6 +76,7 @@ if (!app.includes('renderMonthMiniWidget')) fail('month mini widget logic is mis
 if (app.includes('localStorage.clear()')) fail('logout still clears all local storage');
 
 const index = await readFile(path.join(root, 'index.html'), 'utf8');
+if (!index.includes('maximum-scale=1.0, user-scalable=no')) fail('requested mobile viewport lock changed unexpectedly');
 for (const id of ['restoreBackupBtn', 'restorePreImportBtn', 'saveTariffTemplateBtn', 'loadTariffTemplateBtn', 'resetTariffsBtn', 'changeLogList', 'forgetDeviceBtn', 'dataHealthSummary', 'dataLastSync', 'dataLastExport', 'dataPendingState', 'dataSyncNowBtn', 'appVersion']) {
   if (!index.includes(`id="${id}"`)) fail(`index is missing ${id}`);
 }
@@ -93,6 +94,8 @@ if (!index.includes('id="communityTariffStatus"')) fail('community provider publ
 for (const id of ['communityTariffCity', 'communityTariffRegion', 'communityTariffService', 'cloudTariffSearch', 'cloudTariffServiceFilter']) {
   if (!index.includes(`id="${id}"`)) fail(`index is missing provider catalog control ${id}`);
 }
+const landing = await readFile(path.join(root, 'landing.html'), 'utf8');
+if (landing.includes('cdn.tailwindcss.com')) fail('landing page still depends on a third-party Tailwind runtime');
 // Check the resulting cascade, not the removed floating-dock implementation.
 const layout=new JSDOM(index,{virtualConsole:new VirtualConsole()});
 const modern=layout.window.document.createElement('style');modern.textContent=await readFile(path.join(root,'styles/modern.css'),'utf8')+'\n'+await readFile(path.join(root,'styles/workspace.css'),'utf8');layout.window.document.head.append(modern);
@@ -107,13 +110,13 @@ if (!admin.includes("escHtml((ud.lastDevice || '—').slice(0, 12))")) fail('adm
 
 const worker = await readFile(path.join(root, 'worker.js'), 'utf8');
 if (!worker.includes('function getUidLogin')) fail('worker cannot create first Google UID accounts');
-if (!worker.includes("if (!pass || stored !== pass) return err('WRONG_PASSWORD', 403);")) fail('worker allows unsafe Google account linking');
+if (!worker.includes("!await verifyAccountPassword(uData,password)")) fail('worker allows unsafe Google account linking');
 if (worker.includes('await env.KV.put(`uid_${uid}`, cl);')) fail('worker still overwrites legacy uid user keys during Google linking');
 const workerGetBlock = worker.slice(worker.indexOf('async function doGet'), worker.indexOf('async function doPost'));
 if (/\b(action|body)\b/.test(workerGetBlock)) fail('worker GET path references POST-only action/body state');
 if (!worker.includes("case 'vote_tariff':")) fail('worker provider voting endpoint is missing');
 if (!worker.includes("case 'admin_verify_tariff':")) fail('worker provider moderation endpoint is missing');
 if (!worker.includes('voters: _v')) fail('worker leaks provider tariff voters');
-if (!worker.includes('history: previousSnapshot')) fail('worker provider tariff history is missing');
+if (!/history:\s*previousSnapshot/.test(worker)) fail('worker provider tariff history is missing');
 
 if (!process.exitCode) console.log('Sanity checks passed');

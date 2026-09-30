@@ -698,3 +698,8 @@ html.dark #dashDebtCard {
   background: #351d1c !important;
   border-color: #6e3934 !important;
 }
+.auth-mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:16px;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.14)}
+.auth-mode-switch button{min-height:40px;border-radius:12px;font-size:12px;font-weight:800;color:#64748b;transition:background .2s,color .2s,box-shadow .2s}
+.auth-mode-switch button.active{background:rgba(255,255,255,.92);color:#1d4ed8;box-shadow:0 5px 16px -10px rgba(15,23,42,.45)}
+.dark .auth-mode-switch button.active{background:rgba(255,255,255,.12);color:#93c5fd}
+.share-links-list{display:grid;gap:8px}.share-link-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:14px;background:rgba(148,163,184,.09);border:1px solid rgba(148,163,184,.12)}.share-link-row span{display:grid;min-width:0}.share-link-row strong{font-size:12px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.share-link-row small{font-size:10px;color:var(--text-muted)}.share-link-row button{font-size:10px;font-weight:800;color:#dc2626;padding:8px;border-radius:10px;background:rgba(239,68,68,.08)}

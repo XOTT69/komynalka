@@ -33,6 +33,8 @@ let draftContext = null;
 let draftDirty = false;
 let sessionLogin = localStorage.getItem('k_login');
 let sessionPass  = localStorage.getItem('k_passHash');
+let sessionToken = localStorage.getItem('k_session');
+let accountHasPassword = false;
 let displayName  = localStorage.getItem('k_display_name') || '';
 let currentFilter = 'all';
 let syncState = 'synced';
@@ -326,7 +328,7 @@ async function saveDisplayName() {
 }
 
 // =================== SECURE FETCH ===================
-async function secureFetch(method, params = {}, body = null) {
+async function secureFetch(method, params = {}, body = null, extra = {}) {
   let url = WORKER_URL;
   const headers = { 'Content-Type': 'application/json', 'X-Device-FP': DEVICE_FP };
   const uid = authUid;
@@ -334,6 +336,8 @@ async function secureFetch(method, params = {}, body = null) {
     const user=googleUser||firebase.auth().currentUser;
     if(!user||user.uid!==uid)throw new Error('Увійдіть через Google ще раз');
     headers['Authorization'] = `Bearer ${await user.getIdToken()}`;
+  } else if (sessionLogin && sessionToken) {
+    headers['Authorization'] = `Bearer ${sessionToken}`;
   } else if (sessionLogin && sessionPass) {
     headers['Authorization'] = `Bearer login:${btoa(unescape(encodeURIComponent(sessionLogin)))}:${sessionPass}`;
   }
@@ -341,7 +345,7 @@ async function secureFetch(method, params = {}, body = null) {
   Object.entries(params).forEach(([k, v]) => { if (v != null) urlP.set(k, v); });
   const qs = urlP.toString();
   if (qs) url += '?' + qs;
-  const options = { method, headers, cache: 'no-store' };
+  const options = { method, headers, cache: 'no-store',...(extra.signal?{signal:extra.signal}:{}) };
   if (body && method === 'POST') options.body = JSON.stringify(body);
   const res = await fetch(url, options);
   if (res.status === 429) {
@@ -357,7 +361,7 @@ async function refreshAdminEntry() {
   const check = ++adminAccessCheck;
   const owner = sessionLogin, uid = authUid;
   link.classList.add('hidden');
-  if (isGuest || !owner || (!uid && !sessionPass)) return;
+  if (isGuest || !owner || (!uid && !sessionToken && !sessionPass)) return;
   try {
     const response = await secureFetch('GET', { 'admin-access': 1 });
     if (!response.ok) return;
@@ -495,7 +499,21 @@ $('dismissWelcomeBtn')?.addEventListener('click',dismissWelcome);
 $('welcomeTooltip')?.addEventListener('click',e=>{if(e.target===e.currentTarget)dismissWelcome();});
 
 // =================== AUTH ===================
-$('authForm')?.addEventListener('submit', async (e) => { e.preventDefault(); await performLogin($('authLogin').value.trim(), $('authPass').value, false); });
+let authMode='login';
+function setAuthMode(mode){
+  authMode=mode==='register'?'register':'login';const registering=authMode==='register';
+  $('authModeLogin')?.classList.toggle('active',!registering);$('authModeRegister')?.classList.toggle('active',registering);
+  $('authModeLogin')?.setAttribute('aria-selected',String(!registering));$('authModeRegister')?.setAttribute('aria-selected',String(registering));
+  $('authConfirmWrap')?.classList.toggle('hidden',!registering);if($('authPassConfirm'))$('authPassConfirm').required=registering;
+  if($('authPass'))$('authPass').autocomplete=registering?'new-password':'current-password';
+  if(!registering)$('passStrength')?.classList.add('hidden');
+  if($('authBtnText'))$('authBtnText').textContent=registering?'Створити акаунт':'Увійти';
+  if($('authModeHint'))$('authModeHint').textContent=registering?'Новий акаунт буде окремим. Історія інших акаунтів не зміниться.':'Введіть дані свого наявного акаунта.';
+  $('authError')?.classList.add('hidden');
+}
+$('authModeLogin')?.addEventListener('click',()=>setAuthMode('login'));
+$('authModeRegister')?.addEventListener('click',()=>setAuthMode('register'));
+$('authForm')?.addEventListener('submit',async e=>{e.preventDefault();const login=$('authLogin').value.trim(),password=$('authPass').value;if(authMode==='register')await performRegistration(login,password,$('authPassConfirm')?.value||'');else await performLogin(login,password,false);});
 $('preAuthFeedbackOpen')?.addEventListener('click',()=>{const dialog=$('preAuthFeedbackDialog'),status=$('preAuthFeedbackStatus');status.textContent='';status.className='hidden';if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');$('preAuthFeedbackMessage')?.focus();});
 $('preAuthFeedbackCancel')?.addEventListener('click',()=>{const dialog=$('preAuthFeedbackDialog');if(typeof dialog.close==='function')dialog.close();else dialog.removeAttribute('open');});
 $('preAuthFeedbackForm')?.addEventListener('submit',async event=>{
@@ -543,40 +561,41 @@ $('googleAuthBtn')?.addEventListener('click', async () => {
 });
 $('googleAuthCopyUrl')?.addEventListener('click',()=>copyProviderText(window.location.origin+window.location.pathname));
 
+function authMessage(code){return({INVALID_CREDENTIALS:'Неправильний логін або пароль.',TOO_MANY_ATTEMPTS:'Забагато спроб. Зачекайте 15 хвилин.',INVALID_LOGIN:'Логін має містити 2–80 літер, цифр або символів . _ @ + -',PASSWORD_TOO_SHORT:'Пароль має містити щонайменше 8 символів.',PASSWORD_TOO_LONG:'Пароль надто довгий.',PASSWORD_TOO_WEAK:'Додайте до пароля літери або цифри.',ACCOUNT_EXISTS:'Такий акаунт уже існує. Перейдіть до входу.'})[code]||'Не вдалося виконати вхід. Спробуйте ще раз.';}
+async function activateAccount(result,owner,uid){
+  if(!saveDraft())throw new Error('Спочатку збережіть або експортуйте поточну чернетку');
+  if(localStorage.getItem('k_push_owner')&&localStorage.getItem('k_push_owner')!==owner&&!await detachPush())throw new Error('Не вдалося від’єднати сповіщення попереднього акаунта');
+  sessionLogin=owner;let remote=normalizeImportData(result.data||{addresses:[],currentAddressId:'default'});if(!remote)throw new Error('Дані потребують перевірки. Оригінал у хмарі збережено.');
+  let adoptedSettings=null;if(!localStorage.getItem(`komynalka_account_v1:${encodeURIComponent(owner)}`)&&!Object.keys(remote.accountSettings||{}).length&&initialDeviceLogin===owner){adoptedSettings={};for(const key of ['k_budget',CUSTOM_REMINDERS_KEY,CUSTOM_TARIFF_TEMPLATE_KEY,COMMUNITY_TARIFF_KEY,CHANGE_LOG_KEY,'achievements_unlocked','lastSubmittedMonth','lastPushShown']){const val=localStorage.getItem(key);if(val!==null)adoptedSettings[key]=val;}}
+  let state=bindAccount(owner,remote,result.data?.revision??0,result.data?.syncProtocol||result.syncProtocol);if(adoptedSettings&&Object.keys(adoptedSettings).length)state=activeStore.stage({...state.local,accountSettings:{...adoptedSettings,...state.local.accountSettings}});
+  localStorage.setItem('k_login',owner);if(uid){localStorage.setItem('k_uid',uid);localStorage.removeItem('k_passHash');sessionPass=null;}else localStorage.removeItem('k_uid');
+  accountHasPassword=Boolean(result.data?.hasPassword);displayName=result.data?.displayName||'';localStorage.setItem('k_display_name',displayName);applySnapshot(state.local);
+  if(!addresses.length){addresses=[{id:'default',name:'Мій дім',tariffs:{...defaultTariffs},prefs:{...defaultPrefs},records:[],customServices:KomunalkaData.copy(defaultCustomServices)}];currentAddressId='default';loadCurrentAddress();await syncToCloud();}
+  else if(state.conflict)showSyncConflict();else{setSyncState(state.pending?'pending':'synced');if(state.pending)await flushSync();}
+  showLegacyRecovery();if(!records.length)showWelcome();checkBroadcast();void refreshAdminEntry();
+}
+async function performRegistration(rawLogin,rawPass,confirmation){
+  const errEl=$('authError');errEl?.classList.add('hidden');if(rawPass!==confirmation){errEl.textContent='Паролі не збігаються.';errEl.classList.remove('hidden');return;}
+  if($('authBtnText'))$('authBtnText').textContent='Створення…';$('authSpinner')?.classList.remove('hidden');const previous={login:sessionLogin,pass:sessionPass,token:sessionToken,uid:authUid};
+  try{sessionLogin=String(rawLogin||'').trim().toLowerCase();sessionPass=null;sessionToken=null;authUid=null;const response=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','X-Device-FP':DEVICE_FP},cache:'no-store',body:JSON.stringify({action:'auth_register',login:sessionLogin,password:rawPass})}),result=await response.json();if(!response.ok||!result.success)throw new Error(authMessage(result.error));sessionToken=result.sessionToken;await activateAccount(result,sessionLogin,null);localStorage.setItem('k_session',sessionToken);localStorage.removeItem('k_passHash');}
+  catch(error){sessionLogin=previous.login;sessionPass=previous.pass;sessionToken=previous.token;authUid=previous.uid;errEl.textContent=error.message;errEl.classList.remove('hidden');}
+  finally{if($('authBtnText'))$('authBtnText').textContent=authMode==='register'?'Створити акаунт':'Увійти';$('authSpinner')?.classList.add('hidden');}
+}
 async function performLogin(rawLogin,rawPass,isAlreadyHashed,uid=null){
   const errEl=$('authError');errEl?.classList.add('hidden');
   if($('authBtnText'))$('authBtnText').textContent='Завантаження…';
   $('authSpinner')?.classList.remove('hidden');
-  const previousLogin=sessionLogin,previousPass=sessionPass,previousUid=authUid;
+  const previousLogin=sessionLogin,previousPass=sessionPass,previousToken=sessionToken,previousUid=authUid;
   try{
     authUid=uid;
-    if(!uid){sessionLogin=String(rawLogin||'').trim().toLowerCase();sessionPass=isAlreadyHashed?rawPass:await getHash(rawPass);}
-    const res=await secureFetch('GET',{t:Date.now()});const result=await res.json();
-    if(res.status===403||res.status===401)throw new Error('Неправильний пароль або сесія завершилась');
-    if(res.status===429)throw new Error('Забагато спроб. Зачекайте хвилину.');
-    if(res.status!==404&&(!res.ok||!result.success))throw new Error('Не вдалося завантажити дані. Спробуйте ще раз.');
+    let res,result;
+    if(!uid&&!isAlreadyHashed){sessionLogin=String(rawLogin||'').trim().toLowerCase();sessionPass=null;sessionToken=null;res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','X-Device-FP':DEVICE_FP},cache:'no-store',body:JSON.stringify({action:'auth_login',login:sessionLogin,password:rawPass})});result=await res.json();if(!res.ok||!result.success)throw new Error(authMessage(result.error));sessionToken=result.sessionToken;}
+    else{if(!uid&&rawLogin)sessionLogin=String(rawLogin).trim().toLowerCase();res=await secureFetch('GET',{t:Date.now()});result=await res.json();if((res.status===403||res.status===401)&&sessionToken){localStorage.removeItem('k_session');sessionToken=null;throw new Error('Сесія завершилась. Увійдіть ще раз.');}if(res.status===403||res.status===401)throw new Error('Неправильний пароль або сесія завершилась');if(res.status===429)throw new Error('Забагато спроб. Зачекайте 15 хвилин.');if(res.status!==404&&(!res.ok||!result.success))throw new Error('Не вдалося завантажити дані. Спробуйте ще раз.');if(!uid&&sessionPass&&!sessionToken&&res.ok){const upgraded=await secureFetch('POST',{}, {action:'auth_upgrade_session'}),upgrade=await upgraded.json();if(upgrade.success){sessionToken=upgrade.sessionToken;localStorage.setItem('k_session',sessionToken);localStorage.removeItem('k_passHash');sessionPass=null;}}}
     if(res.status===404&&uid&&initialDeviceLogin&&!initialDeviceLogin.startsWith('uid_')){sessionLogin=previousLogin;sessionPass=previousPass;$('linkModal')?.classList.remove('hidden');return;}
-    if(!saveDraft())throw new Error('Спочатку збережіть або експортуйте поточну чернетку');
     const owner=result.data?.linkedLogin||(uid?`uid_${uid}`:sessionLogin);
-    if(localStorage.getItem('k_push_owner')&&localStorage.getItem('k_push_owner')!==owner&&!await detachPush())throw new Error('Не вдалося від’єднати сповіщення попереднього акаунта');
-    sessionLogin=owner;
-    let remote=res.status===404?{addresses:[],currentAddressId:'default'}:normalizeImportData(result.data);
-    if(!remote)throw new Error('Дані потребують перевірки. Оригінал у хмарі збережено.');
-    // Device settings are adopted only for the same previously signed-in account.
-    let adoptedSettings=null;
-    if(!localStorage.getItem(`komynalka_account_v1:${encodeURIComponent(owner)}`)&&!Object.keys(remote.accountSettings||{}).length&&initialDeviceLogin===owner){adoptedSettings={};for(const key of ['k_budget',CUSTOM_REMINDERS_KEY,CUSTOM_TARIFF_TEMPLATE_KEY,COMMUNITY_TARIFF_KEY,CHANGE_LOG_KEY,'achievements_unlocked','lastSubmittedMonth','lastPushShown']){const val=localStorage.getItem(key);if(val!==null)adoptedSettings[key]=val;}}
-    let state=bindAccount(owner,remote,result.data?.revision??0,result.data?.syncProtocol||result.syncProtocol);
-    if(adoptedSettings&&Object.keys(adoptedSettings).length)state=activeStore.stage({...state.local,accountSettings:{...adoptedSettings,...state.local.accountSettings}});
-    localStorage.setItem('k_login',owner);
-    if(uid){localStorage.setItem('k_uid',uid);localStorage.removeItem('k_passHash');sessionPass=null;}else{localStorage.setItem('k_passHash',sessionPass);localStorage.removeItem('k_uid');}
-    displayName=result.data?.displayName||'';localStorage.setItem('k_display_name',displayName);
-    applySnapshot(state.local);
-    if(!addresses.length){addresses=[{id:'default',name:'Мій дім',tariffs:{...defaultTariffs},prefs:{...defaultPrefs},records:[],customServices:KomunalkaData.copy(defaultCustomServices)}];currentAddressId='default';loadCurrentAddress();await syncToCloud();}
-    else if(state.conflict)showSyncConflict();else{setSyncState(state.pending?'pending':'synced');if(state.pending)await flushSync();}
-    showLegacyRecovery();
-    if(!records.length)showWelcome();checkBroadcast();void refreshAdminEntry();
-  }catch(e){sessionLogin=previousLogin;sessionPass=previousPass;authUid=previousUid;if(errEl){errEl.textContent=e.message;errEl.classList.remove('hidden');}}
-  finally{if($('authBtnText'))$('authBtnText').textContent='Увійти';$('authSpinner')?.classList.add('hidden');}
+    if(res.status===404&&!uid)throw new Error('Акаунт не знайдено. Перевірте логін або створіть новий.');await activateAccount(result,owner,uid);if(sessionToken&&!uid){localStorage.setItem('k_session',sessionToken);localStorage.removeItem('k_passHash');}
+  }catch(e){sessionLogin=previousLogin;sessionPass=previousPass;sessionToken=previousToken;authUid=previousUid;if(errEl){errEl.textContent=e.message;errEl.classList.remove('hidden');}}
+  finally{if($('authBtnText'))$('authBtnText').textContent=authMode==='register'?'Створити акаунт':'Увійти';$('authSpinner')?.classList.add('hidden');}
 }
 function showLegacyRecovery(){
   const raw=localStorage.getItem(LOCAL_BACKUP_KEY);
@@ -627,8 +646,7 @@ $('linkNoBtn')?.addEventListener('click', async () => {
 });
 
 async function linkAccount(lgn, pss) {
-  const passHash = await getHash(pss);
-  const res  = await fetch(WORKER_URL, { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${await (googleUser||firebase.auth().currentUser).getIdToken()}`}, body: JSON.stringify({ action:"link_google", login: lgn, pass: passHash, uid: googleUser.uid }) });
+  const res  = await fetch(WORKER_URL, { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${await (googleUser||firebase.auth().currentUser).getIdToken()}`}, body: JSON.stringify({ action:"link_google", login: lgn, password:pss, uid: googleUser.uid }) });
   const data = await res.json();
   if (data.success) { $('linkModal')?.classList.add('hidden'); $('linkAccountModal')?.classList.add('hidden'); showToast("Підв'язано!"); performLogin(null, null, false, googleUser.uid); }
   else showToast("Неправильний логін або пароль", "❌");
@@ -640,22 +658,21 @@ $('btnLinkGoogle')?.addEventListener('click', async () => {
   try {
     const result = await firebase.auth().signInWithPopup(provider);
     googleUser=result.user;
-    const uid    = result.user.uid;
-    const res    = await fetch(WORKER_URL, { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${await (googleUser||firebase.auth().currentUser).getIdToken()}`}, body: JSON.stringify({ action:"link_google", login: sessionLogin, pass: sessionPass, uid }) });
-    if ((await res.json()).success) { showToast("Google підв'язано!"); localStorage.setItem('k_uid', uid); updateGoogleButton(); }
+    const modal=$('linkAccountModal');if($('laLogin'))$('laLogin').value=sessionLogin;if($('laPass'))$('laPass').value='';$('laError')?.classList.add('hidden');modal?.classList.remove('hidden');setTimeout(()=>$('laPass')?.focus(),100);
   } catch(e) { showToast("Скасовано", "⚠️"); }
 });
 
 function updateGoogleButton() {
   if (localStorage.getItem('k_uid') && $('btnLinkGoogle')) {
-    $('btnLinkGoogle').innerHTML = '<i class="fa-solid fa-check"></i>';
-    $('btnLinkGoogle').className = 'w-9 h-9 bg-green-50 dark:bg-green-500/10 rounded-xl flex items-center justify-center text-green-500 text-xs pointer-events-none';
+    $('btnLinkGoogle').innerHTML = '<i class="fa-solid fa-check"></i><span>Google підключено</span>';
+    $('btnLinkGoogle').className = 'min-h-9 px-3 bg-green-50 dark:bg-green-500/10 rounded-xl flex items-center justify-center gap-2 text-green-600 text-xs font-bold pointer-events-none';
   }
 }
 
 $('authPass')?.addEventListener('input', function() {
   const val = this.value, container = $('passStrength');
   if (!container) return;
+  if(authMode!=='register'){container.classList.add('hidden');return;}
   if (val.length === 0) { container.classList.add('hidden'); return; }
   container.classList.remove('hidden');
   let score = 0;
@@ -1649,8 +1666,11 @@ $('changePassBtn')?.addEventListener('click', () => {
   if ($('cpNewPass'))    $('cpNewPass').value    = '';
   if ($('cpConfirmPass'))$('cpConfirmPass').value = '';
   if ($('cpError'))      $('cpError').classList.add('hidden');
+  $('cpOldPassWrap')?.classList.toggle('hidden',!accountHasPassword);
+  if($('changePassTitle'))$('changePassTitle').textContent=accountHasPassword?'Змінити пароль':'Створити пароль';
+  if($('cpBtnText'))$('cpBtnText').textContent=accountHasPassword?'Змінити':'Створити';
   modal.classList.remove('hidden');
-  setTimeout(() => $('cpOldPass')?.focus(), 100);
+  setTimeout(() => (accountHasPassword?$('cpOldPass'):$('cpNewPass'))?.focus(), 100);
 });
 $('cpCancelBtn')?.addEventListener('click', () => $('changePassModal')?.classList.add('hidden'));
 $('cpSubmitBtn')?.addEventListener('click', async () => {
@@ -1660,29 +1680,28 @@ $('cpSubmitBtn')?.addEventListener('click', async () => {
   const cpErr = $('cpError');
   const cpBtn = $('cpBtnText');
   const cpSpinner = $('cpSpinner');
-  if (!oldPass) { if (cpErr) { cpErr.textContent = 'Введіть поточний пароль'; cpErr.classList.remove('hidden'); } return; }
-  if (!newPass || newPass.length < 4) { if (cpErr) { cpErr.textContent = 'Новий пароль — мінімум 4 символи'; cpErr.classList.remove('hidden'); } return; }
+  if (accountHasPassword&&!oldPass) { if (cpErr) { cpErr.textContent = 'Введіть поточний пароль'; cpErr.classList.remove('hidden'); } return; }
+  if (!newPass || newPass.length < 8) { if (cpErr) { cpErr.textContent = 'Новий пароль — мінімум 8 символів'; cpErr.classList.remove('hidden'); } return; }
   if (newPass !== confirmPass) { if (cpErr) { cpErr.textContent = 'Паролі не збігаються'; cpErr.classList.remove('hidden'); } return; }
   if (cpErr) cpErr.classList.add('hidden');
   if (cpBtn) cpBtn.textContent = 'Змінюю...';
   if (cpSpinner) cpSpinner.classList.remove('hidden');
   try {
-    const oldHash = await getHash(oldPass);
-    const newHash = await getHash(newPass);
-    const res = await secureFetch('POST', {}, { action: 'change_password', login: sessionLogin, oldPass: oldHash, newPass: newHash });
+    const res = await secureFetch('POST', {}, { action: 'change_password', oldPass, newPass });
     const data = await res.json();
     if (data.success) {
-      sessionPass = newHash;
-      localStorage.setItem('k_passHash', newHash);
+      accountHasPassword=true;sessionPass=null;localStorage.removeItem('k_passHash');
+      if(data.sessionToken){sessionToken=data.sessionToken;localStorage.setItem('k_session',sessionToken);}
       $('changePassModal')?.classList.add('hidden');
-      showToast('Пароль змінено! ✅');
+      showToast('Пароль збережено! ✅');
     } else {
-      if (cpErr) { cpErr.textContent = 'Неправильний поточний пароль'; cpErr.classList.remove('hidden'); }
+      const message={WRONG_PASSWORD:'Неправильний поточний пароль.',PASSWORD_TOO_SHORT:'Новий пароль має містити щонайменше 8 символів.',PASSWORD_TOO_LONG:'Новий пароль надто довгий.',PASSWORD_TOO_WEAK:'Додайте до пароля літери або цифри.',PASSWORD_SETUP_REQUIRES_GOOGLE:'Щоб створити пароль, увійдіть через підключений Google-акаунт.',CONFLICT:'Дані змінилися на іншому пристрої. Оновіть сторінку й повторіть.'}[data.error]||'Не вдалося змінити пароль. Спробуйте ще раз.';
+      if (cpErr) { cpErr.textContent = message; cpErr.classList.remove('hidden'); }
     }
   } catch(e) {
     if (cpErr) { cpErr.textContent = 'Помилка мережі: ' + e.message; cpErr.classList.remove('hidden'); }
   }
-  if (cpBtn) cpBtn.textContent = 'Змінити';
+  if (cpBtn) cpBtn.textContent = accountHasPassword?'Змінити':'Створити';
   if (cpSpinner) cpSpinner.classList.add('hidden');
 });
 $('cpConfirmPass')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('cpSubmitBtn')?.click(); });
@@ -1820,6 +1839,7 @@ $('exportCsvBtn')?.addEventListener('click',exportCSV);
 $('exportPdfBtn')?.addEventListener('click',generatePDF);
 $('shareAllBtn')?.addEventListener('click',shareAllRecords);
 $('exportJsonBtn')?.addEventListener('click',()=>{syncCurrentAddress();downloadBlob(JSON.stringify({version:APP_VERSION,exportDate:new Date().toISOString(),addresses,currentAddressId,accountSettings:activeSettings},null,2),'komunalka_backup.json','application/json;charset=utf-8;');writeDeviceMeta({lastExportAt:Date.now()});showToast('Бекап створено','💾');});
+$('exportAccountBtn')?.addEventListener('click',async()=>{try{await syncToCloud();const response=await secureFetch('POST',{}, {action:'account_export'}),result=await response.json();if(!response.ok||!result.success)throw new Error();downloadBlob(JSON.stringify(result.export,null,2),`komunalka_account_${new Date().toISOString().slice(0,10)}.json`,'application/json;charset=utf-8;');writeDeviceMeta({lastExportAt:Date.now()});renderDataHealth();showToast('Усі дані завантажено','💾');}catch{showToast('Не вдалося завантажити дані','❌');}});
 $('dataSyncNowBtn')?.addEventListener('click',async()=>{if(!activeStore)return showToast('Спочатку увійдіть в акаунт','⚠️');await syncToCloud();renderDataHealth();});
 $('importJsonBtn')?.addEventListener('click',()=>$('importFileInput')?.click());
 
@@ -1849,7 +1869,7 @@ function normalizeImportData(data){
 $('importFileInput')?.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const normalized=normalizeImportData(JSON.parse(ev.target.result));if(!normalized){showToast('Невірний формат','❌');return;}const recordCount=normalized.addresses.reduce((s,a)=>s+(a.records?.length||0),0);if(confirm(`Імпорт ${normalized.addresses.length} об'єктів і ${recordCount} записів? Поточні дані буде замінено, але перед цим створиться аварійний бекап.`)){if(!backupCurrentState(PRE_IMPORT_BACKUP_KEY))return;addresses=normalized.addresses;currentAddressId=normalized.currentAddressId;activeSettings=normalized.accountSettings||activeSettings;addChangeLog('json_imported',{addresses:normalized.addresses.length,records:recordCount});loadCurrentAddress();syncToCloud();showActionToast('Імпортовано','Скасувати',()=>{if(restoreFromLocalBackup(PRE_IMPORT_BACKUP_KEY)){addChangeLog('import_rolled_back');showToast('Імпорт скасовано','✅');}else showToast('Немає бекапу','⚠️');},'✅');}}catch(err){showToast('Помилка','❌');}};reader.readAsText(file);e.target.value='';});
 $('restoreBackupBtn')?.addEventListener('click',()=>{if(confirm('Відновити останній локальний бекап? Поточні дані буде замінено.')){if(!backupCurrentState(PRE_IMPORT_BACKUP_KEY))return;if(restoreFromLocalBackup(LOCAL_BACKUP_KEY)){addChangeLog('local_backup_restored');showToast('Бекап відновлено','✅');}else showToast('Бекап не знайдено','⚠️');}});
 $('restorePreImportBtn')?.addEventListener('click',()=>{if(confirm('Відновити стан перед останнім імпортом?')){if(restoreFromLocalBackup(PRE_IMPORT_BACKUP_KEY)){addChangeLog('pre_import_backup_restored');showToast('Відновлено','✅');}else showToast('Бекап не знайдено','⚠️');}});
-$('forgetDeviceBtn')?.addEventListener('click',async()=>{if(confirm('Прибрати дані входу з цього пристрою? Локальні бекапи й налаштування залишаться.')){if(!await detachPush()){showToast('Не вдалося вимкнути сповіщення. Повторіть.','⚠️');return;}['k_login','k_passHash','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));addChangeLog('device_credentials_forgotten');location.reload();}});
+$('forgetDeviceBtn')?.addEventListener('click',async()=>{if(confirm('Прибрати дані входу з цього пристрою? Локальні бекапи й налаштування залишаться.')){if(!await detachPush()){showToast('Не вдалося вимкнути сповіщення. Повторіть.','⚠️');return;}try{await secureFetch('POST',{}, {action:'auth_logout'});}catch{}['k_login','k_passHash','k_session','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));addChangeLog('device_credentials_forgotten');location.reload();}});
 
 // =================== TIPS ===================
 function getConsumptionTrend(type,months=6){const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,months);if(sorted.length<2)return null;const values=sorted.map(r=>{switch(type){case 'water':return Math.max(0,(r.wCur||0)-(r.wPrev||0));case 'electro':return Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0));case 'gas':return Math.max(0,(r.gCur||0)-(r.gPrev||0));default:return r.total;}}).reverse();const first=values.slice(0,Math.ceil(values.length/2)),second=values.slice(Math.ceil(values.length/2));const avgF=first.reduce((a,b)=>a+b,0)/first.length,avgS=second.reduce((a,b)=>a+b,0)/second.length;if(avgF===0)return 0;return Math.round(((avgS-avgF)/avgF)*100);}
@@ -1978,12 +1998,17 @@ window.addEventListener('online',initPush);
 $('shareAppBtn')?.addEventListener('click',async()=>{const text='🏠 Комуналка — розумний облік комунальних платежів.\nВода, світло, газ — все в одному додатку. Безкоштовно!\n\nhttps://komynalka.vercel.app';if(navigator.share){try{await navigator.share({text,url:'https://komynalka.vercel.app'});return;}catch(e){}}try{await navigator.clipboard.writeText(text);showToast('Посилання скопійовано!','📋');}catch(e){prompt('Скопіюйте:',text);}});
 
 // =================== LOGOUT ===================
+$('deleteAccountBtn')?.addEventListener('click',()=>{const dialog=$('deleteAccountDialog');if(!dialog)return;$('deleteAccountConfirm').value='';$('deleteAccountPassword').value='';$('deleteAccountLoginHint').textContent=sessionLogin;$('deleteAccountPasswordWrap')?.classList.toggle('hidden',!accountHasPassword);$('deleteAccountError')?.classList.add('hidden');if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');});
+$('deleteAccountCancel')?.addEventListener('click',()=>{const dialog=$('deleteAccountDialog');if(typeof dialog?.close==='function')dialog.close();else dialog?.removeAttribute('open');});
+$('deleteAccountForm')?.addEventListener('submit',async event=>{event.preventDefault();const error=$('deleteAccountError'),button=$('deleteAccountConfirmBtn');error?.classList.add('hidden');if($('deleteAccountConfirm')?.value.trim().toLowerCase()!==String(sessionLogin||'').toLowerCase()){error.textContent='Введіть свій логін точно так, як показано в акаунті.';error.classList.remove('hidden');return;}button.disabled=true;button.textContent='Видалення…';try{const response=await secureFetch('POST',{}, {action:'delete_account',confirmation:$('deleteAccountConfirm').value.trim(),password:$('deleteAccountPassword')?.value||''}),result=await response.json();if(!response.ok||!result.success)throw new Error(result.error||'DELETE_FAILED');['k_login','k_passHash','k_session','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));localStorage.removeItem(`k_ai_history_v2:${encodeURIComponent(sessionLogin)}`);localStorage.removeItem(`k_ai_consent_v1:${encodeURIComponent(sessionLogin)}`);location.href=window.location.pathname;}
+  catch(err){error.textContent=err.message==='WRONG_PASSWORD'?'Неправильний поточний пароль.':'Не вдалося видалити акаунт. Дані не змінено.';error.classList.remove('hidden');button.disabled=false;button.textContent='Видалити назавжди';}});
 async function logout(){
   if(isGuest){window.location.href=window.location.pathname;return;}
   if(confirm('Вийти? Локальний бекап і налаштування залишаться на пристрої.')){
     if(!saveDraft()||!saveToLocal())return;
     if(!await detachPush()){showToast('Не вдалося вимкнути сповіщення. Повторіть вихід.','⚠️');return;}
-    ['k_login','k_passHash','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));
+    try{await secureFetch('POST',{}, {action:'auth_logout'});}catch{}
+    ['k_login','k_passHash','k_session','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));
     if(googleUser){try{await firebase.auth().signOut();}catch(e){}}
     location.reload();
   }
@@ -1992,17 +2017,24 @@ $('logoutBtn')?.addEventListener('click',logout);
 
 // =================== SHARE ADDRESS ===================
 $('shareAddressBtn')?.addEventListener('click',shareAddress);
+$('createManagedShareBtn')?.addEventListener('click',shareAddress);
+async function loadShares(){
+  const list=$('shareLinksList');if(!list||isGuest)return;if(!navigator.onLine){list.innerHTML='<p class="text-xs text-slate-400">Активні посилання можна перевірити після підключення до інтернету.</p>';return;}
+  try{const response=await secureFetch('POST',{}, {action:'share_list'}),result=await response.json();if(!response.ok||!result.success)throw new Error();const shares=result.shares||[];if(!shares.length){list.innerHTML='<p class="text-xs text-slate-400">Активних посилань немає.</p>';return;}list.innerHTML=shares.sort((a,b)=>b.createdAt-a.createdAt).map(item=>{const address=addresses.find(a=>String(a.id)===String(item.addressId));return `<div class="share-link-row"><span><strong>${escapeHtml(address?.name||'Адреса')}</strong><small>до ${new Date(item.expiresAt).toLocaleDateString('uk-UA')}</small></span><button type="button" data-share-revoke="${escapeAttr(item.id)}">Відкликати</button></div>`;}).join('');}
+  catch{list.innerHTML='<p class="text-xs text-red-500">Не вдалося отримати список. Спробуйте ще раз.</p>';}
+}
+$('shareLinksList')?.addEventListener('click',async event=>{const button=event.target.closest('[data-share-revoke]');if(!button)return;if(!await showAppConfirm('Після відкликання це посилання більше не відкриє дані.',{title:'Відкликати доступ?',confirmLabel:'Відкликати',danger:true}))return;button.disabled=true;try{const response=await secureFetch('POST',{}, {action:'share_revoke',id:button.dataset.shareRevoke}),result=await response.json();if(!response.ok||!result.success)throw new Error();await loadShares();showToast('Доступ відкликано','✓');}catch{button.disabled=false;showToast('Не вдалося відкликати','❌');}});
 async function shareAddress(){
   if(!sessionLogin&&!localStorage.getItem('k_uid')){showToast('Спочатку увійдіть','⚠️');return;}
   const btn=$('shareAddressBtn');if(btn)btn.style.opacity='0.6';
   showToast('Генерую посилання...','⏳');
   try{
-    const res=await secureFetch('POST',{},{action:'generate_share',addressId:currentAddressId}),data=await res.json();
+    const days=Number($('shareExpiryDays')?.value)||30,res=await secureFetch('POST',{},{action:'generate_share',addressId:currentAddressId,days}),data=await res.json();
     if(btn)btn.style.opacity='1';
     if(!data.success||!data.shareToken){showToast(data.error||'Помилка','❌');return;}
     const shareUrl=`${window.location.origin}${window.location.pathname}?share=${data.shareToken}`,addrName=addresses.find(a=>String(a.id)===String(currentAddressId))?.name||'Мій дім';
-    if(navigator.share){try{await navigator.share({title:'Комуналка',text:`Перегляд за "${addrName}"`,url:shareUrl});showToast('Надіслано!','✅');return;}catch(e){if(e.name==='AbortError')return;}}
-    try{await navigator.clipboard.writeText(shareUrl);showToast('Посилання скопійовано!','📋');}catch(e){prompt('Скопіюйте:',shareUrl);}
+    await loadShares();if(navigator.share){try{await navigator.share({title:'Комуналка',text:`Перегляд за "${addrName}" до ${new Date(data.expiresAt).toLocaleDateString('uk-UA')}`,url:shareUrl});showToast('Надіслано!','✅');return;}catch(e){if(e.name==='AbortError')return;}}
+    try{await navigator.clipboard.writeText(shareUrl);showToast('Посилання скопійовано!','📋');}catch(e){await showCopyDialog('Скопіюйте гостьове посилання',shareUrl);}
   }catch(e){if(btn)btn.style.opacity='1';showToast('Помилка мережі','❌');}
 }
 
@@ -2186,6 +2218,7 @@ function initAppUI(){
   if($('tGas'))           $('tGas').value           =tariffs.gas;
   if($('budgetInput'))    $('budgetInput').value    =accountStorage.getItem('k_budget')||'';
   if($('accountLoginDisplay'))$('accountLoginDisplay').textContent=sessionLogin||'—';
+  if($('accountPasswordStatus'))$('accountPasswordStatus').textContent=accountHasPassword?'Змінити пароль':'Створити пароль';
   updateGoogleButton();
   updateDisplayName();
   renderTariffPresets();
@@ -2237,7 +2270,7 @@ if(urlShareToken){
     try{activeStore=KomunalkaData.create(localStorage,initialDeviceLogin);const state=activeStore.read();if(state){sessionLogin=initialDeviceLogin;authUid=uid;bindAccount(initialDeviceLogin,state.base,state.revision,2);applySnapshot(activeStore.read().local);setSyncState('offline');}else activeStore=null;}catch(e){showToast('Локальну копію не вдалося відкрити. Оригінал збережено.','⚠️');}
   }else if(uid){
     const unsubscribe=firebase.auth().onAuthStateChanged(user=>{unsubscribe();if(user&&user.uid===uid){googleUser=user;performLogin(null,null,false,uid);}else{if($('authError')){$('authError').textContent='Увійдіть через Google, щоб відкрити свої дані.';$('authError').classList.remove('hidden');}}});
-  }else if(sessionLogin&&sessionPass)performLogin(sessionLogin,sessionPass,true);
+  }else if(sessionLogin&&(sessionToken||sessionPass))performLogin(sessionLogin,sessionPass,true);
 }
 
 $('mode-light')?.addEventListener('click',()=>setThemeMode('light'));
@@ -2980,7 +3013,7 @@ function openSettingsPanel(name){
   $('swipeContainer')?.scrollTo({top:0});
   if(name==='providers')renderProviders();
   if(name==='reminders'){renderReminderOverview();void initPush();void refreshTelegramState();}
-  if(name==='account')void refreshAdminEntry();
+  if(name==='account'){void refreshAdminEntry();void loadShares();}
   if(panel)panel.querySelector('h3')?.focus({preventScroll:true});
 }
 document.querySelectorAll('[data-settings-open]').forEach(button=>button.addEventListener('click',()=>openSettingsPanel(button.dataset.settingsOpen)));

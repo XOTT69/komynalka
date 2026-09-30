@@ -6,6 +6,7 @@ import {environment,legacyAccount} from './helpers.mjs';
 const hash=createHash('sha256').update('test-password').digest('hex');
 const auth=login=>`Bearer login:${Buffer.from(login).toString('base64')}:${hash}`;
 function req(login,body){return new Request('https://test.workers.dev',{method:body?'POST':'GET',headers:{Authorization:auth(login),'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});}
+async function loginAdmin(env){const response=await worker.fetch(new Request('https://test.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_login',pass:env.ADMIN_PASS})}),env),data=await response.json();assert.equal(response.status,200);assert.ok(data.token);return data.token;}
 test('existing account read preserves all historical data and raw recovery snapshot',async()=>{const legacy=legacyAccount(hash);const {env,stores}=environment({anna:legacy});const result=await (await worker.fetch(req('anna'),env)).json();assert.equal(result.success,true);assert.equal(result.data.syncProtocol,2);assert.deepEqual(result.data.addresses,legacy.addresses);assert.equal(stores.get('anna').get('legacy-original').raw,JSON.stringify(legacy));assert.equal(stores.get('anna').get('account').revision,1);});
 test('two devices cannot overwrite each other; identical retry is idempotent',async()=>{const {env}=environment({anna:legacyAccount(hash)});const cloud=(await(await worker.fetch(req('anna'),env)).json()).data;const body={addresses:cloud.addresses,currentAddressId:'home',baseRevision:1,clientMutationId:'a'};body.addresses[0].records[0].note='First';const results=await Promise.all([worker.fetch(req('anna',body),env),worker.fetch(req('anna',{...body,clientMutationId:'b'}),env)]);assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);assert.equal((await worker.fetch(req('anna',body),env)).status,200);const final=(await(await worker.fetch(req('anna'),env)).json()).data;assert.equal(final.revision,2);assert.equal(final.addresses[0].records[0].note,'First');});
 test('legacy snapshot writers are rejected, not allowed to erase other-device records',async()=>{const {env}=environment({anna:legacyAccount(hash)});assert.equal((await worker.fetch(req('anna',{addresses:[]}),env)).status,400);const res=await worker.fetch(req('anna',{addresses:legacyAccount(hash).addresses}),env);assert.equal(res.status,409);assert.equal((await res.json()).error,'SYNC_UPGRADE_REQUIRED');});
@@ -22,7 +23,7 @@ test('private admin entry is visible only to the authenticated owner',async()=>{
   delete env.ADMIN_OWNER_LOGIN;
   assert.deepEqual(await (await access(auth('xott69'))).json(),{success:true,allowed:false});
 });
-test('admin listing paginates all keys and includes Google-only accounts',async()=>{const seed={anna:legacyAccount(hash),uid_google:{...legacyAccount(hash),pass:undefined}};for(let i=0;i<1001;i++)seed[`rl:${String(i).padStart(4,'0')}`]='1';const {env}=environment(seed);const adminToken=createHash('sha256').update(`${env.ADMIN_PASS}:${Math.floor(Date.now()/3600000)}:k_admin`).digest('hex');const res=await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'admin_stats',adminToken})}),env);assert.deepEqual((await res.json()).users.map(u=>u.login).sort(),['anna','uid_google']);});
+test('admin listing paginates all keys and includes Google-only accounts',async()=>{const seed={anna:legacyAccount(hash),uid_google:{...legacyAccount(hash),pass:undefined}};for(let i=0;i<1001;i++)seed[`rl:${String(i).padStart(4,'0')}`]='1';const {env}=environment(seed);const adminToken=await loginAdmin(env);const res=await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'admin_stats',adminToken})}),env);assert.deepEqual((await res.json()).users.map(u=>u.login).sort(),['anna','uid_google']);});
 test('request body limit applies without Content-Length; CORS is not wildcard',async()=>{const {env}=environment();const large=new Request('https://test.workers.dev',{method:'POST',body:' '.repeat(513*1024)});assert.equal((await worker.fetch(large,env)).status,413);const preflight=await worker.fetch(new Request('https://test.workers.dev',{method:'OPTIONS',headers:{Origin:'https://komynalka.vercel.app'}}),env);assert.equal(preflight.headers.get('Access-Control-Allow-Origin'),'https://komynalka.vercel.app');assert.equal((await worker.fetch(new Request('https://test.workers.dev',{headers:{Origin:'https://unknown.example'}}),env)).status,403);});
 
 test('authenticated feedback is private, validated and manageable from admin without changing utility data',async()=>{
@@ -34,7 +35,7 @@ test('authenticated feedback is private, validated and manageable from admin wit
   assert.equal(values.get('anna'),before);
   const key=[...values.keys()].find(name=>name.startsWith('feedback:'));assert.ok(key);
   const stored=JSON.parse(values.get(key));assert.equal(stored.login,'anna');assert.equal(stored.status,'new');assert.equal('addresses' in stored,false);
-  const adminToken=createHash('sha256').update(`${env.ADMIN_PASS}:${Math.floor(Date.now()/3600000)}:k_admin`).digest('hex');
+  const adminToken=await loginAdmin(env);
   const admin=body=>worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({adminToken,...body})}),env);
   const listed=await(await admin({action:'admin_feedback_list'})).json();assert.equal(listed.feedback.length,1);assert.equal(listed.feedback[0].message,stored.message);
   assert.equal((await admin({action:'admin_feedback_update',id:stored.id,status:'done'})).status,200);assert.equal(JSON.parse(values.get(key)).status,'done');
@@ -52,12 +53,12 @@ test('pre-login feedback accepts login failures without account access and resis
 test('a committed account remains discoverable and exportable when its KV mirror fails',async()=>{
   const {env,values}=environment();const put=env.KV.put;env.KV.put=async(key,value)=>{if(key==='anna')throw new Error('mirror unavailable');return put(key,value);};
   const snapshot=legacyAccount(hash);const response=await worker.fetch(req('anna',{addresses:snapshot.addresses,currentAddressId:'home',baseRevision:0,clientMutationId:'new-account'}),env);assert.equal(response.status,200);assert.equal(values.has('anna'),false);assert.equal((await(await worker.fetch(req('anna'),env)).json()).data.addresses[0].records[0].total,151.9);
-  const adminToken=createHash('sha256').update(`${env.ADMIN_PASS}:${Math.floor(Date.now()/3600000)}:k_admin`).digest('hex');const stats=await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'admin_stats',adminToken})}),env);assert.deepEqual((await stats.json()).users.map(u=>u.login),['anna']);
+  const adminToken=await loginAdmin(env);const stats=await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'admin_stats',adminToken})}),env);assert.deepEqual((await stats.json()).users.map(u=>u.login),['anna']);
 });
 
 test('maintenance blocks writers and paginated backups retain UID and share mappings verbatim',async()=>{
   const mapping='anna',share=JSON.stringify({login:'anna',addressId:'home'});const {env}=environment({anna:legacyAccount(hash),'uid:google':mapping,'share:example':share});env.MAINTENANCE_MODE='read-only';assert.equal((await worker.fetch(req('anna',{addresses:legacyAccount(hash).addresses,baseRevision:1,clientMutationId:'blocked'}),env)).status,503);
-  const adminToken=createHash('sha256').update(`${env.ADMIN_PASS}:${Math.floor(Date.now()/3600000)}:k_admin`).digest('hex');const response=await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'admin_backup_page',adminToken})}),env);const backup=await response.json();assert.equal(backup.readOnly,true);assert.equal(backup.entries.find(e=>e.name==='uid:google').value,mapping);assert.equal(backup.entries.find(e=>e.name==='share:example').value,share);
+  const adminToken=await loginAdmin(env);const response=await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'admin_backup_page',adminToken})}),env);const backup=await response.json();assert.equal(backup.readOnly,true);assert.equal(backup.entries.find(e=>e.name==='uid:google').value,mapping);assert.equal(backup.entries.find(e=>e.name==='share:example').value,share);
 });
 
 test('old share_ links with phone metadata and capitalized account keys keep working',async()=>{
@@ -67,11 +68,11 @@ test('old share_ links with phone metadata and capitalized account keys keep wor
 });
 test('opaque old accounts are preserved and flagged; Google and share aliases are not accounts',async()=>{
   const opaque='synthetic-old-opaque-value';const {env,values}=environment({anna:legacyAccount(hash),encrypted:opaque,google_example:'anna',share_old:{phone:'anna',addressId:'home'},_broadcast:{message:'Test'}});
-  const adminToken=createHash('sha256').update(`${env.ADMIN_PASS}:${Math.floor(Date.now()/3600000)}:k_admin`).digest('hex');const res=await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'admin_stats',adminToken})}),env);const data=await res.json();assert.deepEqual(data.users.map(u=>u.login),['anna']);assert.equal(data.unrecognizedAccounts,1);assert.equal((await worker.fetch(req('encrypted'),env)).status,503);assert.equal(values.get('encrypted'),opaque);
+  const adminToken=await loginAdmin(env);const res=await worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({action:'admin_stats',adminToken})}),env);const data=await res.json();assert.deepEqual(data.users.map(u=>u.login),['anna']);assert.equal(data.unrecognizedAccounts,1);assert.equal((await worker.fetch(req('encrypted'),env)).status,503);assert.equal(values.get('encrypted'),opaque);
 });
 test('an edited community tariff loses approval and corrupt tariff data is never shown as empty',async()=>{
   const {env,values}=environment({anna:legacyAccount(hash)});
-  const adminToken=createHash('sha256').update(`${env.ADMIN_PASS}:${Math.floor(Date.now()/3600000)}:k_admin`).digest('hex');
+  const adminToken=await loginAdmin(env);
   const publish=async water=>(await worker.fetch(req('anna',{action:'publish_tariff',name:'Міський тариф',author:'Анна',tariffs:{water}}),env)).json();
   const first=await publish(40);assert.equal(first.success,true);
   const moderate=async body=>worker.fetch(new Request('https://test.workers.dev',{method:'POST',body:JSON.stringify({adminToken,...body})}),env);
@@ -80,7 +81,7 @@ test('an edited community tariff loses approval and corrupt tariff data is never
   assert.equal((await publish(50)).success,true);
   assert.equal(JSON.parse(values.get('community_tariffs'))[0].verified,false);
   values.set('community_tariffs','not-json');
-  assert.equal((await moderate({action:'admin_get_tariffs'})).status,503);
+  const authoritative=await moderate({action:'admin_get_tariffs'});assert.equal(authoritative.status,200);assert.equal((await authoritative.json()).tariffs[0].verified,false);
   assert.equal(values.get('community_tariffs'),'not-json');
 });
 test('push subscriptions are authenticated, schedule an alarm and do not alter account history',async()=>{

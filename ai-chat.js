@@ -1,7 +1,7 @@
 'use strict';
 
 const AI_MAX_HISTORY    = 10;
-const AI_HISTORY_KEY    = 'k_ai_history';
+const AI_HISTORY_KEY    = 'k_ai_history_v2';
 const AI_CONTEXT_MONTHS = 6;
 const AI_MAX_TOKENS     = 400;
 
@@ -10,24 +10,39 @@ class KomunalkaAI {
     this.isOpen    = false;
     this.isLoading = false;
     this.abort     = null;
+    this.historyOwner = this._owner();
     this.history   = this._loadHistory();
   }
 
+  _owner() { return String((typeof sessionLogin !== 'undefined' && sessionLogin) || localStorage.getItem('k_login') || 'guest'); }
+  _historyKey() { return `${AI_HISTORY_KEY}:${encodeURIComponent(this._owner())}`; }
+  _consentKey() { return `k_ai_consent_v1:${encodeURIComponent(this._owner())}`; }
+  _refreshOwner() { const owner=this._owner();if(owner!==this.historyOwner){this.historyOwner=owner;this.history=this._loadHistory();} }
+
   _loadHistory() {
     try {
-      const arr = JSON.parse(localStorage.getItem(AI_HISTORY_KEY) || '[]');
+      let raw=localStorage.getItem(this._historyKey());
+      // Migrate the pre-account global history at most once. Leaving the legacy
+      // key intact preserves recovery, while the marker prevents copying one
+      // person's chat into every account later used on the same device.
+      const migrationMarker='k_ai_history_migrated_v2';
+      if(raw===null&&this._owner()!=='guest'&&!localStorage.getItem(migrationMarker)){
+        raw=localStorage.getItem('k_ai_history');
+        if(raw!==null){localStorage.setItem(this._historyKey(),raw);localStorage.setItem(migrationMarker,'1');}
+      }
+      const arr = JSON.parse(raw || '[]');
       return Array.isArray(arr) ? arr : [];
     } catch { return []; }
   }
 
   _saveHistory() {
     this.history = this.history.slice(-AI_MAX_HISTORY);
-    try { localStorage.setItem(AI_HISTORY_KEY, JSON.stringify(this.history)); } catch {}
+    try { localStorage.setItem(this._historyKey(), JSON.stringify(this.history)); } catch {}
   }
 
   clearHistory() {
     this.history = [];
-    localStorage.removeItem(AI_HISTORY_KEY);
+    localStorage.removeItem(this._historyKey());
     this._render();
     this._chatToast('Історію очищено ✓');
   }
@@ -71,6 +86,11 @@ ${recLines}
 
   async sendMessage(userText) {
     if (!userText.trim() || this.isLoading) return;
+    this._refreshOwner();
+    if(localStorage.getItem(this._consentKey())!=='yes'){
+      const accepted=typeof showAppConfirm==='function'?await showAppConfirm('Для відповіді AI застосунок надішле ваш запит, назву поточної адреси, тарифи та підсумки останніх 6 місяців зовнішньому AI-провайдеру. Пароль, email постачальника й повна резервна копія не передаються.',{title:'Дозволити AI-аналіз?',confirmLabel:'Дозволити',icon:'🤖'}):confirm('Дозволити передавання підсумків комунальних даних AI-провайдеру?');
+      if(!accepted)return;localStorage.setItem(this._consentKey(),'yes');
+    }
     this.abort?.abort();
     this.abort = new AbortController();
     this._addMsg('user', userText);
@@ -80,21 +100,8 @@ ${recLines}
         { role: 'system', content: this._buildSystemPrompt() },
         ...this.history.slice(-(AI_MAX_HISTORY - 1)).map(m => ({ role: m.role, content: m.content })),
       ];
-      const headers = {
-        'Content-Type': 'application/json',
-        'X-Device-FP': typeof DEVICE_FP !== 'undefined' ? DEVICE_FP : 'unknown',
-      };
-      const uid = localStorage.getItem('k_uid');
-      if (uid) {
-        headers['Authorization'] = `Bearer uid:${uid}`;
-      } else if (typeof sessionLogin !== 'undefined' && sessionLogin && typeof sessionPass !== 'undefined' && sessionPass) {
-        headers['Authorization'] = `Bearer login:${btoa(unescape(encodeURIComponent(sessionLogin)))}:${sessionPass}`;
-      }
-      const res = await fetch(WORKER_URL, {
-        method: 'POST', headers,
-        body: JSON.stringify({ action: 'ai_chat', messages: apiMessages, max_tokens: AI_MAX_TOKENS, temperature: 0.4 }),
-        signal: this.abort.signal,
-      });
+      const payload={action:'ai_chat',messages:apiMessages,max_tokens:AI_MAX_TOKENS,temperature:0.4};
+      const res=await secureFetch('POST',{},payload,{signal:this.abort.signal});
       if (res.status === 429) throw new Error('Забагато запитів. Зачекайте хвилину. ⏳');
       if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error || `HTTP ${res.status}`); }
       const data = await res.json();
@@ -209,6 +216,7 @@ ${recLines}
   }
 
   open() {
+    this._refreshOwner();
     this.isOpen = true;
     const panel = document.getElementById('aiChatPanel');
     const inner = document.getElementById('aiPanelInner');
@@ -238,9 +246,9 @@ ${recLines}
     document.getElementById('aiChatPanel')?.addEventListener('click', e => {
       if (e.target.id === 'aiChatPanel') this.close();
     });
-    document.getElementById('aiSendBtn')?.addEventListener('click', () => this._handleSend());
+    document.getElementById('aiSendBtn')?.addEventListener('click', () => void this._handleSend());
     document.getElementById('aiInput')?.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this._handleSend(); }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void this._handleSend(); }
     });
     document.getElementById('aiInput')?.addEventListener('input', e => {
       e.target.style.height = 'auto';
@@ -248,18 +256,18 @@ ${recLines}
     });
     document.getElementById('aiMessagesList')?.addEventListener('click', e => {
       const btn = e.target.closest('.ai-suggestion');
-      if (btn?.dataset.text) this.sendMessage(btn.dataset.text);
+      if (btn?.dataset.text) void this.sendMessage(btn.dataset.text);
     });
   }
 
-  _handleSend() {
+  async _handleSend() {
     const input = document.getElementById('aiInput');
     if (!input) return;
     const text = input.value.trim();
     if (!text) return;
     input.value = '';
     input.style.height = 'auto';
-    this.sendMessage(text);
+    await this.sendMessage(text);
   }
 }
 

@@ -28,6 +28,15 @@ async function page(env,stored={},offline=false,suffix=""){
   return {w,errors,close:()=>dom.window.close(),storage:()=>Object.fromEntries(Array.from({length:w.localStorage.length},(_,i)=>{const key=w.localStorage.key(i);return[key,w.localStorage.getItem(key)];}))};
 }
 test('actual app login preserves history, account totals and additional legacy fields',async()=>{const legacy=legacyAccount(hash),{env}=environment({anna:legacy});const p=await page(env);try{await p.w.performLogin('anna',password,false);await delay(30);assert.equal(p.w.document.getElementById('appScreen').classList.contains('hidden'),false,p.w.document.getElementById('authError').textContent);const data=JSON.parse(p.w.localStorage.getItem('komynalka_account_v1:anna'));assert.equal(data.local.addresses[0].records[0].total,151.9);assert.equal(data.local.addresses[0].records[0].paidAmount,50);assert.equal(data.local.addresses[0].records[0].customField,'preserve');assert.deepEqual(p.errors,[]);}finally{p.close();}});
+test('registration creates an isolated account and the account password control replaces every old session',async()=>{
+ const {env,values}=environment(),p=await page(env);try{
+  await p.w.performRegistration('fresh-user','StrongPass9','StrongPass9');await delay(100);
+  const d=p.w.document;assert.equal(d.getElementById('appScreen').classList.contains('hidden'),false);assert.match(p.w.localStorage.getItem('k_session'),/^s1\./);assert.equal(p.w.localStorage.getItem('k_passHash'),null);
+  const before=JSON.parse(values.get('fresh-user'));assert.equal(before.addresses.length,1);assert.equal(before.pass,undefined);assert.equal(before.credential.algorithm,'PBKDF2-SHA256');
+  d.getElementById('changePassBtn').click();d.getElementById('cpOldPass').value='StrongPass9';d.getElementById('cpNewPass').value='NewStrongPass8';d.getElementById('cpConfirmPass').value='NewStrongPass8';d.getElementById('cpSubmitBtn').click();await delay(350);
+  assert.equal(d.getElementById('changePassModal').classList.contains('hidden'),true);assert.match(p.w.localStorage.getItem('k_session'),/^s1\./);const after=JSON.parse(values.get('fresh-user'));assert.deepEqual(after.addresses,before.addresses);assert.notEqual(after.credential.hash,before.credential.hash);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
 test('the account shows the admin shortcut only after server approval for xott69',async()=>{
  const {env}=environment({xott69:legacyAccount(hash),anna:legacyAccount(hash)});env.ADMIN_OWNER_LOGIN='xott69';
  const owner=await page(env),other=await page(env);
