@@ -12,3 +12,10 @@ test('legacy AI history is migrated once and never copied into a second account'
   window.sessionLogin='bob';window.localStorage.setItem('k_login','bob');window.komunalkaAI.open();
   assert.equal(window.komunalkaAI.history.length,0);assert.equal(window.localStorage.getItem('k_ai_history_v2:anna').includes('Стара історія'),true);assert.equal(window.localStorage.getItem('k_ai_history_v2:bob'),null);dom.window.close();
 });
+
+test('AI system prompt allows general questions while retaining utility context',()=>{
+  assert.match(source,/універсальний AI-помічник/);
+  assert.match(source,/на будь-які запитання/);
+  assert.match(source,/Для питань про комуналку використовуй наведені нижче дані/);
+  assert.doesNotMatch(source,/Якщо питання не про комуналку — поверни до теми/);
+});

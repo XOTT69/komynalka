@@ -74,14 +74,14 @@ class KomunalkaAI {
         }).join('\n')
       : '• Записів поки немає';
 
-    return `Ти — AI-помічник додатку "Комуналка". Відповідай ТІЛЬКИ українською. Максимум 2-3 речення.
+    return `Ти — універсальний AI-помічник у додатку "Комуналка". Відповідай українською на будь-які запитання: побут, навчання, технології, тексти, планування та комунальні послуги. Будь доброзичливим, конкретним і стислим; використовуй списки, коли це зручніше. Для питань про комуналку використовуй наведені нижче дані й показуй розрахунки. Не вигадуй відсутні дані та чітко кажи, коли для відповіді потрібна свіжа інформація з інтернету.
 ${dName ? `Користувача звати: ${dName}` : ''}
 АДРЕСА: "${addr?.name || 'Мій дім'}"
 ТАРИФИ: вода ${t.water||30.38}₴/м³ | електрика ${t.electroBase||4.32}₴/кВт (ніч ×${t.nightCoef||0.5}) | газ ${t.gas||7.96}₴/м³
 СТАТИСТИКА: середній ${avg}₴/міс | серія ${streak}міс | борг ${unpaid.length}міс
 ОСТАННІ ${sorted.length} МІС:
 ${recLines}
-ПРАВИЛА: оперуй конкретними числами. Якщо питання не про комуналку — поверни до теми.`;
+ПРАВИЛА: оперуй конкретними числами, якщо питання стосується комуналки; для інших тем відповідай по суті й не повертай розмову примусово до комунальних послуг.`;
   }
 
   async sendMessage(userText) {
@@ -218,7 +218,7 @@ ${recLines}
     return `<div class="ai-empty-state flex flex-col items-center py-6 px-4">
       <div class="w-16 h-16 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-xl">🤖</div>
       <p class="text-base font-black text-slate-900 dark:text-white mb-1">AI-помічник</p>
-      <p class="text-xs text-slate-400 text-center mb-5">Аналізую ваші комунальні, знаходжу аномалії</p>
+      <p class="text-xs text-slate-400 text-center mb-5">Відповідаю на загальні питання й допомагаю з комунальними</p>
       <div class="grid grid-cols-2 gap-2 w-full">
         ${s.map(x=>`<button class="ai-suggestion text-left bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2.5 active:scale-[0.97] transition-transform" data-text="${x.t}"><span class="text-base">${x.e}</span><p class="text-[10px] font-bold text-slate-600 dark:text-slate-300 mt-1 leading-tight">${x.t}</p></button>`).join('')}
       </div>
