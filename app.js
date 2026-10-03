@@ -2401,7 +2401,7 @@ function showUpdateBanner(){
   document.body.appendChild(banner);
   $('applyUpdateBtn').addEventListener('click',async()=>{
     const button=$('applyUpdateBtn');button.disabled=true;
-    if(!await updateManager.check(updateRegistration)){return;}
+    if(!await updateManager.check(updateRegistration)){button.disabled=false;return;}
     if(!saveDraft()||(activeStore&&(syncCurrentAddress(),!saveToLocal()))){button.disabled=false;return;}
     const waiting=updateManager.current();if(!waiting)return;
     isRefreshingAfterUpdate=true;waiting.postMessage({type:'SKIP_WAITING'});

@@ -24,7 +24,7 @@ async function page(env,stored={},offline=false,suffix="",fetchFault=null){
   const originalFetch=(url,options)=>worker.fetch(new Request(url,options),env);
   w.fetch=async(url,options={})=>{if(offline||fetchFault==='reject')throw new TypeError('fetch failed');if(typeof fetchFault==='function')return fetchFault(url,options,originalFetch);if(typeof fetchFault==='number')return new Response('Test server unavailable',{status:fetchFault});if(fetchFault==='invalid-json')return new Response('invalid server response');return originalFetch(url,options);};
   for(const [key,value] of Object.entries(stored))w.localStorage.setItem(key,value);
-  w.eval(sources.join('\n')+'\nwindow.__disposeTestPage=()=>{activeStore=null;activeDrain=null;authAttempt++;};');
+  w.eval(sources.join('\n')+'\nwindow.__disposeTestPage=()=>{activeStore=null;activeDrain=null;authAttempt++;};window.__interruptUpdateCheck=()=>{pendingServiceWorker={state:"installed"};updateManager={check:async()=>false};showUpdateBanner();};');
   await delay(30);
   return {w,errors,navigations,close:()=>{
     // Browser navigation discards callbacks from the old document. JSDOM.close()
@@ -45,6 +45,14 @@ test('control gained during initial SW registration reloads only for a subsequen
     sw.dispatchEvent(new p.w.Event('controllerchange'));assert.equal(p.navigations.length,0,'Initial activation must not reload');
     sw.controller={};sw.dispatchEvent(new p.w.Event('controllerchange'));assert.equal(p.navigations.length,1,'Subsequent activation must reload');
     assert.deepEqual(p.errors,[]);
+  }finally{p.close();}
+});
+test('an interrupted update check leaves the update button usable',async()=>{
+  const {env}=environment({anna:legacyAccount(hash)}),p=await page(env);
+  try{
+    p.w.__interruptUpdateCheck();
+    const button=p.w.document.getElementById('applyUpdateBtn');button.click();await delay(10);
+    assert.equal(button.disabled,false);assert.equal(p.navigations.length,0);assert.deepEqual(p.errors,[]);
   }finally{p.close();}
 });
 test('an unknown previous reading cannot charge from zero; explicit zero is accepted',async()=>{
