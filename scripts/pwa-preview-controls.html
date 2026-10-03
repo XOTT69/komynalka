@@ -1,0 +1,40 @@
+<!-- Injected only by the isolated localhost PWA fixture server; never built or deployed. -->
+<details id="pwaDiagnostics" style="position:fixed;right:12px;bottom:100px;z-index:9999;max-width:340px;padding:10px;background:#fff;color:#243047;border:1px solid #cad7f4;border-radius:12px;font:12px/1.5 system-ui;box-shadow:0 4px 16px #0002">
+  <summary>PWA · локальна перевірка</summary>
+  <output id="pwaState" style="display:block;overflow-wrap:anywhere" aria-live="polite">Встановлення…</output>
+  <button id="pwaCheck" type="button">Перевірити оновлення</button>
+  <button id="pwaNext" type="button">Тестова наступна версія</button>
+  <button id="pwaOffline" type="button">Мережа: працює</button>
+</details>
+<script>
+(()=>{
+  const state=document.getElementById('pwaState');let busy=false,offline=false;
+  const version=worker=>new Promise(resolve=>{
+    if(!worker)return resolve('немає');
+    const channel=new MessageChannel(),timer=setTimeout(()=>{channel.port1.close();resolve(worker.state);},1000);
+    channel.port1.onmessage=e=>{clearTimeout(timer);channel.port1.close();resolve(e.data?.version||worker.state);};
+    worker.postMessage({type:'GET_VERSION'},[channel.port2]);
+  });
+  async function render(){
+    if(busy)return;busy=true;
+    try{
+      const registration=await navigator.serviceWorker.getRegistration();
+      const network=await fetch('/__demo/pwa/status',{cache:'no-store'}).then(response=>response.json());offline=network.previewOffline;
+      document.getElementById('pwaOffline').textContent=`Мережа: ${offline?'тестовий збій':'працює'}`;
+      const [active,waiting]=await Promise.all([version(navigator.serviceWorker.controller),version(registration?.waiting)]);
+      state.textContent=`Контролер: ${active} · Очікує: ${waiting} · Мережа: ${offline?'тестовий збій':'працює'}`;
+    }catch(e){state.textContent=`PWA: ${e.message}`;}finally{busy=false;}
+  }
+  document.getElementById('pwaCheck').onclick=async()=>{await(await navigator.serviceWorker.getRegistration())?.update();await render();};
+  document.getElementById('pwaNext').onclick=async()=>{
+    await fetch('/__demo/pwa/release',{method:'POST'});
+    await(await navigator.serviceWorker.getRegistration())?.update();await render();
+  };
+  document.getElementById('pwaOffline').onclick=async event=>{
+    const result=await fetch(`/__demo/pwa/network?offline=${offline?'0':'1'}`,{method:'POST'});
+    if(result.ok){offline=!offline;event.target.textContent=`Мережа: ${offline?'тестовий збій':'працює'}`;await render();}
+  };
+  navigator.serviceWorker.addEventListener('controllerchange',render);
+  setInterval(render,2000);render();
+})();
+</script>

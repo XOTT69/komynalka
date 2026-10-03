@@ -4,6 +4,7 @@ import {pathToFileURL} from 'node:url';
 
 export function verifyBackup(data,{forMigration=false}={}){
   const fail=message=>{throw new Error(message);};
+  if(data?.format==='komunalka-encrypted-backup-v1')fail('Encrypted archive: use npm run backup:restore-check in a terminal');
   if(!data||data.complete!==true||!Array.isArray(data.users)||!data.manifest)fail('Backup is incomplete or has no manifest');
   if(forMigration&&data.unrecognizedAccounts>0)fail('Unrecognized legacy accounts need a compatible reader before migration');
   if(forMigration&&data.readOnly!==true)fail('Migration requires an export taken while writes were paused');
@@ -25,6 +26,6 @@ export function verifyBackup(data,{forMigration=false}={}){
   return {...result,chargedCents,readOnly:data.readOnly===true};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
-  try{const args=process.argv.slice(2),filename=args.find(arg=>!arg.startsWith('--'));if(!filename)throw new Error('Usage: npm run backup:verify -- /absolute/path/backup.json [--for-migration]');const raw=await readFile(filename);const result=verifyBackup(JSON.parse(raw),{forMigration:args.includes('--for-migration')});console.log(JSON.stringify({...result,sha256:createHash('sha256').update(raw).digest('hex'),bytes:raw.byteLength},null,2));}
+  try{const args=process.argv.slice(2),filename=args.find(arg=>!arg.startsWith('--'));if(!filename)throw new Error('Usage: npm run backup:verify -- /absolute/path/backup.json [--for-migration]');const raw=await readFile(filename);const data=JSON.parse(raw);if(data.format==='komunalka-recovery-v2'){await import('../operational-backup.js');await globalThis.KomunalkaBackup.verify(data);}const result=verifyBackup(data,{forMigration:args.includes('--for-migration')});console.log(JSON.stringify({...result,sha256:createHash('sha256').update(raw).digest('hex'),bytes:raw.byteLength},null,2));}
   catch(error){console.error('Backup verification failed: '+error.message);process.exitCode=1;}
 }

@@ -5,7 +5,18 @@ import {sendTelegram} from './telegram.js';
  */
 export class AccountStore {
   constructor(ctx,env){this.ctx=ctx;this.env=env;}
-  async alarm(){return this.ctx.blockConcurrencyWhile(()=>deliverReminders(this.ctx,this.env));}
+  async cleanupDeleted(){
+    const keys=await this.ctx.storage.get('delete-cleanup')||[],remaining=[];
+    for(const key of keys)try{await this.env.KV.delete(key);}catch{remaining.push(key);}
+    if(remaining.length){await this.ctx.storage.put('delete-cleanup',remaining);await this.ctx.storage.setAlarm(Date.now()+60000);}
+    else{await this.ctx.storage.delete('delete-cleanup');await this.ctx.storage.deleteAlarm();}
+    return Response.json({success:true,cleanupPending:Boolean(remaining.length)});
+  }
+  async alarm(){return this.ctx.blockConcurrencyWhile(async()=>{
+    if(await this.ctx.storage.get('delete-cleanup'))return this.cleanupDeleted();
+    if(this.ctx.storage.list){const expired=await this.ctx.storage.list({prefix:'rate:',limit:1000});for(const [key,value] of expired)if(value.expiresAt<=Date.now())await this.ctx.storage.delete(key);const remaining=await this.ctx.storage.list({prefix:'rate:',limit:1});if(remaining.size)await this.ctx.storage.setAlarm(Date.now()+3600000);}
+    return deliverReminders(this.ctx,this.env);
+  });}
   async fetch(request){
     const body=await request.json();
     return this.ctx.blockConcurrencyWhile(async()=>{
@@ -20,6 +31,7 @@ export class AccountStore {
         const entry=stored?.bucket===bucket?stored:{bucket,count:0,expiresAt:(bucket+2)*windowMs};
         if(entry.count>=limit)return Response.json({success:true,allowed:false,retryAfter:Math.max(1,Math.ceil(((bucket+1)*windowMs-now)/1000))});
         entry.count+=1;await this.ctx.storage.put(storageKey,entry);
+        if(!await this.ctx.storage.getAlarm())await this.ctx.storage.setAlarm(now+windowMs*2);
         return Response.json({success:true,allowed:true,remaining:Math.max(0,limit-entry.count)});
       }
       if(action.startsWith('admin-session-')){
@@ -42,6 +54,7 @@ export class AccountStore {
       if(action.startsWith('community-')){
         let community=await this.ctx.storage.get('community');
         if(!community){let list=[];try{const raw=await this.env.KV.get('community_tariffs');if(raw)list=JSON.parse(raw);if(!Array.isArray(list))list=[];}catch{list=[];}community={list,revision:1};await this.ctx.storage.put('community',community);}
+        if(action==='community-restore'){if(!Array.isArray(body.snapshot?.list)||body.snapshot.list.length>200||!Number.isInteger(body.snapshot.revision)||body.snapshot.revision<1)return Response.json({error:'INVALID_COMMUNITY_DATA'},{status:400});community={list:body.snapshot.list,revision:body.snapshot.revision};await this.ctx.storage.put('community',community);return Response.json({success:true,revision:community.revision});}
         if(action==='community-read')return Response.json({success:true,list:community.list,revision:community.revision});
         if(action==='community-replace'){
           if(body.expectedRevision!==community.revision)return Response.json({error:'CONFLICT',revision:community.revision},{status:409});
@@ -66,7 +79,7 @@ export class AccountStore {
         const now=Date.now();let sessions=(await this.ctx.storage.get('sessions')||[]).filter(item=>item.expiresAt>now);
         if(action==='session-create'){
           if(!/^[a-f0-9]{64}$/.test(body.tokenHash||''))return Response.json({error:'INVALID_TOKEN'},{status:400});
-          const entry={tokenHash:body.tokenHash,createdAt:now,expiresAt:now+Math.max(3600000,Math.min(Number(body.ttl)||2592000000,7776000000)),device:String(body.device||'').slice(0,120)};
+          const entry={tokenHash:body.tokenHash,createdAt:now,expiresAt:now+Math.max(3600000,Math.min(Number(body.ttl)||2592000000,7776000000)),device:String(body.device||'').slice(0,120),deviceName:String(body.deviceName||'Пристрій').slice(0,80)};
           sessions=[...sessions.filter(item=>item.tokenHash!==entry.tokenHash),entry].slice(-12);await this.ctx.storage.put('sessions',sessions);
           return Response.json({success:true,expiresAt:entry.expiresAt});
         }
@@ -78,19 +91,23 @@ export class AccountStore {
           sessions=sessions.filter(item=>item.tokenHash!==body.tokenHash);await this.ctx.storage.put('sessions',sessions);return Response.json({success:true});
         }
         if(action==='session-revoke-all'){await this.ctx.storage.put('sessions',[]);return Response.json({success:true});}
-        if(action==='session-list')return Response.json({success:true,sessions:sessions.map(({tokenHash:_token,...item})=>item)});
+        if(action==='session-list')return Response.json({success:true,sessions:sessions.map(({tokenHash,...item})=>({...item,id:tokenHash,current:tokenHash===body.currentTokenHash}))});
+        if(action==='session-revoke-others'){await this.ctx.storage.put('sessions',sessions.filter(item=>item.tokenHash===body.currentTokenHash));return Response.json({success:true});}
         return Response.json({error:'INVALID_ACTION'},{status:400});
       }
       if(action.startsWith('share-')){
         if(state.deleted||!state.value)return Response.json({error:'NOT_FOUND'},{status:404});
         const now=Date.now();let shares=(await this.ctx.storage.get('shares')||[]).filter(item=>item.expiresAt>now);
-        if(action==='share-add'){
-          const entry={tokenHash:String(body.tokenHash||''),token:String(body.token||''),addressId:String(body.addressId||''),createdAt:now,expiresAt:Number(body.expiresAt)||now};
+        if(action==='share-add'||action==='share-import'){
+          const entry={tokenHash:String(body.tokenHash||''),token:String(body.token||''),addressId:String(body.addressId||''),createdAt:Number(body.createdAt)||now,expiresAt:Number(body.expiresAt)||now,kvKey:body.kvKey||`share:${body.token}`};
           if(!/^[a-f0-9]{64}$/.test(entry.tokenHash)||!/^[-_A-Za-z0-9]{12,128}$/.test(entry.token)||!entry.addressId||entry.expiresAt<=now)return Response.json({error:'INVALID_SHARE'},{status:400});
-          shares=[...shares.filter(item=>item.tokenHash!==entry.tokenHash),entry].slice(-30);await this.ctx.storage.put('shares',shares);return Response.json({success:true});
+          if(await this.ctx.storage.get(`share-revoked:${entry.tokenHash}`))return Response.json({error:'INVALID_OR_EXPIRED'},{status:404});
+          if(action==='share-add'&&shares.length>=30)return Response.json({error:'SHARE_LIMIT'},{status:409});
+          shares=[...shares.filter(item=>item.tokenHash!==entry.tokenHash),entry];await this.ctx.storage.put('shares',shares);return Response.json({success:true});
         }
         if(action==='share-list'){await this.ctx.storage.put('shares',shares);return Response.json({success:true,shares});}
-        if(action==='share-revoke'){const removed=shares.find(item=>item.tokenHash===body.tokenHash);shares=shares.filter(item=>item.tokenHash!==body.tokenHash);await this.ctx.storage.put('shares',shares);return Response.json({success:true,token:removed?.token||null});}
+        if(action==='share-verify')return Response.json({success:shares.some(item=>item.tokenHash===body.tokenHash&&String(item.addressId)===String(body.addressId))});
+        if(action==='share-revoke'){const removed=shares.find(item=>item.tokenHash===body.tokenHash);await this.ctx.storage.put(`share-revoked:${body.tokenHash}`,{revokedAt:now});shares=shares.filter(item=>item.tokenHash!==body.tokenHash);await this.ctx.storage.put('shares',shares);return Response.json({success:true,token:removed?.token||null,kvKey:removed?.kvKey||null});}
         if(action==='share-clear'){await this.ctx.storage.put('shares',[]);return Response.json({success:true,tokens:shares.map(item=>item.token).filter(Boolean)});}
         return Response.json({error:'INVALID_ACTION'},{status:400});
       }
@@ -99,7 +116,7 @@ export class AccountStore {
         const telegram=await this.ctx.storage.get('telegram')||{};
         if(body.action==='telegram-status'){
           if(telegram.chatId)await this.ctx.storage.setAlarm(Date.now()+5000);
-          return Response.json({success:true,connected:Boolean(telegram.chatId),chatId:telegram.chatId||null,chatLabel:telegram.chatId?telegram.chatLabel||'Приватний чат':null,lastReminderDay:telegram.lastDay||null,lastTestAt:telegram.lastTestAt||null});
+          return Response.json({success:true,connected:Boolean(telegram.chatId),chatId:telegram.chatId||null,chatLabel:telegram.chatId?telegram.chatLabel||'Приватний чат':null,lastReminderDay:telegram.lastDay||null,lastTestAt:telegram.lastTestAt||null,lastAttemptAt:telegram.lastAttemptAt||null,lastStatus:telegram.lastStatus??null});
         }
         if(body.action==='telegram-begin'){
           if(!/^[a-f0-9]{32}$/.test(body.ticket))return Response.json({error:'INVALID_TOKEN'},{status:400});
@@ -154,7 +171,7 @@ export class AccountStore {
           const subscribed=pushConfigured(this.env)&&Boolean(entry);
           // Opening the app repairs a missing/stale alarm and checks today's window now.
           if(subscribed)await this.ctx.storage.setAlarm(Date.now()+5000);
-          return Response.json({success:true,subscribed,nextCheckAt:subscribed?await this.ctx.storage.getAlarm():null,lastReminderDay:entry?.lastDay||null,lastTestAt:entry?.lastTestAt||null});
+          return Response.json({success:true,subscribed,nextCheckAt:subscribed?await this.ctx.storage.getAlarm():null,lastReminderDay:entry?.lastDay||null,lastTestAt:entry?.lastTestAt||null,lastAttemptAt:entry?.lastAttemptAt||null,lastStatus:entry?.lastStatus??null});
         }
         if(body.action==='push-test'){
           if(!pushConfigured(this.env))return Response.json({error:'PUSH_NOT_CONFIGURED'},{status:503});
@@ -172,6 +189,20 @@ export class AccountStore {
           return Response.json({success:true,sentAt:now});
         }
         return Response.json({error:'INVALID_ACTION'},{status:400});
+      }
+      if(body.action==='backup-snapshot'){
+        const push=await this.ctx.storage.get('push')||{subscriptions:[]},telegram=await this.ctx.storage.get('telegram')||null,shares=await this.ctx.storage.get('shares')||[];
+        const revokedShares=this.ctx.storage.list?Object.fromEntries(await this.ctx.storage.list({prefix:'share-revoked:'})):{};
+        return Response.json({success:true,snapshot:{login:body.login,account:state,push,telegram,shares,revokedShares,alarmAt:await this.ctx.storage.getAlarm()},revision:state.revision});
+      }
+      if(body.action==='restore-snapshot'){
+        const snapshot=body.snapshot;
+        if(snapshot?.login!==body.login||snapshot.account?.login!==body.login||!Number.isInteger(snapshot.account.revision)||!(Array.isArray(snapshot.account.value?.addresses)||Array.isArray(snapshot.account.value?.records)))return Response.json({error:'INVALID_SNAPSHOT'},{status:400});
+        await this.ctx.storage.put({account:snapshot.account,push:snapshot.push||{subscriptions:[]},telegram:snapshot.telegram||{},shares:snapshot.shares||[],sessions:[],...(snapshot.revokedShares||{})});
+        await this.ctx.storage.delete('previous');await this.ctx.storage.delete('legacy-original');
+        if(snapshot.push?.subscriptions?.length||snapshot.telegram?.chatId)await this.ctx.storage.setAlarm(Date.now()+60000);else await this.ctx.storage.deleteAlarm();
+        await this.env.KV.put(`account-index:${encodeURIComponent(body.login)}`,JSON.stringify({login:body.login}));
+        return Response.json({success:true,revision:snapshot.account.revision});
       }
       if(body.action==='read')return Response.json({value:state.deleted?null:state.value,revision:state.revision});
       if(body.action==='write'){
@@ -192,10 +223,14 @@ export class AccountStore {
         return Response.json({success:true,revision});
       }
       if(body.action==='delete'){
-        await this.ctx.storage.put({'previous':state,'account':{...state,deleted:true,revision:state.revision+1}});
-        await this.ctx.storage.deleteAlarm();await this.ctx.storage.put('push',{subscriptions:[]});await this.ctx.storage.delete('telegram');await this.ctx.storage.put('sessions',[]);await this.ctx.storage.put('shares',[]);
+        // Remove the old credential mirror before committing the private-state purge.
+        // Related aliases can be retried safely by an alarm after the account is gone.
         await this.env.KV.delete(body.login);
-        return Response.json({success:true});
+        await this.ctx.storage.put('delete-cleanup',[...new Set([...(await this.ctx.storage.get('delete-cleanup')||[]),...(body.cleanupKeys||[])])]);
+        await this.ctx.storage.put('account',{login:body.login,value:null,deleted:true,revision:state.revision+1,receipts:[]});
+        await this.ctx.storage.delete('previous');await this.ctx.storage.delete('legacy-original');
+        await this.ctx.storage.deleteAlarm();await this.ctx.storage.put('push',{subscriptions:[]});await this.ctx.storage.delete('telegram');await this.ctx.storage.put('sessions',[]);await this.ctx.storage.put('shares',[]);
+        return this.cleanupDeleted();
       }
       return Response.json({error:'INVALID_ACTION'},{status:400});
     });

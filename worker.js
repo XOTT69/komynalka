@@ -1,4 +1,5 @@
 import {pushConfigured} from './push-delivery.js';
+import './meter-readings.js';
 import {handleTelegramWebhook,prepareBot,randomLinkToken} from './telegram.js';
 import {verifyFirebaseToken} from './auth-token.js';
 import {createOpaqueToken,createPasswordVerifier,parseSessionToken,passwordPolicy,sessionToken,sha256Hex,validLogin,verifyPassword} from './password-auth.js';
@@ -7,6 +8,7 @@ export {AccountStore} from './account-store.js';
 // КОМУНАЛКА Worker — синхронізація, сесії, нагадування та адміністрування
 // ============================================================
 
+const WORKER_VERSION='5.13.0';
 const CORS = {
   'Cache-Control':'no-store',
   'X-Content-Type-Options':'nosniff',
@@ -62,7 +64,7 @@ function normalize(d) {
 }
 
 async function rateLimit(env, key, limit, ms) {
-  if(env.ACCOUNT_STORE){const result=await specialRequest(env,'security',{action:'rate-limit',key,limit,windowMs:ms});return result.allowed===true;}
+  if(env.ACCOUNT_STORE){const result=await specialRequest(env,`security-rate-${(await sha256(key)).slice(0,2)}`,{action:'rate-limit',key,limit,windowMs:ms});return result.allowed===true;}
   const bucket=Math.floor(Date.now()/ms),k=`rl:${key}:${bucket}`,cur=parseInt((await env.KV.get(k))||'0');
   if(cur>=limit)return false;await env.KV.put(k,String(cur+1),{expirationTtl:Math.ceil(ms/1000*2)});return true;
 }
@@ -91,6 +93,21 @@ async function parseAuth(req,env) {
   return null;
 }
 
+const loginDirectories=new WeakMap();
+async function legacyLoginDirectory(env){
+  if(loginDirectories.has(env))return loginDirectories.get(env);
+  const pending=(async()=>{
+    const saved=await env.KV.get('login-directory:v1');if(saved)return JSON.parse(saved);
+    const directory=Object.create(null);let cursor;
+    do{const page=await env.KV.list({limit:1000,...(cursor?{cursor}:{})});
+      for(const {name} of page.keys){if(name===name.toLowerCase()||name.includes(':')||/^(?:share_|google_|uid_|_)/.test(name))continue;
+        const lower=name.toLowerCase();directory[lower]=[...(directory[lower]||[]),name];}
+      cursor=page.list_complete?null:page.cursor;
+    }while(cursor);
+    await env.KV.put('login-directory:v1',JSON.stringify(directory));return directory;
+  })();loginDirectories.set(env,pending);
+  try{return await pending;}catch(error){loginDirectories.delete(env);throw error;}
+}
 async function resolveLogin(env, auth) {
   if(auth.type==='session'){
     const result=await accountRequest(env,auth.login,{action:'session-verify',tokenHash:auth.tokenHash}).catch(()=>null);
@@ -117,8 +134,7 @@ async function resolveLogin(env, auth) {
   const alias=await env.KV.get(`login-alias:${encodeURIComponent(l)}`);if(alias)return alias;
   if(await env.KV.get(l)!==null||await env.KV.get(`account-index:${encodeURIComponent(l)}`)!==null)return l;
   // Existing account keys may retain capitalization from earlier deployments.
-  let cursor;const matches=[];
-  do{const page=await env.KV.list({limit:1000,...(cursor?{cursor}:{})});matches.push(...page.keys.filter(k=>k.name.toLowerCase()===l).map(k=>k.name));cursor=page.list_complete?null:page.cursor;}while(cursor);
+  const matches=(await legacyLoginDirectory(env))[l]||[];
   if(matches.length>1)throw new Error('AMBIGUOUS_LEGACY_LOGIN');
   if(matches[0]){await env.KV.put(`login-alias:${encodeURIComponent(l)}`,matches[0]);return matches[0];}
   return l;
@@ -129,8 +145,9 @@ function publicAccount(data,login){
   return {revision:normalized?._revision??0,syncProtocol:2,accountSettings:normalized?.accountSettings,addresses:addrs,currentAddressId:normalized?.currentAddressId||addrs[0]?.id||null,isPro:normalized?.isPro||false,hasGoogle:normalized?.hasGoogle||false,hasPassword:Boolean(normalized?.credential||normalized?.passHash||normalized?.pass),displayName:normalized?.displayName||'',createdAt:normalized?.createdAt||null,linkedLogin:login};
 }
 
-async function issueSession(env,login,device=''){
-  const token=sessionToken(login),tokenHash=await sha256(token),result=await accountRequest(env,login,{action:'session-create',tokenHash,ttl:30*86400000,device});
+function deviceName(req){const agent=req.headers.get('User-Agent')||'',browser=/Edg/.test(agent)?'Edge':/Firefox/.test(agent)?'Firefox':/Chrome|CriOS/.test(agent)?'Chrome':/Safari/.test(agent)?'Safari':'Браузер',system=/iPhone|iPad/.test(agent)?'iOS':/Android/.test(agent)?'Android':/Windows/.test(agent)?'Windows':/Mac/.test(agent)?'macOS':/Linux/.test(agent)?'Linux':'';return [browser,system].filter(Boolean).join(' · ');}
+async function issueSession(env,login,device='',label='Пристрій'){
+  const token=sessionToken(login),tokenHash=await sha256(token),result=await accountRequest(env,login,{action:'session-create',tokenHash,ttl:30*86400000,device,deviceName:label});
   return {token,expiresAt:result.expiresAt};
 }
 
@@ -155,7 +172,7 @@ async function verifyAccountPassword(data,password){
   return (await sha256(String(password||'')))===legacy;
 }
 
-async function doAuthLogin(body,env,ip,fp){
+async function doAuthLogin(body,env,ip,fp,label){
   const requested=String(body.login||'').trim().toLowerCase(),password=String(body.password||'');
   if(!validLogin(requested)||!password)return err('INVALID_CREDENTIALS',400);
   const ipKey=(await sha256(String(ip||'unknown'))).slice(0,24);
@@ -163,7 +180,7 @@ async function doAuthLogin(body,env,ip,fp){
   const login=await resolveLogin(env,{type:'login',login:requested,passHash:'0'.repeat(64)}),data=await getUser(env,login);
   if(!data||!await verifyAccountPassword(data,password))return err('INVALID_CREDENTIALS',403);
   let normalized=normalize(data);
-  if(!normalized.credential){
+  if(!normalized.credential&&env.MAINTENANCE_MODE!=='read-only'){
     const credential=await createPasswordVerifier(password),{pass:_pass,passHash:_passHash,...clean}=normalized;
     normalized={...clean,credential};
     try{
@@ -176,13 +193,13 @@ async function doAuthLogin(body,env,ip,fp){
       normalized=normalize(current);
     }
   }
-  const session=await issueSession(env,login,fp);
+  const session=await issueSession(env,login,fp,label);
   return ok({success:true,sessionToken:session.token,sessionExpiresAt:session.expiresAt,data:publicAccount(normalized,login)});
 }
 
-async function doAuthRegister(body,env,ip,fp){
+async function doAuthRegister(body,env,ip,fp,label){
   const login=String(body.login||'').trim().toLowerCase(),password=String(body.password||'');
-  if(!validLogin(login))return err('INVALID_LOGIN',400);
+  if(!validLogin(login)||/^(?:__|uid_|google_|share_)/.test(login)||['broadcast','community_tariffs'].includes(login))return err('INVALID_LOGIN',400);
   const policyError=passwordPolicy(password);if(policyError)return err(policyError,400);
   const ipKey=(await sha256(String(ip||'unknown'))).slice(0,24);
   if(!await rateLimit(env,`register-ip:${ipKey}`,5,86400000))return err('TOO_MANY_ATTEMPTS',429);
@@ -190,7 +207,7 @@ async function doAuthRegister(body,env,ip,fp){
   if(existing)return err('ACCOUNT_EXISTS',409);
   const value={credential:await createPasswordVerifier(password),displayName:'',addresses:[],currentAddressId:null,accountSettings:{},hasGoogle:false,isPro:false,createdAt:new Date().toISOString(),knownDevices:[fp],suspiciousActivity:0,lastDevice:fp};
   const saved=await saveUser(env,login,value,{expectedRevision:0}),data={...value,_revision:saved.revision};
-  const session=await issueSession(env,login,fp);return ok({success:true,sessionToken:session.token,sessionExpiresAt:session.expiresAt,data:publicAccount(data,login)},201);
+  const session=await issueSession(env,login,fp,label);return ok({success:true,sessionToken:session.token,sessionExpiresAt:session.expiresAt,data:publicAccount(data,login)},201);
 }
 
 function getUidLogin(uid) {
@@ -208,7 +225,7 @@ const handler = {
     try {
       if(url.pathname==='/telegram')return req.method==='POST'?handleTelegramWebhook(req,env,accountRequest):err('Method not allowed',405);
       if(url.searchParams.has('push-config'))return ok({success:true,enabled:Boolean(env.ACCOUNT_STORE)&&pushConfigured(env),publicKey:env.ACCOUNT_STORE&&pushConfigured(env)?env.VAPID_PUBLIC_KEY:null});
-      if(url.searchParams.has('health'))return ok({success:true,syncProtocol:env.ACCOUNT_STORE?2:0,readOnly:env.MAINTENANCE_MODE==='read-only'});
+      if(url.searchParams.has('health'))return ok({success:true,version:WORKER_VERSION,syncProtocol:env.ACCOUNT_STORE?2:0,readOnly:env.MAINTENANCE_MODE==='read-only'});
       if(url.searchParams.has('admin-access'))return await doAdminAccess(req,env);
       if (share)                 return await doShare(req, env, share, ip);
       if (req.method === 'GET')  return await doGet(req, env, ip, fp);
@@ -260,9 +277,9 @@ async function doPost(req, env, ip, fp) {
   try {body=await readBody(req);}catch(e){return err(e.message,e.message==='PAYLOAD_TOO_LARGE'?413:400);}
   const action = typeof body.action === 'string' ? body.action : '';
 
-  if(env.MAINTENANCE_MODE==='read-only'&&!['auth_login','admin_login','admin_stats','admin_user_data','admin_backup_page','admin_get_tariffs','admin_feedback_list','get_tariffs','get_broadcast','push_status','push_unsubscribe'].includes(action))return err('MAINTENANCE_READ_ONLY',503);
-  if(action==='auth_login')return doAuthLogin(body,env,ip,fp);
-  if(action==='auth_register')return doAuthRegister(body,env,ip,fp);
+  if(env.MAINTENANCE_MODE==='read-only'&&!['auth_login','auth_logout','session_list','admin_login','admin_logout','telegram_status','admin_stats','admin_health','admin_audit_list','admin_user_data','admin_backup_page','admin_backup_account','admin_backup_community','admin_get_tariffs','admin_feedback_list','get_tariffs','get_broadcast','push_status','push_unsubscribe'].includes(action))return err('MAINTENANCE_READ_ONLY',503);
+  if(action==='auth_login')return doAuthLogin(body,env,ip,fp,deviceName(req));
+  if(action==='auth_register')return doAuthRegister(body,env,ip,fp,deviceName(req));
   if (action === 'admin_login' || action.startsWith('admin_')) return doAdmin(action, body, env, ip);
   if (action === 'get_broadcast') return doGetBroadcast(env);
   if(action==='link_google'){const auth=await parseAuth(req,env);if(auth?.type!=='uid'||auth.uid!==body.uid)return err('NO_AUTH',401);return doLinkGoogle(body,env);}
@@ -285,7 +302,8 @@ async function doPost(req, env, ip, fp) {
   let userData = await getUser(env, login);
 
   if (!userData) {
-    if ((auth.type === 'login' || auth.type === 'uid') && action === '' && Array.isArray(body.addresses)) {
+    if (auth.type === 'uid' && action === '' && Array.isArray(body.addresses)) {
+      const ipKey=(await sha256(String(ip))).slice(0,24);if(!await rateLimit(env,`google-register:${ipKey}`,5,86400000))return err('TOO_MANY_ATTEMPTS',429);
       userData = {
         ...(auth.type === 'login' ? { pass: auth.passHash, passHash: auth.passHash } : {}),
         displayName: '', addresses: [], currentAddressId: null,
@@ -341,6 +359,15 @@ async function doPost(req, env, ip, fp) {
     case 'push_test':return ok(await accountRequest(env,login,{action:'push-test',endpoint:body.endpoint}));
     case 'change_password':  return doChangePass(body, env, login, userData, auth, fp);
     case 'account_export':   return doAccountExport(userData,login);
+    case 'session_list': return ok(await accountRequest(env,login,{action:'session-list',currentTokenHash:auth.tokenHash}));
+    case 'session_revoke': {
+      if(auth.type!=='session'||!/^[a-f0-9]{64}$/.test(body.id||''))return err('INVALID_SESSION',400);
+      return ok(await accountRequest(env,login,{action:'session-revoke',tokenHash:body.id}));
+    }
+    case 'session_revoke_others': {
+      if(auth.type!=='session')return err('SESSION_REQUIRED',400);
+      return ok(await accountRequest(env,login,{action:'session-revoke-others',currentTokenHash:auth.tokenHash}));
+    }
     case 'delete_account':   return doDeleteAccount(body,env,login,userData,auth);
     case 'share_list':       return doListShares(env,login);
     case 'share_revoke':     return doRevokeShare(body,env,login);
@@ -358,6 +385,7 @@ async function doPost(req, env, ip, fp) {
 async function doSave(body,env,login,data,ip,fp){
   if(!Array.isArray(body.addresses)||body.addresses.length<1||body.addresses.length>10)return err('INVALID_DATA',400);
   if(!body.addresses.every(a=>a&&a.id!=null&&Array.isArray(a.records)&&a.records.every(r=>r&&r.id!=null&&/^\d{4}-(0[1-9]|1[0-2])$/.test(r.month)&&Number.isFinite(Number(r.total)))))return err('INVALID_DATA',400);
+  try{for(const address of body.addresses)for(const record of address.records)if(record._meterEvents){if(typeof record._meterEvents!=='object'||Array.isArray(record._meterEvents))throw new Error();for(const [key,event] of Object.entries(record._meterEvents)){if(!['wPrev','hwPrev','dPrev','nPrev','gPrev'].includes(key))throw new Error();globalThis.KomunalkaMeters.validate(event,record.month);}}}catch{return err('INVALID_METER_REPLACEMENT',400);}
   if(new Set(body.addresses.map(a=>String(a.id))).size!==body.addresses.length||body.addresses.some(a=>new Set(a.records.map(r=>String(r.id))).size!==a.records.length))return err('DUPLICATE_ID',400);
   if(!Number.isInteger(body.baseRevision)||typeof body.clientMutationId!=='string'||body.clientMutationId.length>128)return err('SYNC_UPGRADE_REQUIRED',409);
   const value={...data,addresses:body.addresses,currentAddressId:body.currentAddressId||data.currentAddressId,accountSettings:body.accountSettings??data.accountSettings??{},updatedAt:new Date().toISOString(),lastIP:ip,lastDevice:fp,knownDevices:[...new Set([...(data.knownDevices||[]),fp])].slice(-10)};
@@ -393,19 +421,44 @@ async function doPublicFeedbackSubmit(body,env,ip){
   return ok({success:true,id});
 }
 
+const shareRecordFields=['id','month','isWinter','total','waterCost','hotWaterCost','electroCost','gasCost','customCost','customData','paid','paidAmount','paymentStatus','wPrev','wCur','hwPrev','hwCur','dPrev','dCur','nPrev','nCur','gPrev','gCur','tariffSnapshot','_filled','_meterEvents'];
+function guestAddress(address){
+  const pick=(value,keys)=>Object.fromEntries(keys.filter(key=>value?.[key]!==undefined&&['string','number','boolean'].includes(typeof value[key])).map(key=>[key,value[key]]));
+  const tariffKeys=['water','hotWater','electroBase','electroWinter','gas','nightCoef','winterLimit'];
+  return {...pick(address,['id','name']),tariffs:pick(address.tariffs,tariffKeys),prefs:pick(address.prefs,['showWater','showHotWater','showElectro','showGas','electroTwoZone','electroWinter','winterMode']),customServices:(address.customServices||[]).map(value=>pick(value,['id','name','price','type','enabled','defaultSum'])),records:(address.records||[]).map(record=>({...pick(record,shareRecordFields),tariffSnapshot:pick(record.tariffSnapshot,tariffKeys),_filled:pick(record._filled,['water','hotWater','electro','gas','custom']),customData:Object.fromEntries(Object.entries(record.customData||{}).map(([id,value])=>[id,pick(value,['name','val'])])),_meterEvents:Object.fromEntries(Object.entries(record._meterEvents||{}).filter(([id])=>['wPrev','hwPrev','dPrev','nPrev','gPrev'].includes(id)).map(([id,value])=>[id,pick(value,['date','oldPrevious','oldFinal','newInitial'])]))}))};
+}
+async function importShare(env,key,sd,expiration){
+  const login=sd.login||sd.phone,token=key.startsWith('share:')?key.slice(6):key.slice(6);
+  if(!login||!/^[-_A-Za-z0-9]{12,128}$/.test(token))return null;
+  const expiresAt=Number(sd.expiresAt)||(expiration?expiration*1000:Date.now()+30*86400000);
+  if(expiresAt<=Date.now())return null;
+  await accountRequest(env,login,{action:'share-import',token,tokenHash:await sha256(token),addressId:sd.addressId,createdAt:sd.createdAt,expiresAt,kvKey:key});
+  await env.KV.put(key,JSON.stringify({...sd,expiresAt,managedVersion:2}),{expirationTtl:Math.max(60,Math.ceil((expiresAt-Date.now())/1000))});
+  return {...sd,expiresAt,managedVersion:2};
+}
+async function migrateShares(env,login){
+  for(const prefix of ['share:','share_']){let cursor;do{
+    const page=await env.KV.list({prefix,limit:1000,...(cursor?{cursor}:{})});
+    for(const key of page.keys){const raw=await env.KV.get(key.name);let data;try{data=JSON.parse(raw);}catch{continue;}
+      if(data&&(data.login||data.phone)===login&&data.managedVersion!==2)try{await importShare(env,key.name,data,key.expiration);}catch(error){if(error.status!==404)throw error;}
+    }cursor=page.list_complete?null:page.cursor;
+  }while(cursor);}
+}
 async function doShare(req, env, token, ip) {
   if (!/^[A-Za-z0-9_-]{12,128}$/.test(token)) return err('INVALID_TOKEN', 400);
-  const raw = await env.KV.get(`share:${token}`)||await env.KV.get(`share_${token}`);
+  let key=`share:${token}`,raw=await env.KV.get(key);if(!raw){key=`share_${token}`;raw=await env.KV.get(key);}
   if (!raw) return err('INVALID_OR_EXPIRED', 404);
-  let sd;
-  try { sd = JSON.parse(raw); } catch { return err('INVALID_TOKEN', 400); }
-  const uData = normalize(await getUser(env,sd.login||sd.phone));
-  if (!uData) return err('NOT_FOUND', 404);
-  const addr = (uData.addresses || []).find(a => String(a.id) === String(sd.addressId));
-  if (!addr) return err('ADDRESS_NOT_FOUND', 404);
-  if (req.method === 'GET') return ok({ success: true, data: { addresses: [addr], currentAddressId: sd.addressId } });
+  let sd;try { sd=JSON.parse(raw); } catch { return err('INVALID_TOKEN',400); }
+  if(!sd||!sd.addressId||!(sd.login||sd.phone))return err('INVALID_TOKEN',400);
+  if(sd.expiresAt&&Number(sd.expiresAt)<=Date.now())return err('INVALID_OR_EXPIRED',404);
+  if(sd.managedVersion!==2){try{const metadata=await env.KV.list({prefix:key,limit:2});sd=await importShare(env,key,sd,metadata.keys.find(item=>item.name===key)?.expiration);}catch{return err('INVALID_OR_EXPIRED',404);}if(!sd)return err('INVALID_OR_EXPIRED',404);}
+  const login=sd.login||sd.phone,access=await accountRequest(env,login,{action:'share-verify',tokenHash:await sha256(token),addressId:sd.addressId}).catch(()=>null);
+  if(!access?.success)return err('INVALID_OR_EXPIRED',404);
+  const uData=normalize(await getUser(env,login)),addr=(uData?.addresses||[]).find(a=>String(a.id)===String(sd.addressId));
+  if(!addr||addr.archivedAt)return err('ADDRESS_NOT_FOUND',404);
+  if(req.method==='GET')return ok({success:true,data:{addresses:[guestAddress(addr)],currentAddressId:sd.addressId}});
   if(req.method==='POST')return err('READ_ONLY_SHARE',403);
-  return err('Method not allowed', 405);
+  return err('Method not allowed',405);
 }
 
 async function doGetBroadcast(env) {
@@ -452,40 +505,35 @@ function withoutPrivateAccount(data){
 function doAccountExport(data,login){return ok({success:true,export:{version:1,exportedAt:new Date().toISOString(),login,data:withoutPrivateAccount(data)}});}
 
 async function doListShares(env,login){
+  await migrateShares(env,login);
   const result=await accountRequest(env,login,{action:'share-list'});
-  return ok({success:true,shares:(result.shares||[]).map(({token:_token,tokenHash,...item})=>({...item,id:tokenHash}))});
+  return ok({success:true,shares:(result.shares||[]).map(({token:_token,kvKey:_key,tokenHash,...item})=>({...item,id:tokenHash}))});
 }
 
 async function doRevokeShare(body,env,login){
   const id=String(body.id||'');if(!/^[a-f0-9]{64}$/.test(id))return err('INVALID_SHARE',400);
-  const result=await accountRequest(env,login,{action:'share-revoke',tokenHash:id});if(result.token)await env.KV.delete(`share:${result.token}`);
+  const result=await accountRequest(env,login,{action:'share-revoke',tokenHash:id});if(result.token){await env.KV.delete(result.kvKey||`share:${result.token}`);await env.KV.delete(`share:${result.token}`);await env.KV.delete(`share_${result.token}`);}
   return ok({success:true});
 }
 
-async function deleteLoginAliases(env,login){
-  await env.KV.delete(`account-index:${encodeURIComponent(login)}`);
-  await env.KV.delete(`login-alias:${encodeURIComponent(login.toLowerCase())}`);
-  for(const prefix of ['uid:','google_']){
-    let cursor;
-    do{
-      const page=await env.KV.list({prefix,limit:1000,...(cursor?{cursor}:{})});
-      for(const key of page.keys)if((await env.KV.get(key.name))===login)await env.KV.delete(key.name);
-      cursor=page.list_complete?null:page.cursor;
-    }while(cursor);
-  }
+async function collectLoginAliases(env,login){
+  const keys=[`account-index:${encodeURIComponent(login)}`,`login-alias:${encodeURIComponent(login.toLowerCase())}`];
+  for(const prefix of ['uid:','google_']){let cursor;do{const page=await env.KV.list({prefix,limit:1000,...(cursor?{cursor}:{})});for(const key of page.keys)if((await env.KV.get(key.name))===login)keys.push(key.name);cursor=page.list_complete?null:page.cursor;}while(cursor);}
+  return keys;
 }
-
+async function deleteStoredAccount(env,login){
+  await migrateShares(env,login);
+  const telegram=await accountRequest(env,login,{action:'telegram-status'}).catch(()=>null),shares=await accountRequest(env,login,{action:'share-list'}).catch(()=>({shares:[]}));
+  const cleanupKeys=await collectLoginAliases(env,login);
+  for(const item of shares.shares||[])cleanupKeys.push(`share:${item.token}`,`share_${item.token}`);
+  if(telegram?.chatId)cleanupKeys.push(`tg-chat:${telegram.chatId}`);
+  return accountRequest(env,login,{action:'delete',cleanupKeys});
+}
 async function doDeleteAccount(body,env,login,data,auth){
   if(String(body.confirmation||'').trim().toLowerCase()!==login.toLowerCase())return err('CONFIRMATION_MISMATCH',400);
   if(data.credential||data.passHash||data.pass){if(!await verifyAccountPassword(data,body.password))return err('WRONG_PASSWORD',403);}
   else if(auth.type!=='uid')return err('GOOGLE_REAUTH_REQUIRED',403);
-  const telegram=await accountRequest(env,login,{action:'telegram-status'}).catch(()=>null);
-  const shares=await accountRequest(env,login,{action:'share-clear'}).catch(()=>({tokens:[]}));
-  for(const token of shares.tokens||[])await env.KV.delete(`share:${token}`);
-  await accountRequest(env,login,{action:'delete'});
-  if(telegram?.chatId)await env.KV.delete(`tg-chat:${telegram.chatId}`);
-  await deleteLoginAliases(env,login);
-  return ok({success:true});
+  return ok(await deleteStoredAccount(env,login));
 }
 
 async function doGenerateShare(body, env, login, data) {
@@ -494,8 +542,9 @@ async function doGenerateShare(body, env, login, data) {
   const addr = (data.addresses || []).find(a => a.id === addressId);
   if (!addr) return err('ADDRESS_NOT_FOUND', 404);
   const days=Math.max(1,Math.min(Number(body.days)||30,90)),token=createOpaqueToken(24),createdAt=Date.now(),expiresAt=createdAt+days*86400000;
-  await env.KV.put(`share:${token}`,JSON.stringify({login,addressId,createdAt,expiresAt}),{expirationTtl:86400*days});
+  await migrateShares(env,login);
   await accountRequest(env,login,{action:'share-add',token,tokenHash:await sha256(token),addressId,expiresAt});
+  try{await env.KV.put(`share:${token}`,JSON.stringify({login,addressId,createdAt,expiresAt,managedVersion:2}),{expirationTtl:86400*days});}catch(error){await accountRequest(env,login,{action:'share-revoke',tokenHash:await sha256(token)});throw error;}
   return ok({success:true,shareToken:token,expiresAt});
 }
 
@@ -584,7 +633,7 @@ async function doAiChat(body, env, login) {
     .filter(m => m?.role && typeof m.content === 'string' && m.content.trim())
     .map(m => ({ role: ['system','user','assistant'].includes(m.role) ? m.role : 'user', content: String(m.content).slice(0, 4000) }));
   if (!safe.length) return err('NO_VALID_MESSAGES', 400);
-  const tk = Math.min(Math.max(1, Math.floor(Number(max_tokens)||400)), 500);
+  const tk = Math.min(Math.max(1, Math.floor(Number(max_tokens)||800)), 1200);
   const tp = Math.max(0, Math.min(Number(temperature)||0.4, 1));
   const attempts = [];
   const callProvider = async (name, url, key, payload) => {
@@ -597,12 +646,12 @@ async function doAiChat(body, env, login) {
         signal: AbortSignal.timeout(20000),
       });
       if (response.ok) return { ...await response.json(), success:true, ...(name === 'gemini' ? {_fallback:'gemini'} : {}) };
-      const detail = (await response.text().catch(() => '')).slice(0, 240);
+      await response.body?.cancel();
       attempts.push(`${name}:${response.status}`);
-      console.error(`${name} provider returned ${response.status}`, detail);
+      console.error(`${name} provider returned ${response.status}`);
     } catch (error) {
       attempts.push(`${name}:network`);
-      console.error(`${name} provider failed`, error?.message);
+      console.error(`${name} provider network failure`);
     }
     return null;
   };
@@ -650,8 +699,19 @@ async function doAdmin(action, body, env, ip) {
   const tokenHash=await sha256(adminToken),verified=await specialRequest(env,'security',{action:'admin-session-verify',tokenHash}).catch(()=>null);
   if(!verified?.success)return err('UNAUTHORIZED',401);
   if(action==='admin_logout'){await specialRequest(env,'security',{action:'admin-session-revoke',tokenHash});return ok({success:true});}
-  switch (action) {
+  const audited=['admin_give_pro','admin_revoke_pro','admin_delete_user','admin_broadcast','admin_reset_password','admin_delete_tariff','admin_clear_tariffs','admin_verify_tariff','admin_feedback_update'].includes(action);
+  const auditKey=`admin-audit:${Date.now()}-${createOpaqueToken(8)}`,audit={action,target:String(body.login||body.id||'').slice(0,120),session:tokenHash.slice(0,12),createdAt:new Date().toISOString(),status:'attempted'};
+  if(audited)await env.KV.put(auditKey,JSON.stringify(audit),{expirationTtl:365*86400});
+  const execute=async()=>{switch (action) {
+    case 'admin_health':return doAdminHealth(env);
+    case 'admin_audit_list':return doAdminAuditList(env);
     case 'admin_backup_page':      return doAdminBackupPage(body,env);
+    case 'admin_backup_account': {
+      if(!body.login||typeof body.login!=='string')return err('INVALID_LOGIN',400);
+      const result=await accountRequest(env,body.login,{action:'backup-snapshot'});
+      return ok({...result,readOnly:env.MAINTENANCE_MODE==='read-only'});
+    }
+    case 'admin_backup_community': return ok({success:true,community:await readCommunity(env),readOnly:env.MAINTENANCE_MODE==='read-only'});
     case 'admin_stats':            return doAdminStats(env);
     case 'admin_user_data':        return doAdminUserData(body, env);
     case 'admin_give_pro':         return doAdminPro(body, env, true);
@@ -664,10 +724,21 @@ async function doAdmin(action, body, env, ip) {
     case 'admin_delete_tariff':    return doAdminDeleteTariff(body, env);
     case 'admin_clear_tariffs':    return doAdminClearTariffs(env);
     case 'admin_verify_tariff':    return doAdminVerifyTariff(body, env);
-    case 'admin_feedback_list':    return doAdminFeedbackList(env);
+    case 'admin_feedback_list':    return doAdminFeedbackList(env,body);
     case 'admin_feedback_update':  return doAdminFeedbackUpdate(body,env);
     default: return err('UNKNOWN_ACTION', 400);
-  }
+  }};
+  try{const response=await execute();if(audited)try{await env.KV.put(auditKey,JSON.stringify({...audit,status:response.ok?'success':'rejected',httpStatus:response.status,completedAt:new Date().toISOString()}),{expirationTtl:365*86400});}catch{console.error('Admin audit completion unavailable');}return response;}catch(error){if(audited)try{await env.KV.put(auditKey,JSON.stringify({...audit,status:'failed'}),{expirationTtl:365*86400});}catch{}throw error;}
+}
+async function doAdminHealth(env){
+  let kv=false,authority=false;try{await env.KV.get('health:probe');kv=true;}catch{}
+  try{await readCommunity(env);authority=true;}catch{}
+  return ok({success:true,version:WORKER_VERSION,checkedAt:new Date().toISOString(),readOnly:env.MAINTENANCE_MODE==='read-only',kv,authority,integrations:{push:pushConfigured(env),telegram:Boolean(env.TG_BOT_TOKEN),ai:Boolean(env.GROQ_API_KEY||env.GEMINI_API_KEY)},integrationCheck:'configuration-only'});
+}
+async function doAdminAuditList(env){
+  const keys=[];let cursor;do{const page=await env.KV.list({prefix:'admin-audit:',limit:1000,...(cursor?{cursor}:{})});keys.push(...page.keys);cursor=page.list_complete?null:page.cursor;}while(cursor);
+  const entries=await Promise.all(keys.sort((a,b)=>b.name.localeCompare(a.name)).slice(0,100).map(async key=>{try{return JSON.parse(await env.KV.get(key.name));}catch{return null;}}));
+  return ok({success:true,entries:entries.filter(Boolean),retentionDays:365});
 }
 
 async function doAdminBackupPage(body,env){
@@ -680,7 +751,7 @@ async function doAdminBackupPage(body,env){
 async function doAdminStats(env) {
   const curMonth = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
   const all={keys:[]};let cursor;do{const page=await env.KV.list({limit:1000,...(cursor?{cursor}:{})});all.keys.push(...page.keys);cursor=page.list_complete?null:page.cursor;}while(cursor);
-  const skip     = ['share:','share_','google_','_broadcast','uid:','rl:','adminlogin:','ai_rl:','broadcast','community_tariffs','tariff_pub:','account-index:','feedback:'];
+  const skip     = ['share:','share_','google_','_broadcast','uid:','rl:','adminlogin:','ai_rl:','broadcast','community_tariffs','tariff_pub:','account-index:','feedback:','login-alias:','login-directory:','admin-audit:','tg-chat:','tg-link:'];
   const indexed=new Set(all.keys.filter(({name})=>name.startsWith('account-index:')).map(({name})=>decodeURIComponent(name.slice('account-index:'.length))));
   const logins=[...new Set([...all.keys.filter(({name})=>name!=='broadcast'&&!skip.some(p=>name.startsWith(p))).map(({name})=>name),...indexed])];
   const users    = [];let unrecognizedAccounts=0;
@@ -706,10 +777,10 @@ async function doAdminStats(env) {
 
 async function readFeedback(env){
   const keys=[];let cursor;do{const page=await env.KV.list({prefix:'feedback:',limit:1000,...(cursor?{cursor}:{})});keys.push(...page.keys.filter(key=>key.name.startsWith('feedback:')));cursor=page.list_complete?null:page.cursor;}while(cursor);
-  const values=await Promise.all(keys.slice(0,500).map(async key=>{try{return JSON.parse(await env.KV.get(key.name));}catch{return null;}}));
+  const values=await Promise.all(keys.map(async key=>{try{return JSON.parse(await env.KV.get(key.name));}catch{return null;}}));
   return values.filter(item=>item&&item.id&&['problem','idea','other'].includes(item.type)).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
 }
-async function doAdminFeedbackList(env){return ok({success:true,feedback:await readFeedback(env)});}
+async function doAdminFeedbackList(env,body={}){const all=await readFeedback(env),offset=body.cursor?all.findIndex(item=>item.id===body.cursor)+1:0,limit=Math.min(100,Math.max(1,Number(body.limit)||100));if(body.cursor&&!offset)return err('INVALID_CURSOR',400);const page=all.slice(offset,offset+limit);return ok({success:true,feedback:page,total:all.length,cursor:offset+limit<all.length?page.at(-1)?.id:null});}
 async function doAdminFeedbackUpdate(body,env){
   const id=String(body.id||''),status=String(body.status||'');
   if(!/^\d{10,16}-[A-Za-z0-9_-]{6,24}$/.test(id)||!['new','in_progress','done'].includes(status))return err('INVALID_FEEDBACK_UPDATE',400);
@@ -735,15 +806,9 @@ async function doAdminPro(body, env, val) {
   return ok({ success:true });
 }
 
-async function doAdminDelete(body, env) {
-  if (!body.login) return err('NO_LOGIN', 400);
-  const login=String(body.login),telegram=await accountRequest(env,login,{action:'telegram-status'}).catch(()=>null);
-  const shares=await accountRequest(env,login,{action:'share-clear'}).catch(()=>({tokens:[]}));
-  for(const token of shares.tokens||[])await env.KV.delete(`share:${token}`);
-  await accountRequest(env,login,{action:'delete'});
-  if(telegram?.chatId)await env.KV.delete(`tg-chat:${telegram.chatId}`);
-  await deleteLoginAliases(env,login);
-  return ok({ success:true });
+async function doAdminDelete(body,env){
+  if(!body.login)return err('NO_LOGIN',400);
+  return ok(await deleteStoredAccount(env,String(body.login)));
 }
 
 async function doAdminBroadcast(body, env) {
@@ -813,7 +878,7 @@ async function readBody(req){
 export default {
   async fetch(req,env){
     const origin=req.headers.get('Origin');
-    const allowed=new Set(['https://komynalka.vercel.app','http://127.0.0.1:4173','http://localhost:4173',...(env.ALLOWED_ORIGINS||'').split(',').map(s=>s.trim()).filter(Boolean)]);
+    const allowed=new Set(['https://komynalka.vercel.app','https://mykomunalka.pp.ua','https://www.mykomunalka.pp.ua','http://127.0.0.1:4173','http://localhost:4173',...(env.ALLOWED_ORIGINS||'').split(',').map(s=>s.trim()).filter(Boolean)]);
     if(origin&&!allowed.has(origin))return err('ORIGIN_NOT_ALLOWED',403);
     const response=await handler.fetch(req,env);
     const headers=new Headers(response.headers);if(origin)headers.set('Access-Control-Allow-Origin',origin);headers.set('Vary','Origin');

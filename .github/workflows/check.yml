@@ -1,0 +1,37 @@
+name: Check application
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run worker:check
+      - run: node scripts/check-recovery.mjs
+      - run: npm audit --audit-level=high
+      - run: npx playwright install --with-deps chromium
+      - name: Browser checks with fictional data
+        run: |
+          npm run demo > /tmp/komunalka-demo.log 2>&1 &
+          for attempt in $(seq 1 30); do curl --fail --silent http://127.0.0.1:4174/ > /dev/null && break; sleep 1; done
+          npm run check:layout
+      - name: Real PWA update and offline checks
+        run: |
+          npm run demo:pwa > /tmp/komunalka-pwa.log 2>&1 &
+          for attempt in $(seq 1 30); do curl --fail --silent http://127.0.0.1:4175/ > /dev/null && break; sleep 1; done
+          node tests/pwa-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: layout-failure
+          path: test-results/

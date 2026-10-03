@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { JSDOM } from 'jsdom';
 
 const html = await readFile(new URL('../admin.html', import.meta.url), 'utf8');
-const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+const script = await readFile(new URL('../admin-panel.js', import.meta.url), 'utf8');
 assert.ok(script, 'admin script is present');
 assert.equal(/<script[^>]+src="https?:\/\//.test(html), false, 'admin page does not run third-party JavaScript');
 

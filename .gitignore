@@ -10,3 +10,4 @@ test-results/
 backups/
 *.backup.json
 .wrangler/
+.vercel/

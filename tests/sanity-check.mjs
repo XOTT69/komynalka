@@ -102,7 +102,7 @@ const modern=layout.window.document.createElement('style');modern.textContent=aw
 if(layout.window.getComputedStyle(layout.window.document.getElementById('bottomNav')).position!=='fixed')fail('navigation must stay fixed after the full style cascade');
 layout.window.close();
 
-const admin = await readFile(path.join(root, 'admin.html'), 'utf8');
+const admin = await readFile(path.join(root, 'admin.html'), 'utf8')+'\n'+await readFile(path.join(root,'admin-panel.js'),'utf8');
 for (const unsafe of ['onclick="viewUser(', 'onclick="resetPassword(', 'onclick="deleteUser(', 'onclick="givePro(', 'onclick="revokePro(']) {
   if (admin.includes(unsafe)) fail(`admin still contains unsafe generated handler: ${unsafe}`);
 }

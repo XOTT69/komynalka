@@ -5,6 +5,7 @@ const $ = id => document.getElementById(id);
 const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'dev';
+const APP_BUILD=document.querySelector('meta[name="app-build"]')?.content||'local';
 const MAX_ADDRESSES_FREE = 3;
 const MAX_ADDRESSES_TOTAL = 10;
 const LOCAL_BACKUP_KEY = 'komynalka_backup';
@@ -122,6 +123,7 @@ function readDeviceMeta(){try{return JSON.parse(localStorage.getItem(deviceMetaK
 function writeDeviceMeta(patch){try{localStorage.setItem(deviceMetaKey(),JSON.stringify({...readDeviceMeta(),...patch}));}catch{}renderDataHealth();}
 function formatDeviceTime(value){if(!value)return null;const date=new Date(value);if(Number.isNaN(date.getTime()))return null;return new Intl.DateTimeFormat('uk-UA',{dateStyle:'medium',timeStyle:'short'}).format(date);}
 function renderDataHealth(){
+  if($('dataBuildVersion'))$('dataBuildVersion').textContent=`${APP_VERSION} / ${APP_BUILD}`;
   const summary=$('dataHealthSummary');if(!summary)return;
   const labels={synced:'Дані захищені та синхронізовані',syncing:'Надсилаємо зміни у хмару…',pending:'Зміни безпечно збережені на цьому пристрої',offline:'Офлайн: працюємо з локальною копією',error:'Синхронізація потребує уваги',conflict:'Потрібно обрати правильну версію даних'};
   const state=activeStore?.read?.(),meta=readDeviceMeta();
@@ -404,6 +406,9 @@ function bindAccount(owner,remote,revision,protocol){
   const nextStore=KomunalkaData.create(localStorage,owner);
   const state=nextStore.initialize(remote,revision);
   activeStore=nextStore;
+  for(const id of ['enablePushBtn','disablePushBtn','testPushBtn','telegramConnect','telegramDisconnect','testTelegramBtn'])if($(id))$(id).disabled=false;
+  for(const id of ['pushTestStatus','telegramTestStatus'])if($(id)){$(id).textContent='';$(id).classList.add('hidden');}
+  if($('telegramOpenLink')){$('telegramOpenLink').removeAttribute('href');$('telegramOpenLink').classList.add('hidden');}
   syncProtocol=protocol||0;
   const boundStore=activeStore;
   activeDrain=KomunalkaSyncQueue.createDrain(boundStore,async entry=>{
@@ -411,7 +416,8 @@ function bindAccount(owner,remote,revision,protocol){
     if(syncProtocol!==2)throw new Error('SERVER_UPDATE_REQUIRED');
     const res=await secureFetch('POST',{}, {...entry.local,baseRevision:entry.revision,clientMutationId:entry.pending.id});
     const result=await res.json();
-    if(res.status===409){const response=await secureFetch('GET');const cloud=await response.json();if(!response.ok||!cloud.success)throw new Error('SYNC_READ_FAILED');return{conflict:true,remote:normalizeImportData(cloud.data),revision:cloud.data.revision};}
+    if(activeStore!==boundStore)throw new Error('ACCOUNT_CHANGED');
+    if(res.status===409){const response=await secureFetch('GET');const cloud=await response.json();if(activeStore!==boundStore)throw new Error('ACCOUNT_CHANGED');if(!response.ok||!cloud.success)throw new Error('SYNC_READ_FAILED');return{conflict:true,remote:normalizeImportData(cloud.data),revision:cloud.data.revision};}
     if(!res.ok||!result.success||result.protected)throw new Error(result.error||'SAVE_NOT_CONFIRMED');
     return result;
   },state=>{if(activeStore===boundStore)setSyncState(state);});
@@ -499,7 +505,7 @@ $('dismissWelcomeBtn')?.addEventListener('click',dismissWelcome);
 $('welcomeTooltip')?.addEventListener('click',e=>{if(e.target===e.currentTarget)dismissWelcome();});
 
 // =================== AUTH ===================
-let authMode='login';
+let authMode='login',authAttempt=0;
 function setAuthMode(mode){
   authMode=mode==='register'?'register':'login';const registering=authMode==='register';
   $('authModeLogin')?.classList.toggle('active',!registering);$('authModeRegister')?.classList.toggle('active',registering);
@@ -562,40 +568,68 @@ $('googleAuthBtn')?.addEventListener('click', async () => {
 $('googleAuthCopyUrl')?.addEventListener('click',()=>copyProviderText(window.location.origin+window.location.pathname));
 
 function authMessage(code){return({INVALID_CREDENTIALS:'Неправильний логін або пароль.',TOO_MANY_ATTEMPTS:'Забагато спроб. Зачекайте 15 хвилин.',INVALID_LOGIN:'Логін має містити 2–80 літер, цифр або символів . _ @ + -',PASSWORD_TOO_SHORT:'Пароль має містити щонайменше 8 символів.',PASSWORD_TOO_LONG:'Пароль надто довгий.',PASSWORD_TOO_WEAK:'Додайте до пароля літери або цифри.',ACCOUNT_EXISTS:'Такий акаунт уже існує. Перейдіть до входу.'})[code]||'Не вдалося виконати вхід. Спробуйте ще раз.';}
-async function activateAccount(result,owner,uid){
+async function activateAccount(result,owner,uid,attempt=null){
   if(!saveDraft())throw new Error('Спочатку збережіть або експортуйте поточну чернетку');
   if(localStorage.getItem('k_push_owner')&&localStorage.getItem('k_push_owner')!==owner&&!await detachPush())throw new Error('Не вдалося від’єднати сповіщення попереднього акаунта');
+  if(attempt!==null&&attempt!==authAttempt)return;
   sessionLogin=owner;let remote=normalizeImportData(result.data||{addresses:[],currentAddressId:'default'});if(!remote)throw new Error('Дані потребують перевірки. Оригінал у хмарі збережено.');
   let adoptedSettings=null;if(!localStorage.getItem(`komynalka_account_v1:${encodeURIComponent(owner)}`)&&!Object.keys(remote.accountSettings||{}).length&&initialDeviceLogin===owner){adoptedSettings={};for(const key of ['k_budget',CUSTOM_REMINDERS_KEY,CUSTOM_TARIFF_TEMPLATE_KEY,COMMUNITY_TARIFF_KEY,CHANGE_LOG_KEY,'achievements_unlocked','lastSubmittedMonth','lastPushShown']){const val=localStorage.getItem(key);if(val!==null)adoptedSettings[key]=val;}}
   let state=bindAccount(owner,remote,result.data?.revision??0,result.data?.syncProtocol||result.syncProtocol);if(adoptedSettings&&Object.keys(adoptedSettings).length)state=activeStore.stage({...state.local,accountSettings:{...adoptedSettings,...state.local.accountSettings}});
   localStorage.setItem('k_login',owner);if(uid){localStorage.setItem('k_uid',uid);localStorage.removeItem('k_passHash');sessionPass=null;}else localStorage.removeItem('k_uid');
-  accountHasPassword=Boolean(result.data?.hasPassword);displayName=result.data?.displayName||'';localStorage.setItem('k_display_name',displayName);applySnapshot(state.local);
+  accountHasPassword=Boolean(result.data?.hasPassword);writeDeviceMeta({hasPassword:accountHasPassword});displayName=result.data?.displayName||'';localStorage.setItem('k_display_name',displayName);applySnapshot(state.local);
   if(!addresses.length){addresses=[{id:'default',name:'Мій дім',tariffs:{...defaultTariffs},prefs:{...defaultPrefs},records:[],customServices:KomunalkaData.copy(defaultCustomServices)}];currentAddressId='default';loadCurrentAddress();await syncToCloud();}
   else if(state.conflict)showSyncConflict();else{setSyncState(state.pending?'pending':'synced');if(state.pending)await flushSync();}
   showLegacyRecovery();if(!records.length)showWelcome();checkBroadcast();void refreshAdminEntry();
 }
 async function performRegistration(rawLogin,rawPass,confirmation){
   const errEl=$('authError');errEl?.classList.add('hidden');if(rawPass!==confirmation){errEl.textContent='Паролі не збігаються.';errEl.classList.remove('hidden');return;}
-  if($('authBtnText'))$('authBtnText').textContent='Створення…';$('authSpinner')?.classList.remove('hidden');const previous={login:sessionLogin,pass:sessionPass,token:sessionToken,uid:authUid};
-  try{sessionLogin=String(rawLogin||'').trim().toLowerCase();sessionPass=null;sessionToken=null;authUid=null;const response=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','X-Device-FP':DEVICE_FP},cache:'no-store',body:JSON.stringify({action:'auth_register',login:sessionLogin,password:rawPass})}),result=await response.json();if(!response.ok||!result.success)throw new Error(authMessage(result.error));sessionToken=result.sessionToken;await activateAccount(result,sessionLogin,null);localStorage.setItem('k_session',sessionToken);localStorage.removeItem('k_passHash');}
-  catch(error){sessionLogin=previous.login;sessionPass=previous.pass;sessionToken=previous.token;authUid=previous.uid;errEl.textContent=error.message;errEl.classList.remove('hidden');}
-  finally{if($('authBtnText'))$('authBtnText').textContent=authMode==='register'?'Створити акаунт':'Увійти';$('authSpinner')?.classList.add('hidden');}
+  if($('authBtnText'))$('authBtnText').textContent='Створення…';$('authSpinner')?.classList.remove('hidden');const attempt=++authAttempt,previous={login:sessionLogin,pass:sessionPass,token:sessionToken,uid:authUid};
+  try{sessionLogin=String(rawLogin||'').trim().toLowerCase();sessionPass=null;sessionToken=null;authUid=null;const response=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','X-Device-FP':DEVICE_FP},cache:'no-store',body:JSON.stringify({action:'auth_register',login:sessionLogin,password:rawPass})}),result=await response.json();if(attempt!==authAttempt)return;if(!response.ok||!result.success)throw new Error(authMessage(result.error));sessionToken=result.sessionToken;await activateAccount(result,sessionLogin,null,attempt);if(attempt!==authAttempt)return;localStorage.setItem('k_session',sessionToken);localStorage.removeItem('k_passHash');}
+  catch(error){if(attempt!==authAttempt)return;sessionLogin=previous.login;sessionPass=previous.pass;sessionToken=previous.token;authUid=previous.uid;errEl.textContent=error.message;errEl.classList.remove('hidden');}
+  finally{if(attempt===authAttempt){if($('authBtnText'))$('authBtnText').textContent=authMode==='register'?'Створити акаунт':'Увійти';$('authSpinner')?.classList.add('hidden');}}
 }
-async function performLogin(rawLogin,rawPass,isAlreadyHashed,uid=null){
+function restoreCachedAccount(owner,uid=null){
+  if(!owner||owner!==initialDeviceLogin||owner!==localStorage.getItem('k_login'))return false;
+  try{const cache=KomunalkaData.create(localStorage,owner),state=cache.read();if(!state)return false;sessionLogin=owner;authUid=uid;accountHasPassword=readDeviceMeta().hasPassword??Boolean(!uid&&(sessionToken||sessionPass));bindAccount(owner,state.base,state.revision,2);applySnapshot(activeStore.read().local);setSyncState('offline');return true;}
+  catch{showToast('Локальну копію не вдалося відкрити. Оригінал збережено.','⚠️');return false;}
+}
+async function performLogin(rawLogin,rawPass,isAlreadyHashed,uid=null,allowCached=false){
   const errEl=$('authError');errEl?.classList.add('hidden');
   if($('authBtnText'))$('authBtnText').textContent='Завантаження…';
   $('authSpinner')?.classList.remove('hidden');
-  const previousLogin=sessionLogin,previousPass=sessionPass,previousToken=sessionToken,previousUid=authUid;
+  const attempt=++authAttempt,previousLogin=sessionLogin,previousPass=sessionPass,previousToken=sessionToken,previousUid=authUid;
+  let res=null,connectionFailed=false;
+  const request=async operation=>{try{return await operation();}catch(error){connectionFailed=!error?.code?.startsWith('auth/')||error.code==='auth/network-request-failed';throw new Error('Не вдалося зв’язатися із сервером. Перевірте мережу й повторіть.');}};
+  const readResponse=async response=>{if(response.status>=500)throw new Error('Сервер тимчасово недоступний. Спробуйте пізніше.');try{return await response.json();}catch{if(response.ok)connectionFailed=true;throw new Error('Сервер повернув некоректну відповідь. Спробуйте пізніше.');}};
   try{
     authUid=uid;
-    let res,result;
-    if(!uid&&!isAlreadyHashed){sessionLogin=String(rawLogin||'').trim().toLowerCase();sessionPass=null;sessionToken=null;res=await fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','X-Device-FP':DEVICE_FP},cache:'no-store',body:JSON.stringify({action:'auth_login',login:sessionLogin,password:rawPass})});result=await res.json();if(!res.ok||!result.success)throw new Error(authMessage(result.error));sessionToken=result.sessionToken;}
-    else{if(!uid&&rawLogin)sessionLogin=String(rawLogin).trim().toLowerCase();res=await secureFetch('GET',{t:Date.now()});result=await res.json();if((res.status===403||res.status===401)&&sessionToken){localStorage.removeItem('k_session');sessionToken=null;throw new Error('Сесія завершилась. Увійдіть ще раз.');}if(res.status===403||res.status===401)throw new Error('Неправильний пароль або сесія завершилась');if(res.status===429)throw new Error('Забагато спроб. Зачекайте 15 хвилин.');if(res.status!==404&&(!res.ok||!result.success))throw new Error('Не вдалося завантажити дані. Спробуйте ще раз.');if(!uid&&sessionPass&&!sessionToken&&res.ok){const upgraded=await secureFetch('POST',{}, {action:'auth_upgrade_session'}),upgrade=await upgraded.json();if(upgrade.success){sessionToken=upgrade.sessionToken;localStorage.setItem('k_session',sessionToken);localStorage.removeItem('k_passHash');sessionPass=null;}}}
+    let result;
+    if(!uid&&!isAlreadyHashed){
+      sessionLogin=String(rawLogin||'').trim().toLowerCase();sessionPass=null;sessionToken=null;
+      res=await request(()=>fetch(WORKER_URL,{method:'POST',headers:{'Content-Type':'application/json','X-Device-FP':DEVICE_FP},cache:'no-store',body:JSON.stringify({action:'auth_login',login:sessionLogin,password:rawPass})}));
+      result=await readResponse(res);if(attempt!==authAttempt)return;
+      if(!res.ok||!result.success)throw new Error(authMessage(result.error));sessionToken=result.sessionToken;
+    }else{
+      if(!uid&&rawLogin)sessionLogin=String(rawLogin).trim().toLowerCase();
+      res=await request(()=>secureFetch('GET',{t:Date.now()}));if(attempt!==authAttempt)return;
+      if(res.status===403||res.status===401){
+        if(allowCached){localStorage.removeItem('k_login');localStorage.removeItem('k_passHash');}
+        if(sessionToken){localStorage.removeItem('k_session');sessionToken=null;}
+        throw new Error('Сесія завершилась. Увійдіть ще раз.');
+      }
+      if(res.status===429)throw new Error('Забагато спроб. Зачекайте 15 хвилин.');
+      result=await readResponse(res);if(attempt!==authAttempt)return;
+      if(res.status!==404&&(!res.ok||!result.success))throw new Error('Не вдалося завантажити дані. Спробуйте ще раз.');
+      if(!uid&&sessionPass&&!sessionToken&&res.ok){
+        const upgraded=await request(()=>secureFetch('POST',{}, {action:'auth_upgrade_session'})),upgrade=await readResponse(upgraded);if(attempt!==authAttempt)return;
+        if(upgrade.success){sessionToken=upgrade.sessionToken;localStorage.setItem('k_session',sessionToken);localStorage.removeItem('k_passHash');sessionPass=null;}
+      }
+    }
     if(res.status===404&&uid&&initialDeviceLogin&&!initialDeviceLogin.startsWith('uid_')){sessionLogin=previousLogin;sessionPass=previousPass;$('linkModal')?.classList.remove('hidden');return;}
     const owner=result.data?.linkedLogin||(uid?`uid_${uid}`:sessionLogin);
-    if(res.status===404&&!uid)throw new Error('Акаунт не знайдено. Перевірте логін або створіть новий.');await activateAccount(result,owner,uid);if(sessionToken&&!uid){localStorage.setItem('k_session',sessionToken);localStorage.removeItem('k_passHash');}
-  }catch(e){sessionLogin=previousLogin;sessionPass=previousPass;sessionToken=previousToken;authUid=previousUid;if(errEl){errEl.textContent=e.message;errEl.classList.remove('hidden');}}
-  finally{if($('authBtnText'))$('authBtnText').textContent=authMode==='register'?'Створити акаунт':'Увійти';$('authSpinner')?.classList.add('hidden');}
+    if(res.status===404&&!uid)throw new Error('Акаунт не знайдено. Перевірте логін або створіть новий.');await activateAccount(result,owner,uid,attempt);if(attempt!==authAttempt)return;if(sessionToken&&!uid){localStorage.setItem('k_session',sessionToken);localStorage.removeItem('k_passHash');}
+  }catch(e){if(attempt!==authAttempt)return;sessionLogin=previousLogin;sessionPass=previousPass;sessionToken=previousToken;authUid=previousUid;if(allowCached&&(connectionFailed||res?.status>=500)&&restoreCachedAccount(previousLogin,uid)){showToast('Сервер недоступний. Працюємо з копією на пристрої.','📱');return;}if(errEl){errEl.textContent=e.message;errEl.classList.remove('hidden');}}
+  finally{if(attempt===authAttempt){if($('authBtnText'))$('authBtnText').textContent=authMode==='register'?'Створити акаунт':'Увійти';$('authSpinner')?.classList.add('hidden');}}
 }
 function showLegacyRecovery(){
   const raw=localStorage.getItem(LOCAL_BACKUP_KEY);
@@ -815,7 +849,7 @@ const ACHIEVEMENT_HINTS = { 'first_record':'Збережіть перший ро
 function getStreak(recs) { if(!recs.length) return 0; const sorted=[...recs].sort((a,b)=>new Date(b.month)-new Date(a.month)); let streak=1; for(let i=0;i<sorted.length-1;i++){const[y1,m1]=sorted[i].month.split('-').map(Number);const[y2,m2]=sorted[i+1].month.split('-').map(Number);if((y1*12+m1)-(y2*12+m2)===1)streak++;else break;} return streak; }
 function checkSaverAchievement(recs) { if(recs.length<4) return false; const s=[...recs].sort((a,b)=>new Date(b.month)-new Date(a.month)); return s[0].total<s[1].total&&s[1].total<s[2].total; }
 function checkBudgetAchievement(recs) { const budget=parseFloat(accountStorage.getItem('k_budget'))||0; if(!budget||recs.length<3) return false; const s=[...recs].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,3); return s.every(r=>r.total<=budget); }
-function checkNightOwl(recs) { if(!recs.length) return false; const last=[...recs].sort((a,b)=>new Date(b.month)-new Date(a.month))[0]; const n=Math.max(0,(last.nCur||0)-(last.nPrev||0)),d=Math.max(0,(last.dCur||0)-(last.dPrev||0)),t=n+d; return t>0&&(n/t)>=0.7; }
+function checkNightOwl(recs) { if(!recs.length) return false; const last=[...recs].sort((a,b)=>new Date(b.month)-new Date(a.month))[0]; const n=recordUsage(last,'nPrev','nCur'),d=recordUsage(last,'dPrev','dCur'),t=n+d; return t>0&&(n/t)>=0.7; }
 function getUnlockedAchievements() { return ACHIEVEMENTS.filter(a=>a.check(records)); }
 
 function checkNewAchievements() { const unlocked=JSON.parse(accountStorage.getItem('achievements_unlocked')||'[]'); const current=getUnlockedAchievements(); const newOnes=current.filter(a=>!unlocked.includes(a.id)); if(newOnes.length>0){accountStorage.setItem('achievements_unlocked',JSON.stringify(current.map(a=>a.id)));showAchievementUnlock(newOnes[0]);} }
@@ -1086,17 +1120,18 @@ function renderEntryReview(valid=validateReadingsUI()){
   const base=[['Вода','waterCost',prefs.showWater],['Гаряча вода','hotWaterCost',prefs.showHotWater],['Світло','electroCost',prefs.showElectro],['Газ','gasCost',prefs.showGas],['Інші послуги','customCost',activeCustomServices().length>0]].filter(([,key,enabled])=>enabled||Number(currentCalc[key])>0);
   const paid=getPaymentInputData().paidAmount;
   $('entryReviewMonth').textContent=/^\d{4}-\d{2}$/.test(month)?new Date(month+'-01T12:00:00').toLocaleDateString('uk-UA',{month:'long',year:'numeric'}):'';
-  $('entryReviewStatus').textContent=!valid?'Поточні показники мають бути не меншими за попередні.':historic?'Ви оновлюєте наявний запис. Історичні суми зберігаються для незмінених показників.':'Можна зберегти частину послуг, а решту додати пізніше.';
+  const missingPrevious=readingInputIds.filter(id=>id.endsWith('Prev')).some(id=>$(id)?.getAttribute('aria-invalid')==='true'&&$(id).value==='');
+  $('entryReviewStatus').textContent=!valid?(missingPrevious?'Вкажіть попередній показник. Якщо лічильник починав із нуля, введіть 0.':'Поточні показники мають бути не меншими за попередні.'):historic?'Ви оновлюєте наявний запис. Історичні суми зберігаються для незмінених показників.':'Можна зберегти частину послуг, а решту додати пізніше.';
   $('entryReviewStatus').classList.toggle('review-error',!valid);
   $('entryReviewLines').innerHTML=valid?base.map(([label,key])=>`<div class="review-line"><span>${label}</span><strong>${fmt.format(currentCalc[key]||0)} ₴</strong></div>`).join(''):'';
   const insightTarget=$('entryInsights');
   if(insightTarget){
     const entered=id=>$(id)?.value.trim()!=='';
     const current={
-      water:prefs.showWater&&entered('wCur')?Math.max(0,getV('wCur')-getV('wPrev')):null,
-      hotWater:prefs.showHotWater&&entered('hwCur')?Math.max(0,getV('hwCur')-getV('hwPrev')):null,
-      electro:prefs.showElectro&&(entered('dCur')||(prefs.electroTwoZone&&entered('nCur')))?Math.max(0,getV('dCur')-getV('dPrev'))+(prefs.electroTwoZone?Math.max(0,getV('nCur')-getV('nPrev')):0):null,
-      gas:prefs.showGas&&entered('gCur')?Math.max(0,getV('gCur')-getV('gPrev')):null,
+      water:prefs.showWater&&entered('wCur')?formUsage('wPrev','wCur'):null,
+      hotWater:prefs.showHotWater&&entered('hwCur')?formUsage('hwPrev','hwCur'):null,
+      electro:prefs.showElectro&&(entered('dCur')||(prefs.electroTwoZone&&entered('nCur')))?formUsage('dPrev','dCur')+(prefs.electroTwoZone?formUsage('nPrev','nCur'):0):null,
+      gas:prefs.showGas&&entered('gCur')?formUsage('gPrev','gCur'):null,
     };
     const insights=valid?KomunalkaInsights.compare(records,month,current).filter(item=>item.tone!=='normal'):[];
     insightTarget.innerHTML=insights.map(item=>`<div class="entry-insight is-${item.tone}"><i class="fa-solid ${item.tone==='high'?'fa-arrow-trend-up':'fa-arrow-trend-down'}" aria-hidden="true"></i><div><strong>${escapeHtml(item.label)}: ${fmt.format(item.value)} ${escapeHtml(item.unit)}</strong><p>${escapeHtml(item.detail)} Середнє — ${fmt.format(item.average)} ${escapeHtml(item.unit)}.</p></div></div>`).join('');
@@ -1227,26 +1262,29 @@ function getV(id){return Math.max(0,parseFloat($(id)?.value)||0);}
 let calcDebounceTimer;
 function debouncedCalculate(){clearTimeout(calcDebounceTimer);calcDebounceTimer=setTimeout(()=>{calculatePreview();updateSmartBadges();},150);}
 
+function formMeterEvents(){try{const value=JSON.parse($('meterEventsInput')?.value||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}catch{return {};}}
+function recordUsage(record,previous,current){return KomunalkaMeters.usage(record[previous],record[current],record._meterEvents?.[previous])??0;}
+function formUsage(previous,current){return KomunalkaMeters.usage($(previous)?.value??'',$(current)?.value??'',formMeterEvents()[previous])??0;}
 function calculatePreview() {
   const historic=records.find(r=>r.month===$('monthInput')?.value);
   const calculationTariffs=historic?.tariffSnapshot?{...tariffs,...historic.tariffSnapshot}:tariffs;
-  if(prefs.showWater)    currentCalc.waterCost   =Math.max(0,getV('wCur')-getV('wPrev'))*calculationTariffs.water;    else currentCalc.waterCost=0;
-  if(prefs.showHotWater) currentCalc.hotWaterCost=Math.max(0,getV('hwCur')-getV('hwPrev'))*calculationTariffs.hotWater; else currentCalc.hotWaterCost=0;
+  if(prefs.showWater)    currentCalc.waterCost   =formUsage('wPrev','wCur')*calculationTariffs.water;    else currentCalc.waterCost=0;
+  if(prefs.showHotWater) currentCalc.hotWaterCost=formUsage('hwPrev','hwCur')*calculationTariffs.hotWater; else currentCalc.hotWaterCost=0;
   if(prefs.showElectro){
-    const dV=Math.max(0,getV('dCur')-getV('dPrev')),nV=prefs.electroTwoZone?Math.max(0,getV('nCur')-getV('nPrev')):Math.max(0,Number(historic?.nCur||0)-Number(historic?.nPrev||0)),tEl=dV+nV;
+    const dV=formUsage('dPrev','dCur'),nV=prefs.electroTwoZone?formUsage('nPrev','nCur'):Math.max(0,Number(historic?.nCur||0)-Number(historic?.nPrev||0)),tEl=dV+nV;
     if(tEl===0) currentCalc.electroCost=0;
     else if(prefs.electroWinter&&$('isWinterInput')?.checked){
       if(tEl<=calculationTariffs.winterLimit) currentCalc.electroCost=dV*calculationTariffs.electroWinter+nV*calculationTariffs.electroWinter*calculationTariffs.nightCoef;
       else{const dp=dV/tEl,np=nV/tEl;currentCalc.electroCost=calculationTariffs.winterLimit*dp*calculationTariffs.electroWinter+calculationTariffs.winterLimit*np*calculationTariffs.electroWinter*calculationTariffs.nightCoef+(tEl-calculationTariffs.winterLimit)*dp*calculationTariffs.electroBase+(tEl-calculationTariffs.winterLimit)*np*calculationTariffs.electroBase*calculationTariffs.nightCoef;}
     } else currentCalc.electroCost=dV*calculationTariffs.electroBase+nV*calculationTariffs.electroBase*calculationTariffs.nightCoef;
   } else currentCalc.electroCost=0;
-  if(prefs.showGas) currentCalc.gasCost=Math.max(0,getV('gCur')-getV('gPrev'))*calculationTariffs.gas; else currentCalc.gasCost=0;
+  if(prefs.showGas) currentCalc.gasCost=formUsage('gPrev','gCur')*calculationTariffs.gas; else currentCalc.gasCost=0;
   currentCalc.customCost=0;
   activeCustomServices().forEach(srv=>{let val=parseFloat($(`custom_${srv.id}`)?.value);if(isNaN(val)&&srv.defaultSum)val=parseFloat(srv.defaultSum);if(!isNaN(val))currentCalc.customCost+=val;});
   if(historic){
     for(const [key,enabled] of [['waterCost',prefs.showWater],['hotWaterCost',prefs.showHotWater],['electroCost',prefs.showElectro],['gasCost',prefs.showGas]])if(!enabled)currentCalc[key]=Number(historic[key]||0);
     currentCalc.customCost+=Object.entries(historic.customData||{}).filter(([id])=>!activeCustomServices().some(s=>String(s.id)===id)).reduce((sum,[,s])=>sum+Number(s.val||0),0);
-    const unchanged=ids=>ids.every(id=>Number(historic[id]??0)===(['nPrev','nCur'].includes(id)&&!prefs.electroTwoZone?Number(historic[id]||0):getV(id)));
+    const unchanged=ids=>ids.filter(id=>id.endsWith('Prev')).every(id=>KomunalkaData.equal(historic._meterEvents?.[id],formMeterEvents()[id]))&&ids.every(id=>Number(historic[id]??0)===(['nPrev','nCur'].includes(id)&&!prefs.electroTwoZone?Number(historic[id]||0):getV(id)));
     for(const [key,ids] of [['waterCost',['wPrev','wCur']],['hotWaterCost',['hwPrev','hwCur']],['gasCost',['gPrev','gCur']]])if(unchanged(ids)&&historic[key]!=null)currentCalc[key]=Number(historic[key]);
     const season=historic.isWinter??([10,11,12,1,2,3,4].includes(Number(historic.month.slice(5))));
     if(unchanged(['dPrev','dCur','nPrev','nCur'])&&season===Boolean($('isWinterInput')?.checked)&&historic.electroCost!=null)currentCalc.electroCost=Number(historic.electroCost);
@@ -1255,7 +1293,7 @@ function calculatePreview() {
   currentCalc.total=currentCalc.waterCost+currentCalc.hotWaterCost+currentCalc.electroCost+currentCalc.gasCost+currentCalc.customCost;
   if(historic&&['waterCost','hotWaterCost','electroCost','gasCost','customCost'].every(key=>currentCalc[key]===Number(historic[key]??0)))currentCalc.total=historic.total;
   currentCalc.total=Math.round(currentCalc.total*100)/100;
-  if(!validateReadingsUI()){renderEntryReview(false);renderEntryProgress();return;}
+  if(!validateReadingsUI()){for(const id of ['waterCostDisplay','hotWaterCostDisplay','electroCostDisplay','gasCostDisplay','customCostDisplay'])if($(id))$(id).textContent='—';$('monthComparison')?.classList.add('hidden');renderEntryReview(false);renderEntryProgress();return;}
   if($('heroTotal')) $('heroTotal').innerHTML=`${fmt.format(currentCalc.total)} <span class="text-2xl font-bold text-white/40">₴</span>`;
   if($('waterCostDisplay'))    $('waterCostDisplay').innerText   =fmt.format(currentCalc.waterCost)+' ₴';
   if($('hotWaterCostDisplay')) $('hotWaterCostDisplay').innerText=fmt.format(currentCalc.hotWaterCost)+' ₴';
@@ -1270,9 +1308,12 @@ function validateReadingsUI() {
   let hasInvalid=false;
   pairs.forEach(([prevId,curId,enabled])=>{
     const prevEl=$(prevId),curEl=$(curId);
-    if(!prevEl||!curEl)return;if(!enabled){prevEl.classList.remove('input-invalid');curEl.classList.remove('input-invalid');curEl.setAttribute('aria-invalid','false');return;}
-    const invalid=prevEl.validity.badInput||curEl.validity.badInput||(prevEl.value!==''&&Number(prevEl.value)<0)||(curEl.value!==''&&(Number(curEl.value)<0||(prevEl.value!==''&&Number(curEl.value)<Number(prevEl.value))));
-    prevEl.classList.toggle('input-invalid',invalid);curEl.classList.toggle('input-invalid',invalid);curEl.setAttribute('aria-invalid',String(invalid));
+    if(!prevEl||!curEl)return;if(!enabled){prevEl.classList.remove('input-invalid');curEl.classList.remove('input-invalid');prevEl.setAttribute('aria-invalid','false');curEl.setAttribute('aria-invalid','false');return;}
+    const replacement=formMeterEvents()[prevId];
+    const prevInvalid=prevEl.validity.badInput||(prevEl.value!==''&&(!Number.isFinite(Number(prevEl.value))||Number(prevEl.value)<0))||(curEl.value!==''&&prevEl.value==='')||(replacement&&(prevEl.value===''||Number(prevEl.value)!==Number(replacement.newInitial)));
+    const curInvalid=curEl.validity.badInput||(curEl.value!==''&&(!Number.isFinite(Number(curEl.value))||Number(curEl.value)<0||(prevEl.value!==''&&Number(curEl.value)<Number(prevEl.value))))||(replacement&&(curEl.value===''||(!prevInvalid&&KomunalkaMeters.usage(getV(prevId),getV(curId),replacement)===null)));
+    const invalid=prevInvalid||curInvalid;
+    prevEl.classList.toggle('input-invalid',Boolean(prevInvalid));curEl.classList.toggle('input-invalid',Boolean(curInvalid));prevEl.setAttribute('aria-invalid',String(Boolean(prevInvalid)));curEl.setAttribute('aria-invalid',String(Boolean(curInvalid)));
     if(invalid) hasInvalid=true;
   });
   const btn=$('submitFormBtn');
@@ -1284,7 +1325,7 @@ function validateReadingsUI() {
 function updatePartialIndicator(){const w=$('partialWater'),e=$('partialElectro'),g=$('partialGas');if(w)w.className=`partial-dot ${(getV('wCur')>0||getV('hwCur')>0)?'filled':'empty'}`;if(e)e.className=`partial-dot ${getV('dCur')>0?'filled':'empty'}`;if(g)g.className=`partial-dot ${getV('gCur')>0?'filled':'empty'}`;}
 
 function updateSmartBadges(){
-  const update=(prevId,curId,badgeId,unit,color,activeBg)=>{const badge=$(badgeId);if(!badge)return;const d=getV(curId)-getV(prevId);badge.innerText=d>0?`+${d} ${unit}`:`0 ${unit}`;badge.className=d>0?`absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 ${activeBg} ${color} shadow-md px-2.5 py-1.5 rounded-xl text-[11px] font-bold`:'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-md border border-slate-100 dark:border-white/10 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-slate-400';};
+  const update=(prevId,curId,badgeId,unit,color,activeBg)=>{const badge=$(badgeId);if(!badge)return;const d=formUsage(prevId,curId);badge.innerText=d>0?`+${d} ${unit}`:`0 ${unit}`;badge.className=d>0?`absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 ${activeBg} ${color} shadow-md px-2.5 py-1.5 rounded-xl text-[11px] font-bold`:'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-md border border-slate-100 dark:border-white/10 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-slate-400';};
   if(prefs.showWater)    update('wPrev','wCur','wDiffBadge','м³','text-blue-600','bg-blue-100 dark:bg-blue-500/20');
   if(prefs.showHotWater) update('hwPrev','hwCur','hwDiffBadge','м³','text-red-600','bg-red-100 dark:bg-red-500/20');
   if(prefs.showElectro)  {update('dPrev','dCur','dDiffBadge','кВт','text-yellow-600','bg-yellow-100 dark:bg-yellow-500/20');if(prefs.electroTwoZone)update('nPrev','nCur','nDiffBadge','кВт','text-indigo-500','bg-indigo-100 dark:bg-indigo-500/20');}
@@ -1338,7 +1379,7 @@ const DRAFT_KEY='komunalka_draft';
 function saveDraft(){
   if(!activeStore||isGuest||!draftContext||!draftDirty)return true;
   try{
-    const draft={month:draftContext.month,isWinter:$('isWinterInput')?.checked,paymentStatus:$('paymentStatusInput')?.value,paidAmount:$('paidAmountInput')?.value,paymentDate:$('paymentDateInput')?.value||'',paymentReference:$('paymentReferenceInput')?.value||'',note:$('recordNote')?.value||''};
+    const draft={month:draftContext.month,isWinter:$('isWinterInput')?.checked,paymentStatus:$('paymentStatusInput')?.value,paidAmount:$('paidAmountInput')?.value,paymentDate:$('paymentDateInput')?.value||'',paymentReference:$('paymentReferenceInput')?.value||'',note:$('recordNote')?.value||'',meterEvents:formMeterEvents()};
     readingInputIds.forEach(id=>{if($(id))draft[id]=$(id).value;});
     activeCustomServices().forEach(srv=>{if($(`custom_${srv.id}`))draft[`custom_${srv.id}`]=$(`custom_${srv.id}`).value;});
     activeStore.saveDraft(draftContext.address,draftContext.month,draft);draftDirty=false;
@@ -1365,6 +1406,7 @@ function loadDraft(){
     activeCustomServices().forEach(srv=>{const id=`custom_${srv.id}`;if($(id)&&draft[id]!==undefined)$(id).value=draft[id];});
     if($('recordNote'))$('recordNote').value=draft.note??'';
     if($('isWinterInput')&&draft.isWinter!==undefined)$('isWinterInput').checked=draft.isWinter;
+    if($('meterEventsInput')&&draft.meterEvents)$('meterEventsInput').value=JSON.stringify(draft.meterEvents);
     if(draft.paymentStatus&&$('paymentStatusInput'))$('paymentStatusInput').value=draft.paymentStatus;
     if(draft.paidAmount!==undefined&&$('paidAmountInput'))$('paidAmountInput').value=draft.paidAmount;
     if(draft.paymentDate!==undefined&&$('paymentDateInput'))$('paymentDateInput').value=draft.paymentDate;
@@ -1401,7 +1443,7 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
   activeCustomServices().forEach(srv=>{let v=parseFloat($(`custom_${srv.id}`)?.value);if(isNaN(v)&&srv.defaultSum)v=parseFloat(srv.defaultSum);if(!isNaN(v)&&v>0)cData[srv.id]={name:srv.name,val:v};});
   const existingIdx=records.findIndex(r=>r.month===month);
   const paymentData=getPaymentInputData(currentCalc.total);
-  const newData={id:Date.now(),month,isWinter:Boolean($('isWinterInput')?.checked),wPrev:hasWater?getV('wPrev'):0,wCur:hasWater?getV('wCur'):0,hwPrev:hasHotWater?getV('hwPrev'):0,hwCur:hasHotWater?getV('hwCur'):0,dPrev:hasElectro?getV('dPrev'):0,dCur:hasElectro?getV('dCur'):0,nPrev:(hasElectro&&prefs.electroTwoZone)?getV('nPrev'):(records[existingIdx]?.nPrev||0),nCur:(hasElectro&&prefs.electroTwoZone)?getV('nCur'):(records[existingIdx]?.nCur||0),gPrev:hasGas?getV('gPrev'):0,gCur:hasGas?getV('gCur'):0,customData:cData,note:$('recordNote')?.value?.trim()||'',waterCost:hasWater?currentCalc.waterCost:0,hotWaterCost:hasHotWater?currentCalc.hotWaterCost:0,electroCost:hasElectro?currentCalc.electroCost:0,gasCost:hasGas?currentCalc.gasCost:0,customCost:currentCalc.customCost,total:currentCalc.total,...paymentData,tariffSnapshot:createTariffSnapshot(),_filled:{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas,custom:hasCustom},_enteredPrevious:{wPrev:hasWater&&entered('wPrev'),hwPrev:hasHotWater&&entered('hwPrev'),dPrev:hasElectro&&entered('dPrev'),nPrev:hasElectro&&prefs.electroTwoZone&&entered('nPrev'),gPrev:hasGas&&entered('gPrev')}};
+  const newData={id:Date.now(),month,_meterEvents:formMeterEvents(),isWinter:Boolean($('isWinterInput')?.checked),wPrev:hasWater?getV('wPrev'):0,wCur:hasWater?getV('wCur'):0,hwPrev:hasHotWater?getV('hwPrev'):0,hwCur:hasHotWater?getV('hwCur'):0,dPrev:hasElectro?getV('dPrev'):0,dCur:hasElectro?getV('dCur'):0,nPrev:(hasElectro&&prefs.electroTwoZone)?getV('nPrev'):(records[existingIdx]?.nPrev||0),nCur:(hasElectro&&prefs.electroTwoZone)?getV('nCur'):(records[existingIdx]?.nCur||0),gPrev:hasGas?getV('gPrev'):0,gCur:hasGas?getV('gCur'):0,customData:cData,note:$('recordNote')?.value?.trim()||'',waterCost:hasWater?currentCalc.waterCost:0,hotWaterCost:hasHotWater?currentCalc.hotWaterCost:0,electroCost:hasElectro?currentCalc.electroCost:0,gasCost:hasGas?currentCalc.gasCost:0,customCost:currentCalc.customCost,total:currentCalc.total,...paymentData,tariffSnapshot:createTariffSnapshot(),_filled:{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas,custom:hasCustom},_enteredPrevious:{wPrev:hasWater&&entered('wPrev'),hwPrev:hasHotWater&&entered('hwPrev'),dPrev:hasElectro&&entered('dPrev'),nPrev:hasElectro&&prefs.electroTwoZone&&entered('nPrev'),gPrev:hasGas&&entered('gPrev')}};
   setRecordPayment(newData,paymentData.paymentStatus,paymentData.paidAmount,paymentData);
   if(existingIdx>=0){
     const existing=records[existingIdx];
@@ -1439,11 +1481,12 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
   if(emailService)showActionToast('Показники збережено','Підготувати лист',()=>openProviderEmail(emailService.id,month),'✉️');
 });
 
-$('btnClearFields')?.addEventListener('click',()=>{if(!requireEdit('У режимі перегляду очищення недоступне'))return;readingInputIds.forEach(id=>{const el=$(id);if(el){el.value='';el.classList.remove('input-invalid');}});document.querySelectorAll('.custom-srv-input').forEach(el=>el.value='');if($('recordNote'))$('recordNote').value='';setPaymentInputsFromRecord(null);calculatePreview();updateSmartBadges();clearDraft();showToast('Очищено','🧼');});
+$('btnClearFields')?.addEventListener('click',()=>{if(!requireEdit('У режимі перегляду очищення недоступне'))return;if($('meterEventsInput'))$('meterEventsInput').value='{}';readingInputIds.forEach(id=>{const el=$(id);if(el){el.value='';el.classList.remove('input-invalid');}});document.querySelectorAll('.custom-srv-input').forEach(el=>el.value='');if($('recordNote'))$('recordNote').value='';setPaymentInputsFromRecord(null);calculatePreview();updateSmartBadges();clearDraft();showToast('Очищено','🧼');});
 
 // =================== FILL PREVIOUS READINGS ===================
 function fillPreviousReadings() {
   try {
+    if($('meterEventsInput'))$('meterEventsInput').value='{}';
     readingInputIds.forEach(id=>{if($(id))$(id).value='';});
     document.querySelectorAll('.custom-srv-input').forEach(el=>el.value='');
     if($('recordNote'))$('recordNote').value='';
@@ -1461,10 +1504,12 @@ function fillPreviousReadings() {
     }
     const currentRecord=records.find(r=>r.month===selectedMonth);
     if(currentRecord){
+      if($('meterEventsInput'))$('meterEventsInput').value=JSON.stringify(currentRecord._meterEvents||{});
       if(prefs.showWater&&currentRecord._filled?.water!==false)   {if(currentRecord.wPrev!=null&&$('wPrev'))$('wPrev').value=currentRecord.wPrev;if(currentRecord.wCur!=null&&$('wCur'))$('wCur').value=currentRecord.wCur;}
       if(prefs.showHotWater&&currentRecord._filled?.hotWater!==false){if(currentRecord.hwPrev!=null&&$('hwPrev'))$('hwPrev').value=currentRecord.hwPrev;if(currentRecord.hwCur!=null&&$('hwCur'))$('hwCur').value=currentRecord.hwCur;}
       if(prefs.showElectro&&currentRecord._filled?.electro!==false) {if(currentRecord.dPrev!=null&&$('dPrev'))$('dPrev').value=currentRecord.dPrev;if(currentRecord.dCur!=null&&$('dCur'))$('dCur').value=currentRecord.dCur;if(prefs.electroTwoZone){if(currentRecord.nPrev!=null&&$('nPrev'))$('nPrev').value=currentRecord.nPrev;if(currentRecord.nCur!=null&&$('nCur'))$('nCur').value=currentRecord.nCur;}}
       if(prefs.showGas&&currentRecord._filled?.gas!==false)     {if(currentRecord.gPrev!=null&&$('gPrev'))$('gPrev').value=currentRecord.gPrev;if(currentRecord.gCur!=null&&$('gCur'))$('gCur').value=currentRecord.gCur;}
+      for(const [key,event] of Object.entries(currentRecord._meterEvents||{}))if($(key))$(key).value=event.newInitial;
       if(currentRecord.customData)Object.keys(currentRecord.customData).forEach(srvId=>{const el=$(`custom_${srvId}`);if(el)el.value=currentRecord.customData[srvId].val;});
       if($('recordNote'))$('recordNote').value=currentRecord.note||'';
       setPaymentInputsFromRecord(currentRecord);
@@ -1558,8 +1603,20 @@ function renderChangeLog() {
   list.innerHTML = log.map(item => { const d = new Date(item.ts).toLocaleString('uk-UA', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }); const month = item.details?.month ? ` · ${escapeHtml(item.details.month)}` : ''; return `<div class="flex justify-between gap-3 bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5"><span class="font-bold text-slate-700 dark:text-slate-200">${escapeHtml(labels[item.type]||item.type)}${month}</span><span class="text-slate-400 shrink-0">${d}</span></div>`; }).join('');
 }
 
+function readTariffInputs(){
+  const next={...tariffs};let invalid=false;
+  for(const [key,id] of [['water','tWater'],['hotWater','tHotWater'],['electroBase','tElectroBase'],['electroWinter','tElectroWinter'],['gas','tGas']]){
+    const input=$(id);if(!input)continue;
+    const value=input.value.trim()===''?defaultTariffs[key]:Number(input.value);
+    const bad=input.validity.badInput||!Number.isFinite(value)||value<0;
+    input.classList.toggle('input-invalid',bad);input.setAttribute('aria-invalid',String(bad));
+    if(bad)invalid=true;else next[key]=value;
+  }
+  if(invalid){showToast('Тарифи мають бути невід’ємними числами','⚠️');return null;}
+  return next;
+}
 $('saveTariffTemplateBtn')?.addEventListener('click',()=>{
-  const tpl={water:parseFloat($('tWater')?.value)||defaultTariffs.water,hotWater:parseFloat($('tHotWater')?.value)||defaultTariffs.hotWater,electroBase:parseFloat($('tElectroBase')?.value)||defaultTariffs.electroBase,electroWinter:parseFloat($('tElectroWinter')?.value)||defaultTariffs.electroWinter,gas:parseFloat($('tGas')?.value)||defaultTariffs.gas};
+  const tpl=readTariffInputs();if(!tpl)return;
   accountStorage.setItem(CUSTOM_TARIFF_TEMPLATE_KEY,JSON.stringify(tpl));
   addChangeLog('tariff_template_saved');
   renderChangeLog();
@@ -1590,7 +1647,7 @@ $('reminderTime')?.addEventListener('change',function(){
 });
 
 $('saveSettingsBtn')?.addEventListener('click',()=>{
-  tariffs={water:parseFloat($('tWater')?.value)||defaultTariffs.water,hotWater:parseFloat($('tHotWater')?.value)||defaultTariffs.hotWater,electroBase:parseFloat($('tElectroBase')?.value)||defaultTariffs.electroBase,electroWinter:parseFloat($('tElectroWinter')?.value)||defaultTariffs.electroWinter,winterLimit:2000,nightCoef:0.5,gas:parseFloat($('tGas')?.value)||defaultTariffs.gas};
+  const nextTariffs=readTariffInputs();if(!nextTariffs)return;tariffs=nextTariffs;
   prefs={...prefs,showWater:$('prefWater')?.checked,showHotWater:$('prefHotWater')?.checked,showElectro:$('prefElectro')?.checked,showGas:$('prefGas')?.checked,electroTwoZone:$('prefElectroTwoZone')?.checked,electroWinter:$('prefElectroWinter')?.checked,remindersEnabled:$('prefReminders')?.checked,remWaterStart:parseInt($('remWaterStart')?.value)||1,remWaterEnd:parseInt($('remWaterEnd')?.value)||5,remElectroStart:parseInt($('remElectroStart')?.value)||28,remElectroEnd:parseInt($('remElectroEnd')?.value)||3,remGasStart:parseInt($('remGasStart')?.value)||1,remGasEnd:parseInt($('remGasEnd')?.value)||5,familyRole:$('familyRoleSelect')?.value||getFamilyRole()};
   customServices=customServices.filter(s=>KomunalkaServices.isArchived(s)||String(s.name||'').trim()!=="");
   const budgetVal = parseFloat($('budgetInput')?.value);
@@ -1631,6 +1688,7 @@ function getMonthKey() {
 let pushConnectionState='unknown',telegramConnectionState='unknown';
 function renderReminderOverview(){
   const title=$('reminderNextDate');if(!title)return;
+  $('remindersDisabledNotice')?.classList.toggle('hidden',Boolean(prefs.remindersEnabled));
   const time=KomunalkaReminders.notificationTime(activeSettings),next=KomunalkaReminders.nextDelivery({id:currentAddressId,prefs},activeSettings);
   if(!prefs.remindersEnabled){title.textContent='Нагадування вимкнені';$('reminderNextServices').textContent='Увімкніть їх, щоб бачити наступний день передачі.';}
   else if(!next){title.textContent='Активних днів немає';$('reminderNextServices').textContent='Перевірте дні та послуги нижче.';}
@@ -1690,7 +1748,7 @@ $('cpSubmitBtn')?.addEventListener('click', async () => {
     const res = await secureFetch('POST', {}, { action: 'change_password', oldPass, newPass });
     const data = await res.json();
     if (data.success) {
-      accountHasPassword=true;sessionPass=null;localStorage.removeItem('k_passHash');
+      accountHasPassword=true;writeDeviceMeta({hasPassword:true});sessionPass=null;localStorage.removeItem('k_passHash');
       if(data.sessionToken){sessionToken=data.sessionToken;localStorage.setItem('k_session',sessionToken);}
       $('changePassModal')?.classList.add('hidden');
       showToast('Пароль збережено! ✅');
@@ -1771,7 +1829,7 @@ function renderRecords(){
 
 function renderHistoryChart(sortedRecords,retryCount=0){if(!$('historyChartCanvas'))return;if(!historyChart)historyChart=new ChartEngine('historyChartCanvas',{padding:30,barRadius:5});if(!historyChart.width)historyChart.setupCanvas();if(!historyChart.width){if(retryCount<5)setTimeout(()=>renderHistoryChart(sortedRecords,retryCount+1),200);return;}historyChart.setData(sortedRecords.slice(-10).map(r=>({value:r.total,label:new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color:isRecordPaid(r)?'#007aff':getPaymentStatus(r)==='partial'?'#ffcc00':'#ff9500'})));}
 
-function renderServiceChart(retryCount=0){if(!$('serviceChartCanvas')||records.length===0){if($('serviceChartSummary'))$('serviceChartSummary').innerHTML='';return;}const type=$('serviceChartSelect')?.value||'water',unit=type==='electro'?'кВт':'м³';if(!serviceChart)serviceChart=new ChartEngine('serviceChartCanvas',{padding:24,barRadius:4,unit});else serviceChart.options.unit=unit;if(!serviceChart.width)serviceChart.setupCanvas();if(!serviceChart.width){if(retryCount<5)setTimeout(()=>renderServiceChart(retryCount+1),200);return;}const sorted=[...records].sort((a,b)=>new Date(a.month)-new Date(b.month)).slice(-8);const getValue=rec=>{switch(type){case 'water':return Math.max(0,(rec.wCur||0)-(rec.wPrev||0));case 'hotWater':return Math.max(0,(rec.hwCur||0)-(rec.hwPrev||0));case 'electro':return Math.max(0,(rec.dCur||0)-(rec.dPrev||0))+Math.max(0,(rec.nCur||0)-(rec.nPrev||0));case 'gas':return Math.max(0,(rec.gCur||0)-(rec.gPrev||0));default:return 0;}};const getColor=()=>{switch(type){case 'water':return'#3b82f6';case 'hotWater':return'#ef4444';case 'electro':return'#eab308';case 'gas':return'#f97316';default:return'#6b7280';}};const color=getColor(),data=sorted.map(rec=>({value:getValue(rec),label:new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color}));serviceChart.setData(data);const values=data.map(d=>d.value),avg=values.length?values.reduce((a,b)=>a+b,0)/values.length:0,last=values[values.length-1]||0,prevLast=values.length>1?values[values.length-2]:last,trendPct=prevLast>0?Math.round(((last-prevLast)/prevLast)*100):0;const summary=$('serviceChartSummary');if(summary)summary.innerHTML=`<span>Сер.: <span style="color:${color}" class="font-black">${Math.round(avg)} ${unit}/міс</span></span><span>Ост.: <span class="${trendPct<0?'text-green-600':trendPct>0?'text-red-500':'text-slate-500'} font-black">${last} ${unit} (${trendPct>0?'+':''}${trendPct}%)</span></span>`;}
+function renderServiceChart(retryCount=0){if(!$('serviceChartCanvas')||records.length===0){if($('serviceChartSummary'))$('serviceChartSummary').innerHTML='';return;}const type=$('serviceChartSelect')?.value||'water',unit=type==='electro'?'кВт':'м³';if(!serviceChart)serviceChart=new ChartEngine('serviceChartCanvas',{padding:24,barRadius:4,unit});else serviceChart.options.unit=unit;if(!serviceChart.width)serviceChart.setupCanvas();if(!serviceChart.width){if(retryCount<5)setTimeout(()=>renderServiceChart(retryCount+1),200);return;}const sorted=[...records].sort((a,b)=>new Date(a.month)-new Date(b.month)).slice(-8);const getValue=rec=>{switch(type){case 'water':return recordUsage(rec,'wPrev','wCur');case 'hotWater':return recordUsage(rec,'hwPrev','hwCur');case 'electro':return recordUsage(rec,'dPrev','dCur')+recordUsage(rec,'nPrev','nCur');case 'gas':return recordUsage(rec,'gPrev','gCur');default:return 0;}};const getColor=()=>{switch(type){case 'water':return'#3b82f6';case 'hotWater':return'#ef4444';case 'electro':return'#eab308';case 'gas':return'#f97316';default:return'#6b7280';}};const color=getColor(),data=sorted.map(rec=>({value:getValue(rec),label:new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color}));serviceChart.setData(data);const values=data.map(d=>d.value),avg=values.length?values.reduce((a,b)=>a+b,0)/values.length:0,last=values[values.length-1]||0,prevLast=values.length>1?values[values.length-2]:last,trendPct=prevLast>0?Math.round(((last-prevLast)/prevLast)*100):0;const summary=$('serviceChartSummary');if(summary)summary.innerHTML=`<span>Сер.: <span style="color:${color}" class="font-black">${Math.round(avg)} ${unit}/міс</span></span><span>Ост.: <span class="${trendPct<0?'text-green-600':trendPct>0?'text-red-500':'text-slate-500'} font-black">${last} ${unit} (${trendPct>0?'+':''}${trendPct}%)</span></span>`;}
 $('serviceChartSelect')?.addEventListener('change',renderServiceChart);
 
 async function shareRecordById(id){const rec=records.find(r=>String(r.id)===String(id));if(!rec)return;const d=new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'});let t=`🧾 Комуналка за ${d}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n──────────\n`;if(rec.waterCost>0)t+=`💧 Вода: ${fmt.format(rec.waterCost)} ₴\n`;if(rec.hotWaterCost>0)t+=`🌡️ Гар.: ${fmt.format(rec.hotWaterCost)} ₴\n`;if(rec.electroCost>0)t+=`⚡ Світло: ${fmt.format(rec.electroCost)} ₴\n`;if(rec.gasCost>0)t+=`🔥 Газ: ${fmt.format(rec.gasCost)} ₴\n`;if(rec.customCost>0)t+=`📦 Інше: ${fmt.format(rec.customCost)} ₴\n`;t+=`──────────\n💰 Всього: ${fmt.format(rec.total)} ₴\n💳 ${getPaymentLabel(rec)}${getPaymentStatus(rec)==='partial'?`: ${fmt.format(getPaidAmount(rec))} ₴ сплачено, борг ${fmt.format(getOutstandingAmount(rec))} ₴`:''}`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
@@ -1800,10 +1858,10 @@ async function ensurePdfTools(){await loadOptionalScript('vendor/jspdf/jspdf.umd
 
 function exportServices(){
   return [
-    {key:'waterCost',label:'Вода',unit:'м³',used:!!prefs.showWater,value:r=>Math.max(0,(r.wCur||0)-(r.wPrev||0))},
-    {key:'hotWaterCost',label:'Гаряча вода',unit:'м³',used:!!prefs.showHotWater,value:r=>Math.max(0,(r.hwCur||0)-(r.hwPrev||0))},
-    {key:'electroCost',label:'Світло',unit:'кВт·год',used:!!prefs.showElectro,value:r=>Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0))},
-    {key:'gasCost',label:'Газ',unit:'м³',used:!!prefs.showGas,value:r=>Math.max(0,(r.gCur||0)-(r.gPrev||0))}
+    {key:'waterCost',label:'Вода',unit:'м³',used:!!prefs.showWater,value:r=>recordUsage(r,'wPrev','wCur')},
+    {key:'hotWaterCost',label:'Гаряча вода',unit:'м³',used:!!prefs.showHotWater,value:r=>recordUsage(r,'hwPrev','hwCur')},
+    {key:'electroCost',label:'Світло',unit:'кВт·год',used:!!prefs.showElectro,value:r=>recordUsage(r,'dPrev','dCur')+recordUsage(r,'nPrev','nCur')},
+    {key:'gasCost',label:'Газ',unit:'м³',used:!!prefs.showGas,value:r=>recordUsage(r,'gPrev','gCur')}
   ].filter(service=>service.used||records.some(r=>Number(r[service.key])>0));
 }
 function exportCSV(){
@@ -1848,6 +1906,7 @@ function isPlainObject(value){return value&&typeof value==='object'&&!Array.isAr
 function normalizeNumber(value,fallback=0){const num=Number(value);return Number.isFinite(num)?num:fallback;}
 function normalizeImportedRecord(rec){
   if(!isPlainObject(rec)||!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(rec.month||'')))throw new Error('INVALID_RECORD');
+  if(rec._meterEvents){if(!isPlainObject(rec._meterEvents))throw new Error('INVALID_METER_EVENTS');for(const [key,event] of Object.entries(rec._meterEvents)){if(!['wPrev','hwPrev','dPrev','nPrev','gPrev'].includes(key))throw new Error('INVALID_METER_EVENTS');KomunalkaMeters.validate(event,rec.month);}}
   for(const key of ['total','waterCost','hotWaterCost','electroCost','gasCost','customCost','paidAmount'])if(rec[key]!=null&&!Number.isFinite(Number(rec[key])))throw new Error('INVALID_AMOUNT');
   return {...rec,id:rec.id??`legacy_${rec.month}`,month:String(rec.month),total:Number(rec.total??0)};
 }
@@ -1860,20 +1919,21 @@ function normalizeImportedAddress(addr,index){
 }
 function normalizeImportData(data){
   if(!isPlainObject(data))return null;
+  if(isPlainObject(data.data)&&Array.isArray(data.data.addresses)){if(data.version!==1&&data.format!=='komunalka-account-v1')return null;data=data.data;}
   if(!Array.isArray(data.addresses)){if(Array.isArray(data.records))data={...data,addresses:[{id:'default',name:'Мій дім',records:data.records,tariffs:data.tariffs||{},prefs:data.prefs||{},customServices:data.customServices||[]}],currentAddressId:'default'};else return null;}
   const addrs=data.addresses.map(normalizeImportedAddress);
   if(new Set(addrs.map(a=>String(a.id))).size!==addrs.length)throw new Error('DUPLICATE_ADDRESS_ID');
   const cid=data.currentAddressId;
   return {addresses:addrs,currentAddressId:addrs.some(a=>a.id===cid)?cid:(addrs[0]?.id||'default'),...(data.accountSettings?{accountSettings:KomunalkaData.copy(data.accountSettings)}:{})};
 }
-$('importFileInput')?.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const normalized=normalizeImportData(JSON.parse(ev.target.result));if(!normalized){showToast('Невірний формат','❌');return;}const recordCount=normalized.addresses.reduce((s,a)=>s+(a.records?.length||0),0);if(confirm(`Імпорт ${normalized.addresses.length} об'єктів і ${recordCount} записів? Поточні дані буде замінено, але перед цим створиться аварійний бекап.`)){if(!backupCurrentState(PRE_IMPORT_BACKUP_KEY))return;addresses=normalized.addresses;currentAddressId=normalized.currentAddressId;activeSettings=normalized.accountSettings||activeSettings;addChangeLog('json_imported',{addresses:normalized.addresses.length,records:recordCount});loadCurrentAddress();syncToCloud();showActionToast('Імпортовано','Скасувати',()=>{if(restoreFromLocalBackup(PRE_IMPORT_BACKUP_KEY)){addChangeLog('import_rolled_back');showToast('Імпорт скасовано','✅');}else showToast('Немає бекапу','⚠️');},'✅');}}catch(err){showToast('Помилка','❌');}};reader.readAsText(file);e.target.value='';});
+
 $('restoreBackupBtn')?.addEventListener('click',()=>{if(confirm('Відновити останній локальний бекап? Поточні дані буде замінено.')){if(!backupCurrentState(PRE_IMPORT_BACKUP_KEY))return;if(restoreFromLocalBackup(LOCAL_BACKUP_KEY)){addChangeLog('local_backup_restored');showToast('Бекап відновлено','✅');}else showToast('Бекап не знайдено','⚠️');}});
 $('restorePreImportBtn')?.addEventListener('click',()=>{if(confirm('Відновити стан перед останнім імпортом?')){if(restoreFromLocalBackup(PRE_IMPORT_BACKUP_KEY)){addChangeLog('pre_import_backup_restored');showToast('Відновлено','✅');}else showToast('Бекап не знайдено','⚠️');}});
-$('forgetDeviceBtn')?.addEventListener('click',async()=>{if(confirm('Прибрати дані входу з цього пристрою? Локальні бекапи й налаштування залишаться.')){if(!await detachPush()){showToast('Не вдалося вимкнути сповіщення. Повторіть.','⚠️');return;}try{await secureFetch('POST',{}, {action:'auth_logout'});}catch{}['k_login','k_passHash','k_session','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));addChangeLog('device_credentials_forgotten');location.reload();}});
+$('forgetDeviceBtn')?.addEventListener('click',async()=>{if(confirm('Прибрати дані входу з цього пристрою? Локальні бекапи й налаштування залишаться.')){if(!await detachPush()){showToast('Не вдалося вимкнути сповіщення. Повторіть.','⚠️');return;}try{await secureFetch('POST',{}, {action:'auth_logout'});}catch{}if(googleUser)await firebase.auth().signOut();window.komunalkaAI?.cancel();['k_login','k_passHash','k_session','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));addChangeLog('device_credentials_forgotten');location.reload();}});
 
 // =================== TIPS ===================
-function getConsumptionTrend(type,months=6){const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,months);if(sorted.length<2)return null;const values=sorted.map(r=>{switch(type){case 'water':return Math.max(0,(r.wCur||0)-(r.wPrev||0));case 'electro':return Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0));case 'gas':return Math.max(0,(r.gCur||0)-(r.gPrev||0));default:return r.total;}}).reverse();const first=values.slice(0,Math.ceil(values.length/2)),second=values.slice(Math.ceil(values.length/2));const avgF=first.reduce((a,b)=>a+b,0)/first.length,avgS=second.reduce((a,b)=>a+b,0)/second.length;if(avgF===0)return 0;return Math.round(((avgS-avgF)/avgF)*100);}
-function getSmartTips(){const tips=[];if(records.length>=3){const wT=getConsumptionTrend('water');if(wT&&wT>20)tips.push({emoji:'💧',text:`Споживання води зросло на ${wT}%. Перевірте крани.`});const eT=getConsumptionTrend('electro');if(eT&&eT>20)tips.push({emoji:'⚡',text:`Електрика +${eT}%. Перевірте прилади.`});if(eT&&eT<-10)tips.push({emoji:'🎉',text:`Електрика -${Math.abs(eT)}%! Чудова економія!`});}const budget=parseFloat(accountStorage.getItem('k_budget'))||0;if(budget&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];if(last.total>budget*1.2)tips.push({emoji:'⚠️',text:`Перевищили бюджет на ${Math.round(((last.total-budget)/budget)*100)}%`});}const unpaid=records.filter(r=>getOutstandingAmount(r)>0);if(unpaid.length>=3)tips.push({emoji:'💳',text:`${unpaid.length} місяців із боргом. Оплатіть або відмітьте часткову оплату.`});if(prefs.showElectro&&prefs.electroTwoZone&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];const n=Math.max(0,(last.nCur||0)-(last.nPrev||0)),d=Math.max(0,(last.dCur||0)-(last.dPrev||0)),tot=n+d;if(tot>0&&n/tot<0.3)tips.push({emoji:'🌙',text:'Спробуйте більше електрики вночі — дешевше.'});}return tips.slice(0,3);}
+function getConsumptionTrend(type,months=6){const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,months);if(sorted.length<2)return null;const values=sorted.map(r=>{switch(type){case 'water':return recordUsage(r,'wPrev','wCur');case 'electro':return recordUsage(r,'dPrev','dCur')+recordUsage(r,'nPrev','nCur');case 'gas':return recordUsage(r,'gPrev','gCur');default:return r.total;}}).reverse();const first=values.slice(0,Math.ceil(values.length/2)),second=values.slice(Math.ceil(values.length/2));const avgF=first.reduce((a,b)=>a+b,0)/first.length,avgS=second.reduce((a,b)=>a+b,0)/second.length;if(avgF===0)return 0;return Math.round(((avgS-avgF)/avgF)*100);}
+function getSmartTips(){const tips=[];if(records.length>=3){const wT=getConsumptionTrend('water');if(wT&&wT>20)tips.push({emoji:'💧',text:`Споживання води зросло на ${wT}%. Перевірте крани.`});const eT=getConsumptionTrend('electro');if(eT&&eT>20)tips.push({emoji:'⚡',text:`Електрика +${eT}%. Перевірте прилади.`});if(eT&&eT<-10)tips.push({emoji:'🎉',text:`Електрика -${Math.abs(eT)}%! Чудова економія!`});}const budget=parseFloat(accountStorage.getItem('k_budget'))||0;if(budget&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];if(last.total>budget*1.2)tips.push({emoji:'⚠️',text:`Перевищили бюджет на ${Math.round(((last.total-budget)/budget)*100)}%`});}const unpaid=records.filter(r=>getOutstandingAmount(r)>0);if(unpaid.length>=3)tips.push({emoji:'💳',text:`${unpaid.length} місяців із боргом. Оплатіть або відмітьте часткову оплату.`});if(prefs.showElectro&&prefs.electroTwoZone&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];const n=recordUsage(last,'nPrev','nCur'),d=recordUsage(last,'dPrev','dCur'),tot=n+d;if(tot>0&&n/tot<0.3)tips.push({emoji:'🌙',text:'Спробуйте більше електрики вночі — дешевше.'});}return tips.slice(0,3);}
 function renderTips(){const container=$('tipsContainer');if(!container)return;const tips=getSmartTips();if(!tips.length){container.classList.add('hidden');return;}container.classList.remove('hidden');const listEl=$('tipsList');if(listEl)listEl.innerHTML=tips.map(t=>`<div class="flex items-start gap-3 bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5"><span class="text-lg shrink-0">${t.emoji}</span><p class="text-xs font-medium text-slate-600 dark:text-slate-300">${escapeHtml(t.text)}</p></div>`).join('');}
 
 // =================== YEAR REPORT ===================
@@ -1905,14 +1965,20 @@ window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredP
 $('installPwaBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;if(outcome==='accepted')$('pwaInstallBlock')?.classList.add('hidden');deferredPrompt=null;});
 
 // =================== PUSH ===================
-let pushClient=null;
+let pushClient=null,pushClientContext=null;
 let pushDeliveryInfo=null;
+function notificationContext(){const store=activeStore,owner=sessionLogin,token=sessionToken;return()=>Boolean(store&&store===activeStore&&owner===sessionLogin&&token===sessionToken&&!isGuest);}
+function deliveryAttemptLabel(info){
+  if(!info?.lastAttemptAt)return '';
+  const date=new Date(info.lastAttemptAt).toLocaleString('uk-UA',{timeZone:'Europe/Kyiv',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}),ok=info.lastStatus>=200&&info.lastStatus<300;
+  return ` Остання спроба ${date}: ${ok?'прийнято каналом доставки':'помилка, повторимо автоматично'}.`;
+}
 const reminderDayLabel=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))?new Date(value+'T12:00:00Z').toLocaleDateString('uk-UA',{day:'numeric',month:'long',timeZone:'UTC'}):'';
 function renderPushState(state,details=null){
   pushConnectionState=state;if(details)pushDeliveryInfo=details;
   const time=KomunalkaReminders.notificationTime(activeSettings),messages={unsupported:'На iPhone додайте застосунок на початковий екран і відкрийте звідти.',unconfigured:'Push ще не налаштований на сервері. Нагадування в застосунку працюють.',denied:'Push заблокований у налаштуваннях браузера.',available:'Увімкніть Push, щоб отримувати нагадування після закриття застосунку.',connecting:'Підключаємо цей пристрій…',enabled:`Підключено · сповіщення о ${time} за Києвом.`,error:'Підключення не підтверджено. Перевірте мережу й повторіть.'};
   const last=state==='enabled'&&reminderDayLabel(pushDeliveryInfo?.lastReminderDay)?` Останнє успішне нагадування: ${reminderDayLabel(pushDeliveryInfo.lastReminderDay)}.`:'';
-  const status=$('pushStatus');if(status){status.classList.remove('hidden');status.textContent=messages[state]+last;}
+  const status=$('pushStatus');if(status){status.classList.remove('hidden');status.textContent=messages[state]+last+deliveryAttemptLabel(pushDeliveryInfo);}
   const button=$('enablePushBtn');if(button){button.classList.toggle('hidden',!['available','connecting','error'].includes(state));button.disabled=state==='connecting';}
   $('disablePushBtn')?.classList.toggle('hidden',state!=='enabled');
   $('testPushBtn')?.classList.toggle('hidden',state!=='enabled');
@@ -1926,25 +1992,31 @@ async function pushRegistration(){
 async function initPush(){
   if(isGuest||!activeStore)return;
   if(!('Notification'in window)||!('serviceWorker'in navigator)||!('PushManager'in window)){renderPushState('unsupported');return;}
-  if(!pushClient)pushClient=KomunalkaPush.create({
-    request:async(action,data={})=>{const response=action==='config'?await fetch(WORKER_URL+'?push-config=1',{cache:'no-store'}):await secureFetch('POST',{}, {action:'push_'+action,...data});const result=await response.json();if(!response.ok||!result.success)throw new Error(result.error||'PUSH_REQUEST_FAILED');return result;},
-    registration:pushRegistration,permission:{current:()=>Notification.permission,ask:()=>Notification.requestPermission()},
-    subscribeOptions:key=>({userVisibleOnly:true,applicationServerKey:Uint8Array.from(atob(key.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-key.length%4)%4)),c=>c.charCodeAt(0))}),report:renderPushState
-  });
+  if(!pushClient||!pushClientContext?.()){
+    const current=notificationContext();pushClientContext=current;pushDeliveryInfo=null;
+    const requireCurrent=()=>{if(!current())throw new Error('ACCOUNT_CHANGED');};
+    pushClient=KomunalkaPush.create({
+      request:async(action,data={})=>{requireCurrent();const response=action==='config'?await fetch(WORKER_URL+'?push-config=1',{cache:'no-store'}):await secureFetch('POST',{}, {action:'push_'+action,...data});const result=await response.json();requireCurrent();if(!response.ok||!result.success)throw new Error(result.error||'PUSH_REQUEST_FAILED');return result;},
+      registration:async()=>{requireCurrent();const registration=await pushRegistration();requireCurrent();return registration;},permission:{current:()=>Notification.permission,ask:()=>{requireCurrent();return Notification.requestPermission();}},
+      subscribeOptions:key=>({userVisibleOnly:true,applicationServerKey:Uint8Array.from(atob(key.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-key.length%4)%4)),c=>c.charCodeAt(0))}),report:(state,details)=>{if(current())renderPushState(state,details);}
+    });
+  }
   await pushClient.inspect();
 }
-$('enablePushBtn')?.addEventListener('click',async()=>{if(pushClient&&await pushClient.enable())localStorage.setItem('k_push_owner',sessionLogin);});
-$('disablePushBtn')?.addEventListener('click',async()=>{if(pushClient&&await pushClient.disable())localStorage.removeItem('k_push_owner');});
+$('enablePushBtn')?.addEventListener('click',async()=>{const client=pushClient,current=notificationContext(),owner=sessionLogin;if(client&&await client.enable()&&current()&&client===pushClient)localStorage.setItem('k_push_owner',owner);});
+$('disablePushBtn')?.addEventListener('click',async()=>{const client=pushClient,current=notificationContext();if(client&&await client.disable()&&current()&&client===pushClient)localStorage.removeItem('k_push_owner');});
 $('testPushBtn')?.addEventListener('click',async()=>{
-  const button=$('testPushBtn'),status=$('pushTestStatus');button.disabled=true;status.classList.remove('hidden');status.textContent='Надсилаємо тест…';
+  const button=$('testPushBtn'),status=$('pushTestStatus'),current=notificationContext();button.disabled=true;status.classList.remove('hidden');status.textContent='Надсилаємо тест…';
   try{
     const reg=await pushRegistration(),subscription=await reg.pushManager.getSubscription();if(!subscription)throw new Error('PUSH_NOT_CONNECTED');
+    if(!current())return;
     const response=await secureFetch('POST',{}, {action:'push_test',endpoint:subscription.endpoint}),result=await response.json();
+    if(!current())return;
     if(!response.ok||!result.success)throw new Error(result.error||'PUSH_TEST_FAILED');
     pushDeliveryInfo={...pushDeliveryInfo,lastTestAt:result.sentAt};
     status.textContent='Push-сервіс прийняв тест. Перевірте сповіщення на цьому пристрої.';
-  }catch(error){status.textContent=error.message==='TEST_RATE_LIMITED'?'Повторний тест доступний через хвилину.':error.message==='PUSH_NOT_CONNECTED'?'Підключення пристрою застаріло. Увімкніть сповіщення знову.':'Не вдалося надіслати тест. Перевірте мережу й повторіть.';}
-  finally{button.disabled=false;}
+  }catch(error){if(current())status.textContent=error.message==='TEST_RATE_LIMITED'?'Повторний тест доступний через хвилину.':error.message==='PUSH_NOT_CONNECTED'?'Підключення пристрою застаріло. Увімкніть сповіщення знову.':'Не вдалося надіслати тест. Перевірте мережу й повторіть.';}
+  finally{if(current())button.disabled=false;}
 });
 async function detachPush(){
   if(!('serviceWorker'in navigator))return true;
@@ -1953,42 +2025,44 @@ async function detachPush(){
 let telegramCheck=0;
 async function refreshTelegramState(){
   if(isGuest||!activeStore)return;
-  const check=++telegramCheck,status=$('telegramStatus');
+  const check=++telegramCheck,status=$('telegramStatus'),current=notificationContext();
   try{
     const response=await secureFetch('POST',{}, {action:'telegram_status'}),result=await response.json();
-    if(check!==telegramCheck)return;
+    if(check!==telegramCheck||!current())return;
     if(!response.ok||!result.success)throw new Error(result.error||'TELEGRAM_STATUS_FAILED');
     telegramConnectionState=result.connected?'connected':'disconnected';
     const last=reminderDayLabel(result.lastReminderDay);
     status.textContent=!result.available?'Telegram-бот ще не налаштований на сервері.':result.connected?`Підключено до приватного чату.${last?' Останнє успішне нагадування: '+last+'.':''}`:'Не підключено. Відкрийте бота й натисніть Start після створення посилання.';
+    if(result.connected)status.textContent+=deliveryAttemptLabel(result);
     $('telegramConnect').classList.toggle('hidden',!result.available||result.connected);
     $('telegramDisconnect').classList.toggle('hidden',!result.connected);
     $('testTelegramBtn').classList.toggle('hidden',!result.connected);$('telegramChannelDot')?.classList.toggle('is-connected',result.connected);$('telegramChannelDot')?.classList.remove('is-error');renderReminderOverview();
-  }catch{if(check!==telegramCheck)return;telegramConnectionState='unknown';status.textContent='Стан Telegram не вдалося перевірити. Перевірте мережу й відкрийте розділ ще раз.';$('testTelegramBtn').classList.add('hidden');$('telegramChannelDot')?.classList.remove('is-connected');$('telegramChannelDot')?.classList.add('is-error');renderReminderOverview();}
+  }catch{if(check!==telegramCheck||!current())return;telegramConnectionState='unknown';status.textContent='Стан Telegram не вдалося перевірити. Перевірте мережу й відкрийте розділ ще раз.';$('testTelegramBtn').classList.add('hidden');$('telegramChannelDot')?.classList.remove('is-connected');$('telegramChannelDot')?.classList.add('is-error');renderReminderOverview();}
 }
 $('testTelegramBtn')?.addEventListener('click',async()=>{
-  const button=$('testTelegramBtn'),status=$('telegramTestStatus');button.disabled=true;status.classList.remove('hidden');status.textContent='Надсилаємо тест у чат…';
-  try{const response=await secureFetch('POST',{}, {action:'telegram_test'}),result=await response.json();if(!response.ok||!result.success)throw new Error(result.error||'TELEGRAM_TEST_FAILED');status.textContent='Telegram прийняв тест. Перевірте свій чат.';}
-  catch(error){status.textContent=error.message==='TEST_RATE_LIMITED'?'Повторний тест доступний через хвилину.':error.message==='TELEGRAM_NOT_CONNECTED'?'Чат більше не підключений. Підключіть Telegram знову.':'Не вдалося надіслати тест. Перевірте мережу й повторіть.';}
-  finally{button.disabled=false;}
+  const button=$('testTelegramBtn'),status=$('telegramTestStatus'),current=notificationContext();button.disabled=true;status.classList.remove('hidden');status.textContent='Надсилаємо тест у чат…';
+  try{const response=await secureFetch('POST',{}, {action:'telegram_test'}),result=await response.json();if(!current())return;if(!response.ok||!result.success)throw new Error(result.error||'TELEGRAM_TEST_FAILED');status.textContent='Telegram прийняв тест. Перевірте свій чат.';}
+  catch(error){if(current())status.textContent=error.message==='TEST_RATE_LIMITED'?'Повторний тест доступний через хвилину.':error.message==='TELEGRAM_NOT_CONNECTED'?'Чат більше не підключений. Підключіть Telegram знову.':'Не вдалося надіслати тест. Перевірте мережу й повторіть.';}
+  finally{if(current())button.disabled=false;}
 });
 $('telegramConnect')?.addEventListener('click',async()=>{
-  const button=$('telegramConnect'),status=$('telegramStatus');button.disabled=true;status.textContent='Створюємо приватне посилання…';
+  const button=$('telegramConnect'),status=$('telegramStatus'),current=notificationContext();button.disabled=true;status.textContent='Створюємо приватне посилання…';
   try{
     const response=await secureFetch('POST',{}, {action:'telegram_begin'}),result=await response.json();
+    if(!current())return;
     if(!response.ok||!result.success)throw new Error(result.error||'TELEGRAM_CONNECT_FAILED');
     if(!/^https:\/\/t\.me\/[A-Za-z0-9_]+\?start=[a-f0-9]{32}$/.test(result.url))throw new Error('INVALID_TELEGRAM_LINK');
     status.textContent='Посилання готове. У боті натисніть Start, потім поверніться сюди.';
     const link=$('telegramOpenLink');link.href=result.url;link.classList.remove('hidden');
     window.open(result.url,'_blank','noopener,noreferrer');
-  }catch(error){status.textContent=error.message==='TELEGRAM_WEBHOOK_CONFLICT'?'Цей бот уже використовує інший сервіс. Потрібен окремий бот для Комуналки.':'Не вдалося підключити Telegram. Перевірте мережу й повторіть.';}
-  finally{button.disabled=false;}
+  }catch(error){if(current())status.textContent=error.message==='TELEGRAM_WEBHOOK_CONFLICT'?'Цей бот уже використовує інший сервіс. Потрібен окремий бот для Комуналки.':'Не вдалося підключити Telegram. Перевірте мережу й повторіть.';}
+  finally{if(current())button.disabled=false;}
 });
 $('telegramDisconnect')?.addEventListener('click',async()=>{
-  const button=$('telegramDisconnect');button.disabled=true;
-  try{const response=await secureFetch('POST',{}, {action:'telegram_unlink'}),result=await response.json();if(!response.ok||!result.success)throw new Error('UNLINK_FAILED');await refreshTelegramState();showToast('Telegram відключено','✓');}
-  catch{$('telegramStatus').textContent='Не вдалося відключити. Перевірте мережу й повторіть.';}
-  finally{button.disabled=false;}
+  const button=$('telegramDisconnect'),current=notificationContext();button.disabled=true;
+  try{const response=await secureFetch('POST',{}, {action:'telegram_unlink'}),result=await response.json();if(!current())return;if(!response.ok||!result.success)throw new Error('UNLINK_FAILED');await refreshTelegramState();if(current())showToast('Telegram відключено','✓');}
+  catch{if(current())$('telegramStatus').textContent='Не вдалося відключити. Перевірте мережу й повторіть.';}
+  finally{if(current())button.disabled=false;}
 });
 window.addEventListener('focus',()=>{if(!$('settings-reminders')?.classList.contains('hidden'))void refreshTelegramState();});
 setTimeout(initPush,1000);
@@ -2000,15 +2074,15 @@ $('shareAppBtn')?.addEventListener('click',async()=>{const text='🏠 Комун
 // =================== LOGOUT ===================
 $('deleteAccountBtn')?.addEventListener('click',()=>{const dialog=$('deleteAccountDialog');if(!dialog)return;$('deleteAccountConfirm').value='';$('deleteAccountPassword').value='';$('deleteAccountLoginHint').textContent=sessionLogin;$('deleteAccountPasswordWrap')?.classList.toggle('hidden',!accountHasPassword);$('deleteAccountError')?.classList.add('hidden');if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');});
 $('deleteAccountCancel')?.addEventListener('click',()=>{const dialog=$('deleteAccountDialog');if(typeof dialog?.close==='function')dialog.close();else dialog?.removeAttribute('open');});
-$('deleteAccountForm')?.addEventListener('submit',async event=>{event.preventDefault();const error=$('deleteAccountError'),button=$('deleteAccountConfirmBtn');error?.classList.add('hidden');if($('deleteAccountConfirm')?.value.trim().toLowerCase()!==String(sessionLogin||'').toLowerCase()){error.textContent='Введіть свій логін точно так, як показано в акаунті.';error.classList.remove('hidden');return;}button.disabled=true;button.textContent='Видалення…';try{const response=await secureFetch('POST',{}, {action:'delete_account',confirmation:$('deleteAccountConfirm').value.trim(),password:$('deleteAccountPassword')?.value||''}),result=await response.json();if(!response.ok||!result.success)throw new Error(result.error||'DELETE_FAILED');['k_login','k_passHash','k_session','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));localStorage.removeItem(`k_ai_history_v2:${encodeURIComponent(sessionLogin)}`);localStorage.removeItem(`k_ai_consent_v1:${encodeURIComponent(sessionLogin)}`);location.href=window.location.pathname;}
-  catch(err){error.textContent=err.message==='WRONG_PASSWORD'?'Неправильний поточний пароль.':'Не вдалося видалити акаунт. Дані не змінено.';error.classList.remove('hidden');button.disabled=false;button.textContent='Видалити назавжди';}});
+$('deleteAccountForm')?.addEventListener('submit',async event=>{event.preventDefault();const error=$('deleteAccountError'),button=$('deleteAccountConfirmBtn');error?.classList.add('hidden');if($('deleteAccountConfirm')?.value.trim().toLowerCase()!==String(sessionLogin||'').toLowerCase()){error.textContent='Введіть свій логін точно так, як показано в акаунті.';error.classList.remove('hidden');return;}button.disabled=true;button.textContent='Видалення…';const deletingOwner=sessionLogin;let serverDeleted=false;try{const response=await secureFetch('POST',{}, {action:'delete_account',confirmation:$('deleteAccountConfirm').value.trim(),password:$('deleteAccountPassword')?.value||''}),result=await response.json();if(!response.ok||!result.success)throw new Error(result.error||'DELETE_FAILED');serverDeleted=true;const owner=encodeURIComponent(deletingOwner),prefix=`komynalka_account_v1:${owner}`;for(const key of Object.keys(localStorage))if(key===prefix||key.startsWith(prefix+':')||key===`${DEVICE_META_PREFIX}:${owner}`||['k_ai_history_v2:','k_ai_consent_v1:','k_ai_context_v1:'].some(p=>key===p+owner))localStorage.removeItem(key);if(localStorage.getItem('k_ai_history_migrated_v2')===deletingOwner)localStorage.removeItem('k_ai_history');if(deletingOwner!==sessionLogin)return;window.komunalkaAI?.cancel();activeStore=null;activeDrain=null;draftContext=null;if(googleUser){try{await firebase.auth().signOut();}catch{}}['k_login','k_passHash','k_session','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));location.href=window.location.pathname;}
+  catch(err){error.textContent=serverDeleted?'Акаунт видалено на сервері. Локальне очищення не завершилося — закрийте вкладку й приберіть дані цього сайту на пристрої.':err.message==='WRONG_PASSWORD'?'Неправильний поточний пароль.':'Не вдалося видалити акаунт. Дані не змінено.';error.classList.remove('hidden');button.disabled=false;button.textContent='Видалити назавжди';}});
 async function logout(){
   if(isGuest){window.location.href=window.location.pathname;return;}
   if(confirm('Вийти? Локальний бекап і налаштування залишаться на пристрої.')){
     if(!saveDraft()||!saveToLocal())return;
     if(!await detachPush()){showToast('Не вдалося вимкнути сповіщення. Повторіть вихід.','⚠️');return;}
     try{await secureFetch('POST',{}, {action:'auth_logout'});}catch{}
-    ['k_login','k_passHash','k_session','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));
+    window.komunalkaAI?.cancel();['k_login','k_passHash','k_session','k_uid','k_display_name'].forEach(key=>localStorage.removeItem(key));
     if(googleUser){try{await firebase.auth().signOut();}catch(e){}}
     location.reload();
   }
@@ -2267,10 +2341,10 @@ if(urlShareToken){
 } else {
   const uid=localStorage.getItem('k_uid');
   if(!navigator.onLine&&initialDeviceLogin){
-    try{activeStore=KomunalkaData.create(localStorage,initialDeviceLogin);const state=activeStore.read();if(state){sessionLogin=initialDeviceLogin;authUid=uid;bindAccount(initialDeviceLogin,state.base,state.revision,2);applySnapshot(activeStore.read().local);setSyncState('offline');}else activeStore=null;}catch(e){showToast('Локальну копію не вдалося відкрити. Оригінал збережено.','⚠️');}
+    restoreCachedAccount(initialDeviceLogin,uid);
   }else if(uid){
-    const unsubscribe=firebase.auth().onAuthStateChanged(user=>{unsubscribe();if(user&&user.uid===uid){googleUser=user;performLogin(null,null,false,uid);}else{if($('authError')){$('authError').textContent='Увійдіть через Google, щоб відкрити свої дані.';$('authError').classList.remove('hidden');}}});
-  }else if(sessionLogin&&(sessionToken||sessionPass))performLogin(sessionLogin,sessionPass,true);
+    const unsubscribe=firebase.auth().onAuthStateChanged(user=>{unsubscribe();if(user&&user.uid===uid){googleUser=user;performLogin(null,null,false,uid,true);}else{if($('authError')){$('authError').textContent='Увійдіть через Google, щоб відкрити свої дані.';$('authError').classList.remove('hidden');}}});
+  }else if(sessionLogin&&(sessionToken||sessionPass))performLogin(sessionLogin,sessionPass,true,null,true);
 }
 
 $('mode-light')?.addEventListener('click',()=>setThemeMode('light'));
@@ -2292,13 +2366,14 @@ let updateRegistration=null,updateManager=null;
 async function registerServiceWorker(){
   if(!('serviceWorker' in navigator))return;
   try{
+    const existingController=navigator.serviceWorker.controller;
     const registration=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});updateRegistration=registration;
     updateManager=KomunalkaUpdates.create({controller:()=>navigator.serviceWorker.controller,onReady:worker=>{pendingServiceWorker=worker;showUpdateBanner();},onClear:()=>{pendingServiceWorker=null;$('updateBanner')?.remove();}});
     const check=()=>updateManager.check(registration);
     registration.addEventListener('updatefound',()=>{const next=registration.installing;if(next)next.addEventListener('statechange',()=>{if(next.state==='installed'||next.state==='redundant')check();});});
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
-      updateManager.clear();if(!isRefreshingAfterUpdate)return;
-      if(saveDraft())window.location.reload();
+      updateManager.clear();if(!isRefreshingAfterUpdate&&!existingController)return;
+      if(!saveDraft()||(activeStore&&(syncCurrentAddress(),!saveToLocal())))return;window.location.reload();
     });
     await check();initPush();
     let lastUpdateCheck=0;
@@ -2803,10 +2878,10 @@ function createRecordCard(rec) {
       <div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5">
         ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background:${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span>💧 Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span>🌡️ Гар.</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span>⚡ Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span>🔥 Газ</span><span>${Math.round(pG)}%</span></div>`:''}${(100-pW-pHW-pE-pG)>1?`<div class="flex justify-between"><span>📦 Інше</span><span>${Math.round(100-pW-pHW-pE-pG)}%</span></div>`:''}</div></div>` : ''}
         <div class="space-y-3">
-          ${showW ? `<div class="flex justify-between"><span class="font-bold">💧 Вода</span><span class="font-black">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.wPrev}→${rec.wCur}</span><span class="text-blue-500">+${rec.wCur-rec.wPrev} м³</span></div>` : ''}
-          ${showHW ? `<div class="flex justify-between"><span class="font-bold">🌡️ Гар.</span><span class="font-black">${fmt.format(rec.hotWaterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.hwPrev}→${rec.hwCur}</span><span class="text-red-500">+${rec.hwCur-rec.hwPrev} м³</span></div>` : ''}
-          ${showE ? `<div class="flex justify-between"><span class="font-bold">⚡ Світло</span><span class="font-black">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>Д:${rec.dPrev}→${rec.dCur}</span><span class="text-yellow-600">+${rec.dCur-rec.dPrev}</span></div>${(rec.nCur||rec.nPrev)?`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl mt-1"><span>Н:${rec.nPrev}→${rec.nCur}</span><span class="text-indigo-500">+${rec.nCur-rec.nPrev}</span></div>`:''}` : ''}
-          ${showG ? `<div class="flex justify-between"><span class="font-bold">🔥 Газ</span><span class="font-black">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.gPrev}→${rec.gCur}</span><span class="text-orange-500">+${rec.gCur-rec.gPrev} м³</span></div>` : ''}
+          ${Object.keys(rec._meterEvents||{}).length?'<p class="meter-replacement-note">У цьому місяці враховано заміну лічильника: споживання до й після заміни.</p>':''}${showW ? `<div class="flex justify-between"><span class="font-bold">💧 Вода</span><span class="font-black">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.wPrev}→${rec.wCur}</span><span class="text-blue-500">+${recordUsage(rec,'wPrev','wCur')} м³</span></div>` : ''}
+          ${showHW ? `<div class="flex justify-between"><span class="font-bold">🌡️ Гар.</span><span class="font-black">${fmt.format(rec.hotWaterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.hwPrev}→${rec.hwCur}</span><span class="text-red-500">+${recordUsage(rec,'hwPrev','hwCur')} м³</span></div>` : ''}
+          ${showE ? `<div class="flex justify-between"><span class="font-bold">⚡ Світло</span><span class="font-black">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>Д:${rec.dPrev}→${rec.dCur}</span><span class="text-yellow-600">+${recordUsage(rec,'dPrev','dCur')}</span></div>${(rec.nCur||rec.nPrev)?`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl mt-1"><span>Н:${rec.nPrev}→${rec.nCur}</span><span class="text-indigo-500">+${recordUsage(rec,'nPrev','nCur')}</span></div>`:''}` : ''}
+          ${showG ? `<div class="flex justify-between"><span class="font-bold">🔥 Газ</span><span class="font-black">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.gPrev}→${rec.gCur}</span><span class="text-orange-500">+${recordUsage(rec,'gPrev','gCur')} м³</span></div>` : ''}
           ${showC ? `<div class="flex justify-between"><span class="font-bold">📦 Інше</span><span class="font-black">${fmt.format(rec.customCost)} ₴</span></div>${rec.customData ? Object.values(rec.customData).filter(s=>s.val>0).map(s=>`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${escapeHtml(s.name)}</span><span class="text-purple-500">${fmt.format(s.val)} ₴</span></div>`).join('') : ''}` : ''}
           ${paymentStatus === 'partial' ? `<div class="flex justify-between text-[11px] font-bold text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-500/10 px-3 py-2 rounded-xl"><span>💳 Сплачено частково</span><span>${fmt.format(paidAmount)} ₴ / борг ${fmt.format(outstanding)} ₴</span></div>` : ''}
           ${paymentStatus !== 'charged' && (paymentDateLabel || paymentReference) ? `<div class="payment-history-meta"><i class="fa-solid fa-receipt" aria-hidden="true"></i><div><strong>Підтвердження оплати</strong>${paymentDateLabel?`<span>${escapeHtml(paymentDateLabel)}</span>`:''}${paymentReference?`<span>${escapeHtml(paymentReference)}</span>`:''}</div></div>` : ''}
@@ -3013,7 +3088,7 @@ function openSettingsPanel(name){
   $('swipeContainer')?.scrollTo({top:0});
   if(name==='providers')renderProviders();
   if(name==='reminders'){renderReminderOverview();void initPush();void refreshTelegramState();}
-  if(name==='account'){void refreshAdminEntry();void loadShares();}
+  if(name==='account'){void refreshAdminEntry();void loadShares();void window.KomunalkaAccountTools?.loadSessions();}
   if(panel)panel.querySelector('h3')?.focus({preventScroll:true});
 }
 document.querySelectorAll('[data-settings-open]').forEach(button=>button.addEventListener('click',()=>openSettingsPanel(button.dataset.settingsOpen)));
@@ -3043,13 +3118,13 @@ $('overviewDetails')?.addEventListener('toggle',()=>{if($('overviewDetails').ope
 
 // Fast entry keeps every input mounted. Collapsing a service never changes values.
 function activeMeterGroups(){
-  return [['blockWater','Вода',prefs.showWater,['wCur']],['blockHotWater','Гаряча вода',prefs.showHotWater,['hwCur']],['blockElectro','Світло',prefs.showElectro,prefs.electroTwoZone?['dCur','nCur']:['dCur']],['blockGas','Газ',prefs.showGas,['gCur']]].filter(([, ,enabled])=>enabled).map(([id,label,,fields])=>({id,label,fields,complete:fields.every(key=>$(key)?.value!==''&&$(key)?.getAttribute('aria-invalid')!=='true'&&!$(key)?.validity.badInput)}));
+  return [['blockWater','Вода',prefs.showWater,['wCur']],['blockHotWater','Гаряча вода',prefs.showHotWater,['hwCur']],['blockElectro','Світло',prefs.showElectro,prefs.electroTwoZone?['dCur','nCur']:['dCur']],['blockGas','Газ',prefs.showGas,['gCur']]].filter(([, ,enabled])=>enabled).map(([id,label,,fields])=>{const invalid=fields.some(key=>[key,key.replace('Cur','Prev')].some(input=>$(input)?.getAttribute('aria-invalid')==='true'||$(input)?.validity.badInput));return{id,label,fields,invalid,complete:!invalid&&fields.every(key=>$(key)?.value!=='')};});
 }
 function renderEntryProgress(){
   if(!$('entryProgress'))return;const groups=activeMeterGroups(),done=groups.filter(g=>g.complete).length;
   $('entryProgress').textContent=groups.length?`Лічильники: ${done} з ${groups.length} заповнено`:'Додаткові послуги та оплата';
   $('collapseCompleted').disabled=done===0;
-  for(const g of groups){const badge=$(g.id+'State');if(badge){badge.textContent=g.complete?'Заповнено':'Очікує показників';badge.classList.toggle('complete',g.complete);}const next=$(g.id).querySelector('.meter-next');if(next){const index=groups.indexOf(g);next.firstChild.textContent=index<groups.length-1?'Далі: '+groups[index+1].label+' ':'До підсумку ';}}
+  for(const g of groups){const badge=$(g.id+'State');if(badge){badge.textContent=g.invalid?'Перевірте показники':g.complete?'Заповнено':'Очікує показників';badge.classList.toggle('complete',g.complete);}const next=$(g.id).querySelector('.meter-next');if(next){const index=groups.indexOf(g);next.firstChild.textContent=index<groups.length-1?'Далі: '+groups[index+1].label+' ':'До підсумку ';}}
 }
 function focusEntryField(input){if(!input)return;const detail=input.closest('.meter-details');if(detail)detail.open=true;input.scrollIntoView?.({block:'center',behavior:'smooth'});input.focus({preventScroll:true});}
 function showEntryReview(){calculatePreview();const invalid=$('utilityForm').querySelector('[aria-invalid="true"]');if(invalid){focusEntryField(invalid);return;}const title=$('entryReviewTitle');title.scrollIntoView?.({block:'center',behavior:'smooth'});title.focus({preventScroll:true});}

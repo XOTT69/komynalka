@@ -46,7 +46,8 @@
       const current=rec[currentKey],previous=rec[previousKey];
       if(current===null||current===undefined||current===''||!Number.isFinite(Number(current))||Number(current)<0)return null;
       const hasPrevious=rec._enteredPrevious?.[previousKey]!==false&&previous!==null&&previous!==undefined&&previous!==''&&Number.isFinite(Number(previous))&&Number(previous)>=0&&Number(current)>=Number(previous)&&(rec._enteredPrevious?.[previousKey]===true||Number(previous)>0);
-      return {label,unit,current:String(current),previous:hasPrevious?String(previous):'',difference:hasPrevious?String(Number((Number(current)-Number(previous)).toFixed(6))):''};
+      const replacement=rec._meterEvents?.[previousKey],difference=hasPrevious?(typeof KomunalkaMeters!=='undefined'?KomunalkaMeters.usage(previous,current,replacement):Number(current)-Number(previous)):null;
+      return {label,unit,current:String(current),previous:hasPrevious?String(previous):'',difference:difference===null?'':String(difference),...(replacement?{replacement}:{})};
     });
     if(values.some(value=>value===null))return null;
     if(rec._filled?.[id]!==true&&!values.some(value=>Number(value.current)>0))return null;
@@ -60,14 +61,14 @@
     const values=meterValues(address,service.id,month);if(!values)return null;
     const to=email(card.email);if(!to)return null;
     const one=values.length===1?values[0]:null;
-    const list=values.map(value=>`${value.label}: поточні ${value.current}${value.previous?`, попередні ${value.previous}, різниця ${value.difference}`:''} ${value.unit}`).join('\n');
+    const list=values.map(value=>`${value.label}: поточні ${value.current}${value.previous?`, попередні ${value.previous}, різниця ${value.difference}`:''} ${value.unit}${value.replacement?`; заміна ${value.replacement.date}: старий ${value.replacement.oldPrevious} → ${value.replacement.oldFinal}, новий від ${value.replacement.newInitial}`:''}`).join('\n');
     const tokens={account:String(card.account||'').trim(),address:String(address.name||'').trim(),service:service.label,month,current:one?.current||'',previous:one?.previous||'',difference:one?.difference||'',readings:list};
     const fill=text=>text.replace(/\{(account|address|service|month|current|previous|difference|readings)\}/g,(_,key)=>tokens[key]);
     const defaultSubject=tokens.account?`О/р ${tokens.account}. ${tokens.address}`:`Показники: ${tokens.service}. ${tokens.address}`;
-    const defaultBody=one&&one.previous?`Показники ліч. Поточні ${one.current}. Попередні ${one.previous}. Різниця ${one.difference}`:`Показники за ${month}:\n${list}`;
+    const defaultBody=one&&one.previous&&!one.replacement?`Показники ліч. Поточні ${one.current}. Попередні ${one.previous}. Різниця ${one.difference}`:`Показники за ${month}:\n${list}`;
     const subject=card.emailSubject?fill(template(card.emailSubject,240).replace(/[\r\n]+/g,' ')):defaultSubject;
     const body=card.emailBody?fill(template(card.emailBody,1500)):defaultBody;
-    return {to,subject,body,needsReview:values.some(value=>!value.previous)};
+    return {to,subject,body,needsReview:values.some(value=>!value.previous||value.replacement)};
   }
   function mailto(draft){return `mailto:${encodeURIComponent(email(draft.to)).replace('%40','@')}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`;}
   function gmail(draft){
@@ -90,5 +91,5 @@
     if((all!==undefined&&!object(all))||(group!==undefined&&!object(group))||(service!==undefined&&!object(service)))throw new Error('INVALID_DELIVERY_DATA');
     return {...(settings||{}),providerDeliveries:{...(all||{}),[addressKey(address)]:{...(group||{}),[serviceKey(id)]:{...(service||{}),[period]:{...(object(service?.[period])?service[period]:{}),sentAt:stamp}}}}};
   }
-  global.KomunalkaProviders=Object.freeze({services,website,email,get,update,readings,emailDraft,mailto,gmail,delivery,markDelivered});
+  global.KomunalkaProviders=Object.freeze({services,website,email,get,update,meterValues,readings,emailDraft,mailto,gmail,delivery,markDelivered});
 })(globalThis);

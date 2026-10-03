@@ -20,3 +20,11 @@ test('comparison ignores future, missing and invalid readings without changing r
   const [result]=I.compare(records,'2026-09',{water:5});
   assert.equal(result.tone,'low');assert.equal(result.average,10);assert.equal(JSON.stringify(records),before);assert.equal(I.usage({_filled:{water:false},wPrev:0,wCur:100},'water'),null);
 });
+
+test('unentered services are not reported as a 100 percent saving, while explicit zero remains valid',()=>{
+  const records=['2026-07','2026-08'].map(month=>({...water(month,10),gPrev:0,gCur:10,dPrev:0,dCur:10}));
+  assert.deepEqual(Array.from(I.compare(records,'2026-09',{water:null,electro:'',gas:false})),[]);
+  const [zero]=I.compare(records,'2026-09',{water:0,gas:null,electro:null});assert.equal(zero.id,'water');assert.equal(zero.percent,-100);
+  assert.equal(I.usage({wPrev:null,wCur:100},'water'),null);
+  assert.equal(I.usage({wPrev:0,wCur:100,_enteredPrevious:{wPrev:false}},'water'),null);
+});

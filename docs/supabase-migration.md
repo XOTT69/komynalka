@@ -1,4 +1,6 @@
-# KV → Supabase migration
+# Архівний варіант KV → Supabase migration
+
+Це не чинна архітектура чи план deployment. Нині основний стан — Durable Objects, KV — mirror/індекси. Не застосовувати цей документ до поточного релізу; див. `release-5.13.0.md`.
 
 The migration is deliberately opt-in. Workers KV remains the source of truth until every snapshot has been verified.
 

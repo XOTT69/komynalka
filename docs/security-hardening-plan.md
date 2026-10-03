@@ -1,25 +1,9 @@
-# Security hardening plan
+# Поточна безпека і наступні перевірки
 
-## Already covered in the codebase
+Актуальна архітектура: Cloudflare Durable Objects — основний стан акаунтів; KV — індекси, mappings і сумісний mirror. Firebase перевіряє Google ID tokens. Паролі — salted PBKDF2-SHA256; вхід видає окремі opaque Worker-сесії. Legacy SHA-256 зберігається лише для сумісного переходу після перевірки пароля.
 
-- Worker responses are non-cacheable and carry `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`.
-- Worker CORS uses an origin allowlist. The deployed worker accepts the production domain and approved local development origins; extra production/preview domains are supplied through `ALLOWED_ORIGINS` in Worker configuration.
-- Worker request bodies are limited to 512 KiB even when `Content-Length` is absent.
-- Supabase shadow writes are opt-in and use Worker secrets, never browser variables.
-- Client sync keeps the newest full snapshot locally while offline; a stale response cannot erase a newer queued snapshot.
-- The frontend bundles Firebase, fonts and PDF dependencies locally rather than relying on production CDNs.
+У 5.13.0 закриті знайдені аудиторські прогалини: guest whitelist/expiry/revoke, неявна реєстрація, змішування AI-власників, export/import, приватне видалення, відновлюваний encrypted backup і rate-limit cleanup. Деталі й обмеження: [реліз 5.13.0](release-5.13.0.md), [операції recovery](recovery-operations.md).
 
-## Required before calling the service fully production-hardened
+Перед випуском: повний `npm run check`, `npm run worker:check`, актуальний dependency audit, реальна приватна копія й rehearsal, фізичні iPhone/Android та фактична доставка нагадувань. Зовнішній моніторинг/alerts, автоматичне приватне резервування й навантажувальний тест ще потребують налаштованої інфраструктури. Проходження тестів не доводить відсутності інших багів.
 
-1. Replace legacy `login + SHA-256 password hash` bearer authorization with Firebase Auth ID-token verification in the Worker (or a server-side session). A reusable client-side password hash behaves like a long-lived password and must not remain the final authentication protocol.
-2. Keep `ALLOWED_ORIGINS` current as new production or preview domains are approved. The wildcard has been removed; do not reintroduce it.
-3. Move primary account reads from KV to Supabase only after the controlled migration described in `supabase-migration.md`, with row-level security tested using the anonymous key.
-4. Add a scheduled backup export, encryption at rest for exported archives, a recovery test, and a retention policy.
-5. Add alerting for Worker exceptions, authentication spikes, 429 bursts, failed shadow writes and health endpoint downtime.
-6. Test authorization boundaries: account A must never read, edit, share or delete account B data; test expired share links and deleted objects.
-
-## Operating rules
-
-- Never place `SUPABASE_SERVICE_ROLE_KEY`, admin password, AI keys or Worker tokens in the repository or frontend code.
-- Do not enable a new custom domain before the TLS certificate is valid and the domain is added to Firebase Authorized domains.
-- Treat local browser storage as a convenience backup, not the only recovery mechanism.
+CORS лишається allowlist; secrets тільки в Worker, не в frontend/Git. Логи без credentials і приватних snapshot. Поточні namespace IDs не замінюються. Автоматичної міграції в Supabase немає: старий документ Supabase — історичний варіант, не чинна release-інструкція.

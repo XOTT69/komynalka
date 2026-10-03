@@ -5,14 +5,32 @@ import path from 'node:path';
 import worker from '../worker.js';
 import {environment} from './local-worker.mjs';
 import {demoAccount,demoPassHash} from './demo-data.mjs';
-const demo=process.argv.includes('--demo'),port=demo?4174:4173;
+import {parseSessionToken,sessionToken,sha256Hex} from '../password-auth.js';
+const pwa=process.argv.includes('--pwa'),demo=process.argv.includes('--demo')||pwa,port=pwa?4175:demo?4174:4173;
 execFileSync(process.execPath,['scripts/build.mjs'],{stdio:'inherit'});
 const root=path.resolve('dist'),{env}=environment({demo:demoAccount});
-env.ALLOWED_ORIGINS='http://127.0.0.1:4174,http://localhost:4174';
+env.ALLOWED_ORIGINS=`http://127.0.0.1:${port},http://localhost:${port}`;
+// A cached fixture HTML must still sign into the isolated fixture after a server
+// restart. This deliberately public test token is never used outside localhost.
+const pwaFixtureToken=`s1.ZGVtbw.${'42'.repeat(32)}`;
+if(pwa)await env.ACCOUNT_STORE.get('demo').fetch(new Request('https://account.internal',{method:'POST',body:JSON.stringify({login:'demo',action:'session-create',tokenHash:await sha256Hex(pwaFixtureToken),deviceName:'PWA · тест'})}));
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2','.ttf':'font/ttf'};
+let previewRelease=1,previewOffline=false;
 createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,`http://127.0.0.1:${port}`);
+    if(pwa&&url.pathname==='/__demo/pwa/status'&&req.method==='GET'){
+      res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});return res.end(JSON.stringify({previewRelease,previewOffline}));
+    }
+    if(pwa&&['/__demo/pwa/release','/__demo/pwa/network'].includes(url.pathname)){
+      const allowedOrigins=[`http://localhost:${port}`,`http://127.0.0.1:${port}`];
+      if(req.method!=='POST'||!allowedOrigins.includes(req.headers.origin)){res.writeHead(403);return res.end();}
+      if(url.pathname.endsWith('/release'))previewRelease=2;
+      else previewOffline=url.searchParams.get('offline')==='1';
+      res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});return res.end(JSON.stringify({previewRelease,previewOffline}));
+    }
+    // Test-only network failure; controls above remain reachable to undo it.
+    if(pwa&&previewOffline){res.writeHead(503,{'Cache-Control':'no-store'});return res.end('Local PWA offline test');}
     if(demo&&url.pathname.replace(/\/$/,'')==='/__demo/api'){
       const chunks=[];for await(const chunk of req)chunks.push(chunk);
       const request=new Request('https://local.invalid'+url.search,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:Buffer.concat(chunks)}:{})});
@@ -22,16 +40,28 @@ createServer(async(req,res)=>{
     if(file!==root&&!file.startsWith(root+path.sep)){res.writeHead(403);return res.end();}
     if((await stat(file)).isDirectory())file=path.join(file,'index.html');
     let data=await readFile(file);
-    if(demo&&path.basename(file)==='app.js')data=Buffer.from(data.toString().replace(/https:\/\/komunproga\.mikolenko-anton1\.workers\.dev/g,'/__demo/api'));
-    if(demo&&path.basename(file)==='admin.html')data=Buffer.from(data.toString().replace(/https:\/\/komunproga\.mikolenko-anton1\.workers\.dev/g,'/__demo/api'));
-    if(demo&&path.basename(file)==='sw.js'){res.writeHead(404);return res.end();}
+    if(pwa&&path.basename(file)==='sw.js')data=Buffer.from(data.toString().replace(/(const CACHE_NAME = 'komunalka-[^']+)';/,`$1-preview${previewRelease}';`));
+    if(demo&&path.basename(file)==='app.js'){
+      let script=data.toString().replace(/https:\/\/komunproga\.mikolenko-anton1\.workers\.dev/g,'/__demo/api');
+      if(!pwa)script=script.replace("window.addEventListener('load',registerServiceWorker);",'/* Service Worker is tested separately with npm run demo:pwa. */');
+      data=Buffer.from(script);
+    }
+    if(demo&&['admin.html','admin-panel.js'].includes(path.basename(file)))data=Buffer.from(data.toString().replace(/https:\/\/komunproga\.mikolenko-anton1\.workers\.dev/g,'/__demo/api'));
+    if(demo&&!pwa&&path.basename(file)==='sw.js'){res.writeHead(404);return res.end();}
     if(demo&&path.basename(file)==='index.html'){
       let html=data.toString().replace(/<script async src="https:\/\/www.googletagmanager[^>]*><\/script>/g,'');
-      const bootstrap=`<script>localStorage.setItem('k_login','demo');localStorage.setItem('k_passHash','${demoPassHash}');const demoAuth={currentUser:null,onAuthStateChanged(cb){setTimeout(()=>cb(null),0);return()=>{};},signOut:async()=>{}};window.firebase={initializeApp(){},auth:()=>demoAuth};window.firebase.auth.GoogleAuthProvider=class{};</script>`;
+      // Each demo server has isolated sessions: never reuse a token from an older run.
+      const token=pwa?pwaFixtureToken:sessionToken('demo');
+      await env.ACCOUNT_STORE.get('demo').fetch(new Request('https://account.internal',{method:'POST',body:JSON.stringify({login:'demo',action:'session-create',tokenHash:await sha256Hex(parseSessionToken(token).token),deviceName:'Демонстрація'})}));
+      const bootstrap=`<script>localStorage.setItem('k_login','demo');localStorage.setItem('k_session','${token}');localStorage.removeItem('k_passHash');const demoAuth={currentUser:null,onAuthStateChanged(cb){setTimeout(()=>cb(null),0);return()=>{};},signOut:async()=>{}};window.firebase={initializeApp(){},auth:()=>demoAuth};window.firebase.auth.GoogleAuthProvider=class{};</script>`;
       html=html.replace('<script src="app.js"',bootstrap+'<script src="app.js"');
+      if(pwa){
+        if(previewRelease===2)html=html.replace(/(<meta name="app-build" content="[^"]+)"/, '$1-preview2"');
+        html=html.replace('</body>',(await readFile('scripts/pwa-preview-controls.html','utf8'))+'</body>');
+      }
       html=html.replace('</body>','<div style="position:fixed;top:0;left:0;right:0;z-index:9999;padding:3px 12px;background:#2456bd;color:white;text-align:center;font:12px sans-serif;pointer-events:none">Демонстрація · вигадані дані · зміни лише в цьому перегляді</div></body>');
       data=Buffer.from(html);
     }
     res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream','Cache-Control':'no-store'});res.end(data);
   }catch{res.writeHead(404);res.end('Not found');}
-}).listen(port,'127.0.0.1',()=>console.log(`Local${demo?' demo':''}: http://127.0.0.1:${port}`));
+}).listen(port,'127.0.0.1',()=>console.log(`Local${pwa?' PWA demo':demo?' demo':''}: http://127.0.0.1:${port}`));

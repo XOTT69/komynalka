@@ -3,6 +3,8 @@ import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
+import {compile,optimize} from '@tailwindcss/node';
+import {Scanner} from '@tailwindcss/oxide';
 const root=fileURLToPath(new URL('..',import.meta.url));
 process.chdir(root);
 const packageJson=JSON.parse(await readFile('package.json','utf8'));
@@ -10,8 +12,11 @@ const appVersion=String(packageJson.version||'dev');
 execFileSync(process.execPath,['scripts/build-vendor.mjs'],{stdio:'inherit'});
 await rm('dist',{recursive:true,force:true});
 await mkdir('dist/assets',{recursive:true});
-execFileSync(process.execPath,['node_modules/tailwindcss/lib/cli.js','-i','styles/tailwind.css','-o','dist/assets/tailwind.css','--minify'],{stdio:'inherit'});
-const entries=['index.html','landing.html','admin.html','privacy.html','app.js','ui-dialogs.js','ai-chat.js','year-report-image.js','sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','manifest.json','icon.png','icon-192.png','icon-512.png','badge-96.png','og-image.png','styles','vendor'];
+// The one-shot compiler needs no file watcher or its transitive dependencies.
+const cssCompiler=await compile(await readFile('styles/tailwind.css','utf8'),{base:path.join(root,'styles'),onDependency(){}});
+const cssScanner=new Scanner({sources:cssCompiler.sources});
+await writeFile('dist/assets/tailwind.css',optimize(cssCompiler.build(cssScanner.scan()),{minify:true}).code);
+const entries=['index.html','landing.html','admin.html','admin-panel.js','privacy.html','app.js','account-tools.js','meter-readings.js','meter-replacement-ui.js','operational-backup.js','ui-dialogs.js','ai-chat.js','year-report-image.js','sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','manifest.json','icon.png','icon-192.png','icon-512.png','badge-96.png','og-image.png','styles','vendor'];
 for(const optional of ['data-model.js']){try{await readFile(optional);entries.push(optional);}catch{}}
 for(const entry of entries)await cp(entry,path.join('dist',entry),{recursive:true});
 const builtIndexPath=path.join('dist','index.html');
@@ -28,6 +33,7 @@ const optionalOfflinePatterns=[/\/vendor\/jspdf\//,/\/vendor\/fonts\/Roboto-Regu
 const offlineAssets=assets.filter(file=>!optionalOfflinePatterns.some(pattern=>pattern.test(file)));
 const hash=createHash('sha256');hash.update(await readFile('sw.js'));for(const file of assets)hash.update(await readFile(file));
 const buildId=hash.digest('hex').slice(0,12);
+for(const file of ['dist/index.html','dist/admin.html']){const html=await readFile(file,'utf8');await writeFile(file,html.replace('</head>',`<meta name="app-build" content="${buildId}"></head>`));}
 let worker=await readFile('sw.js','utf8');
 worker=worker.replace(/const CACHE_NAME = .*;/,`const CACHE_NAME = 'komunalka-${buildId}';`).replace(/const PRECACHE_URLS = .*;/,`const PRECACHE_URLS = ${JSON.stringify(offlineAssets.map(p=>'./'+p.slice(5)))};`);
 await writeFile('dist/sw.js',worker);

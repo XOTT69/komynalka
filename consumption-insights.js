@@ -6,11 +6,11 @@
     electro:{label:'Світло',unit:'кВт·год',fields:[['dPrev','dCur'],['nPrev','nCur']]},
     gas:{label:'Газ',unit:'м³',fields:[['gPrev','gCur']]},
   };
-  const number=value=>{const n=Number(value);return Number.isFinite(n)?n:null;};
+  const number=value=>{if(value==null||typeof value==='boolean'||(typeof value==='string'&&value.trim()===''))return null;const n=Number(value);return Number.isFinite(n)?n:null;};
   function usage(record,id){
     const definition=definitions[id];if(!definition||!record||record._filled?.[id]===false)return null;
     let total=0,found=false;
-    for(const [previous,current] of definition.fields){const a=number(record[previous]),b=number(record[current]);if(a===null||b===null)continue;if(b<a)return null;total+=b-a;found=true;}
+    for(const [previous,current] of definition.fields){if(record._enteredPrevious?.[previous]===false)continue;const a=number(record[previous]),b=number(record[current]);if(a===null||b===null)continue;if(b<a)return null;const value=typeof global.KomunalkaMeters!=='undefined'?global.KomunalkaMeters.usage(a,b,record._meterEvents?.[previous]):b-a;if(value===null)return null;total+=value;found=true;}
     return found?total:null;
   }
   function compare(records,month,current){

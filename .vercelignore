@@ -1,0 +1,11 @@
+.git/
+.vercel/
+node_modules/
+backups/
+.wrangler/
+test-results/
+coverage/
+.env
+.env.*
+*.backup.json
+.DS_Store

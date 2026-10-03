@@ -1,15 +1,17 @@
 'use strict';
 
-const AI_MAX_HISTORY    = 10;
+const AI_MAX_HISTORY    = 200;
+const AI_API_HISTORY    = 10;
 const AI_HISTORY_KEY    = 'k_ai_history_v2';
 const AI_CONTEXT_MONTHS = 6;
-const AI_MAX_TOKENS     = 400;
+const AI_MAX_TOKENS     = 1000;
 
 class KomunalkaAI {
   constructor() {
     this.isOpen    = false;
     this.isLoading = false;
     this.abort     = null;
+    this.generation = 0;
     this.historyOwner = this._owner();
     this.history   = this._loadHistory();
   }
@@ -17,7 +19,11 @@ class KomunalkaAI {
   _owner() { return String((typeof sessionLogin !== 'undefined' && sessionLogin) || localStorage.getItem('k_login') || 'guest'); }
   _historyKey() { return `${AI_HISTORY_KEY}:${encodeURIComponent(this._owner())}`; }
   _consentKey() { return `k_ai_consent_v1:${encodeURIComponent(this._owner())}`; }
-  _refreshOwner() { const owner=this._owner();if(owner!==this.historyOwner){this.historyOwner=owner;this.history=this._loadHistory();} }
+  _refreshOwner() { const owner=this._owner();if(owner!==this.historyOwner){this.cancel();this.historyOwner=owner;this.history=this._loadHistory();this._syncContextControl();} }
+  _contextKey(){return `k_ai_context_v1:${encodeURIComponent(this._owner())}`;}
+  _usesContext(){return localStorage.getItem(this._contextKey())==='yes';}
+  _syncContextControl(){const control=document.getElementById('aiUseContext');if(control)control.checked=this._usesContext();}
+  cancel(){this.generation++;this.abort?.abort();this.abort=null;this._setLoading(false);}
 
   _loadHistory() {
     try {
@@ -28,19 +34,21 @@ class KomunalkaAI {
       const migrationMarker='k_ai_history_migrated_v2';
       if(raw===null&&this._owner()!=='guest'&&!localStorage.getItem(migrationMarker)){
         raw=localStorage.getItem('k_ai_history');
-        if(raw!==null){localStorage.setItem(this._historyKey(),raw);localStorage.setItem(migrationMarker,'1');}
+        if(raw!==null){localStorage.setItem(this._historyKey(),raw);localStorage.setItem(migrationMarker,this._owner());}
       }
       const arr = JSON.parse(raw || '[]');
-      return Array.isArray(arr) ? arr : [];
+      return Array.isArray(arr) ? arr.filter(m=>m&&['user','assistant'].includes(m.role)&&typeof m.content==='string').slice(-AI_MAX_HISTORY).map(m=>({...m,content:m.content.slice(0,12000),ts:Number(m.ts)||Date.now()})) : [];
     } catch { return []; }
   }
 
   _saveHistory() {
     this.history = this.history.slice(-AI_MAX_HISTORY);
-    try { localStorage.setItem(this._historyKey(), JSON.stringify(this.history)); } catch {}
+    try { localStorage.setItem(this._historyKey(), JSON.stringify(this.history)); } catch { this._chatToast('Не вдалося зберегти історію на пристрої'); }
   }
 
   clearHistory() {
+    this._refreshOwner();this.cancel();
+    if(localStorage.getItem('k_ai_history_migrated_v2')===this._owner())localStorage.removeItem('k_ai_history');
     this.history = [];
     localStorage.removeItem(this._historyKey());
     this._render();
@@ -48,49 +56,33 @@ class KomunalkaAI {
   }
 
   _buildSystemPrompt() {
-    const recs  = (typeof records   !== 'undefined' && Array.isArray(records))   ? records   : [];
-    const addrs = (typeof addresses !== 'undefined' && Array.isArray(addresses)) ? addresses : [];
-    const t     = (typeof tariffs   !== 'undefined') ? tariffs : {};
-    const dName = (typeof displayName !== 'undefined' && displayName) ? displayName : null;
-    const addr  = addrs.find(a => a.id === (typeof currentAddressId !== 'undefined' ? currentAddressId : null));
-    const sorted = [...recs].sort((a, b) => b.month.localeCompare(a.month)).slice(0, AI_CONTEXT_MONTHS);
-    const avg    = sorted.length ? Math.round(sorted.reduce((s, r) => s + (r.total || 0), 0) / sorted.length) : 0;
-    const streak = typeof getStreak === 'function' ? getStreak(recs) : 0;
-    const unpaid = recs.filter(r => !r.paid);
-
-    const recLines = sorted.length
-      ? sorted.map(r => {
-          const p = [];
-          if (r.waterCost    > 0) p.push(`вода ${Math.round(r.waterCost)}₴`);
-          if (r.hotWaterCost > 0) p.push(`гар.${Math.round(r.hotWaterCost)}₴`);
-          if (r.electroCost  > 0) p.push(`світло ${Math.round(r.electroCost)}₴`);
-          if (r.gasCost      > 0) p.push(`газ ${Math.round(r.gasCost)}₴`);
-          if (r.customCost   > 0) p.push(`інше ${Math.round(r.customCost)}₴`);
-          const wU = Math.max(0,(r.wCur||0)-(r.wPrev||0));
-          const eU = Math.max(0,(r.dCur||0)-(r.dPrev||0))+Math.max(0,(r.nCur||0)-(r.nPrev||0));
-          const gU = Math.max(0,(r.gCur||0)-(r.gPrev||0));
-          const u  = [wU>0&&`${wU}м³вод`,eU>0&&`${eU}кВт`,gU>0&&`${gU}м³газ`].filter(Boolean).join(' ');
-          return `• ${r.month}: ${Math.round(r.total)}₴ (${p.join(', ')})${u?' ['+u+']':''} ${r.paid?'✓':'⏳'}`;
-        }).join('\n')
-      : '• Записів поки немає';
-
-    return `Ти — універсальний AI-помічник у додатку "Комуналка". Відповідай українською на будь-які запитання: побут, навчання, технології, тексти, планування та комунальні послуги. Будь доброзичливим, конкретним і стислим; використовуй списки, коли це зручніше. Для питань про комуналку використовуй наведені нижче дані й показуй розрахунки. Не вигадуй відсутні дані та чітко кажи, коли для відповіді потрібна свіжа інформація з інтернету.
-${dName ? `Користувача звати: ${dName}` : ''}
-АДРЕСА: "${addr?.name || 'Мій дім'}"
-ТАРИФИ: вода ${t.water||30.38}₴/м³ | електрика ${t.electroBase||4.32}₴/кВт (ніч ×${t.nightCoef||0.5}) | газ ${t.gas||7.96}₴/м³
-СТАТИСТИКА: середній ${avg}₴/міс | серія ${streak}міс | борг ${unpaid.length}міс
-ОСТАННІ ${sorted.length} МІС:
-${recLines}
-ПРАВИЛА: оперуй конкретними числами, якщо питання стосується комуналки; для інших тем відповідай по суті й не повертай розмову примусово до комунальних послуг.`;
+    const base='Ти — універсальний AI-помічник у додатку "Комуналка". Відповідай українською на будь-які запитання: побут, навчання, технології, тексти та комунальні послуги. Будь конкретним і зрозумілим. Для питань про комуналку використовуй наведені нижче дані, якщо користувач їх дозволив. Не вигадуй відсутні дані та не стверджуй, що перевірив актуальну інформацію в інтернеті, коли пошуку немає.';
+    if(!this._usesContext())return base+' Комунальні дані не надано. За потреби попроси користувача увімкнути їх або ввести потрібні числа.';
+    const recs=typeof records!=='undefined'&&Array.isArray(records)?records:[],addrs=typeof addresses!=='undefined'?addresses:[];
+    const address=addrs.find(a=>String(a.id)===String(typeof currentAddressId!=='undefined'?currentAddressId:''));
+    const money=value=>new Intl.NumberFormat('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value)||0)+' ₴';
+    const balance=rec=>typeof getOutstandingAmount==='function'?getOutstandingAmount(rec):Math.max(0,Number(rec.total||0)-(rec.paymentStatus==='paid'||rec.paid?Number(rec.total||0):Number(rec.paidAmount||0)));
+    const rates=value=>Object.fromEntries(['water','hotWater','electroBase','electroWinter','gas','nightCoef','winterLimit'].filter(key=>value?.[key]!=null&&Number.isFinite(Number(value[key]))).map(key=>[key,Number(value[key])]));
+    const sorted=[...recs].sort((a,b)=>String(b.month).localeCompare(String(a.month))).slice(0,AI_CONTEXT_MONTHS);
+    const lines=sorted.map(rec=>{
+      const parts=[`нараховано ${money(rec.total)}`,`залишок ${money(balance(rec))}`];
+      for(const [key,label] of [['waterCost','вода'],['hotWaterCost','гаряча вода'],['electroCost','світло'],['gasCost','газ'],['customCost','інші послуги']])if(rec[key]!=null)parts.push(`${label} ${money(rec[key])}`);
+      if(typeof KomunalkaProviders!=='undefined'&&address)for(const service of ['water','hotWater','electro','gas']){const values=KomunalkaProviders.meterValues?.({...address,records:[rec]},service,rec.month);if(values)for(const value of values)parts.push(`${value.label}: ${value.current} ${value.unit}; споживання ${value.difference||'не визначено'}`);}
+      if(rec.tariffSnapshot)parts.push('історичні тарифи '+JSON.stringify(rates(rec.tariffSnapshot)));
+      return `• ${rec.month}: ${parts.join('; ')}`;
+    });
+    return base+`\nАДРЕСА: ${address?.name||'Мій дім'}\nПоточні тарифи (не застосовувати до історії): ${JSON.stringify(rates(address?.tariffs||{}))}\nМісяців із залишком: ${recs.filter(rec=>balance(rec)>0).length}.\nОстанні ${sorted.length} місяців:\n${lines.join('\n')||'Дані відсутні'}`;
   }
 
   async sendMessage(userText) {
     if (!userText.trim() || this.isLoading) return;
     this._refreshOwner();
-    if(localStorage.getItem(this._consentKey())!=='yes'){
+    const owner=this._owner(),generation=++this.generation;
+    if(this._usesContext()&&localStorage.getItem(this._consentKey())!=='yes'){
       const accepted=typeof showAppConfirm==='function'?await showAppConfirm('Для відповіді AI застосунок надішле ваш запит, назву поточної адреси, тарифи та підсумки останніх 6 місяців зовнішньому AI-провайдеру. Пароль, email постачальника й повна резервна копія не передаються.',{title:'Дозволити AI-аналіз?',confirmLabel:'Дозволити',icon:'🤖'}):confirm('Дозволити передавання підсумків комунальних даних AI-провайдеру?');
-      if(!accepted)return;localStorage.setItem(this._consentKey(),'yes');
+      if(!accepted||this._owner()!==owner||generation!==this.generation)return false;localStorage.setItem(this._consentKey(),'yes');
     }
+    if(this._owner()!==owner||generation!==this.generation)return false;
     this.abort?.abort();
     this.abort = new AbortController();
     this._addMsg('user', userText);
@@ -98,10 +90,11 @@ ${recLines}
     try {
       const apiMessages = [
         { role: 'system', content: this._buildSystemPrompt() },
-        ...this.history.slice(-(AI_MAX_HISTORY - 1)).map(m => ({ role: m.role, content: m.content })),
+        ...this.history.slice(-AI_API_HISTORY).map(m => ({ role: m.role, content: m.content })),
       ];
       const payload={action:'ai_chat',messages:apiMessages,max_tokens:AI_MAX_TOKENS,temperature:0.4};
       const res=await secureFetch('POST',{},payload,{signal:this.abort.signal});
+      if(this._owner()!==owner||generation!==this.generation)return false;
       if (res.status === 429) throw new Error('Забагато запитів. Зачекайте хвилину. ⏳');
       if (!res.ok) {
         const e = await res.json().catch(()=>({}));
@@ -123,13 +116,15 @@ ${recLines}
       }
       const reply = data.choices?.[0]?.message?.content?.trim();
       if (!reply) throw new Error('Порожня відповідь');
-      this._addMsg('assistant', reply);
+      if(this._owner()!==owner||generation!==this.generation)return false;
+      this._addMsg('assistant', reply+(data.choices?.[0]?.finish_reason==='length'?'\n\nВідповідь скорочено. Можете попросити продовжити.':''));
+      return true;
     } catch (e) {
-      if (e.name === 'AbortError') return;
+      if(e.name==='AbortError'||this._owner()!==owner||generation!==this.generation)return false;
       this._addMsg('error', `⚠️ ${e.message}`);
+      return false;
     } finally {
-      this._setLoading(false);
-      this.abort = null;
+      if(generation===this.generation){this._setLoading(false);this.abort=null;}
     }
   }
 
@@ -147,6 +142,8 @@ ${recLines}
     const ind   = document.getElementById('aiTypingIndicator');
     const btn   = document.getElementById('aiSendBtn');
     const input = document.getElementById('aiInput');
+    document.getElementById('aiCancelBtn')?.classList.toggle('hidden',!v);
+    document.getElementById('aiRetryBtn')?.classList.toggle('hidden',v);
     ind?.classList.toggle('hidden', !v);
     if (btn)   btn.disabled   = v;
     if (input) input.disabled = v;
@@ -203,7 +200,7 @@ ${recLines}
       <div class="w-7 h-7 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl flex items-center justify-center text-[13px] shrink-0 mt-0.5">🤖</div>
       <div class="max-w-[82%]">
         <div class="${cls} px-4 py-2.5 rounded-2xl rounded-bl-md text-sm leading-relaxed border">${formatted}</div>
-        <p class="text-[9px] text-slate-400 mt-1">${time}</p>
+        <p class="text-[9px] text-slate-400 mt-1">${time}</p>${!isError?`<button type="button" class="ai-copy" data-ai-copy="${Number(ts)||0}">Скопіювати</button>`:''}
       </div>
     </div>`;
   }
@@ -232,6 +229,7 @@ ${recLines}
 
   open() {
     this._refreshOwner();
+    this._syncContextControl();
     this.isOpen = true;
     const panel = document.getElementById('aiChatPanel');
     const inner = document.getElementById('aiPanelInner');
@@ -253,6 +251,9 @@ ${recLines}
   toggle() { this.isOpen ? this.close() : this.open(); }
 
   init() {
+    document.getElementById('aiUseContext')?.addEventListener('change',event=>localStorage.setItem(this._contextKey(),event.target.checked?'yes':'no'));
+    document.getElementById('aiCancelBtn')?.addEventListener('click',()=>{this.cancel();this._chatToast('Запит скасовано');});
+    document.getElementById('aiRetryBtn')?.addEventListener('click',()=>{const previous=[...this.history].reverse().find(m=>m.role==='user');if(previous)void this.sendMessage(previous.content);});
     document.getElementById('aiFabBtn')?.addEventListener('click',  () => this.toggle());
     document.getElementById('aiCloseBtn')?.addEventListener('click', () => this.close());
     document.getElementById('aiClearBtn')?.addEventListener('click', () => {
@@ -270,6 +271,7 @@ ${recLines}
       e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px';
     });
     document.getElementById('aiMessagesList')?.addEventListener('click', e => {
+      const copy=e.target.closest('[data-ai-copy]');if(copy){const message=this.history.find(m=>m.role==='assistant'&&m.ts===Number(copy.dataset.aiCopy));if(message){(navigator.clipboard?.writeText(message.content)||Promise.reject(new Error('CLIPBOARD_UNAVAILABLE'))).then(()=>{copy.textContent='Скопійовано ✓';this._chatToast('Скопійовано');}).catch(()=>this._chatToast('Не вдалося скопіювати. Виділіть текст відповіді.'));}return;}
       const btn = e.target.closest('.ai-suggestion');
       if (btn?.dataset.text) void this.sendMessage(btn.dataset.text);
     });
@@ -279,10 +281,9 @@ ${recLines}
     const input = document.getElementById('aiInput');
     if (!input) return;
     const text = input.value.trim();
-    if (!text) return;
-    input.value = '';
-    input.style.height = 'auto';
-    await this.sendMessage(text);
+    if(!text||this.isLoading)return;
+    const owner=this._owner();input.value='';input.style.height='auto';
+    const sent=await this.sendMessage(text);if(!sent&&this._owner()===owner&&!input.value)input.value=text;
   }
 }
 

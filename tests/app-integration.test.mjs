@@ -6,10 +6,10 @@ import {createHash,webcrypto} from 'node:crypto';
 import worker from '../worker.js';
 import {environment,legacyAccount} from './helpers.mjs';
 const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
-const sources=await Promise.all(['sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','app.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
+const sources=await Promise.all(['sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','meter-readings.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','app.js','account-tools.js','meter-replacement-ui.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
 const password='test-password',hash=createHash('sha256').update(password).digest('hex');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
-async function page(env,stored={},offline=false,suffix=""){
+async function page(env,stored={},offline=false,suffix="",fetchFault=null){
   const errors=[];const console=new VirtualConsole();console.on('jsdomError',e=>{if(!e.message.includes('navigation'))errors.push(e.message);});
   const dom=new JSDOM(html,{url:'https://komynalka.vercel.app'+suffix,runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:console});const w=dom.window;
   w.TextEncoder=TextEncoder;w.TextDecoder=TextDecoder;Object.defineProperty(w,'crypto',{value:webcrypto});Object.defineProperty(w.navigator,'onLine',{value:!offline,configurable:true});
@@ -21,13 +21,92 @@ async function page(env,stored={},offline=false,suffix=""){
   w.initAI=()=>{};
   const auth={currentUser:null,onAuthStateChanged(cb){w.setTimeout(()=>cb(null),0);return()=>{};},signOut:async()=>{}};
   w.firebase={initializeApp(){},auth:()=>auth};w.firebase.auth.GoogleAuthProvider=class{};
-  w.fetch=async(url,options={})=>{if(offline)throw new Error('offline');return worker.fetch(new Request(url,options),env);};
+  const originalFetch=(url,options)=>worker.fetch(new Request(url,options),env);
+  w.fetch=async(url,options={})=>{if(offline||fetchFault==='reject')throw new TypeError('fetch failed');if(typeof fetchFault==='function')return fetchFault(url,options,originalFetch);if(typeof fetchFault==='number')return new Response('Test server unavailable',{status:fetchFault});if(fetchFault==='invalid-json')return new Response('invalid server response');return originalFetch(url,options);};
   for(const [key,value] of Object.entries(stored))w.localStorage.setItem(key,value);
-  for(const source of sources)w.eval(source);
+  w.eval(sources.join('\n')+'\nwindow.__disposeTestPage=()=>{activeStore=null;activeDrain=null;authAttempt++;};');
   await delay(30);
-  return {w,errors,close:()=>dom.window.close(),storage:()=>Object.fromEntries(Array.from({length:w.localStorage.length},(_,i)=>{const key=w.localStorage.key(i);return[key,w.localStorage.getItem(key)];}))};
+  return {w,errors,close:()=>{
+    // Browser navigation discards callbacks from the old document. JSDOM.close()
+    // keeps native fetch promises alive, so detach their account before teardown.
+    w.__disposeTestPage();dom.window.close();
+  },storage:()=>Object.fromEntries(Array.from({length:w.localStorage.length},(_,i)=>{const key=w.localStorage.key(i);return[key,w.localStorage.getItem(key)];}))};
 }
 test('actual app login preserves history, account totals and additional legacy fields',async()=>{const legacy=legacyAccount(hash),{env}=environment({anna:legacy});const p=await page(env);try{await p.w.performLogin('anna',password,false);await delay(30);assert.equal(p.w.document.getElementById('appScreen').classList.contains('hidden'),false,p.w.document.getElementById('authError').textContent);const data=JSON.parse(p.w.localStorage.getItem('komynalka_account_v1:anna'));assert.equal(data.local.addresses[0].records[0].total,151.9);assert.equal(data.local.addresses[0].records[0].paidAmount,50);assert.equal(data.local.addresses[0].records[0].customField,'preserve');assert.deepEqual(p.errors,[]);}finally{p.close();}});
+test('an unknown previous reading cannot charge from zero; explicit zero is accepted',async()=>{
+  const legacy=legacyAccount(hash),{env}=environment({anna:legacy}),p=await page(env);
+  try{
+    await p.w.performLogin('anna',password,false);const d=p.w.document,month=d.getElementById('monthInput');
+    month.value='2026-12';month.dispatchEvent(new p.w.Event('change',{bubbles:true}));
+    const previous=d.getElementById('wPrev'),current=d.getElementById('wCur');assert.equal(previous.value,'');
+    current.value='2';current.dispatchEvent(new p.w.Event('input',{bubbles:true}));p.w.calculatePreview();
+    assert.equal(d.getElementById('submitFormBtn').disabled,true);assert.equal(d.getElementById('entryReviewTotal').textContent,'—');assert.match(d.getElementById('entryReviewStatus').textContent,/попередній/);assert.equal(d.getElementById('waterCostDisplay').textContent,'—');assert.equal(d.getElementById('blockWaterState').textContent,'Перевірте показники');
+    d.getElementById('jumpToReview').click();assert.equal(d.activeElement.id,'wPrev');
+    d.getElementById('utilityForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
+    assert.deepEqual(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records,legacy.addresses[0].records);
+    previous.value='0';previous.dispatchEvent(new p.w.Event('input',{bubbles:true}));p.w.calculatePreview();assert.equal(d.getElementById('submitFormBtn').disabled,false);
+    d.getElementById('utilityForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
+    const saved=JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records.find(r=>r.month==='2026-12');assert.equal(saved.total,198);assert.equal(saved._enteredPrevious.wPrev,true);await p.w.flushSync();assert.deepEqual(p.errors,[]);
+  }finally{p.close();}
+});
+test('zero tariffs survive template, save and offline reopening; negative tariffs cannot replace them',async()=>{
+  const legacy=legacyAccount(hash);legacy.addresses[0].tariffs.nightCoef=.4;legacy.addresses[0].tariffs.winterLimit=1800;legacy.addresses[0].tariffs.customField='preserve';
+  const {env}=environment({anna:legacy}),p=await page(env);let stored;
+  try{
+    await p.w.performLogin('anna',password,false);const d=p.w.document;p.w.openSettingsPanel('home');
+    for(const id of ['tWater','tHotWater','tElectroBase','tElectroWinter','tGas'])d.getElementById(id).value='0';
+    d.getElementById('saveTariffTemplateBtn').click();d.getElementById('tWater').value='123';d.getElementById('loadTariffTemplateBtn').click();assert.equal(d.getElementById('tWater').value,'0');
+    d.getElementById('saveSettingsBtn').click();await p.w.syncToCloud();
+    const data=JSON.parse(p.storage()['komynalka_account_v1:anna']).local;assert.equal(data.addresses[0].tariffs.water,0);assert.equal(data.addresses[0].tariffs.gas,0);assert.equal(data.addresses[0].tariffs.nightCoef,.4);assert.equal(data.addresses[0].tariffs.winterLimit,1800);assert.equal(data.addresses[0].tariffs.customField,'preserve');assert.deepEqual(data.addresses[0].records,legacy.addresses[0].records);
+    d.getElementById('tWater').value='-3';d.getElementById('saveSettingsBtn').click();assert.equal(d.getElementById('tWater').getAttribute('aria-invalid'),'true');
+    assert.equal(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].tariffs.water,0);stored=p.storage();assert.deepEqual(p.errors,[]);
+  }finally{p.close();}
+  const reopened=await page(env,stored,true);try{reopened.w.openSettingsPanel('home');assert.equal(reopened.w.document.getElementById('tWater').value,'0');assert.deepEqual(reopened.errors,[]);}finally{reopened.close();}
+});
+test('late Telegram links, delivery states and Push inspection never move into another account',async()=>{
+  const {env}=environment({anna:legacyAccount(hash),bob:legacyAccount(hash)}),p=await page(env);
+  try{
+    const w=p.w,d=w.document;await w.performLogin('anna',password,false);
+    w.Notification={permission:'granted',requestPermission:async()=> 'granted'};w.PushManager=class{};
+    Object.defineProperty(w.navigator,'serviceWorker',{configurable:true,value:{getRegistration:async()=>({active:{},pushManager:{getSubscription:async()=>null}})}});
+    const original=w.fetch,opened=[];let releaseState,releaseLink,releaseConfig;w.open=url=>opened.push(url);
+    w.fetch=(url,options={})=>{
+      const action=options.body?JSON.parse(options.body).action:'';
+      if(action==='telegram_status'&&!releaseState)return new Promise(resolve=>releaseState=resolve);
+      if(action==='telegram_begin'&&!releaseLink)return new Promise(resolve=>releaseLink=resolve);
+      if(String(url).includes('push-config=1')&&!releaseConfig)return new Promise(resolve=>releaseConfig=resolve);
+      return original(url,options);
+    };
+    const state=w.refreshTelegramState(),push=w.initPush();d.getElementById('telegramConnect').click();
+    await w.performLogin('bob',password,false);await w.initPush();d.getElementById('telegramStatus').textContent='Стан нового акаунта';
+    const response=value=>new Response(JSON.stringify(value),{headers:{'Content-Type':'application/json'}});
+    releaseState(response({success:true,available:true,connected:true,lastReminderDay:'2026-10-01'}));
+    releaseLink(response({success:true,url:'https://t.me/TestBot?start='+'a'.repeat(32)}));releaseConfig(response({success:true,enabled:true,publicKey:'fake'}));
+    await Promise.all([state,push]);await delay(0);
+    assert.equal(d.getElementById('telegramStatus').textContent,'Стан нового акаунта');assert.equal(d.getElementById('telegramOpenLink').getAttribute('href'),null);assert.equal(d.getElementById('telegramConnect').disabled,false);assert.deepEqual(opened,[]);assert.match(d.getElementById('pushStatus').textContent,/не налаштований/);assert.deepEqual(p.errors,[]);
+  }finally{p.close();}
+});
+test('cached accounts and drafts reopen when the network indicator is online but the API fails',async()=>{
+  const {env}=environment({anna:legacyAccount(hash)}),online=await page(env);let stored;
+  try{await online.w.performLogin('anna',password,false);const d=online.w.document;d.getElementById('monthInput').value='2026-09';d.getElementById('monthInput').dispatchEvent(new online.w.Event('change',{bubbles:true}));d.getElementById('wCur').value='131';d.getElementById('wCur').dispatchEvent(new online.w.Event('input',{bubbles:true}));stored=online.storage();}finally{online.close();}
+  for(const fault of [503,'reject','invalid-json']){
+    const reopened=await page(env,stored,false,'',fault);
+    try{const d=reopened.w.document;assert.equal(d.getElementById('appScreen').classList.contains('hidden'),false,String(fault));assert.equal(d.getElementById('authScreen').classList.contains('hidden'),true);assert.match(d.getElementById('syncStatusText').textContent,/Офлайн/);assert.equal(d.getElementById('accountPasswordStatus').textContent,'Змінити пароль');d.getElementById('monthInput').value='2026-09';d.getElementById('monthInput').dispatchEvent(new reopened.w.Event('change',{bubbles:true}));assert.equal(d.getElementById('wCur').value,'131');assert.deepEqual(JSON.parse(reopened.storage()['komynalka_account_v1:anna']).local,JSON.parse(stored['komynalka_account_v1:anna']).local);assert.deepEqual(reopened.errors,[]);}finally{reopened.close();}
+  }
+  for(const status of [401,403,404,429]){
+    const rejected=await page(env,stored,false,'',status);
+    try{assert.equal(rejected.w.document.getElementById('appScreen').classList.contains('hidden'),true,String(status));assert.equal(rejected.w.document.getElementById('authScreen').classList.contains('hidden'),false);assert.equal(rejected.w.localStorage.getItem('komynalka_account_v1:anna'),stored['komynalka_account_v1:anna']);if(status===401||status===403){assert.equal(rejected.w.localStorage.getItem('k_session'),null);assert.equal(rejected.w.localStorage.getItem('k_login'),null);}assert.deepEqual(rejected.errors,[]);}finally{rejected.close();}
+  }
+});
+test('a delayed auto-login failure cannot restore the previous account after a newer login',async()=>{
+  const {env}=environment({anna:legacyAccount(hash),bob:legacyAccount(hash)}),original=await page(env);let stored;
+  try{await original.w.performLogin('anna',password,false);stored=original.storage();}finally{original.close();}
+  let release;const p=await page(env,stored,false,'',(url,options,fetchOriginal)=>{
+    if(options.method==='GET'&&String(url).includes('?t=')&&!release)return new Promise(resolve=>release=()=>resolve(new Response('temporary failure',{status:503})));
+    return fetchOriginal(url,options);
+  });
+  try{await p.w.performLogin('bob',password,false);const token=p.w.localStorage.getItem('k_session');release();await delay(0);assert.equal(p.w.localStorage.getItem('k_login'),'bob');assert.equal(p.w.localStorage.getItem('k_session'),token);assert.equal(p.w.document.getElementById('accountLoginDisplay').textContent,'bob');assert.equal(p.w.localStorage.getItem('komynalka_account_v1:anna'),stored['komynalka_account_v1:anna']);assert.deepEqual(p.errors,[]);}finally{p.close();}
+});
 test('registration creates an isolated account and the account password control replaces every old session',async()=>{
  const {env,values}=environment(),p=await page(env);try{
   await p.w.performRegistration('fresh-user','StrongPass9','StrongPass9');await delay(100);
@@ -285,4 +364,29 @@ test('an open provider editor cannot overwrite a newer card received by sync',as
  try{await p.w.performLogin('anna',password,false);p.w.openSettingsPanel('providers');p.w.openProviderEditor('water');const d=p.w.document;d.getElementById('providerAccount').value='old draft';const next=JSON.parse(p.storage()['komynalka_account_v1:anna']).local;next.accountSettings=p.w.KomunalkaProviders.update(next.accountSettings||{},'home','water',{account:'new from sync'});p.w.applySnapshot(next);
  d.getElementById('providerForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));assert.match(d.getElementById('providerError').textContent,/іншому пристрої/);assert.equal(d.getElementById('providerAccount').value,'old draft');assert.equal(p.w.KomunalkaProviders.get(p.w.accountSnapshot().accountSettings,'home','water').account,'new from sync');assert.deepEqual(p.errors,[]);
  }finally{p.close();}
+});
+
+test('account export roundtrips and preview merge preserves current fields while adding new history',async()=>{
+ const {env}=environment({anna:legacyAccount(hash)}),p=await page(env);
+ try{await p.w.performLogin('anna',password,false);const response=await p.w.secureFetch('POST',{}, {action:'account_export'}),exported=await response.json();assert.deepEqual(JSON.parse(JSON.stringify(p.w.normalizeImportData(exported.export))).addresses,legacyAccount(hash).addresses);
+ const imported=exported.export;imported.data.addresses[0].name='Imported name';imported.data.addresses[0].records.push({id:99,month:'2026-10',total:12.34,waterCost:12.34,unknown:'preserve'});
+ const input=p.w.document.getElementById('importFileInput');Object.defineProperty(input,'files',{value:[{size:1024,text:async()=>JSON.stringify(imported)}],configurable:true});input.dispatchEvent(new p.w.Event('change',{bubbles:true}));await delay(10);assert.equal(p.w.document.getElementById('importPreviewDialog').hasAttribute('open'),true);p.w.document.getElementById('importPreviewConfirm').click();await delay(60);
+ const data=JSON.parse(p.storage()['komynalka_account_v1:anna']).local;assert.equal(data.addresses[0].name,'Мій дім');assert.equal(data.addresses[0].records.length,2);assert.equal(data.addresses[0].records[0].total,151.9);assert.equal(data.addresses[0].records.find(r=>r.id===99).unknown,'preserve');assert.equal(JSON.parse(p.storage()['komynalka_account_v1:anna:backup:komynalka_pre_import_backup']).value.addresses[0].records.length,1);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+
+test('meter replacement survives drafts and uses both meters in costs, history, CSV and email',async()=>{
+  const original=legacyAccount(hash),{env}=environment({anna:original}),p=await page(env);let stored;
+  try{
+    await p.w.performLogin('anna',password,false);const d=p.w.document,month=d.getElementById('monthInput');month.value='2026-09';month.dispatchEvent(new p.w.Event('change',{bubbles:true}));
+    d.getElementById('meterReplacementBtn').click();d.getElementById('replacementOldPrevious').value='129';d.getElementById('replacementOldFinal').value='134';d.getElementById('replacementNewInitial').value='10';d.getElementById('replacementDate').value='2026-09-15';
+    d.getElementById('meterReplacementForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));d.getElementById('wCur').value='13';d.getElementById('wCur').dispatchEvent(new p.w.Event('input',{bubbles:true}));p.w.calculatePreview();
+    assert.equal(d.getElementById('wPrev').value,'10');stored=p.storage();assert.deepEqual(p.errors,[]);
+  }finally{p.close();}
+  const reopened=await page(env,stored,true);try{
+    const w=reopened.w,d=w.document,month=d.getElementById('monthInput');month.value='2026-09';month.dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(d.getElementById('wCur').value,'13');assert.equal(JSON.parse(d.getElementById('meterEventsInput').value).wPrev.oldFinal,134);
+    d.getElementById('utilityForm').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await delay(80);
+    const state=JSON.parse(w.localStorage.getItem('komynalka_account_v1:anna')).local,address=state.addresses[0],rec=address.records.find(r=>r.month==='2026-09');assert.equal(rec.waterCost,792);assert.equal(rec.total,792);assert.deepEqual(address.records.find(r=>r.month==='2026-08'),original.addresses[0].records[0]);assert.match(w.createRecordCard(rec).textContent,/\+8 м³/);
+    const meters=w.KomunalkaProviders.meterValues(address,'water','2026-09');assert.equal(meters[0].difference,'8');const draft=w.KomunalkaProviders.emailDraft(address,{id:'water',label:'Вода'},{email:'test@example.invalid',account:'123'},'2026-09');assert.match(draft.body,/різниця 8/);assert.match(draft.body,/старий 129 → 134/);assert.equal(draft.needsReview,true);let csv='';w.downloadBlob=text=>{csv=text;};w.exportCSV();assert.match(csv,/2026-09,8,792.00/);w.editRecordById(rec.id);await delay(60);assert.equal(d.getElementById('wPrev').value,'10');assert.equal(d.getElementById('wCur').value,'13');assert.deepEqual(reopened.errors,[]);
+  }finally{reopened.close();}
 });

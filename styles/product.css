@@ -1,0 +1,42 @@
+/* Shared product components; private state never depends on appearance. */
+:root{--ui-bg:#f6f8fc;--ui-surface:#fff;--ui-soft:#f4f6fb;--ui-text:#243047;--ui-muted:#66738a;--ui-line:#e0e6f0;--brand:#4268cc;--brand-hover:#3558b4;--brand-light:#edf3ff;--brand-border:#cad7f4;--ui-shadow:0 5px 22px rgb(36 48 71 / .035);--product-mint:#eaf6f0;--product-lavender:#f1edfa;--product-warm:#fff4e5}
+html.dark{--ui-bg:#111824;--ui-surface:#1b2534;--ui-soft:#202d40;--ui-text:#eef3fb;--ui-muted:#b1bfd2;--ui-line:#344359;--brand:#b0c7ff;--brand-hover:#cfddff;--brand-light:#2b3e60;--brand-border:#516c9a;--ui-shadow:none;--product-mint:#203b35;--product-lavender:#302c48;--product-warm:#3c3425}
+body{background:var(--ui-bg);font-variant-numeric:tabular-nums}
+#appScreen>header{padding-block:14px}
+.page-heading{margin-bottom:18px}.page-heading h2{font-weight:700}
+#tabDashboard .dashboard-summary{background:linear-gradient(125deg,#edf3ff,#f1edfa)!important;color:var(--ui-text)!important;border:1px solid var(--brand-border)!important;padding:20px;box-shadow:var(--ui-shadow)!important;border-radius:22px}
+html.dark #tabDashboard .dashboard-summary{background:linear-gradient(125deg,#263955,#302f4d)!important;border-color:var(--ui-line)!important}
+#tabDashboard .dashboard-summary .summary-label,#tabDashboard .dashboard-summary .month-status,#tabDashboard .dashboard-summary .dashboard-action-hint{color:var(--ui-muted)!important}
+#tabDashboard .dashboard-summary #dashBalance{font-size:clamp(2rem,8vw,2.65rem);margin:6px 0 16px;color:var(--ui-text)!important;font-weight:750}
+#tabDashboard .dashboard-summary .summary-split{margin-bottom:14px;padding-top:12px;border-color:var(--brand-border)}
+#tabDashboard .dashboard-summary .summary-split p:last-child{color:var(--ui-text)!important;font-size:1rem}
+#tabDashboard .dashboard-summary .dashboard-next-meta{padding:0;background:none;color:var(--ui-text);font-size:.8125rem;margin-bottom:10px}
+#tabDashboard .dashboard-summary #dashAddBtn,html.dark #tabDashboard .dashboard-summary #dashAddBtn{background:var(--brand)!important;color:var(--ui-surface)!important;border-color:var(--brand)!important;min-height:46px;box-shadow:none!important}
+html.dark #tabDashboard .dashboard-summary #dashAddBtn{color:#182744!important}
+.dashboard-action-hint{font-size:.8125rem;line-height:1.45;margin-top:10px}
+.monthly-tasks{padding:20px}.section-heading h3,.section-heading h4{font-size:1rem;font-weight:700}
+.settings-link:nth-child(3n+2) .settings-icon{background:var(--product-mint);color:#356e58}.settings-link:nth-child(3n) .settings-icon{background:var(--product-lavender);color:#73579e}
+html.dark .settings-link:nth-child(3n+2) .settings-icon{color:#a6ddc2}html.dark .settings-link:nth-child(3n) .settings-icon{color:#cfbafa}
+.auth-mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px;border-radius:15px;background:var(--ui-soft);border:1px solid var(--ui-line);margin-bottom:20px}
+.auth-mode-switch button{min-height:44px;border-radius:11px;font-size:.875rem;font-weight:650;color:var(--ui-muted)}
+.auth-mode-switch button.active{background:var(--ui-surface);color:var(--brand);box-shadow:0 2px 7px rgb(36 48 71 / .07)}
+.share-links-list,.account-sessions{display:grid;gap:10px}.account-sessions{margin-top:18px;padding:18px;border:1px solid var(--ui-line);background:var(--ui-surface);border-radius:18px}
+.account-sessions>p,.account-sessions .section-heading button{font-size:.8125rem;line-height:1.5;color:var(--ui-muted)}
+.session-row,.share-link-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px;border:1px solid var(--ui-line);border-radius:13px;background:var(--ui-soft)}
+.session-row>span:first-child,.share-link-row>span{display:grid;gap:5px;min-width:0}
+.session-row strong,.share-link-row strong{font-size:.875rem;overflow-wrap:anywhere}.session-row small,.share-link-row small{font-size:.75rem;color:var(--ui-muted);line-height:1.5}
+.session-row button,.share-link-row button{flex:0 0 auto;min-height:44px;padding:8px 10px;font-size:.8125rem;color:var(--ui-danger,#a33b45);border-radius:10px}
+.session-current{font-size:.75rem;font-weight:650;color:var(--brand)}
+.ai-context-control{padding:12px 18px;border-bottom:1px solid var(--ui-line);background:var(--ui-soft)}
+.ai-context-control label{display:flex;align-items:center;gap:9px;font-size:.875rem;font-weight:650;color:var(--ui-text)}
+.ai-context-control input{width:18px;height:18px;accent-color:var(--brand)}.ai-context-control p{margin-top:7px;font-size:.75rem;line-height:1.5;color:var(--ui-muted)}
+.ai-tools{display:flex;gap:12px;margin-top:8px}.ai-tools button,.ai-copy{min-height:34px;font-size:.75rem;color:var(--brand);padding:4px 0}.ai-tools .hidden{display:none}.ai-copy{margin-top:3px}
+#aiInput{font-size:1rem}#aiSendBtn,#aiClearBtn,#aiCloseBtn{min-width:44px;min-height:44px}
+.action-dialog label{display:block;font-size:.875rem;font-weight:650;margin:16px 0 7px;color:var(--ui-text)}
+.action-dialog input:not([type=checkbox]),.action-dialog select{width:100%;min-height:48px;padding:11px 13px;border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-soft);color:var(--ui-text);font-size:1rem}
+.action-dialog form{min-width:0}.import-notice,.meter-replacement-note{background:var(--brand-light);padding:12px;border-radius:12px;font-size:.8125rem;line-height:1.55;color:var(--ui-text)}
+#replacementError{color:var(--ui-danger,#a33b45);font-size:.875rem;line-height:1.5}
+.reminder-disabled-state{display:flex;gap:13px;padding:18px;border-top:1px solid var(--ui-line);background:var(--ui-soft)}.reminder-disabled-state .settings-icon{flex:0 0 auto}.reminder-disabled-state strong{display:block;font-size:.9375rem}.reminder-disabled-state p{margin-top:6px;font-size:.875rem;color:var(--ui-muted);line-height:1.6}.reminder-disabled-state.hidden{display:none}
+:where(button,a,input,select,textarea,summary):focus-visible{outline:3px solid var(--brand);outline-offset:3px}
+@media(max-width:520px){.page-heading{margin-block:6px 16px}.overview-workspace{gap:16px}.monthly-tasks{padding:18px}#tabDashboard .dashboard-summary{padding:18px}.session-row,.share-link-row{padding:10px;gap:8px}.account-sessions{padding:14px}.settings-back{min-height:44px}.action-dialog{max-height:calc(100dvh - 28px);overflow-y:auto}.action-dialog .dialog-actions{position:sticky;bottom:-1px;background:var(--ui-surface);padding-top:12px}.reminder-disabled-state{padding:16px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
