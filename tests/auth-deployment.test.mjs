@@ -26,3 +26,24 @@ test('a header-only deployment change invalidates cached PWA HTML without alteri
   assert.notEqual(newBuild,oldBuild,'header changes must create a waiting update with fresh cached response headers');
   assert.equal(createReleaseBuildId(sw,after,[...assets]),newBuild,'an unchanged release must never advertise another update');
 });
+
+test('deployment formatting and unrelated build metadata cannot advertise false PWA updates',()=>{
+  const config={headers:[{source:'/(.*)',headers:[{key:'Content-Security-Policy',value:"script-src 'self'"}]}]};
+  const reformatted={name:'platform-generated-name',buildCommand:'npm run build',headers:[{headers:[{value:"script-src 'self'",key:'Content-Security-Policy'}],source:'/(.*)'}]};
+  const build=createReleaseBuildId('same SW',JSON.stringify(config),['same assets']);
+  assert.equal(createReleaseBuildId('same SW',JSON.stringify(reformatted,null,2),['same assets']),build);
+  assert.notEqual(createReleaseBuildId('same SW',JSON.stringify({...config,rewrites:[{source:'/example',destination:'/index.html'}]}),['same assets']),build);
+});
+
+test('Google redirect helpers use a transparent project-specific proxy with uncached same-origin frames',async()=>{
+ const config=JSON.parse(await readFile(new URL('../vercel.json',import.meta.url),'utf8'));
+ const proxy=config.rewrites.find(rule=>rule.source==='/__/auth/:path*');
+ assert.equal(proxy.destination,'https://pwakomun.firebaseapp.com/__/auth/:path*');
+ const headers=config.headers.find(rule=>rule.source==='/__/auth/:path*').headers;
+ assert.equal(headers.find(h=>h.key==='X-Frame-Options').value,'SAMEORIGIN');
+ assert.equal(headers.find(h=>h.key==='Cache-Control').value,'no-store');
+ assert.match(headers.find(h=>h.key==='Content-Security-Policy').value,/frame-ancestors 'self'/);
+ const root=config.headers.find(rule=>rule.source==='/(.*)').headers;
+ assert.equal(root.find(h=>h.key==='X-Frame-Options').value,'DENY');
+ assert.match(root.find(h=>h.key==='Content-Security-Policy').value,/frame-src 'self'/);
+});

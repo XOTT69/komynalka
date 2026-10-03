@@ -18,7 +18,14 @@ const MAIL_DESTINATION_KEY = 'komynalka_mail_destination';
 const DEVICE_META_PREFIX = 'komynalka_device_meta_v1';
 
 const firebaseConfig = { apiKey: "AIzaSyBgRHmaHjg23BIZjJdCucwnmMFDX57XP80", authDomain: "pwakomun.firebaseapp.com", projectId: "pwakomun", storageBucket: "pwakomun.firebasestorage.app", messagingSenderId: "4437974770", appId: "1:4437974770:web:bf7d2f7bac35eff5707a6b" };
+const GOOGLE_REDIRECT_KEY='komynalka_google_redirect_v1';
+const GOOGLE_AUTH_HOSTS=['mykomunalka.pp.ua','www.mykomunalka.pp.ua','komynalka.vercel.app'];
+if(window.location.protocol==='https:'&&GOOGLE_AUTH_HOSTS.includes(window.location.hostname))firebaseConfig.authDomain=window.location.hostname;
 firebase.initializeApp(firebaseConfig);
+function useGoogleRedirect(){
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  return ios&&(navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches)&&GOOGLE_AUTH_HOSTS.includes(window.location.hostname);
+}
 
 window.addEventListener('load', () => {
   setTimeout(() => { const s = $('splashScreen'); if (s) { s.style.opacity = '0'; setTimeout(() => s.remove(), 500); } }, 600);
@@ -558,7 +565,8 @@ $('googleAuthBtn')?.addEventListener('click', async () => {
   const button=$('googleAuthBtn');if(button.disabled)return;
   $('authError')?.classList.add('hidden');$('googleAuthHelp')?.classList.add('hidden');button.disabled=true;button.setAttribute('aria-busy','true');
   try {
-    const result=await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    const result=await startGoogleAuth('login');
+    if(!result)return;
     if(!result?.user)throw new Error('Google не повернув обліковий запис');
     googleUser=result.user;
     await performLogin(null,null,false,googleUser.uid);
@@ -566,6 +574,41 @@ $('googleAuthBtn')?.addEventListener('click', async () => {
   finally{button.disabled=false;button.removeAttribute('aria-busy');}
 });
 $('googleAuthCopyUrl')?.addEventListener('click',()=>copyProviderText(window.location.origin+window.location.pathname));
+async function startGoogleAuth(intent){
+  const auth=firebase.auth(),provider=new firebase.auth.GoogleAuthProvider();
+  if(!useGoogleRedirect())return auth.signInWithPopup(provider);
+  if(!navigator.onLine)throw {code:'auth/network-request-failed'};
+  if(!saveDraft()||(activeStore&&(syncCurrentAddress(),!saveToLocal())))throw new Error('Не вдалося зберегти чернетку перед входом.');
+  // Store intent only, never a password or Google token. Firebase verifies the result.
+  sessionStorage.setItem(GOOGLE_REDIRECT_KEY,JSON.stringify({intent,owner:intent==='link'?sessionLogin:null,at:Date.now()}));
+  if($('googleAuthStatus')){$('googleAuthStatus').textContent='Переходимо до Google… Після входу повернемося до застосунку.';$('googleAuthStatus').classList.remove('hidden');}
+  try{await auth.signInWithRedirect(provider);return null;}
+  catch(error){sessionStorage.removeItem(GOOGLE_REDIRECT_KEY);$('googleAuthStatus')?.classList.add('hidden');throw error;}
+}
+function openGoogleLinkDialog(){
+  const modal=$('linkAccountModal');if($('laLogin'))$('laLogin').value=sessionLogin;if($('laPass'))$('laPass').value='';$('laError')?.classList.add('hidden');modal?.classList.remove('hidden');setTimeout(()=>$('laPass')?.focus(),100);
+}
+async function recoverGoogleRedirect(){
+  const auth=firebase.auth();if(!navigator.onLine||typeof auth.getRedirectResult!=='function')return false;
+  const attempt=authAttempt;
+  let pending=null;
+  try{pending=JSON.parse(sessionStorage.getItem(GOOGLE_REDIRECT_KEY)||'null');}catch{}
+  try{
+    const result=await auth.getRedirectResult();
+    if(attempt!==authAttempt)return true;
+    sessionStorage.removeItem(GOOGLE_REDIRECT_KEY);
+    if(!result?.user){if(pending){$('authError').textContent='Вхід Google не завершено. Натисніть «Вхід через Google» ще раз.';$('authError').classList.remove('hidden');}return false;}
+    googleUser=result.user;
+    if(pending?.intent==='link'){
+      if(Date.now()-pending.at>15*60*1000||pending.owner!==initialDeviceLogin||pending.owner!==sessionLogin)throw new Error('Спроба прив’язки завершилась. Увійдіть у свій акаунт і повторіть.');
+      await performLogin(sessionLogin,sessionPass,true,null,true);
+      if(!activeStore||sessionLogin!==pending.owner)throw new Error('Спочатку увійдіть у свій акаунт для прив’язки Google.');
+      openGoogleLinkDialog();
+    }else await performLogin(null,null,false,googleUser.uid);
+    return true;
+  }catch(error){try{sessionStorage.removeItem(GOOGLE_REDIRECT_KEY);}catch{}if(pending)showGoogleAuthError(error);return false;}
+}
+
 
 function authMessage(code){return({INVALID_CREDENTIALS:'Неправильний логін або пароль.',TOO_MANY_ATTEMPTS:'Забагато спроб. Зачекайте 15 хвилин.',INVALID_LOGIN:'Логін має містити 2–80 літер, цифр або символів . _ @ + -',PASSWORD_TOO_SHORT:'Пароль має містити щонайменше 8 символів.',PASSWORD_TOO_LONG:'Пароль надто довгий.',PASSWORD_TOO_WEAK:'Додайте до пароля літери або цифри.',ACCOUNT_EXISTS:'Такий акаунт уже існує. Перейдіть до входу.'})[code]||'Не вдалося виконати вхід. Спробуйте ще раз.';}
 async function activateAccount(result,owner,uid,attempt=null){
@@ -688,12 +731,12 @@ async function linkAccount(lgn, pss) {
 
 $('btnLinkGoogle')?.addEventListener('click', async () => {
   if (!sessionLogin) return showToast("Спочатку увійдіть", "⚠️");
-  const provider = new firebase.auth.GoogleAuthProvider();
+  const button=$('btnLinkGoogle');button.disabled=true;
   try {
-    const result = await firebase.auth().signInWithPopup(provider);
-    googleUser=result.user;
-    const modal=$('linkAccountModal');if($('laLogin'))$('laLogin').value=sessionLogin;if($('laPass'))$('laPass').value='';$('laError')?.classList.add('hidden');modal?.classList.remove('hidden');setTimeout(()=>$('laPass')?.focus(),100);
-  } catch(e) { showToast("Скасовано", "⚠️"); }
+    const result = await startGoogleAuth('link');if(!result)return;
+    googleUser=result.user;openGoogleLinkDialog();
+  } catch(e) { showToast(e.code==='auth/popup-closed-by-user'?'Вхід скасовано':'Не вдалося відкрити Google. Спробуйте ще раз.', '⚠️'); }
+  finally{button.disabled=false;}
 });
 
 function updateGoogleButton() {
@@ -2339,6 +2382,10 @@ if(urlShareToken){
     .then(data=>{if(data.success){const normalized=normalizeImportData(data.data);addresses=normalized?.addresses||data.data.addresses;currentAddressId=normalized?.currentAddressId||data.data.currentAddressId;loadCurrentAddress();showToast('Гостьовий доступ відкрито','✅');}else showActionToast('Посилання недійсне','На вхід',()=>{window.location.href=window.location.pathname;},'⚠️');})
     .catch(()=>showActionToast('Не вдалося завантажити','Повторити',()=>window.location.reload(),'❌'));
 } else {
+  void restoreAccountSession();
+}
+async function restoreAccountSession(){
+  if(await recoverGoogleRedirect())return;
   const uid=localStorage.getItem('k_uid');
   if(!navigator.onLine&&initialDeviceLogin){
     restoreCachedAccount(initialDeviceLogin,uid);

@@ -12,6 +12,8 @@ self.addEventListener('fetch',event=>{
   const url=new URL(event.request.url);
   if(url.origin!==self.location.origin)return;
   const path=url.pathname;
+  // OAuth helpers contain live state and must never use the offline app shell.
+  if(path.startsWith('/__/auth/')||path==='/__/firebase/init.json')return;
   const isApp=event.request.mode === 'navigate' && (path.endsWith('/')||path.endsWith('/index.html'));
   if(isApp){event.respondWith(caches.open(CACHE_NAME).then(cache=>cache.match('./index.html')).then(cached=>cached||fetch(event.request)));return;}
   event.respondWith(caches.open(CACHE_NAME).then(cache=>cache.match(event.request,{ignoreSearch:true})).then(cached=>cached||fetch(event.request)));

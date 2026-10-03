@@ -12,3 +12,9 @@ test('reminder notification exposes useful actions and routes them into the inst
  assert.deepEqual(Array.from(notifications[0].options.actions,a=>a.action),['readings','reminders']);assert.equal(notifications[0].options.data.url,'./index.html#reminders');
  handlers.notificationclick({action:'readings',notification:{close(){}},waitUntil:p=>waited=p});await waited;assert.deepEqual(navigations,['./index.html#calc']);
 });
+
+test('OAuth helpers bypass offline HTML and query-insensitive caching',()=>{
+ for(const path of ['/__/auth/iframe?eventId=123','/__/auth/handler?state=secret-state','/__/auth/handler.js','/__/firebase/init.json']){
+  const r=runtime();r.handlers.fetch({...r.event,request:{method:'GET',url:'https://komynalka.vercel.app'+path,mode:'navigate'}});assert.equal(r.response(),undefined,path);
+ }
+});

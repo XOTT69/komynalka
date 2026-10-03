@@ -9,7 +9,7 @@ const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
 const sources=await Promise.all(['sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','meter-readings.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','app.js','account-tools.js','meter-replacement-ui.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
 const password='test-password',hash=createHash('sha256').update(password).digest('hex');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
-async function page(env,stored={},offline=false,suffix="",fetchFault=null){
+async function page(env,stored={},offline=false,suffix="",fetchFault=null,googleSetup=null){
   const errors=[],navigations=[];const console=new VirtualConsole();console.on('jsdomError',e=>{if(e.message.includes('navigation'))navigations.push(e.message);else errors.push(e.message);});
   const dom=new JSDOM(html,{url:'https://komynalka.vercel.app'+suffix,runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:console});const w=dom.window;
   w.TextEncoder=TextEncoder;w.TextDecoder=TextDecoder;Object.defineProperty(w,'crypto',{value:webcrypto});Object.defineProperty(w.navigator,'onLine',{value:!offline,configurable:true});
@@ -24,6 +24,7 @@ async function page(env,stored={},offline=false,suffix="",fetchFault=null){
   const originalFetch=(url,options)=>worker.fetch(new Request(url,options),env);
   w.fetch=async(url,options={})=>{if(offline||fetchFault==='reject')throw new TypeError('fetch failed');if(typeof fetchFault==='function')return fetchFault(url,options,originalFetch);if(typeof fetchFault==='number')return new Response('Test server unavailable',{status:fetchFault});if(fetchFault==='invalid-json')return new Response('invalid server response');return originalFetch(url,options);};
   for(const [key,value] of Object.entries(stored))w.localStorage.setItem(key,value);
+  if(googleSetup)googleSetup(w,auth);
   w.eval(sources.join('\n')+'\nwindow.__disposeTestPage=()=>{activeStore=null;activeDrain=null;authAttempt++;};window.__interruptUpdateCheck=()=>{pendingServiceWorker={state:"installed"};updateManager={check:async()=>false};showUpdateBanner();};');
   await delay(30);
   return {w,errors,navigations,close:()=>{
@@ -411,4 +412,44 @@ test('meter replacement survives drafts and uses both meters in costs, history, 
     const state=JSON.parse(w.localStorage.getItem('komynalka_account_v1:anna')).local,address=state.addresses[0],rec=address.records.find(r=>r.month==='2026-09');assert.equal(rec.waterCost,792);assert.equal(rec.total,792);assert.deepEqual(address.records.find(r=>r.month==='2026-08'),original.addresses[0].records[0]);assert.match(w.createRecordCard(rec).textContent,/\+8 м³/);
     const meters=w.KomunalkaProviders.meterValues(address,'water','2026-09');assert.equal(meters[0].difference,'8');const draft=w.KomunalkaProviders.emailDraft(address,{id:'water',label:'Вода'},{email:'test@example.invalid',account:'123'},'2026-09');assert.match(draft.body,/різниця 8/);assert.match(draft.body,/старий 129 → 134/);assert.equal(draft.needsReview,true);let csv='';w.downloadBlob=text=>{csv=text;};w.exportCSV();assert.match(csv,/2026-09,8,792.00/);w.editRecordById(rec.id);await delay(60);assert.equal(d.getElementById('wPrev').value,'10');assert.equal(d.getElementById('wCur').value,'13');assert.deepEqual(reopened.errors,[]);
   }finally{reopened.close();}
+});
+
+function iosStandalone(w){Object.defineProperty(w.navigator,'userAgent',{value:'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X)',configurable:true});Object.defineProperty(w.navigator,'standalone',{value:true,configurable:true});}
+const redirectKey='komynalka_google_redirect_v1';
+test('iPhone PWA uses redirect without a popup and preserves account data before navigation',async()=>{
+ const {env}=environment({anna:legacyAccount(hash)});let redirects=0,popups=0;
+ const p=await page(env,{komynalka_backup:'preserve-this'},false,'',null,(w,auth)=>{iosStandalone(w);auth.signInWithRedirect=async()=>{redirects++;};auth.signInWithPopup=async()=>{popups++;throw Error('PWA popup must not be used');};});
+ try{p.w.document.getElementById('googleAuthBtn').click();await delay(20);assert.equal(redirects,1);assert.equal(popups,0);const intent=JSON.parse(p.w.sessionStorage.getItem(redirectKey));assert.equal(intent.intent,'login');assert.deepEqual(Object.keys(intent).sort(),['at','intent','owner']);assert.equal(p.w.localStorage.getItem('komynalka_backup'),'preserve-this');assert.match(p.w.document.getElementById('googleAuthStatus').textContent,/Переходимо до Google/);assert.deepEqual(p.errors,[]);}finally{p.close();}
+});
+test('iPad standalone with desktop user agent uses redirect while Safari tabs retain popup',async()=>{
+ const {env}=environment(),p=await page(env);
+ try{assert.equal(p.w.useGoogleRedirect(),false);Object.defineProperty(p.w.navigator,'platform',{value:'MacIntel',configurable:true});Object.defineProperty(p.w.navigator,'maxTouchPoints',{value:5,configurable:true});Object.defineProperty(p.w.navigator,'standalone',{value:true,configurable:true});assert.equal(p.w.useGoogleRedirect(),true);Object.defineProperty(p.w.navigator,'standalone',{value:false,configurable:true});assert.equal(p.w.useGoogleRedirect(),false);assert.deepEqual(p.errors,[]);}finally{p.close();}
+});
+test('verified redirect result opens the existing mapped account and retains readings and unknown fields',async()=>{
+ const legacy=legacyAccount(hash),{env}=environment({anna:legacy});let verifiedRequests=0;
+ const p=await page(env,{},false,'',(url,options,original)=>{if(options.headers?.Authorization==='Bearer verified-google-fixture'&&options.method==='GET'){verifiedRequests++;return Response.json({success:true,syncProtocol:2,data:{...legacy,linkedLogin:'anna',syncProtocol:2,revision:0}});}return original(url,options);},(w,auth)=>{w.sessionStorage.setItem(redirectKey,JSON.stringify({intent:'login',owner:null,at:Date.now()}));auth.getRedirectResult=async()=>({user:{uid:'google-owner',getIdToken:async()=> 'verified-google-fixture'}});});
+ try{await delay(60);assert.ok(verifiedRequests);assert.equal(p.w.localStorage.getItem('k_login'),'anna');assert.equal(p.w.localStorage.getItem('k_uid'),'google-owner');assert.equal(p.w.sessionStorage.getItem(redirectKey),null);assert.deepEqual(JSON.parse(p.w.localStorage.getItem('komynalka_account_v1:anna')).local.addresses[0].records,legacy.addresses[0].records);assert.equal(p.w.document.getElementById('authScreen').classList.contains('hidden'),true);assert.deepEqual(p.errors,[]);}finally{p.close();}
+});
+test('cancelled or failed redirect gives visible recovery and never creates or deletes an account',async()=>{
+ for(const failure of [null,{code:'auth/network-request-failed'}]){
+  const {env,values}=environment({anna:legacyAccount(hash)});const before=values.get('anna');
+  const p=await page(env,{komynalka_backup:'keep'},false,'',null,(w,auth)=>{w.sessionStorage.setItem(redirectKey,JSON.stringify({intent:'login',at:Date.now()}));auth.getRedirectResult=async()=>{if(failure)throw failure;return null;};});
+  try{assert.equal(p.w.document.getElementById('authError').classList.contains('hidden'),false);assert.equal(p.w.document.getElementById('googleAuthBtn').disabled,false);assert.equal(p.w.localStorage.getItem('komynalka_backup'),'keep');assert.equal(p.w.sessionStorage.getItem(redirectKey),null);assert.equal(values.get('anna'),before);assert.equal(values.has('uid_undefined'),false);assert.deepEqual(p.errors,[]);}finally{p.close();}
+ }
+});
+test('redirect initiation errors release the Google button and clear pending intent',async()=>{
+ const {env}=environment(),p=await page(env,{},false,'',null,(w,auth)=>{iosStandalone(w);auth.signInWithRedirect=async()=>{throw {code:'auth/network-request-failed'};};});
+ try{p.w.document.getElementById('googleAuthBtn').click();await delay(20);assert.equal(p.w.document.getElementById('googleAuthBtn').disabled,false);assert.equal(p.w.sessionStorage.getItem(redirectKey),null);assert.match(p.w.document.getElementById('authError').textContent,/Перевірте інтернет/);assert.deepEqual(p.errors,[]);}finally{p.close();}
+});
+test('Google redirect linking still requires the existing account password and never links automatically',async()=>{
+ const {env,values}=environment({anna:legacyAccount(hash)});const initial=await page(env);let stored;
+ try{await initial.w.performLogin('anna',password,false);stored=initial.storage();}finally{initial.close();}
+ const before=values.get('anna');
+ const p=await page(env,stored,false,'',null,(w,auth)=>{w.sessionStorage.setItem(redirectKey,JSON.stringify({intent:'link',owner:'anna',at:Date.now()}));auth.getRedirectResult=async()=>({user:{uid:'new-google-owner',getIdToken:async()=> 'fixture'}});});
+ try{await delay(60);assert.equal(p.w.document.getElementById('linkAccountModal').classList.contains('hidden'),false);assert.equal(p.w.document.getElementById('laLogin').value,'anna');assert.equal(p.w.document.getElementById('laPass').value,'');assert.equal(values.has('google_new-google-owner'),false);assert.equal(values.get('anna'),before);assert.equal(p.w.localStorage.getItem('k_uid'),null);assert.deepEqual(p.errors,[]);}finally{p.close();}
+});
+test('a late redirect result cannot replace an account signed in by a newer action',async()=>{
+ const {env}=environment({bob:legacyAccount(hash)});let release;
+ const p=await page(env,{},false,'',null,(w,auth)=>{auth.getRedirectResult=()=>new Promise(resolve=>release=()=>resolve({user:{uid:'old-google',getIdToken:async()=> 'fixture'}}));});
+ try{await p.w.performLogin('bob',password,false);release();await delay(30);assert.equal(p.w.localStorage.getItem('k_login'),'bob');assert.equal(p.w.localStorage.getItem('k_uid'),null);assert.deepEqual(p.errors,[]);}finally{p.close();}
 });
