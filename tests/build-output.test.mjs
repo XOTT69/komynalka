@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {access,readFile} from 'node:fs/promises';
+import {access,readFile,readdir} from 'node:fs/promises';
+import {createReleaseBuildId} from '../scripts/release-build-id.mjs';
 
 test('production build injects one release version and keeps optional assets out of the install cache',async()=>{
   const pkg=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'));
@@ -25,4 +26,28 @@ test('production build injects one release version and keeps optional assets out
   assert.equal(assets.includes('./og-image.png'),false);
   assert.equal(assets.includes('./styles/quiet-ui.css'),false);
   for(const asset of assets)await access(new URL('../dist/'+asset.slice(2),import.meta.url));
+});
+
+test('the published HTML and SW use the build identity of assets and deployment response policy',async()=>{
+  const root=new URL('../',import.meta.url);
+  async function files(directory){
+    const result=[];
+    for(const entry of await readdir(new URL(directory,root),{withFileTypes:true})){
+      const name=directory+entry.name;
+      if(entry.isDirectory())result.push(...await files(name+'/'));else result.push(name);
+    }
+    return result;
+  }
+  const assets=(await files('dist/')).filter(name=>!['dist/admin.html','dist/landing.html','dist/sw.js'].includes(name)).sort();
+  const bytes=await Promise.all(assets.map(async name=>{
+    const source=await readFile(new URL(name,root));
+    return name==='dist/index.html'?Buffer.from(source.toString().replace(/<meta name="app-build" content="[^"]+">/,'')):source;
+  }));
+  const swSource=await readFile(new URL('sw.js',root));
+  const expected=createReleaseBuildId(swSource,await readFile(new URL('vercel.json',root)),bytes);
+  const index=await readFile(new URL('dist/index.html',root),'utf8');
+  const sw=await readFile(new URL('dist/sw.js',root),'utf8');
+  assert.ok(index.includes(`<meta name="app-build" content="${expected}">`));
+  assert.ok(sw.includes(`const CACHE_NAME = 'komunalka-${expected}';`));
+  assert.notEqual(createReleaseBuildId(swSource,'{}',bytes),expected,'cached response headers must participate in the deployed build identity');
 });

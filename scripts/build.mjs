@@ -1,6 +1,6 @@
 import {mkdir, cp, readFile, writeFile, readdir, rm} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
-import {createHash} from 'node:crypto';
+import {createReleaseBuildId} from './release-build-id.mjs';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import {compile,optimize} from '@tailwindcss/node';
@@ -31,8 +31,9 @@ async function files(dir){const result=[];for(const entry of await readdir(dir,{
 const assets=(await files('dist')).filter(p=>!p.endsWith('admin.html')&&!p.endsWith('landing.html')).sort();
 const optionalOfflinePatterns=[/\/vendor\/jspdf\//,/\/vendor\/fonts\/Roboto-Regular\.ttf$/,/\/vendor\/fontawesome\/webfonts\/.*\.ttf$/,/\/vendor\/fontawesome\/webfonts\/fa-(?:regular|v4compatibility).*\.woff2$/,/\/og-image\.png$/,/\/icon\.png$/,/\/styles\/(?:app-shell|design-tokens|quiet-ui|theme|tailwind)\.css$/];
 const offlineAssets=assets.filter(file=>!optionalOfflinePatterns.some(pattern=>pattern.test(file)));
-const hash=createHash('sha256');hash.update(await readFile('sw.js'));for(const file of assets)hash.update(await readFile(file));
-const buildId=hash.digest('hex').slice(0,12);
+// Cached HTML retains its response headers. Deployment policy changes must
+// therefore produce a new SW cache even when the application assets are unchanged.
+const buildId=createReleaseBuildId(await readFile('sw.js'),await readFile('vercel.json'),await Promise.all(assets.map(file=>readFile(file))));
 for(const file of ['dist/index.html','dist/admin.html']){const html=await readFile(file,'utf8');await writeFile(file,html.replace('</head>',`<meta name="app-build" content="${buildId}"></head>`));}
 let worker=await readFile('sw.js','utf8');
 worker=worker.replace(/const CACHE_NAME = .*;/,`const CACHE_NAME = 'komunalka-${buildId}';`).replace(/const PRECACHE_URLS = .*;/,`const PRECACHE_URLS = ${JSON.stringify(offlineAssets.map(p=>'./'+p.slice(5)))};`);
