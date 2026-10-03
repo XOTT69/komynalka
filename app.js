@@ -2366,13 +2366,15 @@ let updateRegistration=null,updateManager=null;
 async function registerServiceWorker(){
   if(!('serviceWorker' in navigator))return;
   try{
-    const existingController=navigator.serviceWorker.controller;
+    let existingController=navigator.serviceWorker.controller;
     const registration=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});updateRegistration=registration;
     updateManager=KomunalkaUpdates.create({controller:()=>navigator.serviceWorker.controller,onReady:worker=>{pendingServiceWorker=worker;showUpdateBanner();},onClear:()=>{pendingServiceWorker=null;$('updateBanner')?.remove();}});
     const check=()=>updateManager.check(registration);
     registration.addEventListener('updatefound',()=>{const next=registration.installing;if(next)next.addEventListener('statechange',()=>{if(next.state==='installed'||next.state==='redundant')check();});});
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
-      updateManager.clear();if(!isRefreshingAfterUpdate&&!existingController)return;
+      const shouldReload=isRefreshingAfterUpdate||Boolean(existingController);
+      existingController=navigator.serviceWorker.controller;
+      updateManager.clear();if(!shouldReload)return;
       if(!saveDraft()||(activeStore&&(syncCurrentAddress(),!saveToLocal())))return;window.location.reload();
     });
     await check();initPush();
