@@ -45,5 +45,10 @@ const fs=require('node:fs');
     assert.equal(await second.locator('#updateBanner').count(),0,'unchanged release must not offer an update');
     const appCaches=await second.evaluate(async()=> (await caches.keys()).filter(key=>key.startsWith('komunalka-')));assert.equal(appCaches.length,1,'old release cache must be removed');
     assert.deepEqual(errors,[]);console.log('PWA browser checks passed: first install, two-tab update, drafts, unavailable API, offline reload and unchanged release.');
+  }catch(error){
+    for(const [index,page] of context.pages().entries()){
+      try{const button=page.locator('#applyUpdateBtn');console.error('PWA failure page',index,await page.locator('#pwaState').textContent(),await page.locator('meta[name="app-build"]').getAttribute('content'),'update button',await button.count()?await button.getAttribute('disabled'):'absent');await page.screenshot({path:`test-results/pwa-failure-${index}.png`});}catch{}
+    }
+    console.error('PWA page errors',errors);throw error;
   }finally{await context.setOffline(false);await context.close();await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -10,7 +10,7 @@ const sources=await Promise.all(['sync-queue.js','data-store.js','addresses.js',
 const password='test-password',hash=createHash('sha256').update(password).digest('hex');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function page(env,stored={},offline=false,suffix="",fetchFault=null){
-  const errors=[];const console=new VirtualConsole();console.on('jsdomError',e=>{if(!e.message.includes('navigation'))errors.push(e.message);});
+  const errors=[],navigations=[];const console=new VirtualConsole();console.on('jsdomError',e=>{if(e.message.includes('navigation'))navigations.push(e.message);else errors.push(e.message);});
   const dom=new JSDOM(html,{url:'https://komynalka.vercel.app'+suffix,runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:console});const w=dom.window;
   w.TextEncoder=TextEncoder;w.TextDecoder=TextDecoder;Object.defineProperty(w,'crypto',{value:webcrypto});Object.defineProperty(w.navigator,'onLine',{value:!offline,configurable:true});
   w.matchMedia=()=>({matches:false,addEventListener(){}});w.IntersectionObserver=class{observe(){}disconnect(){}};
@@ -26,13 +26,27 @@ async function page(env,stored={},offline=false,suffix="",fetchFault=null){
   for(const [key,value] of Object.entries(stored))w.localStorage.setItem(key,value);
   w.eval(sources.join('\n')+'\nwindow.__disposeTestPage=()=>{activeStore=null;activeDrain=null;authAttempt++;};');
   await delay(30);
-  return {w,errors,close:()=>{
+  return {w,errors,navigations,close:()=>{
     // Browser navigation discards callbacks from the old document. JSDOM.close()
     // keeps native fetch promises alive, so detach their account before teardown.
     w.__disposeTestPage();dom.window.close();
   },storage:()=>Object.fromEntries(Array.from({length:w.localStorage.length},(_,i)=>{const key=w.localStorage.key(i);return[key,w.localStorage.getItem(key)];}))};
 }
 test('actual app login preserves history, account totals and additional legacy fields',async()=>{const legacy=legacyAccount(hash),{env}=environment({anna:legacy});const p=await page(env);try{await p.w.performLogin('anna',password,false);await delay(30);assert.equal(p.w.document.getElementById('appScreen').classList.contains('hidden'),false,p.w.document.getElementById('authError').textContent);const data=JSON.parse(p.w.localStorage.getItem('komynalka_account_v1:anna'));assert.equal(data.local.addresses[0].records[0].total,151.9);assert.equal(data.local.addresses[0].records[0].paidAmount,50);assert.equal(data.local.addresses[0].records[0].customField,'preserve');assert.deepEqual(p.errors,[]);}finally{p.close();}});
+test('control gained during initial SW registration reloads only for a subsequent controller',async()=>{
+  const {env}=environment({anna:legacyAccount(hash)}),p=await page(env);
+  try{
+    await p.w.performLogin('anna',password,false);
+    const sw=new p.w.EventTarget(),registration=new p.w.EventTarget(),firstController={};
+    registration.waiting=null;registration.update=async()=>{};
+    sw.controller=null;sw.register=async()=>{sw.controller=firstController;return registration;};
+    Object.defineProperty(p.w.navigator,'serviceWorker',{configurable:true,value:sw});
+    await p.w.registerServiceWorker();
+    sw.dispatchEvent(new p.w.Event('controllerchange'));assert.equal(p.navigations.length,0,'Initial activation must not reload');
+    sw.controller={};sw.dispatchEvent(new p.w.Event('controllerchange'));assert.equal(p.navigations.length,1,'Subsequent activation must reload');
+    assert.deepEqual(p.errors,[]);
+  }finally{p.close();}
+});
 test('an unknown previous reading cannot charge from zero; explicit zero is accepted',async()=>{
   const legacy=legacyAccount(hash),{env}=environment({anna:legacy}),p=await page(env);
   try{

@@ -2368,12 +2368,15 @@ async function registerServiceWorker(){
   try{
     let existingController=navigator.serviceWorker.controller;
     const registration=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});updateRegistration=registration;
+    // First activation may finish while register() is awaiting its result.
+    existingController=navigator.serviceWorker.controller;
     updateManager=KomunalkaUpdates.create({controller:()=>navigator.serviceWorker.controller,onReady:worker=>{pendingServiceWorker=worker;showUpdateBanner();},onClear:()=>{pendingServiceWorker=null;$('updateBanner')?.remove();}});
     const check=()=>updateManager.check(registration);
     registration.addEventListener('updatefound',()=>{const next=registration.installing;if(next)next.addEventListener('statechange',()=>{if(next.state==='installed'||next.state==='redundant')check();});});
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
-      const shouldReload=isRefreshingAfterUpdate||Boolean(existingController);
-      existingController=navigator.serviceWorker.controller;
+      const nextController=navigator.serviceWorker.controller;
+      const shouldReload=isRefreshingAfterUpdate||Boolean(existingController&&existingController!==nextController);
+      existingController=nextController;
       updateManager.clear();if(!shouldReload)return;
       if(!saveDraft()||(activeStore&&(syncCurrentAddress(),!saveToLocal())))return;window.location.reload();
     });
