@@ -13,8 +13,39 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
         let statsRequest = null;
         let sessionInterval = null;
         let passwordLogin = '';
+        let serverPages=false,userTotal=0,userCursor=null,userCursors=[null],usersGeneration=0,userFilterTimer,usersBusy=false;
+        let indexedStats=null,indexedAnalytics=null,indexRequest=null;
+        let feedbackCursor=null,feedbackTotal=0,feedbackGeneration=0,feedbackFilterTimer,feedbackBusy=false;
+        function userQuery(){return{paginated:true,limit:PAGE_SIZE,cursor:userCursors[currentPage],q:document.getElementById('searchUsers').value,type:document.getElementById('filterType').value,pro:document.getElementById('filterPro').value,active:document.getElementById('filterActive').value,sort:currentSort.field,dir:currentSort.dir};}
+        async function ensureAdminIndex(){
+            if(indexRequest)return indexRequest;
+            const owner=adminToken;
+            indexRequest=(async()=>{let result;do{if(adminToken!==owner)throw new Error('Сесія змінилась');result=await adminApi('admin_index_prepare');if(result.indexReady===false)document.getElementById('lastUpdate').textContent='Готую індекс: '+result.pages+' сторінок';}while(result.indexReady===false);})();
+            try{await indexRequest;}finally{indexRequest=null;}
+        }
+        async function requestUserPage(){
+            const generation=++usersGeneration,owner=adminToken,query=userQuery();
+            usersBusy=true;document.querySelectorAll('button[onclick="prevPage()"],button[onclick="nextPage()"]').forEach(button=>button.disabled=true);
+            try{
+            const data=await adminApi('admin_stats',query);
+            if(generation!==usersGeneration||owner!==adminToken)return;
+            if(data.indexReady===false)throw new Error('Індекс ще готується. Натисніть оновити.');
+            const {stats,users}=data;serverPages=data.mode==='directory';userTotal=data.total??users.length;userCursor=data.cursor||null;
+            allUsers=users;indexedStats=serverPages?stats:null;indexedAnalytics=data.analytics||null;
+            if(!serverPages){const known=new Set(users.map(u=>u.login));for(const login of selectedUsers)if(!known.has(login))selectedUsers.delete(login);}
+            for(const [id,value] of Object.entries({statUsers:stats.totalUsers,statActive:stats.activeThisMonth,statRecords:stats.totalRecords,statPro:stats.proUsers||0,statGoogle:stats.googleUsers??users.filter(u=>u.hasGoogle).length,statSuspicious:stats.suspiciousUsers??users.filter(u=>u.suspicious>0).length,statTariffs:stats.communityTariffs||0}))document.getElementById(id).textContent=value;
+            document.getElementById('statRetention').textContent=stats.totalUsers?Math.round(stats.activeThisMonth/stats.totalUsers*100)+'%':'0%';
+            const badge=document.getElementById('feedbackBadge');badge.textContent=stats.feedbackNew||'';badge.classList.toggle('hidden',!stats.feedbackNew);
+            const warning=document.getElementById('unrecognizedAccountsWarning');warning.classList.toggle('hidden',!data.unrecognizedAccounts);
+            if(data.unrecognizedAccounts)warning.textContent='У KV є '+data.unrecognizedAccounts+' записів невідомого формату. Вони збережені та не включені до списку користувачів.';
+            document.getElementById('lastUpdate').textContent='Оновлено: '+new Date().toLocaleTimeString('uk-UA');renderUsers();
+            if(sessionStorage.getItem('admin_tab')==='analytics')renderAnalytics();
+            if(sessionStorage.getItem('admin_tab')==='security')renderSecurity();
+            }finally{if(generation===usersGeneration){usersBusy=false;document.querySelector('button[onclick="prevPage()"]').disabled=currentPage===0;document.querySelector('button[onclick="nextPage()"]').disabled=serverPages?!userCursor:(currentPage+1)*PAGE_SIZE>=getFilteredUsers().length;}}
+        }
 
         async function adminApi(action, payload = {}) {
+            const owner=adminToken;
             let response;
             try {
                 response = await fetch(WORKER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, adminToken, ...payload }) });
@@ -23,6 +54,7 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
             }
             let data;
             try { data = await response.json(); } catch { throw new Error('Сервер повернув неочікувану відповідь'); }
+            if(owner!==adminToken)throw new Error('Сесія змінилась. Повторіть дію.');
             if (response.status === 401 || data.error === 'UNAUTHORIZED') {
                 adminLogout();
                 throw new Error('Сесія закінчилася. Увійдіть знову.');
@@ -45,6 +77,9 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
             sessionStorage.removeItem('admin_token');
             sessionStorage.removeItem('admin_expires_at');
             adminToken = '';
+            usersGeneration++;feedbackGeneration++;clearTimeout(userFilterTimer);clearTimeout(feedbackFilterTimer);
+            allUsers=[];allFeedback=[];selectedUsers.clear();indexedStats=null;indexedAnalytics=null;serverPages=false;currentPage=0;userCursors=[null];userCursor=null;feedbackCursor=null;usersBusy=false;
+            document.getElementById('usersTableBody').textContent='';document.getElementById('feedbackList').textContent='';document.getElementById('userModal').classList.add('hidden');
         }
 
         let toastTimer;
@@ -152,35 +187,10 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
         function restoreAdminTab(){const tab=sessionStorage.getItem('admin_tab')||'users';switchAdminTab(tab,document.querySelector(`[data-admin-tab="${tab}"]`));}
 
         // =================== DATA LOADING ===================
-        async function loadStats() {
-            document.getElementById('lastUpdate').textContent = 'Завантаження...';
-            refreshSystemHealth();
-            if (statsRequest) return statsRequest;
-            statsRequest = (async () => {
-            try {
-                const data = await adminApi('admin_stats');
-                const { stats, users } = data;
-                allUsers = users;
-                const known = new Set(users.map(u => u.login));
-                for (const login of selectedUsers) if (!known.has(login)) selectedUsers.delete(login);
-                document.getElementById('statUsers').textContent = stats.totalUsers;
-                document.getElementById('statActive').textContent = stats.activeThisMonth;
-                document.getElementById('statRecords').textContent = stats.totalRecords;
-                document.getElementById('statPro').textContent = stats.proUsers || 0;
-                document.getElementById('statGoogle').textContent = users.filter(u => u.hasGoogle).length;
-                document.getElementById('statRetention').textContent = stats.totalUsers > 0 ? Math.round((stats.activeThisMonth / stats.totalUsers) * 100) + '%' : '0%';
-                document.getElementById('statSuspicious').textContent = users.filter(u => u.suspicious > 0).length;
-                document.getElementById('statTariffs').textContent = stats.communityTariffs || 0;
-                const feedbackBadge=document.getElementById('feedbackBadge');feedbackBadge.textContent=stats.feedbackNew||'';feedbackBadge.classList.toggle('hidden',!(stats.feedbackNew>0));
-                const warning = document.getElementById('unrecognizedAccountsWarning');
-                warning.classList.toggle('hidden', !(data.unrecognizedAccounts > 0));
-                if (data.unrecognizedAccounts > 0) warning.textContent = `У KV є ${data.unrecognizedAccounts} записів невідомого формату. Вони не включені до списку користувачів і не будуть змінені цією панеллю. Перед міграцією перевірте резервну копію.`;
-                document.getElementById('usersCount').textContent = `${users.length} юзерів`;
-                document.getElementById('lastUpdate').textContent = `Оновлено: ${new Date().toLocaleTimeString('uk-UA')}`;
-                renderUsers();
-            } catch (e) { document.getElementById('lastUpdate').textContent = 'Помилка завантаження'; showAdminToast(e.message, 'error'); }
-            finally { statsRequest = null; }
-            })();
+        async function loadStats(){
+            if(statsRequest)return statsRequest;
+            document.getElementById('lastUpdate').textContent='Завантаження…';refreshSystemHealth();
+            statsRequest=(async()=>{try{await ensureAdminIndex();await requestUserPage();}catch(error){document.getElementById('lastUpdate').textContent='Помилка завантаження';showAdminToast(error.message,'error');}finally{statsRequest=null;}})();
             return statsRequest;
         }
 
@@ -202,6 +212,7 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
 
         // =================== USERS TABLE ===================
         function getFilteredUsers() {
+            if(serverPages)return allUsers;
             const q = (document.getElementById('searchUsers')?.value || '').trim().toLocaleLowerCase('uk-UA');
             const typeFilter = document.getElementById('filterType').value;
             const proFilter = document.getElementById('filterPro').value;
@@ -229,13 +240,14 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
 
         function renderUsers() {
             const filtered = getFilteredUsers();
-            currentPage = Math.min(currentPage, Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1));
+            if(!serverPages)currentPage = Math.min(currentPage, Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1));
             const start = currentPage * PAGE_SIZE;
-            const pageUsers = filtered.slice(start, start + PAGE_SIZE);
-            document.getElementById('usersCount').textContent = `${filtered.length} з ${allUsers.length}`;
-            document.getElementById('pageInfo').textContent = filtered.length ? `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} з ${filtered.length}` : 'Немає результатів';
+            const pageUsers = serverPages?allUsers:filtered.slice(start, start + PAGE_SIZE);
+            const total=serverPages?userTotal:filtered.length;
+            document.getElementById('usersCount').textContent = `${total} з ${indexedStats?.totalUsers??allUsers.length}`;
+            document.getElementById('pageInfo').textContent = pageUsers.length ? `${start + 1}–${start+pageUsers.length} з ${total}` : 'Немає результатів';
             document.querySelector('button[onclick="prevPage()"]').disabled = currentPage === 0;
-            document.querySelector('button[onclick="nextPage()"]').disabled = start + PAGE_SIZE >= filtered.length;
+            document.querySelector('button[onclick="nextPage()"]').disabled = serverPages?!userCursor:start + PAGE_SIZE >= filtered.length;
 
             document.getElementById('usersTableBody').innerHTML = pageUsers.map(u => {
                 const loginAttr = escAttr(u.login);
@@ -271,10 +283,10 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
             }));
         }
 
-        function filterUsers() { currentPage = 0; renderUsers(); }
-        function sortUsers(field) { if (currentSort.field === field) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc'; else { currentSort.field = field; currentSort.dir = 'desc'; } renderUsers(); }
-        function nextPage() { const max = Math.ceil(getFilteredUsers().length / PAGE_SIZE) - 1; if (currentPage < max) { currentPage++; renderUsers(); } }
-        function prevPage() { if (currentPage > 0) { currentPage--; renderUsers(); } }
+        function filterUsers(){currentPage=0;userCursors=[null];usersGeneration++;if(!serverPages){renderUsers();return;}clearTimeout(userFilterTimer);userFilterTimer=setTimeout(()=>requestUserPage().catch(error=>showAdminToast(error.message,'error')),200);}
+        function sortUsers(field){if(currentSort.field===field)currentSort.dir=currentSort.dir==='asc'?'desc':'asc';else currentSort={field,dir:'desc'};filterUsers();}
+        async function nextPage(){if(usersBusy)return;if(serverPages){if(!userCursor)return;userCursors[currentPage+1]=userCursor;currentPage++;try{await requestUserPage();}catch(error){currentPage--;showAdminToast(error.message,'error');}}else{const max=Math.ceil(getFilteredUsers().length/PAGE_SIZE)-1;if(currentPage<max){currentPage++;renderUsers();}}}
+        async function prevPage(){if(usersBusy)return;if(currentPage<=0)return;currentPage--;if(serverPages){try{await requestUserPage();}catch(error){currentPage++;showAdminToast(error.message,'error');}}else renderUsers();}
         function toggleSelectAll() { const checked = document.getElementById('selectAll').checked; document.querySelectorAll('.user-checkbox').forEach(cb => { cb.checked = checked; checked ? selectedUsers.add(cb.dataset.login) : selectedUsers.delete(cb.dataset.login); }); updateSelectionStatus(); }
         function updateSelection() { document.querySelectorAll('.user-checkbox').forEach(cb => cb.checked ? selectedUsers.add(cb.dataset.login) : selectedUsers.delete(cb.dataset.login)); updateSelectionStatus(); }
         function updateSelectionStatus() {
@@ -454,61 +466,67 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
         }
 
         // =================== FEEDBACK ===================
-        async function loadFeedback(){
-            const list=document.getElementById('feedbackList');list.innerHTML='<p class="text-slate-400">Завантаження…</p>';
-            try{allFeedback=[];let cursor;do{const data=await adminApi('admin_feedback_list',{cursor});allFeedback.push(...(data.feedback||[]));cursor=data.cursor;renderFeedback();}while(cursor);}
-            catch(error){list.textContent=error.message;showAdminToast(error.message,'error');}
+        async function loadFeedback(more=false){
+            const generation=more?feedbackGeneration:++feedbackGeneration,owner=adminToken;
+            const query={paginated:true,limit:25,cursor:more?feedbackCursor:null,q:document.getElementById('searchFeedback').value,type:document.getElementById('filterFeedbackType').value,status:document.getElementById('filterFeedbackStatus').value};
+            if(!more){allFeedback=[];feedbackCursor=null;document.getElementById('feedbackList').textContent='Завантаження…';}
+            feedbackBusy=true;document.getElementById('feedbackMore').disabled=true;
+            try{await ensureAdminIndex();const data=await adminApi('admin_feedback_list',query);if(generation!==feedbackGeneration||owner!==adminToken)return;if(data.indexReady===false)throw new Error('Індекс ще не готовий');allFeedback=more?[...allFeedback,...(data.feedback||[])]:data.feedback||[];feedbackTotal=data.total??allFeedback.length;feedbackCursor=data.cursor||null;renderFeedback();}
+            catch(error){if(generation===feedbackGeneration&&owner===adminToken){document.getElementById('feedbackList').textContent=error.message;showAdminToast(error.message,'error');}}
+            finally{if(generation===feedbackGeneration){feedbackBusy=false;document.getElementById('feedbackMore').disabled=false;document.getElementById('feedbackMore').classList.toggle('hidden',!feedbackCursor);}}
         }
+        function filterFeedback(){feedbackCursor=null;document.getElementById('feedbackMore').classList.add('hidden');feedbackGeneration++;clearTimeout(feedbackFilterTimer);feedbackFilterTimer=setTimeout(()=>loadFeedback(),200);}
+        function loadMoreFeedback(){if(!feedbackBusy&&feedbackCursor)return loadFeedback(true);}
         function renderFeedback(){
             const q=(document.getElementById('searchFeedback')?.value||'').trim().toLocaleLowerCase('uk-UA'),type=document.getElementById('filterFeedbackType')?.value||'all',status=document.getElementById('filterFeedbackStatus')?.value||'active';
             const items=allFeedback.filter(item=>(type==='all'||item.type===type)&&(status==='all'||(status==='active'?item.status!=='done':item.status===status))&&(!q||`${item.login} ${item.contact} ${item.message}`.toLocaleLowerCase('uk-UA').includes(q)));
             const labels={problem:'Проблема',idea:'Ідея',other:'Інше'},categories={login:'Вхід за логіном',registration:'Реєстрація',google:'Google-вхід',other:'Інше'},statuses={new:'Нове',in_progress:'У роботі',done:'Завершено'};
-            document.getElementById('feedbackCount').textContent=`Показано ${items.length} із ${allFeedback.length}`;
+            document.getElementById('feedbackCount').textContent=`Показано ${items.length} із ${feedbackTotal}`;
             document.getElementById('feedbackList').innerHTML=items.map(item=>`<article class="rounded-xl border border-slate-200 p-4 ${item.status==='new'?'bg-emerald-50/40':'bg-white'}"><div class="flex flex-wrap items-start justify-between gap-2"><div><span class="inline-flex px-2 py-1 rounded-lg bg-slate-100 text-[10px] font-black uppercase">${escHtml(labels[item.type]||'Інше')}</span>${item.source==='pre_auth'?'<span class="inline-flex ml-1 px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-black uppercase">До входу</span>':''}<strong class="ml-2 text-sm">${escHtml(item.login||(item.source==='pre_auth'?'Гість':'—'))}</strong><p class="text-xs text-slate-400 mt-1">${item.category?`${escHtml(categories[item.category]||item.category)} · `:''}${escHtml(new Date(item.createdAt).toLocaleString('uk-UA'))}${item.appVersion?` · v${escHtml(item.appVersion)}`:''}</p></div><select class="feedback-status px-3 py-2 border rounded-lg text-xs font-bold bg-white" data-id="${escAttr(item.id)}" aria-label="Статус звернення"><option value="new" ${item.status==='new'?'selected':''}>${statuses.new}</option><option value="in_progress" ${item.status==='in_progress'?'selected':''}>${statuses.in_progress}</option><option value="done" ${item.status==='done'?'selected':''}>${statuses.done}</option></select></div><p class="mt-3 whitespace-pre-wrap break-words text-sm text-slate-700">${escHtml(item.message)}</p>${item.contact?`<a class="inline-flex mt-3 text-xs font-bold text-blue-600" href="mailto:${escAttr(item.contact)}"><i class="fa-solid fa-envelope mr-2"></i>${escHtml(item.contact)}</a>`:''}</article>`).join('')||'<div class="text-center py-10 text-slate-400"><i class="fa-regular fa-comments text-3xl mb-3"></i><p>Звернень за цим фільтром немає</p></div>';
             document.querySelectorAll('.feedback-status').forEach(select=>select.addEventListener('change',()=>updateFeedbackStatus(select.dataset.id,select.value,select)));
         }
         async function updateFeedbackStatus(id,status,select){
-            select.disabled=true;try{await adminApi('admin_feedback_update',{id,status});const item=allFeedback.find(entry=>entry.id===id);if(item)item.status=status;renderFeedback();const fresh=allFeedback.filter(entry=>entry.status==='new').length,badge=document.getElementById('feedbackBadge');badge.textContent=fresh||'';badge.classList.toggle('hidden',!fresh);showAdminToast('Статус звернення оновлено');}catch(error){showAdminToast(error.message,'error');await loadFeedback();}finally{select.disabled=false;}
+            select.disabled=true;try{await adminApi('admin_feedback_update',{id,status});const item=allFeedback.find(entry=>entry.id===id);if(item)item.status=status;await loadFeedback();await loadStats();showAdminToast('Статус звернення оновлено');}catch(error){showAdminToast(error.message,'error');await loadFeedback();}finally{select.disabled=false;}
         }
 
         // =================== ANALYTICS ===================
         function renderAnalytics() {
             // Top users
-            const top = [...allUsers].sort((a, b) => b.records - a.records).slice(0, 15);
+            const top = indexedAnalytics?.topUsers||[...allUsers].sort((a,b)=>b.records-a.records).slice(0,15);
             document.getElementById('topUsers').innerHTML = top.map((u, i) => `<div class="flex justify-between items-center py-2 ${i ? 'border-t' : ''} text-sm"><span class="font-bold truncate max-w-[200px]">${i + 1}. ${escHtml(u.login)}</span><span class="font-black text-blue-600">${u.records}</span></div>`).join('') || '<p class="text-slate-400">Немає даних</p>';
 
             // Distribution
-            const googleCount = allUsers.filter(u => u.hasGoogle).length;
-            const proCount = allUsers.filter(u => u.isPro).length;
-            const activeCount = allUsers.filter(u => u.activeThisMonth).length;
-            const withRecords = allUsers.filter(u => u.records > 0).length;
-            const total = allUsers.length || 1;
+            const googleCount = indexedStats?.googleUsers??allUsers.filter(u => u.hasGoogle).length;
+            const proCount = indexedStats?.proUsers??allUsers.filter(u => u.isPro).length;
+            const activeCount = indexedStats?.activeThisMonth??allUsers.filter(u => u.activeThisMonth).length;
+            const withRecords = indexedStats?.withRecords??allUsers.filter(u => u.records > 0).length;
+            const total = (indexedStats?.totalUsers??allUsers.length)||1;
             document.getElementById('distributionStats').innerHTML = `
                 <div class="flex justify-between"><span>Google авторизація</span><span class="font-bold">${googleCount} (${Math.round(googleCount / total * 100)}%)</span></div>
                 <div class="flex justify-between"><span>Pro юзери</span><span class="font-bold">${proCount} (${Math.round(proCount / total * 100)}%)</span></div>
                 <div class="flex justify-between"><span>Активні цей місяць</span><span class="font-bold">${activeCount} (${Math.round(activeCount / total * 100)}%)</span></div>
                 <div class="flex justify-between"><span>З записами</span><span class="font-bold">${withRecords} (${Math.round(withRecords / total * 100)}%)</span></div>
-                <div class="flex justify-between"><span>Пусті акаунти</span><span class="font-bold text-orange-600">${allUsers.length - withRecords}</span></div>`;
+                <div class="flex justify-between"><span>Пусті акаунти</span><span class="font-bold text-orange-600">${(indexedStats?.totalUsers??allUsers.length) - withRecords}</span></div>`;
 
             // Monthly activity
             const months = {};
             allUsers.forEach(u => { if (u.lastMonth && u.lastMonth !== '—') { months[u.lastMonth] = (months[u.lastMonth] || 0) + 1; } });
-            const sortedMonths = Object.entries(months).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 12);
+            const sortedMonths = indexedAnalytics?indexedAnalytics.months.map(item=>[item.month,item.count]):Object.entries(months).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,12);
             document.getElementById('monthlyActivity').innerHTML = sortedMonths.map(([m, c]) => `<div class="flex justify-between items-center py-1 text-sm"><span class="text-slate-600">${escHtml(m)}</span><div class="flex items-center gap-2"><div class="h-2 bg-blue-500 rounded-full" style="width:${Math.max(4, c * 3)}px"></div><span class="font-bold text-xs">${c}</span></div></div>`).join('') || '<p class="text-slate-400">Немає даних</p>';
 
             // Device stats
             const deviceCounts = allUsers.map(u => u.devices || 0);
-            const avgDevices = deviceCounts.length ? (deviceCounts.reduce((a, b) => a + b, 0) / deviceCounts.length).toFixed(1) : 0;
-            const multiDevice = allUsers.filter(u => (u.devices || 0) > 1).length;
+            const avgDevices = indexedStats?Number(indexedStats.averageDevices).toFixed(1):deviceCounts.length?(deviceCounts.reduce((a,b)=>a+b,0)/deviceCounts.length).toFixed(1):0;
+            const multiDevice = indexedStats?.multiDevice??allUsers.filter(u => (u.devices || 0) > 1).length;
             document.getElementById('deviceStats').innerHTML = `
                 <div class="flex justify-between"><span>Середня к-сть пристроїв</span><span class="font-bold">${avgDevices}</span></div>
                 <div class="flex justify-between"><span>Мультипристрій (2+)</span><span class="font-bold">${multiDevice}</span></div>
-                <div class="flex justify-between"><span>Підозріла активність</span><span class="font-bold text-red-500">${allUsers.filter(u => u.suspicious > 0).length}</span></div>`;
+                <div class="flex justify-between"><span>Підозріла активність</span><span class="font-bold text-red-500">${indexedStats?.suspiciousUsers??allUsers.filter(u => u.suspicious > 0).length}</span></div>`;
         }
 
         // =================== SECURITY ===================
         function renderSecurity() {
-            loadAdminAudit();const suspicious = allUsers.filter(u => u.suspicious > 0).sort((a, b) => b.suspicious - a.suspicious);
+            loadAdminAudit();const suspicious = indexedAnalytics?.suspicious||allUsers.filter(u => u.suspicious > 0).sort((a,b)=>b.suspicious-a.suspicious);
             document.getElementById('suspiciousUsers').innerHTML = suspicious.length ? suspicious.map(u => `<div class="flex justify-between items-center p-3 bg-red-50 rounded-xl border border-red-100"><div><span class="font-bold text-sm">${escHtml(u.login)}</span><span class="ml-2 badge bg-red-100 text-red-600">⚠️ ${u.suspicious} подій</span></div><button data-login="${escAttr(u.login)}" class="security-view-user px-3 py-1 bg-white rounded-lg text-xs font-bold border hover:bg-slate-50 active:scale-95">👁</button></div>`).join('') : '<p class="text-slate-400">Сигналів зміни пристрою немає. Це не перевірка всіх загроз.</p>';
             document.querySelectorAll('.security-view-user').forEach(btn => btn.addEventListener('click', () => viewUser(btn.dataset.login)));
 
@@ -521,10 +539,11 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
             return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
         }
 
-        function exportAllData() {
+        async function exportAllData() {
+            let exportUsers=allUsers;if(serverPages){try{exportUsers=[];let cursor;do{const data=await adminApi('admin_stats',{paginated:true,limit:100,sort:'login',dir:'asc',cursor});if(!data.indexReady)throw new Error('Індекс недоступний');exportUsers.push(...data.users);cursor=data.cursor;}while(cursor);}catch(error){showAdminToast(error.message,'error');return;}}
             const rows = [
                 ['Login', 'Type', 'Pro', 'Records', 'Addresses', 'LastMonth', 'Active', 'Devices', 'Suspicious'],
-                ...allUsers.map(u => [u.login, u.hasGoogle ? 'Google' : 'Login', u.isPro ? 'Pro' : 'Free', u.records, u.addresses, u.lastMonth, u.activeThisMonth ? 'Yes' : 'No', u.devices || 0, u.suspicious || 0])
+                ...exportUsers.map(u => [u.login, u.hasGoogle ? 'Google' : 'Login', u.isPro ? 'Pro' : 'Free', u.records, u.addresses, u.lastMonth, u.activeThisMonth ? 'Yes' : 'No', u.devices || 0, u.suspicious || 0])
             ];
             const csv = rows.map(row => row.map(csvCell).join(',')).join('\n') + '\n';
             downloadFile('\uFEFF' + csv, 'komunalka_users.csv', 'text/csv');

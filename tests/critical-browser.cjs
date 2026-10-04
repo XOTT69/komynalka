@@ -52,6 +52,14 @@ if(!['chromium','webkit','firefox'].includes(engine))throw new Error('Unsupporte
    await page.goto(base+'/demo.html');await page.locator('#demoCurrent').fill('281');
    await page.locator('#demoPrepare').click();assert.match(await page.locator('#demoMail').inputValue(),/Різниця 14/);
    await page.locator('#demoCopy').click();assert.match(await page.locator('#demoCopyStatus').textContent(),/скопійовано/);
+   await page.request.post(base+'/__demo/api',{data:{action:'feedback_public_submit',category:'other',message:'Fictional browser regression feedback '+width}});
+   await page.goto(base+'/admin.html');await page.locator('#adminPass').fill('test-only-password');await page.locator('#loginBtn').click();
+   await page.locator('#usersTableBody .user-row').first().waitFor();assert.ok(Number(await page.locator('#statUsers').textContent())>=1);
+   await page.locator('#searchUsers').fill('no-such-fictional-account');await page.locator('#pageInfo').filter({hasText:'Немає результатів'}).waitFor();
+   assert.ok(Number(await page.locator('#statUsers').textContent())>=1);
+   await page.locator('[data-admin-tab=feedback]').click();await page.locator('#feedbackList article').first().waitFor();
+   assert.match(await page.locator('#feedbackList').textContent(),/Fictional browser regression/);
+   await page.screenshot({path:`test-results/admin-directory-${engine}-${width}.png`});
    assert.deepEqual(errors,[]);await context.close();console.log(`${engine} ${width}: setup, drafts, address links, summary, history, demo passed`);
   }
  }finally{await browser.close();}

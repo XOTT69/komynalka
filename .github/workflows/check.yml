@@ -45,6 +45,7 @@ jobs:
       - run: npm run check
       - run: npm run worker:check
       - run: node scripts/check-recovery.mjs
+      - run: node scripts/check-admin-load.mjs
       - run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
       - name: Browser checks with fictional data

@@ -93,3 +93,22 @@ test('admin navigation returns to the signed-in app and remembers the working se
     ui.window.switchAdminTab('not-valid');assert.equal(sessionStorage.getItem('admin_tab'),'users');assert.equal(document.querySelector('[data-admin-tab="users"]').getAttribute('aria-selected'),'true');
   }finally{ui.close();}
 });
+
+test('server pages retain selected users, show global totals and export all pages instead of just the visible rows',async()=>{
+ const users=Array.from({length:51},(_,i)=>({login:'user-'+String(i).padStart(2,'0'),records:1,addresses:1,devices:0,suspicious:0,lastMonth:'2026-10'})),ui=setup();
+ const queries=[];
+ ui.window.fetch=async(_url,options)=>{const body=JSON.parse(options.body);queries.push(body);const result=body.action==='admin_stats'?{success:true,indexReady:true,mode:'directory',stats:{totalUsers:51,totalRecords:51,activeThisMonth:51,proUsers:0,googleUsers:0,suspiciousUsers:0},users:body.cursor?users.slice(50):users.slice(0,50),total:51,cursor:body.cursor?null:'second',analytics:{topUsers:[users[50]],months:[{month:'2026-10',count:51}],suspicious:[]}}:{success:true,indexReady:true};return{ok:true,status:200,json:async()=>result};};
+ try{
+  await ui.window.loadStats();const checkbox=ui.window.document.querySelector('.user-checkbox');checkbox.checked=true;ui.window.updateSelection();
+  await ui.window.nextPage();assert.equal(ui.window.document.querySelectorAll('.user-row').length,1);assert.equal(ui.window.document.getElementById('pageInfo').textContent,'51–51 з 51');assert.match(ui.window.document.getElementById('selectedCount').textContent,/1/);
+  await ui.window.prevPage();assert.equal(ui.window.document.querySelector('.user-checkbox').checked,true);assert.equal(ui.window.document.getElementById('statRecords').textContent,'51');
+  ui.window.renderAnalytics();assert.match(ui.window.document.getElementById('topUsers').textContent,/user-50/);
+  let csv;ui.window.downloadFile=text=>{csv=text;};await ui.window.exportAllData();assert.equal(csv.trim().split('\n').length,52);assert.ok(queries.some(q=>q.limit===100&&q.sort==='login'));
+ }finally{ui.close();}
+});
+
+test('feedback fetches one page and loads more on demand, rather than downloading the entire inbox',async()=>{
+ const ui=setup();let pages=0;
+ ui.window.fetch=async(_url,options)=>{const body=JSON.parse(options.body);let data={success:true,indexReady:true};if(body.action==='admin_feedback_list'){pages++;data={...data,mode:'directory',total:60,feedback:Array.from({length:25},(_,i)=>({id:(1759220000000+i+(body.cursor?25:0))+'-abcdefgh',type:'problem',status:'new',message:'Тестове повідомлення',createdAt:'2026-10-01'})),cursor:body.cursor?null:'next'};}return{ok:true,status:200,json:async()=>data};};
+ try{await ui.window.loadFeedback();assert.equal(pages,1);assert.equal(ui.window.document.querySelectorAll('#feedbackList article').length,25);assert.equal(ui.window.document.getElementById('feedbackMore').classList.contains('hidden'),false);await ui.window.loadMoreFeedback();assert.equal(pages,2);assert.equal(ui.window.document.querySelectorAll('#feedbackList article').length,50);}finally{ui.close();}
+});

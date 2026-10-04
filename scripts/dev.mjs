@@ -8,7 +8,12 @@ import {demoAccount,demoPassHash} from './demo-data.mjs';
 import {parseSessionToken,sessionToken,sha256Hex} from '../password-auth.js';
 const pwa=process.argv.includes('--pwa'),demo=process.argv.includes('--demo')||pwa,port=Number(process.env.KOMUNALKA_PORT)||(pwa?4175:demo?4174:4173);
 execFileSync(process.execPath,['scripts/build.mjs'],{stdio:'inherit'});
-const root=path.resolve('dist'),{env}=environment({demo:demoAccount});
+const seed={demo:demoAccount};
+if(process.argv.includes('--admin-load')){
+ for(let i=0;i<160;i++){const data=structuredClone(demoAccount);data.displayName='Тестовий користувач '+i;data.isPro=i%4===0;data.hasGoogle=i%3===0;seed['fixture-'+String(i).padStart(3,'0')]=data;}
+ for(let i=0;i<60;i++){const id=(1759220000000+i)+'-abcdefgh';seed['feedback:'+id]={id,type:i%2?'idea':'problem',status:'new',login:'fixture-'+String(i).padStart(3,'0'),message:i===59?'Корисно додати наступний крок для оплати':'Тестове звернення — усі дані вигадані',createdAt:new Date(1759220000000+i).toISOString()};}
+}
+const root=path.resolve('dist'),{env}=environment(seed);
 env.ALLOWED_ORIGINS=`http://127.0.0.1:${port},http://localhost:${port}`;
 // A cached fixture HTML must still sign into the isolated fixture after a server
 // restart. This deliberately public test token is never used outside localhost.

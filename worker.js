@@ -1,3 +1,4 @@
+import {accountSummary} from './admin-directory.js';
 import {pushConfigured} from './push-delivery.js';
 import './meter-readings.js';
 import {handleTelegramWebhook,prepareBot,randomLinkToken} from './telegram.js';
@@ -8,7 +9,7 @@ export {AccountStore} from './account-store.js';
 // КОМУНАЛКА Worker — синхронізація, сесії, нагадування та адміністрування
 // ============================================================
 
-const WORKER_VERSION='5.14.0';
+const WORKER_VERSION='5.15.0';
 const CORS = {
   'Cache-Control':'no-store',
   'X-Content-Type-Options':'nosniff',
@@ -277,7 +278,7 @@ async function doPost(req, env, ip, fp) {
   try {body=await readBody(req);}catch(e){return err(e.message,e.message==='PAYLOAD_TOO_LARGE'?413:400);}
   const action = typeof body.action === 'string' ? body.action : '';
 
-  if(env.MAINTENANCE_MODE==='read-only'&&!['auth_login','auth_logout','session_list','admin_login','admin_logout','telegram_status','admin_stats','admin_health','admin_audit_list','admin_user_data','admin_backup_page','admin_backup_account','admin_backup_community','admin_get_tariffs','admin_feedback_list','get_tariffs','get_broadcast','push_status','push_unsubscribe','feedback_status'].includes(action))return err('MAINTENANCE_READ_ONLY',503);
+  if(env.MAINTENANCE_MODE==='read-only'&&!['auth_login','auth_logout','session_list','admin_login','admin_logout','telegram_status','admin_stats','admin_index_prepare','admin_health','admin_audit_list','admin_user_data','admin_backup_page','admin_backup_account','admin_backup_community','admin_get_tariffs','admin_feedback_list','get_tariffs','get_broadcast','push_status','push_unsubscribe','feedback_status'].includes(action))return err('MAINTENANCE_READ_ONLY',503);
   if(action==='auth_login')return doAuthLogin(body,env,ip,fp,deviceName(req));
   if(action==='auth_register')return doAuthRegister(body,env,ip,fp,deviceName(req));
   if (action === 'admin_login' || action.startsWith('admin_')) return doAdmin(action, body, env, ip);
@@ -406,7 +407,7 @@ async function doFeedbackSubmit(body,env,login){
   if(contact&&(contact.length>254||!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(contact)))return err('INVALID_CONTACT',400);
   if(!await rateLimit(env,`feedback:${login}`,5,86400000))return err('FEEDBACK_RATE_LIMITED',429);
   const id=`${Date.now()}-${randomLinkToken().slice(0,12)}`,createdAt=new Date().toISOString();
-  await env.KV.put(`feedback:${id}`,JSON.stringify({id,type,message,contact,login,createdAt,status:'new',appVersion}));
+  const item={id,type,message,contact,login,createdAt,status:'new',appVersion};await env.KV.put(`feedback:${id}`,JSON.stringify(item));await indexFeedback(env,item);
   return ok({success:true,id});
 }
 
@@ -425,7 +426,7 @@ async function doPublicFeedbackSubmit(body,env,ip){
   const ipKey=(await sha256(String(ip||'unknown'))).slice(0,24);
   if(!await rateLimit(env,`feedback-public:${ipKey}`,3,86400000))return err('FEEDBACK_RATE_LIMITED',429);
   const id=`${Date.now()}-${randomLinkToken().slice(0,12)}`,createdAt=new Date().toISOString();
-  await env.KV.put(`feedback:${id}`,JSON.stringify({id,type:'problem',category,source:'pre_auth',message,contact,login:'',createdAt,status:'new',appVersion}));
+  const item={id,type:'problem',category,source:'pre_auth',message,contact,login:'',createdAt,status:'new',appVersion};await env.KV.put(`feedback:${id}`,JSON.stringify(item));await indexFeedback(env,item);
   return ok({success:true,id});
 }
 
@@ -720,7 +721,8 @@ async function doAdmin(action, body, env, ip) {
       return ok({...result,readOnly:env.MAINTENANCE_MODE==='read-only'});
     }
     case 'admin_backup_community': return ok({success:true,community:await readCommunity(env),readOnly:env.MAINTENANCE_MODE==='read-only'});
-    case 'admin_stats':            return doAdminStats(env);
+    case 'admin_index_prepare':    return doAdminIndexPrepare(env);
+    case 'admin_stats':            return body.paginated?doIndexedAdminStats(body,env):doAdminStats(env);
     case 'admin_user_data':        return doAdminUserData(body, env);
     case 'admin_give_pro':         return doAdminPro(body, env, true);
     case 'admin_revoke_pro':       return doAdminPro(body, env, false);
@@ -756,10 +758,40 @@ async function doAdminBackupPage(body,env){
   return ok({success:true,entries,listComplete:page.list_complete,cursor:page.list_complete?null:page.cursor,readOnly:env.MAINTENANCE_MODE==='read-only'});
 }
 
+
+async function indexFeedback(env,item){
+  try{await specialRequest(env,'admin_directory',{action:'directory-feedback-upsert',item});}
+  catch{console.error('Feedback index update deferred');await env.KV.put('admin-index:feedback-dirty:'+item.id,item.id);}
+}
+async function doIndexedAdminStats(body,env){
+  const result=await specialRequest(env,'admin_directory',{...body,action:'directory-users'});
+  if(result.indexReady){result.stats.communityTariffs=(await readCommunity(env)).list.length;}
+  return ok(result);
+}
+async function doAdminIndexPrepare(env){
+  const {state}=await specialRequest(env,'admin_directory',{action:'directory-status'});
+  if(state.ready){
+    const dirty=await env.KV.list({prefix:'admin-index:feedback-dirty:',limit:100});
+    for(const key of dirty.keys){const id=await env.KV.get(key.name),raw=await env.KV.get('feedback:'+id);if(raw)await specialRequest(env,'admin_directory',{action:'directory-feedback-upsert',item:JSON.parse(raw)});await env.KV.delete(key.name);}
+    return ok({success:true,indexReady:dirty.list_complete,pages:state.pages});
+  }
+  const page=await env.KV.list({limit:100,...(state.cursor?{cursor:state.cursor}:{})});let unrecognizedAccounts=0;
+  const skip=['share:','share_','google_','_broadcast','uid:','uid_','rl:','adminlogin:','admin-login:','ai_rl:','broadcast','community_tariffs','tariff_pub:','feedback:','login-alias:','login-directory:','admin-audit:','tg-chat:','tg-link:','health:','admin-index:'];
+  for(let offset=0;offset<page.keys.length;offset+=10){await Promise.all(page.keys.slice(offset,offset+10).map(async({name})=>{
+    if(name.startsWith('feedback:')){const raw=await env.KV.get(name);if(raw){let item;try{item=JSON.parse(raw);}catch{throw new Error('INVALID_FEEDBACK');}await specialRequest(env,'admin_directory',{action:'directory-feedback-upsert',item,bootstrap:true});}return;}
+    let login;
+    if(name.startsWith('account-index:'))login=decodeURIComponent(name.slice('account-index:'.length));
+    else if(!skip.some(prefix=>name.startsWith(prefix))){const raw=await env.KV.get(name);if(!raw)return;let value;try{value=JSON.parse(raw);}catch{unrecognizedAccounts++;return;}if(!value||typeof value!=='object'||Array.isArray(value))return;if(!Array.isArray(value.addresses)&&!Array.isArray(value.records))return;login=name;}
+    if(login){const account=await accountRequest(env,login,{action:'read'});await specialRequest(env,'admin_directory',{action:'directory-upsert',summary:accountSummary({login,value:account.value,revision:account.revision,deleted:!account.value})});}
+  }));}
+  const committed=await specialRequest(env,'admin_directory',{action:'directory-build-commit',expectedCursor:state.cursor,cursor:page.cursor,complete:page.list_complete,unrecognizedAccounts});
+  return ok({success:true,indexReady:committed.state.ready,pages:committed.state.pages});
+}
+
 async function doAdminStats(env) {
   const curMonth = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
   const all={keys:[]};let cursor;do{const page=await env.KV.list({limit:1000,...(cursor?{cursor}:{})});all.keys.push(...page.keys);cursor=page.list_complete?null:page.cursor;}while(cursor);
-  const skip     = ['share:','share_','google_','_broadcast','uid:','rl:','adminlogin:','ai_rl:','broadcast','community_tariffs','tariff_pub:','account-index:','feedback:','login-alias:','login-directory:','admin-audit:','tg-chat:','tg-link:'];
+  const skip     = ['share:','share_','google_','_broadcast','uid:','rl:','adminlogin:','ai_rl:','broadcast','community_tariffs','tariff_pub:','account-index:','feedback:','login-alias:','login-directory:','admin-audit:','tg-chat:','tg-link:','admin-index:'];
   const indexed=new Set(all.keys.filter(({name})=>name.startsWith('account-index:')).map(({name})=>decodeURIComponent(name.slice('account-index:'.length))));
   const logins=[...new Set([...all.keys.filter(({name})=>name!=='broadcast'&&!skip.some(p=>name.startsWith(p))).map(({name})=>name),...indexed])];
   const users    = [];let unrecognizedAccounts=0;
@@ -788,13 +820,13 @@ async function readFeedback(env){
   const values=await Promise.all(keys.map(async key=>{try{return JSON.parse(await env.KV.get(key.name));}catch{return null;}}));
   return values.filter(item=>item&&item.id&&['problem','idea','other'].includes(item.type)).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
 }
-async function doAdminFeedbackList(env,body={}){const all=await readFeedback(env),offset=body.cursor?all.findIndex(item=>item.id===body.cursor)+1:0,limit=Math.min(100,Math.max(1,Number(body.limit)||100));if(body.cursor&&!offset)return err('INVALID_CURSOR',400);const page=all.slice(offset,offset+limit);return ok({success:true,feedback:page,total:all.length,cursor:offset+limit<all.length?page.at(-1)?.id:null});}
+async function doAdminFeedbackList(env,body={}){if(body.paginated)return ok(await specialRequest(env,'admin_directory',{...body,action:'directory-feedback'}));const all=await readFeedback(env),offset=body.cursor?all.findIndex(item=>item.id===body.cursor)+1:0,limit=Math.min(100,Math.max(1,Number(body.limit)||100));if(body.cursor&&!offset)return err('INVALID_CURSOR',400);const page=all.slice(offset,offset+limit);return ok({success:true,feedback:page,total:all.length,cursor:offset+limit<all.length?page.at(-1)?.id:null});}
 async function doAdminFeedbackUpdate(body,env){
   const id=String(body.id||''),status=String(body.status||'');
   if(!/^\d{10,16}-[A-Za-z0-9_-]{6,24}$/.test(id)||!['new','in_progress','done'].includes(status))return err('INVALID_FEEDBACK_UPDATE',400);
   const key=`feedback:${id}`,raw=await env.KV.get(key);if(!raw)return err('NOT_FOUND',404);
   let item;try{item=JSON.parse(raw);}catch{return err('INVALID_FEEDBACK',503);}
-  await env.KV.put(key,JSON.stringify({...item,status,updatedAt:new Date().toISOString()}));
+  const next={...item,status,updatedAt:new Date().toISOString()};await env.KV.put(key,JSON.stringify(next));await indexFeedback(env,next);
   return ok({success:true});
 }
 

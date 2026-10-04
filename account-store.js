@@ -1,10 +1,20 @@
 import {pushConfigured,validateSubscription,deliverReminders,sendReminder} from './push-delivery.js';
 import {sendTelegram} from './telegram.js';
+import {accountSummary,directoryAction} from './admin-directory.js';
 /* A serialized authority for each account; the original KV snapshot is retained.
  * All account writers must go through this object after the coordinated cutover.
  */
 export class AccountStore {
   constructor(ctx,env){this.ctx=ctx;this.env=env;}
+  async flushDirectory(force=false){
+    const summary=await this.ctx.storage.get('directory-pending');if(!summary)return;
+    try{
+      const stub=this.env.ACCOUNT_STORE.get(this.env.ACCOUNT_STORE.idFromName('__admin_directory__'));
+      const response=await stub.fetch(new Request('https://account.internal',{method:'POST',body:JSON.stringify({action:'directory-upsert',summary,force})}));
+      if(!response.ok)throw new Error('INDEX_UNAVAILABLE');
+      await this.ctx.storage.put('directory-revision',summary.revision);await this.ctx.storage.delete('directory-pending');
+    }catch{console.error('Admin index update deferred');await this.ctx.storage.setAlarm(Date.now()+60000);}
+  }
   async cleanupDeleted(){
     const keys=await this.ctx.storage.get('delete-cleanup')||[],remaining=[];
     for(const key of keys)try{await this.env.KV.delete(key);}catch{remaining.push(key);}
@@ -13,14 +23,21 @@ export class AccountStore {
     return Response.json({success:true,cleanupPending:Boolean(remaining.length)});
   }
   async alarm(){return this.ctx.blockConcurrencyWhile(async()=>{
-    if(await this.ctx.storage.get('delete-cleanup'))return this.cleanupDeleted();
+    await this.flushDirectory();
+    if(await this.ctx.storage.get('delete-cleanup')){const result=await this.cleanupDeleted();if(await this.ctx.storage.get('directory-pending'))await this.ctx.storage.setAlarm(Date.now()+60000);return result;}
     if(this.ctx.storage.list){const expired=await this.ctx.storage.list({prefix:'rate:',limit:1000});for(const [key,value] of expired)if(value.expiresAt<=Date.now())await this.ctx.storage.delete(key);const remaining=await this.ctx.storage.list({prefix:'rate:',limit:1});if(remaining.size)await this.ctx.storage.setAlarm(Date.now()+3600000);}
-    return deliverReminders(this.ctx,this.env);
+    const result=await deliverReminders(this.ctx,this.env);
+    if(await this.ctx.storage.get('directory-pending')){const alarm=await this.ctx.storage.getAlarm();await this.ctx.storage.setAlarm(Math.min(alarm||Infinity,Date.now()+60000));}
+    return result;
   });}
   async fetch(request){
     const body=await request.json();
     return this.ctx.blockConcurrencyWhile(async()=>{
       const action=String(body.action||'');
+      if(action.startsWith('directory-')){
+        try{return Response.json(await directoryAction(this.ctx,body));}
+        catch(error){return Response.json({error:error.message},{status:/^INVALID_/.test(error.message)?400:503});}
+      }
       // One dedicated object serializes security counters and administrator sessions.
       if(action==='rate-limit'){
         const now=Date.now(),windowMs=Math.max(1000,Math.min(Number(body.windowMs)||60000,86400000)),limit=Math.max(1,Math.min(Number(body.limit)||1,10000));
@@ -74,6 +91,7 @@ export class AccountStore {
         await this.ctx.storage.put({'account':state,'legacy-original':{raw,importedAt:Date.now()}});
       }
       if(state.login!==body.login)return Response.json({error:'ACCOUNT_MISMATCH'},{status:403});
+      if(state.value&&(await this.ctx.storage.get('directory-revision'))!==state.revision){await this.ctx.storage.put('directory-pending',accountSummary(state));await this.flushDirectory();}
       if(action.startsWith('session-')){
         if(state.deleted||!state.value)return Response.json({error:'NOT_FOUND'},{status:404});
         const now=Date.now();let sessions=(await this.ctx.storage.get('sessions')||[]).filter(item=>item.expiresAt>now);
@@ -202,6 +220,7 @@ export class AccountStore {
         await this.ctx.storage.delete('previous');await this.ctx.storage.delete('legacy-original');
         if(snapshot.push?.subscriptions?.length||snapshot.telegram?.chatId)await this.ctx.storage.setAlarm(Date.now()+60000);else await this.ctx.storage.deleteAlarm();
         await this.env.KV.put(`account-index:${encodeURIComponent(body.login)}`,JSON.stringify({login:body.login}));
+        await this.ctx.storage.put('directory-pending',accountSummary(snapshot.account));await this.flushDirectory(true);
         return Response.json({success:true,revision:snapshot.account.revision});
       }
       if(body.action==='read')return Response.json({value:state.deleted?null:state.value,revision:state.revision});
@@ -215,7 +234,8 @@ export class AccountStore {
         const next={...state,value:body.value,revision};
         if(body.mutationId)next.receipts=[...state.receipts,{id:body.mutationId,fingerprint:body.fingerprint,revision}].slice(-1000);
         // Keep the immediately preceding version for operational recovery.
-        await this.ctx.storage.put({'previous':state,'account':next});
+        await this.ctx.storage.put({'previous':state,'account':next,'directory-pending':accountSummary(next)});
+        await this.flushDirectory();
         // KV is a compatibility mirror. It is never the authority after import.
         try{await this.env.KV.put(body.login,JSON.stringify({...body.value,_revision:revision}));}catch{console.error('Account KV mirror failed');}
         // A reminder edited during today's active window must not wait until tomorrow.
@@ -227,10 +247,11 @@ export class AccountStore {
         // Related aliases can be retried safely by an alarm after the account is gone.
         await this.env.KV.delete(body.login);
         await this.ctx.storage.put('delete-cleanup',[...new Set([...(await this.ctx.storage.get('delete-cleanup')||[]),...(body.cleanupKeys||[])])]);
-        await this.ctx.storage.put('account',{login:body.login,value:null,deleted:true,revision:state.revision+1,receipts:[]});
+        const tombstone={login:body.login,value:null,deleted:true,revision:state.revision+1,receipts:[]};
+        await this.ctx.storage.put({'account':tombstone,'directory-pending':accountSummary(tombstone)});
         await this.ctx.storage.delete('previous');await this.ctx.storage.delete('legacy-original');
         await this.ctx.storage.deleteAlarm();await this.ctx.storage.put('push',{subscriptions:[]});await this.ctx.storage.delete('telegram');await this.ctx.storage.put('sessions',[]);await this.ctx.storage.put('shares',[]);
-        return this.cleanupDeleted();
+        const result=await this.cleanupDeleted();await this.flushDirectory();return result;
       }
       return Response.json({error:'INVALID_ACTION'},{status:400});
     });
