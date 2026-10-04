@@ -8,12 +8,18 @@ import {demoAccount,demoPassHash} from './demo-data.mjs';
 import {parseSessionToken,sessionToken,sha256Hex} from '../password-auth.js';
 const pwa=process.argv.includes('--pwa'),demo=process.argv.includes('--demo')||pwa,port=Number(process.env.KOMUNALKA_PORT)||(pwa?4175:demo?4174:4173);
 execFileSync(process.execPath,['scripts/build.mjs'],{stdio:'inherit'});
-const seed={demo:demoAccount};
+const seed={demo:structuredClone(demoAccount)};
+const historyArgument=process.argv.find(value=>value.startsWith('--history-records='));
+if(historyArgument){
+ const count=Number(historyArgument.split('=')[1]);if(!Number.isInteger(count)||count<1||count>1000)throw new Error('Fixture history must contain 1–1000 records');
+ const original=seed.demo.addresses[0].records[0],today=new Date();
+ seed.demo.addresses[0].records=Array.from({length:count},(_,i)=>{const date=new Date(today.getFullYear(),today.getMonth()-i,1);return {...structuredClone(original),id:'fictional-history-'+i,month:date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')};});
+}
 if(process.argv.includes('--admin-load')){
  for(let i=0;i<160;i++){const data=structuredClone(demoAccount);data.displayName='Тестовий користувач '+i;data.isPro=i%4===0;data.hasGoogle=i%3===0;seed['fixture-'+String(i).padStart(3,'0')]=data;}
  for(let i=0;i<60;i++){const id=(1759220000000+i)+'-abcdefgh';seed['feedback:'+id]={id,type:i%2?'idea':'problem',status:'new',login:'fixture-'+String(i).padStart(3,'0'),message:i===59?'Корисно додати наступний крок для оплати':'Тестове звернення — усі дані вигадані',createdAt:new Date(1759220000000+i).toISOString()};}
 }
-const root=path.resolve('dist'),{env}=environment(seed);
+const root=path.resolve('dist'),{env,executionContext}=environment(seed);
 env.ALLOWED_ORIGINS=`http://127.0.0.1:${port},http://localhost:${port}`;
 // A cached fixture HTML must still sign into the isolated fixture after a server
 // restart. This deliberately public test token is never used outside localhost.
@@ -40,7 +46,7 @@ createServer(async(req,res)=>{
       if(process.env.KOMUNALKA_DEBUG==='1')console.log('Fixture API request',req.method);
       const chunks=[];for await(const chunk of req)chunks.push(chunk);
       const request=new Request('https://local.invalid'+url.search,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:Buffer.concat(chunks)}:{})});
-      const response=await worker.fetch(request,env);if(process.env.KOMUNALKA_DEBUG==='1')console.log('Fixture API response',response.status);res.writeHead(response.status,Object.fromEntries(response.headers));return res.end(Buffer.from(await response.arrayBuffer()));
+      const response=await worker.fetch(request,env,executionContext);if(process.env.KOMUNALKA_DEBUG==='1')console.log('Fixture API response',response.status);res.writeHead(response.status,Object.fromEntries(response.headers));return res.end(Buffer.from(await response.arrayBuffer()));
     }
     let file=path.resolve(root,'.'+decodeURIComponent(url.pathname));
     if(file!==root&&!file.startsWith(root+path.sep)){res.writeHead(403);return res.end();}

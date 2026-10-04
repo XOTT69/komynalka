@@ -93,7 +93,7 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
 
         function escHtml(str) {
             const div = document.createElement('div');
-            div.textContent = str || '';
+            div.textContent = str ?? '';
             return div.innerHTML;
         }
 
@@ -203,6 +203,30 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
                 document.getElementById('systemIntegrations').textContent=Object.entries(data.integrations).map(([key,value])=>`${key.toUpperCase()}: ${value?'налаштовано':'не налаштовано'}`).join(' · ')+'. Це перевірка конфігурації; доставку перевіряйте тестовим повідомленням.';
             }catch{api.className='system-chip is-error';api.textContent='Стан API не перевірено';storage.textContent='Стан сховищ невідомий';protocol.textContent='Повторіть перевірку';}
         }
+        let metricsRequest=0;
+        async function loadServiceMetrics(){
+            const request=++metricsRequest,token=sessionStorage.getItem('admin_token'),status=document.getElementById('metricsStatus');
+            status.textContent='Перевіряємо лічильники…';
+            const cards=document.getElementById('metricsCards'),target=document.getElementById('metricsRows');
+            try{
+                const data=await adminApi('admin_metrics',{days:Number(document.getElementById('metricsPeriod').value)});
+                if(request!==metricsRequest||token!==sessionStorage.getItem('admin_token'))return;
+                const rows=data.rows||[],api=rows.filter(row=>!row.operation.endsWith('_reminder')),channels=rows.filter(row=>row.operation.endsWith('_reminder'));
+                const sum=(list,key)=>list.reduce((total,row)=>total+(Number(row[key])||0),0);
+                cards.innerHTML=[['Запити API',sum(api,'count'),''],['Збої API',sum(api,'failed'),'is-danger'],['Конфлікти даних',sum(api,'conflict'),'is-warning'],['Збої надсилання',channels.reduce((total,row)=>total+row.count-row.ok-row.expired,0),'is-danger']].map(([label,value,color])=>`<div class="reliability-card ${value?color:''}"><strong>${escHtml(value)}</strong><span>${escHtml(label)}</span></div>`).join('');
+                const labels={login:'Вхід / оновлення сесії',register:'Реєстрація',google_link:'Прив’язка Google',sync_read:'Завантаження даних',sync_write:'Збереження даних',password:'Зміна пароля',push_setup:'Підключення / тест push',telegram_setup:'Підключення / тест Telegram',telegram_webhook:'Команди Telegram',feedback:'Звернення',ai:'AI-помічник',push_reminder:'Push-нагадування',telegram_reminder:'Telegram-нагадування'};
+                target.innerHTML=rows.filter(row=>row.count>0).map(row=>{
+                    const details=[['Відмови доступу',row.auth],['Конфлікти',row.conflict],['Обмеження частоти',row.limited],['Відхилено',row.rejected],['Застарілі підписки',row.expired],['Збої',row.failed]].filter(([,count])=>count>0).map(([label,count])=>`${label}: ${count}`).join(' · ');
+                    const p95=row.p95UpperMs===null?'> 60 с':row.p95UpperMs>=1000?`≤ ${row.p95UpperMs/1000} с`:`≤ ${row.p95UpperMs} мс`;
+                    return `<article class="reliability-row"><div><h4>${escHtml(labels[row.operation]||row.operation)}</h4><p>${escHtml(details||'Помилок серед записаних подій немає')}</p></div><div><strong>${escHtml(row.ok)} / ${escHtml(row.count)}</strong><span>${row.operation.endsWith('_reminder')?'Прийнято сервісом':'Успішно'}</span></div><div><strong>${escHtml(p95)}</strong><span>P95</span></div></article>`;
+                }).join('')||'<p class="reliability-empty">Подій за цей період ще немає. Лічильники починають накопичуватися після оновлення сервера.</p>';
+                status.textContent=`${data.from} — ${data.through} · UTC · Перевірено ${new Date(data.checkedAt).toLocaleTimeString('uk-UA')}${data.startedAt?' · Збір від '+new Date(data.startedAt).toLocaleDateString('uk-UA'):''}`;
+            }catch{
+                if(request!==metricsRequest||token!==sessionStorage.getItem('admin_token'))return;
+                cards.innerHTML='';target.innerHTML='';status.textContent='Не вдалося отримати лічильники. Це не означає, що облік або нагадування не працюють. Повторіть перевірку.';
+            }
+        }
+
         async function loadAdminAudit(){
             const target=document.getElementById('adminAuditList');target.textContent='Завантаження…';
             const labels={admin_give_pro:'Надано Pro',admin_revoke_pro:'Відкликано Pro',admin_delete_user:'Видалення акаунта',admin_broadcast:'Оголошення',admin_reset_password:'Скидання пароля',admin_delete_tariff:'Видалення тарифу',admin_clear_tariffs:'Очищення тарифів',admin_verify_tariff:'Перевірка тарифу',admin_feedback_update:'Статус звернення'};
@@ -526,7 +550,7 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
 
         // =================== SECURITY ===================
         function renderSecurity() {
-            loadAdminAudit();const suspicious = indexedAnalytics?.suspicious||allUsers.filter(u => u.suspicious > 0).sort((a,b)=>b.suspicious-a.suspicious);
+            loadServiceMetrics();loadAdminAudit();const suspicious = indexedAnalytics?.suspicious||allUsers.filter(u => u.suspicious > 0).sort((a,b)=>b.suspicious-a.suspicious);
             document.getElementById('suspiciousUsers').innerHTML = suspicious.length ? suspicious.map(u => `<div class="flex justify-between items-center p-3 bg-red-50 rounded-xl border border-red-100"><div><span class="font-bold text-sm">${escHtml(u.login)}</span><span class="ml-2 badge bg-red-100 text-red-600">⚠️ ${u.suspicious} подій</span></div><button data-login="${escAttr(u.login)}" class="security-view-user px-3 py-1 bg-white rounded-lg text-xs font-bold border hover:bg-slate-50 active:scale-95">👁</button></div>`).join('') : '<p class="text-slate-400">Сигналів зміни пристрою немає. Це не перевірка всіх загроз.</p>';
             document.querySelectorAll('.security-view-user').forEach(btn => btn.addEventListener('click', () => viewUser(btn.dataset.login)));
 

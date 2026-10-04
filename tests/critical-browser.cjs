@@ -60,6 +60,9 @@ if(!['chromium','webkit','firefox'].includes(engine))throw new Error('Unsupporte
    await page.locator('[data-admin-tab=feedback]').click();await page.locator('#feedbackList article').first().waitFor();
    assert.match(await page.locator('#feedbackList').textContent(),/Fictional browser regression/);
    await page.screenshot({path:`test-results/admin-directory-${engine}-${width}.png`});
+   await page.locator('[data-admin-tab=security]').click();await page.locator('#metricsStatus').filter({hasText:'Перевірено'}).waitFor();assert.match(await page.locator('#metricsRows').textContent(),/Завантаження даних/);
+   await page.locator('#metricsPeriod').selectOption('1');await page.locator('#metricsStatus').filter({hasText:'Перевірено'}).waitFor();assert.ok(await page.locator('.reliability-row').count()>0);
+   assert.ok(await page.locator('body').evaluate(element=>element.scrollWidth<=window.innerWidth+2));await page.screenshot({path:`test-results/reliability-${engine}-${width}.png`});
    assert.deepEqual(errors,[]);await context.close();console.log(`${engine} ${width}: setup, drafts, address links, summary, history, demo passed`);
   }
  }finally{await browser.close();}

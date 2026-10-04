@@ -1,0 +1,108 @@
+{
+  "kind": "local-chromium-laboratory-not-physical-phone",
+  "measuredAt": "2026-10-04T08:49:44.084Z",
+  "version": "5.16.0",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "cpuSlowdown": 4,
+  "simulatedNetwork": {
+    "latencyMs": 70,
+    "downloadMbps": 10,
+    "uploadMbps": 5
+  },
+  "cache": "fresh browser context; HTTP cache disabled",
+  "scope": "localhost Worker adapter and fictional data; includes browser/test runner overhead; not production latency or Core Web Vitals",
+  "runsPerProfile": 5,
+  "profiles": [
+    {
+      "records": 200,
+      "measurements": [
+        {
+          "run": 1,
+          "readyMs": 1534,
+          "historyMs": 351,
+          "longTasks": 2,
+          "blockingMs": 170
+        },
+        {
+          "run": 2,
+          "readyMs": 1578,
+          "historyMs": 278,
+          "longTasks": 2,
+          "blockingMs": 127
+        },
+        {
+          "run": 3,
+          "readyMs": 1562,
+          "historyMs": 257,
+          "longTasks": 2,
+          "blockingMs": 107
+        },
+        {
+          "run": 4,
+          "readyMs": 1500,
+          "historyMs": 257,
+          "longTasks": 1,
+          "blockingMs": 87
+        },
+        {
+          "run": 5,
+          "readyMs": 1528,
+          "historyMs": 246,
+          "longTasks": 2,
+          "blockingMs": 103
+        }
+      ],
+      "medianReadyMs": 1534,
+      "maxReadyMs": 1578,
+      "medianHistoryMs": 257,
+      "maxHistoryMs": 351
+    },
+    {
+      "records": 1000,
+      "measurements": [
+        {
+          "run": 1,
+          "readyMs": 2133,
+          "historyMs": 326,
+          "longTasks": 1,
+          "blockingMs": 291
+        },
+        {
+          "run": 2,
+          "readyMs": 2106,
+          "historyMs": 283,
+          "longTasks": 1,
+          "blockingMs": 255
+        },
+        {
+          "run": 3,
+          "readyMs": 2082,
+          "historyMs": 208,
+          "longTasks": 1,
+          "blockingMs": 249
+        },
+        {
+          "run": 4,
+          "readyMs": 2091,
+          "historyMs": 228,
+          "longTasks": 1,
+          "blockingMs": 249
+        },
+        {
+          "run": 5,
+          "readyMs": 2069,
+          "historyMs": 218,
+          "longTasks": 1,
+          "blockingMs": 237
+        }
+      ],
+      "medianReadyMs": 2091,
+      "maxReadyMs": 2133,
+      "medianHistoryMs": 228,
+      "maxHistoryMs": 326
+    }
+  ]
+}

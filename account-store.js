@@ -1,3 +1,4 @@
+import {metricsAction,pruneMetrics} from './service-metrics.js';
 import {pushConfigured,validateSubscription,deliverReminders,sendReminder} from './push-delivery.js';
 import {sendTelegram} from './telegram.js';
 import {accountSummary,directoryAction} from './admin-directory.js';
@@ -23,6 +24,7 @@ export class AccountStore {
     return Response.json({success:true,cleanupPending:Boolean(remaining.length)});
   }
   async alarm(){return this.ctx.blockConcurrencyWhile(async()=>{
+    if(await this.ctx.storage.get('metrics-enabled'))return pruneMetrics(this.ctx);
     await this.flushDirectory();
     if(await this.ctx.storage.get('delete-cleanup')){const result=await this.cleanupDeleted();if(await this.ctx.storage.get('directory-pending'))await this.ctx.storage.setAlarm(Date.now()+60000);return result;}
     if(this.ctx.storage.list){const expired=await this.ctx.storage.list({prefix:'rate:',limit:1000});for(const [key,value] of expired)if(value.expiresAt<=Date.now())await this.ctx.storage.delete(key);const remaining=await this.ctx.storage.list({prefix:'rate:',limit:1});if(remaining.size)await this.ctx.storage.setAlarm(Date.now()+3600000);}
@@ -34,6 +36,10 @@ export class AccountStore {
     const body=await request.json();
     return this.ctx.blockConcurrencyWhile(async()=>{
       const action=String(body.action||'');
+      if(action.startsWith('metrics-')){
+        try{return Response.json(await metricsAction(this.ctx,body));}
+        catch(error){return Response.json({error:error.message},{status:/^INVALID_/.test(error.message)?400:503});}
+      }
       if(action.startsWith('directory-')){
         try{return Response.json(await directoryAction(this.ctx,body));}
         catch(error){return Response.json({error:error.message},{status:/^INVALID_/.test(error.message)?400:503});}

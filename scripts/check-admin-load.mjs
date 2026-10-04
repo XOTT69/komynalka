@@ -20,5 +20,13 @@ try{
  assert.equal(writes.filter(r=>r.status===200).length,1);assert.equal(writes.filter(r=>r.status===409).length,9);
  const latest=await(await call({action:'read'})).json();assert.deepEqual(latest.value,value);assert.equal(latest.revision,2);
  const stats=(await admin({action:'admin_stats',paginated:true})).data;assert.equal(stats.stats.totalRecords,records);assert.equal(stats.stats.proUsers,1);
+ for(let batch=0;batch<4;batch++)await Promise.all(Array.from({length:10},async(_,i)=>{
+  const name='load-'+String(batch*10+i).padStart(3,'0'),response=await mf.dispatchFetch('https://test.invalid',{headers:{Authorization:'Bearer login:'+btoa(name)+':'+hash}});
+  assert.equal(response.status,200);assert.equal((await response.json()).data.addresses[0].records.length,originals.get(name).addresses[0].records.length);
+ }));
+ let metrics;for(let attempt=0;attempt<30;attempt++){metrics=(await admin({action:'admin_metrics',days:1})).data;if(metrics.rows.find(row=>row.operation==='sync_read').count===40)break;await new Promise(resolve=>setTimeout(resolve,100));}
+ assert.equal(metrics.rows.find(row=>row.operation==='sync_read').ok,40,'Real workerd background context records all fixture reads');
+ assert.equal(JSON.stringify(metrics).includes('load-000'),false);
+
  durations.sort((a,b)=>a-b);console.log(JSON.stringify({verified:true,scope:'isolated workerd / SQLite, fictional data',accounts:40,records,parallelRequests:10,queries:100,concurrentWriters:10,acceptedWrites:1,conflicts:9,historyPreserved:true,localP50Ms:Math.round(durations[49]),localP95Ms:Math.round(durations[94]),timingScope:'local runtime only; not production performance'},null,2));
 }finally{await mf.dispose();}

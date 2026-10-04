@@ -1,3 +1,4 @@
+import {recordMetrics} from './service-metrics.js';
 import {buildPushPayload} from '@block65/webcrypto-web-push';
 import {sendTelegram} from './telegram.js';
 import './reminders.js';
@@ -45,23 +46,25 @@ export async function deliverReminders(ctx,env,send=sendReminder,now=new Date(),
   const labels=[...new Set(reminders.map(r=>r.label))];
   const addressId=String(reminders[0].addressId||'default');
   const message={title:'Комуналка · нагадування',body:`Час передати показники: ${labels.join(', ').slice(0,300)}. Відкрийте застосунок, щоб позначити передані.`,tag:`komunalka-reminder-${today}`,addressId};
-  let retry=false;
+  let retry=false;const metrics=[];
   const subscriptions=await Promise.all(push.subscriptions.map(async entry=>{
     if(!pushConfigured(env))return entry;
     if(entry.lastDay===today)return entry;
-    try{const status=await send(env,entry.subscription,message);if(status===404||status===410)return null;if(status>=200&&status<300)return{...entry,lastDay:today,lastAttemptAt:+now,lastStatus:status};retry=true;return {...entry,lastAttemptAt:+now,lastStatus:status};}catch{retry=true;return {...entry,lastAttemptAt:+now,lastStatus:0};}
+    const started=performance.now();
+    try{const status=await send(env,entry.subscription,message);metrics.push({operation:'push_reminder',status,durationMs:performance.now()-started});if(status===404||status===410)return null;if(status>=200&&status<300)return{...entry,lastDay:today,lastAttemptAt:+now,lastStatus:status};retry=true;return {...entry,lastAttemptAt:+now,lastStatus:status};}catch{metrics.push({operation:'push_reminder',status:0,durationMs:performance.now()-started});retry=true;return {...entry,lastAttemptAt:+now,lastStatus:0};}
   }));
   await ctx.storage.put('push',{subscriptions:subscriptions.filter(Boolean)});
   if(telegram?.chatId&&env.TG_BOT_TOKEN&&telegram.lastDay!==today){
-    try{
+    const started=performance.now();let recorded=false;try{
       const targets=[...new Set(reminders.map(item=>String(item.addressId||'default')))];
       const links=targets.slice(0,10).map((id,index)=>`Адреса ${index+1}: https://mykomunalka.pp.ua/index.html?address=${encodeURIComponent(id)}#calc`).join('\n');
       const text=`Комуналка · нагадування\nЧас передати показники: ${labels.join(', ').slice(0,250)}.\nВнести показники:\n${links}${targets.length>10?'\nРешта адрес — у застосунку.':''}\nПісля передачі позначте її в застосунку.`;
-      const status=await sendTg(env,telegram.chatId,text);
+      const status=await sendTg(env,telegram.chatId,text);metrics.push({operation:'telegram_reminder',status,durationMs:performance.now()-started});recorded=true;
       await ctx.storage.put('telegram',{...telegram,lastAttemptAt:+now,lastStatus:status,...(status>=200&&status<300?{lastDay:today}:{})});
       if(status<200||status>=300)retry=true;
-    }catch{retry=true;await ctx.storage.put('telegram',{...telegram,lastAttemptAt:+now,lastStatus:0});}
+    }catch{if(!recorded)metrics.push({operation:'telegram_reminder',status:0,durationMs:performance.now()-started});retry=true;await ctx.storage.put('telegram',{...telegram,lastAttemptAt:+now,lastStatus:0});}
   }
+  recordMetrics(env,ctx,metrics);
   if(retry)await ctx.storage.setAlarm(+now+30*60000);
   else if(!subscriptions.some(Boolean)&&!telegram?.chatId)await ctx.storage.deleteAlarm();
 }

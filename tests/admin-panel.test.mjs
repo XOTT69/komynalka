@@ -112,3 +112,14 @@ test('feedback fetches one page and loads more on demand, rather than downloadin
  ui.window.fetch=async(_url,options)=>{const body=JSON.parse(options.body);let data={success:true,indexReady:true};if(body.action==='admin_feedback_list'){pages++;data={...data,mode:'directory',total:60,feedback:Array.from({length:25},(_,i)=>({id:(1759220000000+i+(body.cursor?25:0))+'-abcdefgh',type:'problem',status:'new',message:'Тестове повідомлення',createdAt:'2026-10-01'})),cursor:body.cursor?null:'next'};}return{ok:true,status:200,json:async()=>data};};
  try{await ui.window.loadFeedback();assert.equal(pages,1);assert.equal(ui.window.document.querySelectorAll('#feedbackList article').length,25);assert.equal(ui.window.document.getElementById('feedbackMore').classList.contains('hidden'),false);await ui.window.loadMoreFeedback();assert.equal(pages,2);assert.equal(ui.window.document.querySelectorAll('#feedbackList article').length,50);}finally{ui.close();}
 });
+
+test('reliability dashboard separates API errors, expired subscriptions and provider acceptance',async()=>{
+ const ui=setup();ui.window.fetch=async()=>({ok:true,status:200,json:async()=>({success:true,from:'2026-09-28',through:'2026-10-04',checkedAt:'2026-10-04T10:00Z',rows:[{operation:'sync_write',count:10,ok:8,conflict:1,failed:1,p95UpperMs:300},{operation:'push_reminder',count:3,ok:1,expired:1,failed:1,p95UpperMs:3000}]})});
+ try{await ui.window.loadServiceMetrics();const {document}=ui.window;assert.match(document.getElementById('metricsRows').textContent,/Конфлікти: 1/);assert.match(document.getElementById('metricsRows').textContent,/Застарілі підписки: 1/);assert.match(document.getElementById('metricsRows').textContent,/Прийнято сервісом/);assert.deepEqual([...document.querySelectorAll('.reliability-card strong')].map(node=>node.textContent),['10','1','1','1']);
+ ui.window.fetch=async()=>{throw new Error('offline');};await ui.window.loadServiceMetrics();assert.equal(document.querySelectorAll('.reliability-card').length,0);assert.match(document.getElementById('metricsStatus').textContent,/Не вдалося/);
+ }finally{ui.close();}
+});
+test('empty reliability counters do not claim delivery or absence of all errors',async()=>{
+ const ui=setup();ui.window.fetch=async()=>({ok:true,status:200,json:async()=>({success:true,from:'2026-09-28',through:'2026-10-04',checkedAt:'2026-10-04T10:00Z',rows:[]})});
+ try{await ui.window.loadServiceMetrics();assert.match(ui.window.document.getElementById('metricsRows').textContent,/Подій за цей період ще немає/);assert.deepEqual([...ui.window.document.querySelectorAll('.reliability-card strong')].map(node=>node.textContent),['0','0','0','0']);}finally{ui.close();}
+});

@@ -220,6 +220,14 @@
 
             <!-- Tab: Security -->
             <div id="tabSecurity" class="hidden">
+                <section class="reliability-panel" aria-labelledby="reliabilityTitle">
+                    <div class="reliability-heading"><div><h3 id="reliabilityTitle">Надійність сервісу</h3><p>Загальні результати запитів і надсилання нагадувань</p></div><div class="reliability-controls"><label for="metricsPeriod">Період</label><select id="metricsPeriod" onchange="loadServiceMetrics()"><option value="1">Сьогодні</option><option value="7" selected>7 днів</option><option value="14">14 днів</option></select><button type="button" onclick="loadServiceMetrics()">Оновити</button></div></div>
+                    <p id="metricsStatus" class="reliability-status" role="status">Відкрийте розділ для перевірки.</p>
+                    <div id="metricsCards" class="reliability-cards"></div>
+                    <div id="metricsRows" class="reliability-rows"></div>
+                    <p class="reliability-note">«Прийнято» для нагадувань означає відповідь сервісу Telegram або push, а не прочитання чи показ на телефоні. P95 — верхня межа групи часу для 95% запитів; час мережі до вашого пристрою не враховано.</p>
+                    <p class="reliability-note">Лічильники зберігаються 14 днів, межі доби — UTC. Збір працює у фоні й може пропускати події при збоях. Тут немає логінів, адрес, IP, текстів листів або AI-розмов. Помилки Google до звернення до нашого API сюди не потрапляють.</p>
+                </section>
                 <p class="admin-intro">Показники нижче — сигнали з профілів, а не доказ порушення. Деталі захисту перевіряйте у конфігурації Worker.</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="bg-white p-6 rounded-xl border shadow-sm">

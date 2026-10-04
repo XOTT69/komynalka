@@ -53,6 +53,14 @@ jobs:
           npm run demo > /tmp/komunalka-demo.log 2>&1 &
           for attempt in $(seq 1 30); do curl --fail --silent http://127.0.0.1:4174/ > /dev/null && break; sleep 1; done
           npm run check:layout
+      - name: Reproducible local browser performance laboratory
+        env:
+          KOMUNALKA_LAB_RUNS: 3
+        run: npm run measure:performance
+      - uses: actions/upload-artifact@v4
+        with:
+          name: performance-laboratory
+          path: test-results/browser-performance.json
       - name: Real PWA update and offline checks
         run: |
           npm run demo:pwa > /tmp/komunalka-pwa.log 2>&1 &
