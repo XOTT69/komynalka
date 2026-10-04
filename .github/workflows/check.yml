@@ -5,6 +5,33 @@ on:
 permissions:
   contents: read
 jobs:
+  browsers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit, firefox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Critical scenarios with fictional accounts
+        env:
+          KOMUNALKA_BROWSER: ${{ matrix.browser }}
+        run: |
+          npm run demo > /tmp/komunalka-browser.log 2>&1 &
+          for attempt in $(seq 1 30); do curl --fail --silent http://127.0.0.1:4174/ > /dev/null && break; sleep 1; done
+          node tests/critical-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: critical-${{ matrix.browser }}-failure
+          path: test-results/
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 20

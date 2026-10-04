@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /index.html
+Disallow: /__/auth/
+Disallow: /*?share=
+Disallow: /*?address=
+Sitemap: https://mykomunalka.pp.ua/sitemap.xml

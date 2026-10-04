@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Спробувати Комуналку — демо без реєстрації</title>
+<meta name="description" content="Спробуйте розрахунок і готовий лист із вигаданими показниками. Реєстрація не потрібна.">
+<link rel="canonical" href="https://mykomunalka.pp.ua/demo.html">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="styles/fonts.css">
+<link rel="stylesheet" href="styles/public.css">
+<script defer src="demo.js">
+</script>
+</head>
+<body>
+<div class="public-wrap">
+<nav class="public-nav">
+<a class="public-brand" href="landing.html">
+<img src="icon-192.png" width="40" height="40" alt="">Комуналка</a>
+<a href="index.html">Почати власний облік →</a>
+</nav>
+<main class="demo-shell">
+<div class="demo-banner">Демо · вигадані дані. Зміни лише на цій сторінці; у хмару нічого не надсилається.</div>
+<h1>Показники → готовий лист</h1>
+<p>Спробуйте змінити число. Так виглядає розрахунок для однієї послуги; повний облік доступний у застосунку.</p>
+<section class="public-card" aria-labelledby="demoReadingTitle">
+<h2 id="demoReadingTitle">Вода · приклад квартири</h2>
+<form id="demoForm">
+<div class="demo-form">
+<label>Попередній показник, м³<input id="demoPrevious" type="number" min="0" step="any" value="267" required>
+</label>
+<label>Поточний показник, м³<input id="demoCurrent" type="number" min="0" step="any" value="280" required>
+</label>
+<label>Тариф, ₴ / м³<input id="demoTariff" type="number" min="0" step="any" value="50" required>
+</label>
+</div>
+<p class="public-note">50 ₴ / м³ — приклад для демо, не чинний тариф постачальника.</p>
+<div class="demo-result" aria-live="polite">
+<p id="demoUsage">
+</p>
+<strong id="demoTotal">
+</strong>
+</div>
+<p id="demoError" class="demo-error" role="alert">
+</p>
+<button type="submit" class="public-button primary" id="demoPrepare">Підготувати лист</button>
+</form>
+</section>
+<section class="public-card" id="demoMailSection" hidden aria-labelledby="demoMailTitle">
+<h2 id="demoMailTitle">Готовий текст</h2>
+<p class="public-note">Адресат: voda@example.com · демонстраційна адреса</p>
+<p>
+<strong>Тема:</strong> О/р 6037. Приклад квартири</p>
+<textarea class="demo-mail" id="demoMail" rows="4" readonly aria-label="Демонстраційний текст листа">
+</textarea>
+<div class="public-actions">
+<button type="button" class="public-button" id="demoCopy">Скопіювати текст</button>
+<a href="index.html" class="public-button primary">Налаштувати свій облік</a>
+</div>
+<p id="demoCopyStatus" class="demo-status" role="status">
+</p>
+<p class="public-note">У власному обліку можна задати email, тему й шаблон та відкрити заповнений лист у Gmail або системній пошті.</p>
+</section>
+<p class="public-note">Для демо не потрібні пароль, ваші показники чи дозвіл на сповіщення.</p>
+</main>
+<footer class="public-footer">
+<span>Спробуйте · дані не зберігаються</span>
+<a href="privacy.html">Приватність</a>
+</footer>
+</div>
+</body>
+</html>

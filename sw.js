@@ -19,13 +19,17 @@ self.addEventListener('fetch',event=>{
   event.respondWith(caches.open(CACHE_NAME).then(cache=>cache.match(event.request,{ignoreSearch:true})).then(cached=>cached||fetch(event.request)));
 });
 self.addEventListener('message',event=>{if(event.data?.type==='GET_VERSION')event.ports?.[0]?.postMessage({version:CACHE_NAME});if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
+function reminderTarget(addressId,action='reminders'){
+  const query=typeof addressId==='string'&&addressId.length>0&&addressId.length<=200?'?address='+encodeURIComponent(addressId):'';
+  return './index.html'+query+(action==='readings'?'#calc':'#reminders');
+}
 self.addEventListener('push',event=>{
   let data={title:'Комуналка',body:'Перевірте нагадування у застосунку.'};
   try{if(event.data)data={...data,...event.data.json()};}catch{}
-  event.waitUntil(self.registration.showNotification(String(data.title).slice(0,100),{body:String(data.body).slice(0,500),icon:'icon-192.png',badge:'badge-96.png',tag:String(data.tag||'komunalka-reminder'),renotify:false,data:{url:'./index.html#reminders'},actions:[{action:'readings',title:'Внести показники'},{action:'reminders',title:'Нагадування'}]}));
+  event.waitUntil(self.registration.showNotification(String(data.title).slice(0,100),{body:String(data.body).slice(0,500),icon:'icon-192.png',badge:'badge-96.png',tag:String(data.tag||'komunalka-reminder'),renotify:false,data:{addressId:data.addressId,url:reminderTarget(data.addressId)},actions:[{action:'readings',title:'Внести показники'},{action:'reminders',title:'Нагадування'}]}));
 });
 self.addEventListener('notificationclick',event=>{
   event.notification.close();
-  const target=event.action==='readings'?'./index.html#calc':'./index.html#reminders';
+  const target=reminderTarget(event.notification.data?.addressId,event.action);
   event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async windows=>{const current=windows.find(client=>{const url=new URL(client.url);return url.origin===self.location.origin&&!url.searchParams.has('share');});if(current){if(typeof current.navigate==='function')await current.navigate(target);return current.focus();}return self.clients.openWindow(target);}));
 });

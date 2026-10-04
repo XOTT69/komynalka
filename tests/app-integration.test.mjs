@@ -6,9 +6,15 @@ import {createHash,webcrypto} from 'node:crypto';
 import worker from '../worker.js';
 import {environment,legacyAccount} from './helpers.mjs';
 const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
-const sources=await Promise.all(['sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','meter-readings.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','app.js','account-tools.js','meter-replacement-ui.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
+const sources=await Promise.all(['sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','meter-readings.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','onboarding-ui.js','app.js','account-tools.js','meter-replacement-ui.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
 const password='test-password',hash=createHash('sha256').update(password).digest('hex');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
+test('reminder link selects only an owned active address and is consumed once',async()=>{
+ const legacy=legacyAccount(hash);legacy.addresses.push({...structuredClone(legacy.addresses[0]),id:'office',name:'Офіс'});
+ const {env}=environment({anna:legacy}),p=await page(env,{},false,'/index.html?address=office#calc');
+ try{await p.w.performLogin('anna',password,false);assert.equal(p.w.document.getElementById('currentAddressDisplay').textContent,'Офіс');assert.equal(p.w.location.search,'');assert.equal(p.w.document.querySelector('.tab-active').id,'tabCalc');p.w.selectAddress('default');assert.notEqual(p.w.document.getElementById('currentAddressDisplay').textContent,'Офіс');assert.deepEqual(p.errors,[]);}finally{p.close();}
+ const other=await page(env,{},false,'/index.html?address=not-my-address#calc');try{await other.w.performLogin('anna',password,false);assert.notEqual(other.w.document.getElementById('currentAddressDisplay').textContent,'Офіс');assert.equal(other.w.location.search,'');assert.deepEqual(other.errors,[]);}finally{other.close();}
+});
 async function page(env,stored={},offline=false,suffix="",fetchFault=null,googleSetup=null){
   const errors=[],navigations=[];const console=new VirtualConsole();console.on('jsdomError',e=>{if(e.message.includes('navigation'))navigations.push(e.message);else errors.push(e.message);});
   const dom=new JSDOM(html,{url:'https://komynalka.vercel.app'+suffix,runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:console});const w=dom.window;
@@ -25,7 +31,7 @@ async function page(env,stored={},offline=false,suffix="",fetchFault=null,google
   w.fetch=async(url,options={})=>{if(offline||fetchFault==='reject')throw new TypeError('fetch failed');if(typeof fetchFault==='function')return fetchFault(url,options,originalFetch);if(typeof fetchFault==='number')return new Response('Test server unavailable',{status:fetchFault});if(fetchFault==='invalid-json')return new Response('invalid server response');return originalFetch(url,options);};
   for(const [key,value] of Object.entries(stored))w.localStorage.setItem(key,value);
   if(googleSetup)googleSetup(w,auth);
-  w.eval(sources.join('\n')+'\nwindow.__disposeTestPage=()=>{activeStore=null;activeDrain=null;authAttempt++;};window.__interruptUpdateCheck=()=>{pendingServiceWorker={state:"installed"};updateManager={check:async()=>false};showUpdateBanner();};');
+  w.eval(sources.join('\n')+'\nwindow.__disposeTestPage=()=>{activeStore=null;activeDrain=null;authAttempt++;};window.__interruptUpdateCheck=(mode)=>{pendingServiceWorker={state:"installed"};updateManager={check:async()=>Boolean(mode),current:()=>mode==="missing"?null:{state:"installed",postMessage(){throw new Error("test transport error");}}};showUpdateBanner();};');
   await delay(30);
   return {w,errors,navigations,close:()=>{
     // Browser navigation discards callbacks from the old document. JSDOM.close()
@@ -55,6 +61,9 @@ test('an interrupted update check leaves the update button usable',async()=>{
     const button=p.w.document.getElementById('applyUpdateBtn');button.click();await delay(10);
     assert.equal(button.disabled,false);assert.equal(p.navigations.length,0);assert.deepEqual(p.errors,[]);
   }finally{p.close();}
+});
+test('a disappearing update candidate or failed message transport cannot lock the update button',async()=>{
+ for(const mode of ['missing','transport']){const {env}=environment({anna:legacyAccount(hash)}),p=await page(env);try{p.w.__interruptUpdateCheck(mode);const button=p.w.document.getElementById('applyUpdateBtn');button.click();await delay(10);assert.equal(button.disabled,false,mode);assert.equal(p.navigations.length,0);assert.deepEqual(p.errors,[]);}finally{p.close();}}
 });
 test('an unknown previous reading cannot charge from zero; explicit zero is accepted',async()=>{
   const legacy=legacyAccount(hash),{env}=environment({anna:legacy}),p=await page(env);
@@ -452,4 +461,25 @@ test('a late redirect result cannot replace an account signed in by a newer acti
  const {env}=environment({bob:legacyAccount(hash)});let release;
  const p=await page(env,{},false,'',null,(w,auth)=>{auth.getRedirectResult=()=>new Promise(resolve=>release=()=>resolve({user:{uid:'old-google',getIdToken:async()=> 'fixture'}}));});
  try{await p.w.performLogin('bob',password,false);release();await delay(30);assert.equal(p.w.localStorage.getItem('k_login'),'bob');assert.equal(p.w.localStorage.getItem('k_uid'),null);assert.deepEqual(p.errors,[]);}finally{p.close();}
+});
+
+test('first setup resumes per account and only changes an empty address after final confirmation',async()=>{
+  const account=legacyAccount(hash);account.addresses[0].records=[];account.addresses[0].tariffs.customField='keep';const {env}=environment({anna:account}),p=await page(env);let stored;
+  try{
+    await p.w.performLogin('anna',password,false);const d=p.w.document,form=d.getElementById('onboardingForm');assert.ok(d.getElementById('onboardingDialog').hasAttribute('open'));
+    const name=form.elements.namedItem('name');name.value='Моя квартира';name.dispatchEvent(new p.w.Event('input',{bubbles:true}));
+    for(const key of ['showElectro','showGas','showHotWater']){const control=form.elements.namedItem(key);control.checked=false;control.dispatchEvent(new p.w.Event('input',{bubbles:true}));}
+    d.getElementById('onboardingNext').click();assert.equal(d.getElementById('onboardingStep').textContent,'Крок 2 із 3');assert.equal(form.elements.namedItem('water').value,'99');
+    form.elements.namedItem('water').value='56.7';form.elements.namedItem('water').dispatchEvent(new p.w.Event('input',{bubbles:true}));d.getElementById('onboardingLater').click();
+    assert.equal(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].name,'Мій дім');stored=p.storage();assert.deepEqual(p.errors,[]);
+  }finally{p.close();}
+  const reopened=await page(env,stored);try{await delay(80);const d=reopened.w.document,form=d.getElementById('onboardingForm');assert.equal(d.getElementById('onboardingStep').textContent,'Крок 2 із 3');assert.equal(form.elements.namedItem('water').value,'56.7');d.getElementById('onboardingNext').click();assert.equal(d.getElementById('onboardingStep').textContent,'Крок 3 із 3');form.elements.namedItem('wPrev').value='267';form.elements.namedItem('wPrev').dispatchEvent(new reopened.w.Event('input',{bubbles:true}));d.getElementById('onboardingNext').click();await delay(80);const data=JSON.parse(reopened.storage()['komynalka_account_v1:anna']).local;assert.equal(data.addresses[0].name,'Моя квартира');assert.equal(data.addresses[0].tariffs.water,56.7);assert.equal(data.addresses[0].tariffs.customField,'keep');assert.equal(data.addresses[0].records.length,0);assert.equal(d.getElementById('wPrev').value,'267');assert.equal(d.getElementById('onboardingDialog').hasAttribute('open'),false);assert.equal(d.getElementById('tabCalc').classList.contains('tab-active'),true);assert.deepEqual(reopened.errors,[]);}finally{reopened.close();}
+});
+
+test('setup cannot overwrite another account or a changed address',async()=>{
+  const empty=legacyAccount(hash);empty.addresses[0].records=[];const {env}=environment({anna:empty,boris:legacyAccount(hash)}),p=await page(env);try{await p.w.performLogin('anna',password,false);const d=p.w.document;assert.ok(d.getElementById('onboardingDialog').hasAttribute('open'));await p.w.performLogin('boris',password,false);assert.equal(d.getElementById('onboardingDialog').hasAttribute('open'),false);d.getElementById('onboardingNext').click();const data=JSON.parse(p.storage()['komynalka_account_v1:boris']).local;assert.equal(data.addresses[0].records.length,1);assert.equal(data.addresses[0].records[0].total,151.9);assert.deepEqual(p.errors,[]);}finally{p.close();}
+});
+
+test('large history renders in pages and batch payment changes only visible records',async()=>{
+  const account=legacyAccount(hash),base=account.addresses[0].records[0];account.addresses[0].records=Array.from({length:1000},(_,i)=>({...base,id:'large-'+i,month:`${1900+Math.floor(i/12)}-${String(i%12+1).padStart(2,'0')}`}));const {env}=environment({anna:account}),p=await page(env);try{await p.w.performLogin('anna',password,false);p.w.switchTab('tabHistory',2);const d=p.w.document;assert.match(d.getElementById('historyLoadMore').parentNode.textContent,/Показано 48 із 1000/);d.querySelector('.batch-pay-btn').click();await delay(30);let data=JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records;assert.equal(data.filter(record=>record.paymentStatus==='paid').length,48);assert.equal(data.filter(record=>record.paymentStatus==='partial').length,952);d.getElementById('historyLoadMore').click();assert.match(d.getElementById('historyLoadMore').parentNode.textContent,/Показано 96 із 1000/);d.getElementById('searchRecords').value='1900-01';p.w.renderRecords();assert.equal(d.getElementById('historyLoadMore'),null);data=JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records;assert.equal(data.length,1000);assert.deepEqual(p.errors,[]);}finally{p.close();}
 });

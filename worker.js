@@ -8,7 +8,7 @@ export {AccountStore} from './account-store.js';
 // КОМУНАЛКА Worker — синхронізація, сесії, нагадування та адміністрування
 // ============================================================
 
-const WORKER_VERSION='5.13.0';
+const WORKER_VERSION='5.14.0';
 const CORS = {
   'Cache-Control':'no-store',
   'X-Content-Type-Options':'nosniff',
@@ -277,7 +277,7 @@ async function doPost(req, env, ip, fp) {
   try {body=await readBody(req);}catch(e){return err(e.message,e.message==='PAYLOAD_TOO_LARGE'?413:400);}
   const action = typeof body.action === 'string' ? body.action : '';
 
-  if(env.MAINTENANCE_MODE==='read-only'&&!['auth_login','auth_logout','session_list','admin_login','admin_logout','telegram_status','admin_stats','admin_health','admin_audit_list','admin_user_data','admin_backup_page','admin_backup_account','admin_backup_community','admin_get_tariffs','admin_feedback_list','get_tariffs','get_broadcast','push_status','push_unsubscribe'].includes(action))return err('MAINTENANCE_READ_ONLY',503);
+  if(env.MAINTENANCE_MODE==='read-only'&&!['auth_login','auth_logout','session_list','admin_login','admin_logout','telegram_status','admin_stats','admin_health','admin_audit_list','admin_user_data','admin_backup_page','admin_backup_account','admin_backup_community','admin_get_tariffs','admin_feedback_list','get_tariffs','get_broadcast','push_status','push_unsubscribe','feedback_status'].includes(action))return err('MAINTENANCE_READ_ONLY',503);
   if(action==='auth_login')return doAuthLogin(body,env,ip,fp,deviceName(req));
   if(action==='auth_register')return doAuthRegister(body,env,ip,fp,deviceName(req));
   if (action === 'admin_login' || action.startsWith('admin_')) return doAdmin(action, body, env, ip);
@@ -373,6 +373,7 @@ async function doPost(req, env, ip, fp) {
     case 'share_revoke':     return doRevokeShare(body,env,login);
     case 'update_name':      return doUpdateName(body, env, login, userData);
     case 'feedback_submit':  return doFeedbackSubmit(body,env,login);
+    case 'feedback_status': return doFeedbackStatus(body,env,login);
     case 'generate_share':   return doGenerateShare(body, env, login, userData);
     case 'ai_chat':          return doAiChat(body, env, login);
     // ═══ НОВІ: тарифи спільноти ═══
@@ -407,6 +408,13 @@ async function doFeedbackSubmit(body,env,login){
   const id=`${Date.now()}-${randomLinkToken().slice(0,12)}`,createdAt=new Date().toISOString();
   await env.KV.put(`feedback:${id}`,JSON.stringify({id,type,message,contact,login,createdAt,status:'new',appVersion}));
   return ok({success:true,id});
+}
+
+async function doFeedbackStatus(body,env,login){
+  if(!Array.isArray(body.ids)||body.ids.length>20||body.ids.some(id=>typeof id!=='string'||!/^\d{10,16}-[A-Za-z0-9_-]{6,24}$/.test(id)))return err('INVALID_FEEDBACK_IDS',400);
+  const feedback=[];
+  for(const id of new Set(body.ids)){const raw=await env.KV.get(`feedback:${id}`);if(!raw)continue;let item;try{item=JSON.parse(raw);}catch{continue;}if(item.login!==login)continue;feedback.push({id:item.id,type:item.type,createdAt:item.createdAt,updatedAt:item.updatedAt||null,status:['new','in_progress','done'].includes(item.status)?item.status:'new',preview:String(item.message||'').slice(0,160)});}
+  return ok({success:true,feedback:feedback.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)))});
 }
 
 async function doPublicFeedbackSubmit(body,env,ip){

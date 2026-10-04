@@ -1,0 +1,10 @@
+(function(){
+  'use strict';
+  const el=id=>document.getElementById(id),money=new Intl.NumberFormat('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2}),qty=new Intl.NumberFormat('uk-UA',{maximumFractionDigits:3});
+  function calculation(){const values=['demoPrevious','demoCurrent','demoTariff'].map(id=>{const text=el(id).value.trim();return text?Number(text):NaN;});if(values.some(n=>!Number.isFinite(n)||n<0))return {error:'Заповніть усі поля невід’ємними числами.'};const [previous,current,tariff]=values;if(current<previous)return {error:'Поточний показник менший за попередній. Перевірте число.'};const usage=current-previous,total=Math.round(usage*tariff*100)/100;if(!Number.isFinite(total)||total>1e9)return{error:'Значення надто велике для цього прикладу.'};return {previous,current,usage,total};}
+  function preview(){const result=calculation();el('demoError').textContent=result.error||'';el('demoTotal').textContent=result.error?'—':money.format(result.total)+' ₴';el('demoUsage').textContent=result.error?'Перевірте показники':qty.format(result.usage)+' м³ за період';el('demoPrepare').disabled=Boolean(result.error);el('demoMailSection').hidden=true;el('demoCopyStatus').textContent='';return result;}
+  el('demoForm').addEventListener('input',preview);
+  el('demoForm').addEventListener('submit',event=>{event.preventDefault();const result=preview();if(result.error)return;el('demoMail').value=`Показники ліч. Поточні ${qty.format(result.current)}. Попередні ${qty.format(result.previous)}. Різниця ${qty.format(result.usage)}.`;el('demoMailSection').hidden=false;el('demoMailSection').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});el('demoCopy').focus({preventScroll:true});});
+  el('demoCopy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(el('demoMail').value);el('demoCopyStatus').textContent='Текст скопійовано ✓';}catch{el('demoMail').focus();el('demoMail').select();el('demoCopyStatus').textContent='Оберіть «Копіювати» для виділеного тексту.';}});
+  preview();
+})();

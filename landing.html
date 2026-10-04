@@ -1,142 +1,160 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Комуналка — розумний облік комунальних платежів</title>
-    <link rel="icon" type="image/png" href="icon-192.png">
-    <meta name="description" content="Безкоштовний додаток для обліку води, світла, газу. Графіки, прогнози, нагадування. Працює офлайн.">
-    <meta property="og:title" content="Комуналка — розумний облік комунальних">
-    <meta property="og:description" content="Вода, світло, газ — все в одному. Безкоштовно.">
-    <meta property="og:image" content="https://komynalka.vercel.app/og-image.png">
-    <link rel="stylesheet" href="./assets/tailwind.css">
-    <link rel="stylesheet" href="./vendor/fontawesome/css/all.min.css">
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
-        .hero-bg { background: linear-gradient(135deg, #007aff 0%, #0051d4 50%, #003399 100%); }
-        .float-animation { animation: float 6s ease-in-out infinite; }
-        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
-        .feature-card:hover { transform: translateY(-4px); }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Комуналка — показники, нагадування та готові листи</title>
+<meta name="description" content="Внесіть показники, підготуйте лист постачальнику та відстежуйте оплату. Комуналка працює офлайн, нагадує через Telegram і встановлюється як застосунок.">
+<link rel="canonical" href="https://mykomunalka.pp.ua/landing.html">
+<meta property="og:title" content="Комуналка — щомісячні справи в одному місці">
+<meta property="og:description" content="Показники, готові листи, оплати й нагадування. Спробуйте демо без реєстрації.">
+<meta property="og:url" content="https://mykomunalka.pp.ua/landing.html">
+<meta property="og:image" content="https://mykomunalka.pp.ua/og-image.png">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="styles/fonts.css">
+<link rel="stylesheet" href="styles/public.css">
 </head>
-<body class="bg-white text-slate-800 overflow-x-hidden">
-
-    <!-- Hero -->
-    <section class="hero-bg min-h-screen flex items-center relative overflow-hidden">
-        <div class="absolute inset-0 opacity-20">
-            <div class="absolute top-20 right-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
-            <div class="absolute bottom-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl"></div>
-        </div>
-        <div class="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center relative z-10">
-            <div class="text-white">
-                <div class="inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full text-sm font-bold mb-6 border border-white/20">
-                    <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Безкоштовно • PWA
-                </div>
-                <h1 class="text-5xl md:text-6xl font-black leading-tight mb-6">Комуналка<span class="text-white/60">.</span><br>Просто і розумно</h1>
-                <p class="text-xl text-white/70 mb-8 leading-relaxed">Облік води, світла, газу в одному додатку. Графіки, прогнози, нагадування. Працює офлайн.</p>
-                <div class="flex flex-wrap gap-4">
-                    <a href="./index.html" class="bg-white text-blue-600 font-black px-8 py-4 rounded-2xl text-lg shadow-2xl shadow-black/20 hover:shadow-3xl hover:scale-105 transition-all">Почати безкоштовно</a>
-                    <a href="#features" class="border-2 border-white/30 text-white font-bold px-8 py-4 rounded-2xl text-lg hover:bg-white/10 transition-all">Можливості</a>
-                </div>
-                <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-8 text-white/80 text-sm">
-                    <span><i class="fa-solid fa-check mr-1.5" aria-hidden="true"></i>Безкоштовно</span>
-                    <span><i class="fa-solid fa-wifi mr-1.5" aria-hidden="true"></i>Працює офлайн</span>
-                    <span><i class="fa-solid fa-bell mr-1.5" aria-hidden="true"></i>Нагадування</span>
-                </div>
-            </div>
-            <div class="hidden md:flex justify-center">
-                <div class="w-72 h-[580px] bg-black rounded-[3rem] p-3 shadow-2xl shadow-black/40 float-animation border-4 border-slate-700">
-                    <div class="w-full h-full bg-slate-100 rounded-[2.2rem] overflow-hidden relative">
-                        <div class="absolute inset-0 bg-gradient-to-b from-blue-500 to-blue-600 flex items-center justify-center">
-                            <div class="text-center text-white p-6">
-                                <img src="icon-192.png" alt="" width="64" height="64" class="w-16 h-16 rounded-2xl mx-auto mb-4">
-                                <p class="text-3xl font-black">2 578,00 ₴</p>
-                                <p class="text-white/80 text-sm mt-2">приклад витрат за місяць</p>
-                                <div class="mt-6 space-y-2 text-left text-sm">
-                                    <div class="flex justify-between bg-white/10 px-3 py-2 rounded-lg"><span>💧 Вода</span><span class="font-bold">456 ₴</span></div>
-                                    <div class="flex justify-between bg-white/10 px-3 py-2 rounded-lg"><span>⚡ Світло</span><span class="font-bold">1 230 ₴</span></div>
-                                    <div class="flex justify-between bg-white/10 px-3 py-2 rounded-lg"><span>🔥 Газ</span><span class="font-bold">892 ₴</span></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features -->
-    <section id="features" class="py-24 bg-slate-50">
-        <div class="max-w-6xl mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl font-black text-slate-900 mb-4">Все що потрібно</h2>
-                <p class="text-lg text-slate-500 max-w-2xl mx-auto">Один додаток замість блокноту, Excel і калькулятора</p>
-            </div>
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="feature-card bg-white p-8 rounded-3xl shadow-lg border border-slate-100 transition-all">
-                    <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl mb-5">📊</div>
-                    <h3 class="text-xl font-black text-slate-900 mb-3">Авто-розрахунок</h3>
-                    <p class="text-slate-500 leading-relaxed">Введіть показники — ми порахуємо суму з урахуванням тарифів, зони, зимових знижок</p>
-                </div>
-                <div class="feature-card bg-white p-8 rounded-3xl shadow-lg border border-slate-100 transition-all">
-                    <div class="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-2xl mb-5">📈</div>
-                    <h3 class="text-xl font-black text-slate-900 mb-3">Аналітика</h3>
-                    <p class="text-slate-500 leading-relaxed">Графіки за місяці, порівняння з минулим роком, прогноз на наступний місяць</p>
-                </div>
-                <div class="feature-card bg-white p-8 rounded-3xl shadow-lg border border-slate-100 transition-all">
-                    <div class="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-2xl mb-5">🔔</div>
-                    <h3 class="text-xl font-black text-slate-900 mb-3">Нагадування</h3>
-                    <p class="text-slate-500 leading-relaxed">Push-сповіщення коли час передавати показники. Ніколи не забудете</p>
-                </div>
-                <div class="feature-card bg-white p-8 rounded-3xl shadow-lg border border-slate-100 transition-all">
-                    <div class="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-2xl mb-5">📱</div>
-                    <h3 class="text-xl font-black text-slate-900 mb-3">Працює офлайн</h3>
-                    <p class="text-slate-500 leading-relaxed">PWA — встановіть на екран як звичайний додаток. Працює без інтернету</p>
-                </div>
-                <div class="feature-card bg-white p-8 rounded-3xl shadow-lg border border-slate-100 transition-all">
-                    <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center text-2xl mb-5">🏘️</div>
-                    <h3 class="text-xl font-black text-slate-900 mb-3">Багато адрес</h3>
-                    <p class="text-slate-500 leading-relaxed">Квартира, дача, батьки — ведіть облік для всіх об'єктів в одному місці</p>
-                </div>
-                <div class="feature-card bg-white p-8 rounded-3xl shadow-lg border border-slate-100 transition-all">
-                    <div class="w-14 h-14 bg-yellow-50 rounded-2xl flex items-center justify-center text-2xl mb-5">🏆</div>
-                    <h3 class="text-xl font-black text-slate-900 mb-3">Gamification</h3>
-                    <p class="text-slate-500 leading-relaxed">Досягнення, серія місяців, річний звіт — мотивація вести облік регулярно</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- How it works -->
-    <section class="py-24">
-        <div class="max-w-4xl mx-auto px-6">
-            <h2 class="text-4xl font-black text-center text-slate-900 mb-16">Як це працює</h2>
-            <div class="space-y-12">
-                <div class="flex items-center gap-8"><div class="w-16 h-16 bg-blue-500 text-white rounded-2xl flex items-center justify-center text-2xl font-black shrink-0 shadow-lg shadow-blue-500/30">1</div><div><h3 class="text-xl font-black text-slate-900 mb-1">Введіть показники</h3><p class="text-slate-500">Поточні та попередні. Можна частково — тільки воду або тільки світло</p></div></div>
-                <div class="flex items-center gap-8"><div class="w-16 h-16 bg-green-500 text-white rounded-2xl flex items-center justify-center text-2xl font-black shrink-0 shadow-lg shadow-green-500/30">2</div><div><h3 class="text-xl font-black text-slate-900 mb-1">Отримайте розрахунок</h3><p class="text-slate-500">Миттєво бачите суму з урахуванням тарифів, зони день/ніч, зимових знижок</p></div></div>
-                <div class="flex items-center gap-8"><div class="w-16 h-16 bg-purple-500 text-white rounded-2xl flex items-center justify-center text-2xl font-black shrink-0 shadow-lg shadow-purple-500/30">3</div><div><h3 class="text-xl font-black text-slate-900 mb-1">Слідкуйте за витратами</h3><p class="text-slate-500">Графіки, порівняння, прогнози. Знайте де економите і де витрачаєте більше</p></div></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- CTA -->
-    <section class="py-24 hero-bg relative overflow-hidden">
-        <div class="absolute inset-0 opacity-10"><div class="absolute top-0 left-1/3 w-96 h-96 bg-white rounded-full blur-3xl"></div></div>
-        <div class="max-w-3xl mx-auto px-6 text-center relative z-10">
-            <h2 class="text-4xl md:text-5xl font-black text-white mb-6">Почніть прямо зараз</h2>
-            <p class="text-xl text-white/70 mb-10">Безкоштовно. Без реєстрації карти. Без реклами.</p>
-            <a href="./index.html" class="inline-block bg-white text-blue-600 font-black px-10 py-5 rounded-2xl text-xl shadow-2xl shadow-black/20 hover:scale-105 transition-all">Відкрити додаток →</a>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="py-12 bg-slate-900 text-slate-400">
-        <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div class="flex items-center gap-3"><img src="icon-192.png" alt="" width="40" height="40" class="w-10 h-10 rounded-xl"><span class="font-black text-white text-lg">Комуналка<span class="text-blue-400">.</span></span></div>
-            <p class="text-sm">© Антон Миколенко. Усі права захищено.</p>
-            <div class="flex gap-4"><a href="https://send.monobank.ua/jar/58RYPiLjdS" target="_blank" class="text-sm hover:text-white transition-colors"><i class="fa-solid fa-heart mr-1 text-pink-400"></i>Підтримати</a></div>
-        </div>
-    </footer>
-
+<body>
+<div class="public-wrap">
+<nav class="public-nav" aria-label="Головна навігація">
+<a class="public-brand" href="landing.html">
+<img src="icon-192.png" width="40" height="40" alt="">Комуналка</a>
+<a href="index.html">Увійти у свій акаунт →</a>
+</nav>
+<main>
+<section class="public-hero">
+<div>
+<span class="eyebrow">Менше щомісячних клопотів</span>
+<h1>Ваші комунальні.<br>Усе під рукою.</h1>
+<p>Внесіть показники, отримайте готовий лист постачальнику й бачте, скільки залишилось оплатити. Комуналка нагадає, коли прийде час.</p>
+<div class="public-actions">
+<a class="public-button primary" href="index.html">Почати облік</a>
+<a class="public-button" href="demo.html">Спробувати демо</a>
+</div>
+<p class="public-note">Основний облік безкоштовний · iPhone, Android і комп’ютер</p>
+</div>
+<div class="preview-phone" aria-label="Приклад щомісячного обліку">
+<div class="preview-top">
+<span>Моя квартира</span>
+<small>Приклад даних</small>
+</div>
+<div class="preview-balance">
+<p>Залишилось оплатити</p>
+<strong>728,00 ₴</strong>
+<p>Нараховано 1 228,00 ₴ · сплачено 500,00 ₴</p>
+</div>
+<div class="preview-row">
+<span>Вода · 13 м³</span>
+<strong>650,00 ₴</strong>
+</div>
+<div class="preview-row">
+<span>Світло</span>
+<strong>578,00 ₴</strong>
+</div>
+<div class="preview-check">
+<span aria-hidden="true">✓</span>Показники збережені. Далі — передати постачальнику.</div>
+</div>
+</section>
+<section class="public-section">
+<h2>Корисно кожного місяця</h2>
+<p>Від першого показника до оплати — зі зрозумілими сумами й історією.</p>
+<div class="public-grid">
+<article class="public-card">
+<span class="card-icon" aria-hidden="true">↗</span>
+<h3>Внесли — пораховано</h3>
+<p>Вода, світло, газ і додаткові послуги. Власні тарифи, день / ніч та часткова оплата.</p>
+</article>
+<article class="public-card">
+<span class="card-icon" aria-hidden="true">✉</span>
+<h3>Лист уже готовий</h3>
+<p>Адресат, тема й показники підставляться з вашого шаблону. Відкрийте пошту, перевірте та надішліть.</p>
+</article>
+<article class="public-card">
+<span class="card-icon" aria-hidden="true">◷</span>
+<h3>Нагадування у ваш час</h3>
+<p>Оберіть дні й час за Києвом. Підключіть Telegram або доступні на пристрої Push-сповіщення.</p>
+</article>
+<article class="public-card">
+<span class="card-icon" aria-hidden="true">⌂</span>
+<h3>Кілька адрес</h3>
+<p>Квартира, будинок чи житло батьків — окремі показники, тарифи та історія для кожної адреси.</p>
+</article>
+<article class="public-card">
+<span class="card-icon" aria-hidden="true">⇄</span>
+<h3>Працює офлайн</h3>
+<p>Після першого завантаження ведіть облік без інтернету. Зміни синхронізуються після відновлення зв’язку.</p>
+</article>
+<article class="public-card">
+<span class="card-icon" aria-hidden="true">↓</span>
+<h3>Дані можна забрати</h3>
+<p>Завантажуйте резервну копію та експортуйте історію. Статус збереження завжди видно в застосунку.</p>
+</article>
+</div>
+</section>
+<section class="public-section">
+<h2>Налаштуйте один раз</h2>
+<div class="public-steps">
+<article>
+<span>1</span>
+<h3>Додайте свій дім</h3>
+<p>Назвіть адресу й оберіть потрібні послуги.</p>
+</article>
+<article>
+<span>2</span>
+<h3>Перевірте тарифи</h3>
+<p>Візьміть ціни й попередні показники з квитанції.</p>
+</article>
+<article>
+<span>3</span>
+<h3>Внесіть показники</h3>
+<p>Побачте розрахунок і підготуйте передачу постачальнику.</p>
+</article>
+</div>
+</section>
+<section class="public-section public-faq">
+<h2>Перед початком</h2>
+<details>
+<summary>Можна спробувати без акаунта?</summary>
+<p>Так. <a href="demo.html">Відкрийте демо</a> з вигаданими даними. Воно не надсилає листів і не змінює ваш облік.</p>
+</details>
+<details>
+<summary>Як встановити на iPhone чи Android?</summary>
+<p>На iPhone відкрийте сайт у Safari, у меню «Поділитися» оберіть «На початковий екран» і додайте його як вебзастосунок. На Android у меню Chrome оберіть «Встановити застосунок» або «Додати на головний екран». Назви пунктів залежать від браузера.</p>
+</details>
+<details>
+<summary>Застосунок сам надсилає показники й оплачує рахунки?</summary>
+<p>Комуналка готує лист і допомагає вести облік. Надсилання листа підтверджуєте у своїй пошті, оплату виконуєте у своєму банку. Потім позначаєте виконану дію в застосунку.</p>
+</details>
+<details>
+<summary>Звідки беруться тарифи?</summary>
+<p>Ви задаєте тарифи зі своєї квитанції або обираєте відповідний шаблон. Типові значення потрібно перевіряти: вони можуть відрізнятися від чинних цін вашого постачальника.</p>
+</details>
+<details>
+<summary>Як повідомити про проблему?</summary>
+<p>На екрані входу та в розділі допомоги є форма звернення. Не надсилайте паролі чи банківські дані; опишіть, яка дія не працює.</p>
+</details>
+</section>
+<section class="public-final">
+<h2>Наступного місяця буде простіше</h2>
+<p>Почніть із показників однієї послуги.</p>
+<a class="public-button primary" href="index.html">Відкрити Комуналку</a>
+</section>
+</main>
+<section class="public-section">
+<h2>Короткі інструкції</h2>
+<div class="guide-links">
+<a href="guides/email-readings.html">Передати показники поштою →</a>
+<a href="guides/two-zone.html">Налаштувати день і ніч →</a>
+<a href="guides/install.html">Встановити на телефон →</a>
+</div>
+</section>
+<footer class="public-footer">
+<span>Комуналка · облік для вашого дому</span>
+<div>
+<a href="privacy.html">Приватність</a>
+<a href="index.html">Застосунок</a>
+</div>
+</footer>
+</div>
 </body>
 </html>

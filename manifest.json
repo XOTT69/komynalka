@@ -2,17 +2,24 @@
     "id": "komunalka-pwa",
     "lang": "uk",
     "dir": "ltr",
-    "name": "Комунальні платежі",
+    "name": "Комуналка",
     "short_name": "Комуналка",
     "description": "Розумний облік комунальних платежів — вода, світло, газ. Графіки, прогнози, нагадування.",
     "start_url": "./",
     "scope": "./",
     "display": "standalone",
-    "display_override": ["standalone", "minimal-ui"],
+    "display_override": [
+        "standalone",
+        "minimal-ui"
+    ],
     "background_color": "#f2f5fa",
     "theme_color": "#285bd0",
     "orientation": "portrait",
-    "categories": ["finance", "productivity", "utilities"],
+    "categories": [
+        "finance",
+        "productivity",
+        "utilities"
+    ],
     "icons": [
         {
             "src": "icon-192.png",
@@ -45,28 +52,48 @@
             "short_name": "Внести",
             "description": "Швидко внести показники лічильників",
             "url": "./index.html#calc",
-            "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+            "icons": [
+                {
+                    "src": "icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
         },
         {
             "name": "Переглянути Дашборд",
             "short_name": "Дашборд",
             "description": "Головний екран з аналітикою",
             "url": "./index.html",
-            "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+            "icons": [
+                {
+                    "src": "icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
         },
         {
             "name": "Позначити оплату",
             "short_name": "Оплата",
             "description": "Відкрити оплату за поточний місяць",
             "url": "./index.html#payment",
-            "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+            "icons": [
+                {
+                    "src": "icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
         },
         {
             "name": "Нагадування",
             "short_name": "Нагадування",
             "description": "Керувати Push і Telegram нагадуваннями",
             "url": "./index.html#reminders",
-            "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+            "icons": [
+                {
+                    "src": "icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
         }
     ]
 }

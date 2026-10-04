@@ -4,7 +4,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict');
 try{for(const [width,theme] of [[320,'light'],[390,'light'],[390,'dark'],[768,'light'],[1440,'light'],[1440,'dark']]){
  const context=await browser.newContext({viewport:{width,height:844},deviceScaleFactor:1,colorScheme:theme});const p=await context.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));
  await p.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.__copied=text;}}}));
- await p.goto('http://127.0.0.1:4174/',{waitUntil:'domcontentloaded'});await p.locator('#monthlyTasksList .month-task').first().waitFor();await p.locator('#splashScreen').waitFor({state:'hidden'});await p.waitForTimeout(350);
+ await p.goto(process.env.KOMUNALKA_TEST_URL||'http://127.0.0.1:4174/',{waitUntil:'domcontentloaded'});await p.locator('#monthlyTasksList .month-task').first().waitFor();await p.locator('#splashScreen').waitFor({state:'hidden'});await p.waitForTimeout(350);
  const nav=await p.locator('#bottomNav').boundingBox();if(width<1000)assert.ok(Math.abs(nav.y+nav.height-844)<2);else assert.equal(nav.x,0);
  await p.locator('#swipeContainer').evaluate(e=>e.scrollTop=e.scrollHeight);assert.deepEqual(await p.locator('#bottomNav').boundingBox(),nav);
  await p.locator('#swipeContainer').evaluate(e=>e.scrollTop=0);if(width===390||width===1440)await p.screenshot({path:`test-results/overview-${width}-${theme}.png`});

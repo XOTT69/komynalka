@@ -16,7 +16,7 @@ await mkdir('dist/assets',{recursive:true});
 const cssCompiler=await compile(await readFile('styles/tailwind.css','utf8'),{base:path.join(root,'styles'),onDependency(){}});
 const cssScanner=new Scanner({sources:cssCompiler.sources});
 await writeFile('dist/assets/tailwind.css',optimize(cssCompiler.build(cssScanner.scan()),{minify:true}).code);
-const entries=['index.html','landing.html','admin.html','admin-panel.js','privacy.html','app.js','account-tools.js','meter-readings.js','meter-replacement-ui.js','operational-backup.js','ui-dialogs.js','ai-chat.js','year-report-image.js','sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','manifest.json','icon.png','icon-192.png','icon-512.png','badge-96.png','og-image.png','styles','vendor'];
+const entries=['guides','robots.txt','sitemap.xml','index.html','demo.html','demo.js','onboarding-ui.js','monthly-summary.js','landing.html','admin.html','admin-panel.js','privacy.html','app.js','account-tools.js','meter-readings.js','meter-replacement-ui.js','operational-backup.js','ui-dialogs.js','ai-chat.js','year-report-image.js','sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','manifest.json','icon.png','icon-192.png','icon-512.png','badge-96.png','og-image.png','styles','vendor'];
 for(const optional of ['data-model.js']){try{await readFile(optional);entries.push(optional);}catch{}}
 for(const entry of entries)await cp(entry,path.join('dist',entry),{recursive:true});
 const builtIndexPath=path.join('dist','index.html');
@@ -29,7 +29,7 @@ builtAdmin=builtAdmin.replace('<meta name="app-version" content="dev">',`<meta n
 await writeFile(builtAdminPath,builtAdmin);
 async function files(dir){const result=[];for(const entry of await readdir(dir,{withFileTypes:true})){const name=path.join(dir,entry.name);if(entry.isDirectory())result.push(...await files(name));else result.push(name);}return result;}
 const assets=(await files('dist')).filter(p=>!p.endsWith('admin.html')&&!p.endsWith('landing.html')).sort();
-const optionalOfflinePatterns=[/\/vendor\/jspdf\//,/\/vendor\/fonts\/Roboto-Regular\.ttf$/,/\/vendor\/fontawesome\/webfonts\/.*\.ttf$/,/\/vendor\/fontawesome\/webfonts\/fa-(?:regular|v4compatibility).*\.woff2$/,/\/og-image\.png$/,/\/icon\.png$/,/\/styles\/(?:app-shell|design-tokens|quiet-ui|theme|tailwind)\.css$/];
+const optionalOfflinePatterns=[/\/guides\//,/\/(?:robots\.txt|sitemap\.xml)$/,/\/styles\/public\.css$/,/\/demo(?:\.html|\.js)$/,/\/vendor\/jspdf\//,/\/vendor\/fonts\/Roboto-Regular\.ttf$/,/\/vendor\/fontawesome\/webfonts\/.*\.ttf$/,/\/vendor\/fontawesome\/webfonts\/fa-(?:regular|v4compatibility).*\.woff2$/,/\/og-image\.png$/,/\/icon\.png$/,/\/styles\/(?:app-shell|design-tokens|quiet-ui|theme|tailwind)\.css$/];
 const offlineAssets=assets.filter(file=>!optionalOfflinePatterns.some(pattern=>pattern.test(file)));
 // Cached HTML retains its response headers. Deployment policy changes must
 // therefore produce a new SW cache even when the application assets are unchanged.

@@ -9,7 +9,7 @@ const fs=require('node:fs');
   const errors=[];
   const open=async()=>{
     const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
-    await page.goto('http://127.0.0.1:4175/');await page.locator('#appScreen').waitFor({state:'visible'});await page.locator('#splashScreen').waitFor({state:'hidden'});
+    await page.goto(process.env.KOMUNALKA_TEST_URL||'http://127.0.0.1:4175/');await page.locator('#appScreen').waitFor({state:'visible'});await page.locator('#splashScreen').waitFor({state:'hidden'});
     await page.locator('#pwaDiagnostics summary').click();return page;
   };
   const draft=async(page,month,value,note)=>{
@@ -47,7 +47,7 @@ const fs=require('node:fs');
     assert.deepEqual(errors,[]);console.log('PWA browser checks passed: first install, two-tab update, drafts, unavailable API, offline reload and unchanged release.');
   }catch(error){
     for(const [index,page] of context.pages().entries()){
-      try{const button=page.locator('#applyUpdateBtn');console.error('PWA failure page',index,await page.locator('#pwaState').textContent(),await page.locator('meta[name="app-build"]').getAttribute('content'),'update button',await button.count()?await button.getAttribute('disabled'):'absent');await page.screenshot({path:`test-results/pwa-failure-${index}.png`});}catch{}
+      try{const button=page.locator('#applyUpdateBtn');console.error('PWA failure page',index,await page.locator('#pwaState').textContent(),await page.locator('meta[name="app-build"]').getAttribute('content'),'update button',await button.count()?await button.getAttribute('disabled'):'absent');console.error('Update state',await page.evaluate(()=>({candidate:updateManager?.current()?.state,waiting:updateRegistration?.waiting?.state,refreshing:isRefreshingAfterUpdate})));await page.screenshot({path:`test-results/pwa-failure-${index}.png`});}catch{}
     }
     console.error('PWA page errors',errors);throw error;
   }finally{await context.setOffline(false);await context.close();await browser.close();}

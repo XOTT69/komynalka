@@ -43,7 +43,8 @@ export async function deliverReminders(ctx,env,send=sendReminder,now=new Date(),
   const addresses=(state.value.addresses||[{id:'default',prefs:state.value.prefs||{}}]).filter(address=>!address?.archivedAt);
   const reminders=addresses.flatMap(a=>R.due(a,state.value.accountSettings||{},now));if(!reminders.length)return;
   const labels=[...new Set(reminders.map(r=>r.label))];
-  const message={title:'Комуналка · нагадування',body:`Час передати показники: ${labels.join(', ').slice(0,300)}. Відкрийте застосунок, щоб позначити передані.`,tag:`komunalka-reminder-${today}`};
+  const addressId=String(reminders[0].addressId||'default');
+  const message={title:'Комуналка · нагадування',body:`Час передати показники: ${labels.join(', ').slice(0,300)}. Відкрийте застосунок, щоб позначити передані.`,tag:`komunalka-reminder-${today}`,addressId};
   let retry=false;
   const subscriptions=await Promise.all(push.subscriptions.map(async entry=>{
     if(!pushConfigured(env))return entry;
@@ -53,7 +54,9 @@ export async function deliverReminders(ctx,env,send=sendReminder,now=new Date(),
   await ctx.storage.put('push',{subscriptions:subscriptions.filter(Boolean)});
   if(telegram?.chatId&&env.TG_BOT_TOKEN&&telegram.lastDay!==today){
     try{
-      const text=`Комуналка · нагадування\nЧас передати показники: ${labels.join(', ').slice(0,250)}.\nВідкрийте застосунок і позначте передані: https://komynalka.vercel.app/`;
+      const targets=[...new Set(reminders.map(item=>String(item.addressId||'default')))];
+      const links=targets.slice(0,10).map((id,index)=>`Адреса ${index+1}: https://mykomunalka.pp.ua/index.html?address=${encodeURIComponent(id)}#calc`).join('\n');
+      const text=`Комуналка · нагадування\nЧас передати показники: ${labels.join(', ').slice(0,250)}.\nВнести показники:\n${links}${targets.length>10?'\nРешта адрес — у застосунку.':''}\nПісля передачі позначте її в застосунку.`;
       const status=await sendTg(env,telegram.chatId,text);
       await ctx.storage.put('telegram',{...telegram,lastAttemptAt:+now,lastStatus:status,...(status>=200&&status<300?{lastDay:today}:{})});
       if(status<200||status>=300)retry=true;

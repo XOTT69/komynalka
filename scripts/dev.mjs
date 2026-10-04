@@ -6,7 +6,7 @@ import worker from '../worker.js';
 import {environment} from './local-worker.mjs';
 import {demoAccount,demoPassHash} from './demo-data.mjs';
 import {parseSessionToken,sessionToken,sha256Hex} from '../password-auth.js';
-const pwa=process.argv.includes('--pwa'),demo=process.argv.includes('--demo')||pwa,port=pwa?4175:demo?4174:4173;
+const pwa=process.argv.includes('--pwa'),demo=process.argv.includes('--demo')||pwa,port=Number(process.env.KOMUNALKA_PORT)||(pwa?4175:demo?4174:4173);
 execFileSync(process.execPath,['scripts/build.mjs'],{stdio:'inherit'});
 const root=path.resolve('dist'),{env}=environment({demo:demoAccount});
 env.ALLOWED_ORIGINS=`http://127.0.0.1:${port},http://localhost:${port}`;
@@ -32,9 +32,10 @@ createServer(async(req,res)=>{
     // Test-only network failure; controls above remain reachable to undo it.
     if(pwa&&previewOffline){res.writeHead(503,{'Cache-Control':'no-store'});return res.end('Local PWA offline test');}
     if(demo&&url.pathname.replace(/\/$/,'')==='/__demo/api'){
+      if(process.env.KOMUNALKA_DEBUG==='1')console.log('Fixture API request',req.method);
       const chunks=[];for await(const chunk of req)chunks.push(chunk);
       const request=new Request('https://local.invalid'+url.search,{method:req.method,headers:req.headers,...(req.method==='POST'?{body:Buffer.concat(chunks)}:{})});
-      const response=await worker.fetch(request,env);res.writeHead(response.status,Object.fromEntries(response.headers));return res.end(Buffer.from(await response.arrayBuffer()));
+      const response=await worker.fetch(request,env);if(process.env.KOMUNALKA_DEBUG==='1')console.log('Fixture API response',response.status);res.writeHead(response.status,Object.fromEntries(response.headers));return res.end(Buffer.from(await response.arrayBuffer()));
     }
     let file=path.resolve(root,'.'+decodeURIComponent(url.pathname));
     if(file!==root&&!file.startsWith(root+path.sep)){res.writeHead(403);return res.end();}
@@ -49,12 +50,12 @@ createServer(async(req,res)=>{
     if(demo&&['admin.html','admin-panel.js'].includes(path.basename(file)))data=Buffer.from(data.toString().replace(/https:\/\/komunproga\.mikolenko-anton1\.workers\.dev/g,'/__demo/api'));
     if(demo&&!pwa&&path.basename(file)==='sw.js'){res.writeHead(404);return res.end();}
     if(demo&&path.basename(file)==='index.html'){
-      let html=data.toString().replace(/<script async src="https:\/\/www.googletagmanager[^>]*><\/script>/g,'');
+      let html=data.toString().replace(/<script defer src="vendor\/firebase\/[^"]+"><\/script>/g,'').replace(/<script\b[^>]*\bsrc="https:\/\/www.googletagmanager[^>]*><\/script>/g,'');
       // Each demo server has isolated sessions: never reuse a token from an older run.
       const token=pwa?pwaFixtureToken:sessionToken('demo');
       await env.ACCOUNT_STORE.get('demo').fetch(new Request('https://account.internal',{method:'POST',body:JSON.stringify({login:'demo',action:'session-create',tokenHash:await sha256Hex(parseSessionToken(token).token),deviceName:'Демонстрація'})}));
-      const bootstrap=`<script>localStorage.setItem('k_login','demo');localStorage.setItem('k_session','${token}');localStorage.removeItem('k_passHash');const demoAuth={currentUser:null,onAuthStateChanged(cb){setTimeout(()=>cb(null),0);return()=>{};},signOut:async()=>{}};window.firebase={initializeApp(){},auth:()=>demoAuth};window.firebase.auth.GoogleAuthProvider=class{};</script>`;
-      html=html.replace('<script src="app.js"',bootstrap+'<script src="app.js"');
+      const bootstrap=`<script>localStorage.setItem('k_login','demo');localStorage.setItem('k_session','${token}');localStorage.removeItem('k_passHash');localStorage.removeItem('k_uid');const demoAuth={currentUser:null,onAuthStateChanged(cb){setTimeout(()=>cb(null),0);return()=>{};},signOut:async()=>{}};window.firebase={initializeApp(){},auth:()=>demoAuth};window.firebase.auth.GoogleAuthProvider=class{};</script>`;
+      html=html.replace('<script defer src="app.js"',bootstrap+'<script defer src="app.js"');
       if(pwa){
         if(previewRelease===2)html=html.replace(/(<meta name="app-build" content="[^"]+)"/, '$1-preview2"');
         html=html.replace('</body>',(await readFile('scripts/pwa-preview-controls.html','utf8'))+'</body>');

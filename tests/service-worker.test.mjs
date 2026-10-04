@@ -18,3 +18,12 @@ test('OAuth helpers bypass offline HTML and query-insensitive caching',()=>{
   const r=runtime();r.handlers.fetch({...r.event,request:{method:'GET',url:'https://komynalka.vercel.app'+path,mode:'navigate'}});assert.equal(r.response(),undefined,path);
  }
 });
+
+test('address-aware push routes stay on the app origin and ignore supplied URLs',async()=>{
+ const handlers={},notifications=[],opened=[];let waited;
+ const ctx={URL,Request:class{},caches:{},self:{location:{origin:'https://mykomunalka.pp.ua'},addEventListener:(name,fn)=>handlers[name]=fn,registration:{showNotification:async(title,options)=>notifications.push(options)},clients:{matchAll:async()=>[],openWindow:async target=>opened.push(target)}}};
+ vm.runInNewContext(source,ctx);
+ const addressId='home & / # ?';handlers.push({data:{json:()=>({addressId,url:'https://attacker.example/'})},waitUntil:p=>waited=p});await waited;
+ handlers.notificationclick({action:'readings',notification:{close(){},data:notifications[0].data},waitUntil:p=>waited=p});await waited;
+ const target=new URL(opened[0],'https://mykomunalka.pp.ua/');assert.equal(target.origin,'https://mykomunalka.pp.ua');assert.equal(target.pathname,'/index.html');assert.equal(target.searchParams.get('address'),addressId);assert.equal(target.hash,'#calc');
+});

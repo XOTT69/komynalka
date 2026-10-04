@@ -6,6 +6,14 @@ const fmt = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2, maximumFr
 const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
 const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content || 'dev';
 const APP_BUILD=document.querySelector('meta[name="app-build"]')?.content||'local';
+const APP_PUBLIC_URL = 'https://mykomunalka.pp.ua/';
+const optionalModules=new Map();
+function loadOptionalModule(name){
+  const modules={ai:'ai-chat.js',image:'year-report-image.js',summary:'monthly-summary.js'};
+  if(!modules[name])return Promise.reject(new Error('UNKNOWN_MODULE'));
+  if(!optionalModules.has(name))optionalModules.set(name,new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=modules[name];script.onload=()=>resolve();script.onerror=()=>{script.remove();optionalModules.delete(name);reject(new Error('MODULE_LOAD_FAILED'));};document.head.append(script);}));
+  return optionalModules.get(name);
+}
 const MAX_ADDRESSES_FREE = 3;
 const MAX_ADDRESSES_TOTAL = 10;
 const LOCAL_BACKUP_KEY = 'komynalka_backup';
@@ -27,9 +35,8 @@ function useGoogleRedirect(){
   return ios&&(navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches)&&GOOGLE_AUTH_HOSTS.includes(window.location.hostname);
 }
 
-window.addEventListener('load', () => {
-  setTimeout(() => { const s = $('splashScreen'); if (s) { s.style.opacity = '0'; setTimeout(() => s.remove(), 500); } }, 600);
-});
+function dismissSplash(){const screen=$('splashScreen');if(!screen)return;screen.style.opacity='0';screen.style.pointerEvents='none';setTimeout(()=>screen.remove(),160);}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',dismissSplash,{once:true});else dismissSplash();
 
 // =================== STATE ===================
 let googleUser = null;
@@ -45,6 +52,7 @@ let sessionToken = localStorage.getItem('k_session');
 let accountHasPassword = false;
 let displayName  = localStorage.getItem('k_display_name') || '';
 let currentFilter = 'all';
+let historyVisibleLimit=48,historyViewKey='';
 let syncState = 'synced';
 const defaultTariffs = { water: 30.38, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
 const defaultPrefs   = { showWater: true, showHotWater: false, showElectro: true, showGas: true, electroTwoZone: true, electroWinter: true, selectedTariffPreset: '', remindersEnabled: false, remWaterStart: 1, remWaterEnd: 5, remElectroStart: 28, remElectroEnd: 3, remGasStart: 1, remGasEnd: 5, familyRole: 'owner' };
@@ -506,7 +514,11 @@ function applyLiquidGlassLevel(value) {
 }
 
 // =================== WELCOME ===================
-function showWelcome() { if (localStorage.getItem('welcome_done')) return; $('welcomeTooltip')?.classList.remove('hidden'); }
+function showWelcome() {
+  if(isGuest||addresses.some(address=>address.records?.length))return;
+  if(window.KomunalkaOnboarding){if(!readDeviceMeta().onboarding?.completed)openOnboarding();return;}
+  if(!localStorage.getItem('welcome_done'))$('welcomeTooltip')?.classList.remove('hidden');
+}
 function dismissWelcome() { localStorage.setItem('welcome_done', '1'); $('welcomeTooltip')?.classList.add('hidden'); }
 $('dismissWelcomeBtn')?.addEventListener('click',dismissWelcome);
 $('welcomeTooltip')?.addEventListener('click',e=>{if(e.target===e.currentTarget)dismissWelcome();});
@@ -615,6 +627,8 @@ async function activateAccount(result,owner,uid,attempt=null){
   if(!saveDraft())throw new Error('Спочатку збережіть або експортуйте поточну чернетку');
   if(localStorage.getItem('k_push_owner')&&localStorage.getItem('k_push_owner')!==owner&&!await detachPush())throw new Error('Не вдалося від’єднати сповіщення попереднього акаунта');
   if(attempt!==null&&attempt!==authAttempt)return;
+  onboardingUI?.close();window.KomunalkaMonthlySummary?.close();
+  ownFeedbackRequest++;$('ownFeedbackList')?.replaceChildren();if($('ownFeedbackSection'))$('ownFeedbackSection').open=false;
   sessionLogin=owner;let remote=normalizeImportData(result.data||{addresses:[],currentAddressId:'default'});if(!remote)throw new Error('Дані потребують перевірки. Оригінал у хмарі збережено.');
   let adoptedSettings=null;if(!localStorage.getItem(`komynalka_account_v1:${encodeURIComponent(owner)}`)&&!Object.keys(remote.accountSettings||{}).length&&initialDeviceLogin===owner){adoptedSettings={};for(const key of ['k_budget',CUSTOM_REMINDERS_KEY,CUSTOM_TARIFF_TEMPLATE_KEY,COMMUNITY_TARIFF_KEY,CHANGE_LOG_KEY,'achievements_unlocked','lastSubmittedMonth','lastPushShown']){const val=localStorage.getItem(key);if(val!==null)adoptedSettings[key]=val;}}
   let state=bindAccount(owner,remote,result.data?.revision??0,result.data?.syncProtocol||result.syncProtocol);if(adoptedSettings&&Object.keys(adoptedSettings).length)state=activeStore.stage({...state.local,accountSettings:{...adoptedSettings,...state.local.accountSettings}});
@@ -790,6 +804,7 @@ function loadCurrentAddress(skipDraftSave=false) {
 }
 
 function selectAddress(id) {
+  onboardingUI?.close();window.KomunalkaMonthlySummary?.close();
   if(!saveDraft()){showToast('Спочатку збережіть чернетку на пристрої','⚠️');return false;}
   syncCurrentAddress();
   const nextId=KomunalkaAddresses.current(addresses,id);
@@ -924,6 +939,16 @@ function switchTab(tabId, index) {
 }
 
 function launchTabFromLocation(){
+  if(isGuest||!activeStore)return;
+  const launchUrl=new URL(window.location.href),requestedAddress=launchUrl.searchParams.get('address');
+  if(requestedAddress!==null){
+    // Consume only after login, and only once. A later refresh must respect the
+    // address chosen in the app, not silently restore an old reminder link.
+    launchUrl.searchParams.delete('address');window.history.replaceState(null,'',launchUrl);
+    const address=addresses.find(item=>String(item.id)===requestedAddress&&!item.archivedAt);
+    if(!address){showToast('Адреса з нагадування недоступна в цьому акаунті','⚠️');return;}
+    if(String(currentAddressId)!==String(address.id)&&!selectAddress(address.id))return;
+  }
   if(window.location.hash==='#calc'&&!isGuest){switchTab('tabCalc',1);return;}
   if(window.location.hash==='#payment'&&!isGuest){openMonthlyEntry('paymentStatusInput');return;}
   if(window.location.hash==='#providers'&&!isGuest){switchTab('tabSettings',4);openSettingsPanel('providers');return;}
@@ -962,7 +987,7 @@ $('qaExport')?.addEventListener('click',()=>{exportCSV();$('quickActionsModal')?
 $('qaPdf')?.addEventListener('click',()=>{generatePDF();$('quickActionsModal')?.classList.add('hidden');});
 $('qaShare')?.addEventListener('click',()=>{shareAllRecords();$('quickActionsModal')?.classList.add('hidden');});
 $('qaSync')?.addEventListener('click',()=>{syncToCloud();$('quickActionsModal')?.classList.add('hidden');});
-$('qaImage')?.addEventListener('click',()=>{if(typeof shareAsImage==='function')shareAsImage();$('quickActionsModal')?.classList.add('hidden');});
+$('qaImage')?.addEventListener('click',async()=>{const owner=sessionLogin;try{await loadOptionalModule('image');if(owner===sessionLogin&&typeof shareAsImage==='function')await shareAsImage();}catch{showToast('Не вдалося відкрити звіт. Спробуйте ще раз.','⚠️');}$('quickActionsModal')?.classList.add('hidden');});
 
 // =================== CANVAS CHART ENGINE ===================
 class ChartEngine {
@@ -1109,7 +1134,7 @@ class SmartForecast {
 
 let dashChart, historyChart, serviceChart, donutChart, analyticsChart;
 
-function currentAddressSnapshot(){return {id:currentAddressId,name:addresses.find(address=>String(address.id)===String(currentAddressId))?.name||'Мій дім',prefs,records,customServices};}
+function currentAddressSnapshot(){return {id:currentAddressId,tariffs,name:addresses.find(address=>String(address.id)===String(currentAddressId))?.name||'Мій дім',prefs,records,customServices};}
 function openMonthlyEntry(field){
   if(!saveDraft())return;
   $('monthInput').value=getMonthKey();switchTab('tabCalc',1);
@@ -1710,12 +1735,14 @@ $('feedbackForm')?.addEventListener('submit',async event=>{
   const report=(text,ok=false)=>{status.textContent=text;status.className=`text-xs rounded-xl p-3 ${ok?'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200':'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-200'}`;};
   if(isGuest||!sessionLogin){report('Увійдіть у свій акаунт, щоб надіслати звернення.');return;}
   if(message.length<10){report('Опишіть звернення трохи детальніше — щонайменше 10 символів.');return;}
-  button.disabled=true;button.classList.add('opacity-60');
+  button.disabled=true;button.classList.add('opacity-60');const feedbackOwner=sessionLogin;
   try{
     const response=await secureFetch('POST',{}, {action:'feedback_submit',type:$('feedbackType')?.value||'other',message,contact,appVersion:APP_VERSION}),result=await response.json();
+    if(feedbackOwner!==sessionLogin)return;
     if(!response.ok||!result.success)throw new Error(result.error||'FEEDBACK_FAILED');
-    $('feedbackMessage').value='';$('feedbackContact').value='';$('feedbackCounter').textContent='0 / 1500';report('Дякуємо! Звернення надійшло в адмінпанель.',true);showToast('Звернення надіслано','💬');
-  }catch(error){report(error.message==='FEEDBACK_RATE_LIMITED'?'Ліміт — 5 звернень на добу. Спробуйте пізніше.':navigator.onLine?'Не вдалося надіслати. Спробуйте ще раз.':'Немає інтернету. Підключіться й повторіть.');}
+    if(result.id){let receipts=[];try{receipts=JSON.parse(accountStorage.getItem('feedback_receipts_v1')||'[]');}catch{}accountStorage.setItem('feedback_receipts_v1',JSON.stringify([...new Set([result.id,...(Array.isArray(receipts)?receipts:[])])].slice(0,20)));}
+    if($('feedbackMessage').value.trim()===message)$('feedbackMessage').value='';if($('feedbackContact').value.trim()===contact)$('feedbackContact').value='';$('feedbackCounter').textContent=`${$('feedbackMessage').value.length} / 1500`;report('Дякуємо! Звернення надійшло в адмінпанель.',true);showToast('Звернення надіслано','💬');
+  }catch(error){if(feedbackOwner!==sessionLogin)return;report(error.message==='FEEDBACK_RATE_LIMITED'?'Ліміт — 5 звернень на добу. Спробуйте пізніше.':navigator.onLine?'Не вдалося надіслати. Спробуйте ще раз.':'Немає інтернету. Підключіться й повторіть.');}
   finally{button.disabled=false;button.classList.remove('opacity-60');}
 });
 
@@ -1854,20 +1881,23 @@ function renderRecords(){
   renderServiceChart();
   list.innerHTML='';
     if(!sorted.length){list.innerHTML=`<div class="text-center py-8"><p class="text-slate-400 font-medium">Нічого не знайдено</p></div>`;return;}
-  const unpaidCount=sorted.filter(r=>getOutstandingAmount(r)>0).length;
+  const viewKey=JSON.stringify([sessionLogin,currentAddressId,sortVal,currentFilter,search]);if(viewKey!==historyViewKey){historyViewKey=viewKey;historyVisibleLimit=48;}
+  const visibleRecords=sorted.slice(0,historyVisibleLimit);
+  const unpaidCount=visibleRecords.filter(r=>getOutstandingAmount(r)>0).length;
   if(unpaidCount>0&&currentFilter!=='paid'){
     const batchBar=document.createElement('div');
     batchBar.className='bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-2xl flex justify-between items-center text-white mb-4';
-    batchBar.innerHTML=`<div><p class="text-xs font-bold opacity-80">${unpaidCount} з боргом у списку</p><p class="text-sm font-black">${fmt.format(sorted.reduce((s,r)=>s+getOutstandingAmount(r),0))} ₴</p></div><button class="batch-pay-btn px-4 py-2 bg-white/20 rounded-xl text-xs font-bold active:scale-95 transition-transform border border-white/20">✓ Оплатити видимі</button>`;
+    batchBar.innerHTML=`<div><p class="text-xs font-bold opacity-80">${unpaidCount} з боргом у списку</p><p class="text-sm font-black">${fmt.format(visibleRecords.reduce((s,r)=>s+getOutstandingAmount(r),0))} ₴</p></div><button class="batch-pay-btn px-4 py-2 bg-white/20 rounded-xl text-xs font-bold active:scale-95 transition-transform border border-white/20">✓ Оплатити видимі</button>`;
     list.appendChild(batchBar);
-    batchBar.querySelector('.batch-pay-btn')?.addEventListener('click',()=>{if(!requireEdit('У режимі перегляду не можна змінювати оплату'))return;if(confirm(`Позначити ${unpaidCount} видимих записів як оплачені?`)){const payableIds=new Set(sorted.filter(r=>getOutstandingAmount(r)>0).map(r=>r.id));records.forEach(r=>{if(payableIds.has(r.id))setRecordPayment(r,'paid',r.total);});addChangeLog('visible_records_paid',{count:payableIds.size});renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();showToast(`${unpaidCount} записів оплачено!`,'✅');}});
+    batchBar.querySelector('.batch-pay-btn')?.addEventListener('click',()=>{if(!requireEdit('У режимі перегляду не можна змінювати оплату'))return;if(confirm(`Позначити ${unpaidCount} видимих записів як оплачені?`)){const payableIds=new Set(visibleRecords.filter(r=>getOutstandingAmount(r)>0).map(r=>r.id));records.forEach(r=>{if(payableIds.has(r.id))setRecordPayment(r,'paid',r.total);});addChangeLog('visible_records_paid',{count:payableIds.size});renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();showToast(`${unpaidCount} записів оплачено!`,'✅');}});
   }
   let lastYear=null;
-  sorted.forEach(rec=>{
+  visibleRecords.forEach(rec=>{
     const yr=rec.month.split('-')[0];
     if(yr!==lastYear){lastYear=yr;const h=document.createElement('div');h.className="flex items-center gap-4 mt-6 mb-3";h.innerHTML=`<h2 class="text-lg font-black text-slate-300 dark:text-slate-600">${yr}</h2><div class="h-[1px] flex-1 bg-slate-200 dark:bg-white/5"></div>`;list.appendChild(h);}
     list.appendChild(createRecordCard(rec));
   });
+  if(sorted.length>visibleRecords.length){const footer=document.createElement('div');footer.className='history-pagination';const count=document.createElement('p');count.textContent=`Показано ${visibleRecords.length} із ${sorted.length}`;const more=document.createElement('button');more.type='button';more.id='historyLoadMore';more.textContent='Показати наступні 48';more.addEventListener('click',()=>{historyVisibleLimit+=48;renderRecords();$('historyLoadMore')?.focus({preventScroll:true});});footer.append(count,more);list.append(footer);}
 }
 
 function renderHistoryChart(sortedRecords,retryCount=0){if(!$('historyChartCanvas'))return;if(!historyChart)historyChart=new ChartEngine('historyChartCanvas',{padding:30,barRadius:5});if(!historyChart.width)historyChart.setupCanvas();if(!historyChart.width){if(retryCount<5)setTimeout(()=>renderHistoryChart(sortedRecords,retryCount+1),200);return;}historyChart.setData(sortedRecords.slice(-10).map(r=>({value:r.total,label:new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color:isRecordPaid(r)?'#007aff':getPaymentStatus(r)==='partial'?'#ffcc00':'#ff9500'})));}
@@ -1976,7 +2006,7 @@ $('forgetDeviceBtn')?.addEventListener('click',async()=>{if(confirm('Прибр�
 
 // =================== TIPS ===================
 function getConsumptionTrend(type,months=6){const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,months);if(sorted.length<2)return null;const values=sorted.map(r=>{switch(type){case 'water':return recordUsage(r,'wPrev','wCur');case 'electro':return recordUsage(r,'dPrev','dCur')+recordUsage(r,'nPrev','nCur');case 'gas':return recordUsage(r,'gPrev','gCur');default:return r.total;}}).reverse();const first=values.slice(0,Math.ceil(values.length/2)),second=values.slice(Math.ceil(values.length/2));const avgF=first.reduce((a,b)=>a+b,0)/first.length,avgS=second.reduce((a,b)=>a+b,0)/second.length;if(avgF===0)return 0;return Math.round(((avgS-avgF)/avgF)*100);}
-function getSmartTips(){const tips=[];if(records.length>=3){const wT=getConsumptionTrend('water');if(wT&&wT>20)tips.push({emoji:'💧',text:`Споживання води зросло на ${wT}%. Перевірте крани.`});const eT=getConsumptionTrend('electro');if(eT&&eT>20)tips.push({emoji:'⚡',text:`Електрика +${eT}%. Перевірте прилади.`});if(eT&&eT<-10)tips.push({emoji:'🎉',text:`Електрика -${Math.abs(eT)}%! Чудова економія!`});}const budget=parseFloat(accountStorage.getItem('k_budget'))||0;if(budget&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];if(last.total>budget*1.2)tips.push({emoji:'⚠️',text:`Перевищили бюджет на ${Math.round(((last.total-budget)/budget)*100)}%`});}const unpaid=records.filter(r=>getOutstandingAmount(r)>0);if(unpaid.length>=3)tips.push({emoji:'💳',text:`${unpaid.length} місяців із боргом. Оплатіть або відмітьте часткову оплату.`});if(prefs.showElectro&&prefs.electroTwoZone&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];const n=recordUsage(last,'nPrev','nCur'),d=recordUsage(last,'dPrev','dCur'),tot=n+d;if(tot>0&&n/tot<0.3)tips.push({emoji:'🌙',text:'Спробуйте більше електрики вночі — дешевше.'});}return tips.slice(0,3);}
+function getSmartTips(){const tips=[];if(records.length>=3){const wT=getConsumptionTrend('water');if(wT&&wT>20)tips.push({emoji:'💧',text:`Споживання води зросло на ${wT}%. Звірте показники та період обліку.`});const eT=getConsumptionTrend('electro');if(eT&&eT>20)tips.push({emoji:'⚡',text:`Електрика +${eT}%. Звірте показники та звичне споживання.`});if(eT&&eT<-10)tips.push({emoji:'🎉',text:`Електрика -${Math.abs(eT)}%! Чудова економія!`});}const budget=parseFloat(accountStorage.getItem('k_budget'))||0;if(budget&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];if(last.total>budget*1.2)tips.push({emoji:'⚠️',text:`Перевищили бюджет на ${Math.round(((last.total-budget)/budget)*100)}%`});}const unpaid=records.filter(r=>getOutstandingAmount(r)>0);if(unpaid.length>=3)tips.push({emoji:'💳',text:`${unpaid.length} місяців із боргом. Оплатіть або відмітьте часткову оплату.`});if(prefs.showElectro&&prefs.electroTwoZone&&records.length>0){const last=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month))[0];const n=recordUsage(last,'nPrev','nCur'),d=recordUsage(last,'dPrev','dCur'),tot=n+d;if(tot>0&&n/tot<0.3)tips.push({emoji:'🌙',text:'Спробуйте більше електрики вночі — дешевше.'});}return tips.slice(0,3);}
 function renderTips(){const container=$('tipsContainer');if(!container)return;const tips=getSmartTips();if(!tips.length){container.classList.add('hidden');return;}container.classList.remove('hidden');const listEl=$('tipsList');if(listEl)listEl.innerHTML=tips.map(t=>`<div class="flex items-start gap-3 bg-slate-50 dark:bg-black/40 p-3 rounded-xl border border-slate-100 dark:border-white/5"><span class="text-lg shrink-0">${t.emoji}</span><p class="text-xs font-medium text-slate-600 dark:text-slate-300">${escapeHtml(t.text)}</p></div>`).join('');}
 
 // =================== YEAR REPORT ===================
@@ -2005,7 +2035,7 @@ let deferredPrompt;
 let pendingServiceWorker=null;
 let isRefreshingAfterUpdate=false;
 window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;$('pwaInstallBlock')?.classList.remove('hidden');});
-$('installPwaBtn')?.addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;if(outcome==='accepted')$('pwaInstallBlock')?.classList.add('hidden');deferredPrompt=null;});
+$('installPwaBtn')?.addEventListener('click',async()=>{if(!deferredPrompt){showInstallGuide();return;}deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;if(outcome==='accepted')$('pwaInstallBlock')?.classList.add('hidden');deferredPrompt=null;});
 
 // =================== PUSH ===================
 let pushClient=null,pushClientContext=null;
@@ -2112,7 +2142,7 @@ setTimeout(initPush,1000);
 window.addEventListener('online',initPush);
 
 // =================== SHARE APP ===================
-$('shareAppBtn')?.addEventListener('click',async()=>{const text='🏠 Комуналка — розумний облік комунальних платежів.\nВода, світло, газ — все в одному додатку. Безкоштовно!\n\nhttps://komynalka.vercel.app';if(navigator.share){try{await navigator.share({text,url:'https://komynalka.vercel.app'});return;}catch(e){}}try{await navigator.clipboard.writeText(text);showToast('Посилання скопійовано!','📋');}catch(e){prompt('Скопіюйте:',text);}});
+$('shareAppBtn')?.addEventListener('click',async()=>{const text='🏠 Комуналка — розумний облік комунальних платежів.\nВода, світло, газ — все в одному додатку. Безкоштовно!\n\nhttps://mykomunalka.pp.ua/';if(navigator.share){try{await navigator.share({text,url:APP_PUBLIC_URL});return;}catch(e){}}try{await navigator.clipboard.writeText(text);showToast('Посилання скопійовано!','📋');}catch(e){prompt('Скопіюйте:',text);}});
 
 // =================== LOGOUT ===================
 $('deleteAccountBtn')?.addEventListener('click',()=>{const dialog=$('deleteAccountDialog');if(!dialog)return;$('deleteAccountConfirm').value='';$('deleteAccountPassword').value='';$('deleteAccountLoginHint').textContent=sessionLogin;$('deleteAccountPasswordWrap')?.classList.toggle('hidden',!accountHasPassword);$('deleteAccountError')?.classList.add('hidden');if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');});
@@ -2355,15 +2385,8 @@ function initAppUI(){
   const vis=readingInputIds.map(id=>$(id)).filter(el=>el&&el.offsetParent!==null);
   vis.forEach((input,idx,arr)=>{input.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();const next=arr[idx+1];if(next)next.focus();else $('submitFormBtn')?.focus();}});});
 
-  // Init AI
-  requestAnimationFrame(()=>{
-    if(typeof initAI==='function'){
-      initAI();
-    } else {
-      const checkAI=setInterval(()=>{if(typeof initAI==='function'){clearInterval(checkAI);initAI();}},100);
-      setTimeout(()=>clearInterval(checkAI),5000);
-    }
-  });
+  // AI is initialized only when requested; its assets remain available offline.
+  if(!isGuest)$('aiFabBtn')?.classList.remove('hidden');
 }
 
 // =================== GUEST / AUTO-LOGIN ===================
@@ -2448,10 +2471,13 @@ function showUpdateBanner(){
   document.body.appendChild(banner);
   $('applyUpdateBtn').addEventListener('click',async()=>{
     const button=$('applyUpdateBtn');button.disabled=true;
-    if(!await updateManager.check(updateRegistration)){button.disabled=false;return;}
-    if(!saveDraft()||(activeStore&&(syncCurrentAddress(),!saveToLocal()))){button.disabled=false;return;}
-    const waiting=updateManager.current();if(!waiting)return;
-    isRefreshingAfterUpdate=true;waiting.postMessage({type:'SKIP_WAITING'});
+    try{
+      if(!await updateManager.check(updateRegistration))return;
+      if(!saveDraft()||(activeStore&&(syncCurrentAddress(),!saveToLocal())))return;
+      const waiting=updateManager.current();if(!waiting||waiting.state!=='installed')return;
+      waiting.postMessage({type:'SKIP_WAITING'});isRefreshingAfterUpdate=true;
+    }catch{showToast('Не вдалося застосувати оновлення. Спробуйте ще раз.','⚠️');}
+    finally{button.disabled=false;}
   });
 }
 
@@ -3306,3 +3332,55 @@ async function copyProviderText(text,button=null,label='Скопійовано')
 $('providerCopyClose')?.addEventListener('click',()=>{const dialog=$('providerCopyDialog');if(typeof dialog.close==='function')dialog.close();else dialog.removeAttribute('open');});
 
 $('utilityForm')?.addEventListener('invalid',e=>{const detail=e.target.closest('.meter-details');if(detail)detail.open=true;},true);
+
+// =================== FIRST ACCOUNT SETUP ===================
+let onboardingUI=null;
+function openOnboarding(){
+  if(!requireEdit()||!activeStore)return;
+  if(records.length){showToast('Облік уже налаштований. Зміни доступні у налаштуваннях адреси.','ℹ️');switchTab('tabSettings',4);openSettingsPanel('home');return;}
+  if(!window.KomunalkaOnboarding)return;
+  if(!onboardingUI)onboardingUI=KomunalkaOnboarding.create({
+    owner:()=>sessionLogin,address:()=>currentAddressSnapshot(),progress:()=>readDeviceMeta().onboarding,
+    previous:()=>Object.fromEntries(['wPrev','hwPrev','dPrev','nPrev','gPrev'].map(id=>[id,$(id)?.value||''])),
+    saveProgress:progress=>{try{const key=deviceMetaKey(),raw=JSON.stringify({...readDeviceMeta(),onboarding:progress});localStorage.setItem(key,raw);return localStorage.getItem(key)===raw;}catch{return false;}},
+    apply:async(draft,context)=>{
+      if(context.owner!==sessionLogin||String(context.address)!==String(currentAddressId)||!canEditData())throw new Error('Акаунт або адреса змінилися. Відкрийте налаштування ще раз.');
+      if(records.length||!KomunalkaData.equal(context.base,currentAddressSnapshot()))throw new Error('Дані вже змінилися. Закрийте майстер і відкрийте його ще раз.');
+      if(!saveDraft())throw new Error('Спочатку збережіть чернетку на пристрої.');
+      const index=addresses.findIndex(address=>String(address.id)===String(currentAddressId)),old=KomunalkaData.copy(addresses[index]),oldTariffs=tariffs,oldPrefs=prefs;
+      const nextTariffs={...tariffs};for(const key of ['water','hotWater','electroBase','electroWinter','gas'])if(draft.tariffs[key]!=null)nextTariffs[key]=KomunalkaOnboarding.number(draft.tariffs[key])??tariffs[key];
+      tariffs=nextTariffs;prefs={...prefs,...Object.fromEntries(['showWater','showHotWater','showElectro','showGas','electroTwoZone','electroWinter'].map(key=>[key,Boolean(draft.prefs[key])]))};addresses[index]={...addresses[index],name:draft.name.trim().slice(0,120)};syncCurrentAddress();
+      if(!saveToLocal()){addresses[index]=old;tariffs=oldTariffs;prefs=oldPrefs;throw new Error('Не вдалося зберегти. Початкові дані залишилися без змін.');}
+      context.base=KomunalkaData.copy(currentAddressSnapshot());
+      loadCurrentAddress(true);switchTab('tabCalc',1);
+      for(const [id,value] of Object.entries(draft.previous||{}))if($(id)&&String(value).trim()){const n=KomunalkaOnboarding.number(value);if(n!==null)$(id).value=String(n);}
+      draftDirty=true;calculatePreview();if(!saveDraft())throw new Error('Налаштування збережено. Не вдалося зберегти чернетку показників — залиште сторінку відкритою.');
+      void flushSync();showToast('Облік налаштовано. Внесіть поточні показники.','✅');
+    },navigate:()=>{switchTab('tabCalc',1);readingInputIds.map(id=>$(id)).find(input=>input&&input.offsetParent!==null&&!input.disabled&&input.id.endsWith('Cur'))?.focus();}
+  });
+  onboardingUI.open();
+}
+$('resumeOnboarding')?.addEventListener('click',openOnboarding);
+$('helpOnboarding')?.addEventListener('click',openOnboarding);
+$('aiFabBtn')?.addEventListener('click',async()=>{if(window.komunalkaAI)return;const owner=sessionLogin,button=$('aiFabBtn');button.disabled=true;button.setAttribute('aria-busy','true');try{await loadOptionalModule('ai');if(owner===sessionLogin&&!isGuest){window.initAI?.();window.komunalkaAI?.open();}}catch{showToast('Не вдалося відкрити AI. Спробуйте ще раз.','⚠️');}finally{button.disabled=false;button.removeAttribute('aria-busy');}});
+function showInstallGuide(){
+  const installed=navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
+  if(installed){showToast('Застосунок уже встановлено','✅');return;}
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  showToast(ios?'У Safari: меню «Поділитися» → «На початковий екран».':'Відкрийте меню браузера → «Встановити застосунок» або «Додати на головний екран».','📱');
+  const help=$('installPwaHelp');if(help)help.textContent=ios?'У Safari відкрийте меню «Поділитися», оберіть «На початковий екран» і підтвердьте додавання як вебзастосунку.':'У меню браузера оберіть «Встановити застосунок» або «Додати на головний екран». Якщо пункту немає, спробуйте Chrome чи Safari.';
+}
+if(!(navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches))$('pwaInstallBlock')?.classList.remove('hidden');
+
+$('monthlySummaryOpen')?.addEventListener('click',async()=>{const owner=sessionLogin,address=currentAddressId;if(!records.length){showToast('Спочатку збережіть показники за місяць','ℹ️');return;}try{await loadOptionalModule('summary');if(owner!==sessionLogin||address!==currentAddressId)return;KomunalkaMonthlySummary.open({address:currentAddressSnapshot,month:getMonthKey(),paid:getPaidAmount,valid:()=>owner===sessionLogin&&address===currentAddressId,empty:()=>showToast('За місяць ще немає запису','ℹ️')});}catch{showToast('Не вдалося відкрити підсумок. Спробуйте ще раз.','⚠️');}});
+
+let ownFeedbackRequest=0;
+async function loadOwnFeedback(){
+  const owner=sessionLogin,request=++ownFeedbackRequest,list=$('ownFeedbackList');if(!list||isGuest||!owner)return;list.textContent='Перевіряємо статуси…';
+  let ids=[];try{ids=JSON.parse(accountStorage.getItem('feedback_receipts_v1')||'[]');}catch{}ids=Array.isArray(ids)?ids.filter(id=>typeof id==='string'&&/^\d{10,16}-[A-Za-z0-9_-]{6,24}$/.test(id)).slice(0,20):[];
+  if(!ids.length){list.textContent='Тут з’являться звернення, надіслані з цієї версії застосунку.';return;}
+  try{const response=await secureFetch('POST',{}, {action:'feedback_status',ids}),data=await response.json();if(owner!==sessionLogin||request!==ownFeedbackRequest)return;if(!response.ok||!data.success)throw new Error();list.replaceChildren();for(const item of data.feedback||[]){const row=document.createElement('article');row.className='own-feedback-row';const status=document.createElement('strong'),message=document.createElement('p'),date=document.createElement('small');status.textContent=({new:'Отримано',in_progress:'У роботі',done:'Розглянуто'})[item.status]||'Отримано';message.textContent=item.preview;date.textContent=new Date(item.createdAt).toLocaleDateString('uk-UA');row.append(status,message,date);list.append(row);}if(!list.children.length)list.textContent='Доступних звернень немає.';}
+  catch{if(owner===sessionLogin&&request===ownFeedbackRequest)list.textContent='Не вдалося перевірити статус. Оновіть після відновлення зв’язку.';}
+}
+$('ownFeedbackRefresh')?.addEventListener('click',loadOwnFeedback);
+$('ownFeedbackSection')?.addEventListener('toggle',event=>{if(event.currentTarget.open)void loadOwnFeedback();});
