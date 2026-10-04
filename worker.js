@@ -1,3 +1,4 @@
+import {metricOperation,recordMetrics} from './service-metrics.js';
 import {accountSummary} from './admin-directory.js';
 import {pushConfigured} from './push-delivery.js';
 import './meter-readings.js';
@@ -9,7 +10,7 @@ export {AccountStore} from './account-store.js';
 // КОМУНАЛКА Worker — синхронізація, сесії, нагадування та адміністрування
 // ============================================================
 
-const WORKER_VERSION='5.15.0';
+const WORKER_VERSION='5.16.0';
 const CORS = {
   'Cache-Control':'no-store',
   'X-Content-Type-Options':'nosniff',
@@ -217,20 +218,20 @@ function getUidLogin(uid) {
 }
 
 const handler = {
-  async fetch(req, env) {
+  async fetch(req, env, observation) {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     const url   = new URL(req.url);
     const share = url.searchParams.get('share');
     const ip    = req.headers.get('CF-Connecting-IP') || 'unknown';
     const fp    = (req.headers.get('X-Device-FP') || 'unknown').slice(0, 64);
     try {
-      if(url.pathname==='/telegram')return req.method==='POST'?handleTelegramWebhook(req,env,accountRequest):err('Method not allowed',405);
+      if(url.pathname==='/telegram'){observation.operation='telegram_webhook';return req.method==='POST'?await handleTelegramWebhook(req,env,accountRequest):err('Method not allowed',405);}
       if(url.searchParams.has('push-config'))return ok({success:true,enabled:Boolean(env.ACCOUNT_STORE)&&pushConfigured(env),publicKey:env.ACCOUNT_STORE&&pushConfigured(env)?env.VAPID_PUBLIC_KEY:null});
       if(url.searchParams.has('health'))return ok({success:true,version:WORKER_VERSION,syncProtocol:env.ACCOUNT_STORE?2:0,readOnly:env.MAINTENANCE_MODE==='read-only'});
       if(url.searchParams.has('admin-access'))return await doAdminAccess(req,env);
       if (share)                 return await doShare(req, env, share, ip);
-      if (req.method === 'GET')  return await doGet(req, env, ip, fp);
-      if (req.method === 'POST') return await doPost(req, env, ip, fp);
+      if (req.method === 'GET'){observation.operation='sync_read';return await doGet(req, env, ip, fp);}
+      if (req.method === 'POST') return await doPost(req, env, ip, fp, observation);
       return err('Method not allowed', 405);
     } catch (e) {
       console.error('Worker:', e?.message);
@@ -271,14 +272,15 @@ async function doGet(req, env, ip, fp) {
   return ok({success:true,data:{...publicAccount(normalized,login),syncProtocol:env.ACCOUNT_STORE?2:0}});
 }
 
-async function doPost(req, env, ip, fp) {
+async function doPost(req, env, ip, fp, observation) {
   const cl = parseInt(req.headers.get('content-length') || '0');
   if (cl > 512 * 1024) return err('PAYLOAD_TOO_LARGE', 413);
   let body;
   try {body=await readBody(req);}catch(e){return err(e.message,e.message==='PAYLOAD_TOO_LARGE'?413:400);}
   const action = typeof body.action === 'string' ? body.action : '';
+  observation.operation=metricOperation(action);
 
-  if(env.MAINTENANCE_MODE==='read-only'&&!['auth_login','auth_logout','session_list','admin_login','admin_logout','telegram_status','admin_stats','admin_index_prepare','admin_health','admin_audit_list','admin_user_data','admin_backup_page','admin_backup_account','admin_backup_community','admin_get_tariffs','admin_feedback_list','get_tariffs','get_broadcast','push_status','push_unsubscribe','feedback_status'].includes(action))return err('MAINTENANCE_READ_ONLY',503);
+  if(env.MAINTENANCE_MODE==='read-only'&&!['auth_login','auth_logout','session_list','admin_login','admin_logout','telegram_status','admin_stats','admin_index_prepare','admin_health','admin_metrics','admin_audit_list','admin_user_data','admin_backup_page','admin_backup_account','admin_backup_community','admin_get_tariffs','admin_feedback_list','get_tariffs','get_broadcast','push_status','push_unsubscribe','feedback_status'].includes(action))return err('MAINTENANCE_READ_ONLY',503);
   if(action==='auth_login')return doAuthLogin(body,env,ip,fp,deviceName(req));
   if(action==='auth_register')return doAuthRegister(body,env,ip,fp,deviceName(req));
   if (action === 'admin_login' || action.startsWith('admin_')) return doAdmin(action, body, env, ip);
@@ -713,6 +715,7 @@ async function doAdmin(action, body, env, ip) {
   if(audited)await env.KV.put(auditKey,JSON.stringify(audit),{expirationTtl:365*86400});
   const execute=async()=>{switch (action) {
     case 'admin_health':return doAdminHealth(env);
+    case 'admin_metrics':return ok(await specialRequest(env,'service_metrics',{action:'metrics-read',days:body.days??7}));
     case 'admin_audit_list':return doAdminAuditList(env);
     case 'admin_backup_page':      return doAdminBackupPage(body,env);
     case 'admin_backup_account': {
@@ -916,11 +919,13 @@ async function readBody(req){
   try{const body=JSON.parse(new TextDecoder().decode(bytes));if(!body||typeof body!=='object'||Array.isArray(body))throw new Error();return body;}catch{throw new Error('INVALID_JSON');}
 }
 export default {
-  async fetch(req,env){
+  async fetch(req,env,ctx){
     const origin=req.headers.get('Origin');
     const allowed=new Set(['https://komynalka.vercel.app','https://mykomunalka.pp.ua','https://www.mykomunalka.pp.ua','http://127.0.0.1:4173','http://localhost:4173',...(env.ALLOWED_ORIGINS||'').split(',').map(s=>s.trim()).filter(Boolean)]);
     if(origin&&!allowed.has(origin))return err('ORIGIN_NOT_ALLOWED',403);
-    const response=await handler.fetch(req,env);
+    const started=performance.now(),observation={operation:null};
+    const response=await handler.fetch(req,env,observation);
+    if(observation.operation)recordMetrics(env,ctx,[{operation:observation.operation,status:response.status,durationMs:performance.now()-started}]);
     const headers=new Headers(response.headers);if(origin)headers.set('Access-Control-Allow-Origin',origin);headers.set('Vary','Origin');
     return new Response(response.body,{status:response.status,headers});
   }
