@@ -11,7 +11,6 @@ export default {
     './record-card.js',
     './ai-chat.js',
     './year-report-image.js',
-    './tests/*.html',
   ],
   theme: {
     extend: {

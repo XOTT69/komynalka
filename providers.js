@@ -40,11 +40,11 @@
   }
   function meterValues(address,id,month){
     const rec=(address.records||[]).find(r=>r.month===month);if(!rec||rec._filled?.[id]===false)return null;
-    const keys={water:[['wPrev','wCur','Вода','м³']],hotWater:[['hwPrev','hwCur','Гаряча вода','м³']],electro:address.prefs?.electroTwoZone?[['dPrev','dCur','День','кВт·год'],['nPrev','nCur','Ніч','кВт·год']]:[['dPrev','dCur','Світло','кВт·год']],gas:[['gPrev','gCur','Газ','м³']]}[id];
+    const keys={water:[['wPrev','wCur','Вода','м³']],hotWater:[['hwPrev','hwCur','Гаряча вода','м³']],electro:(rec.calculationMode?.twoZone??address.prefs?.electroTwoZone)?[['dPrev','dCur','День','кВт·год'],['nPrev','nCur','Ніч','кВт·год']]:[['dPrev','dCur','Світло','кВт·год']],gas:[['gPrev','gCur','Газ','м³']]}[id];
     if(!keys)return null;
     const values=keys.map(([previousKey,currentKey,label,unit])=>{
       const current=rec[currentKey],previous=rec[previousKey];
-      if(current===null||current===undefined||current===''||!Number.isFinite(Number(current))||Number(current)<0)return null;
+      if(rec._enteredCurrent?.[currentKey]===false||current===null||current===undefined||current===''||!Number.isFinite(Number(current))||Number(current)<0)return null;
       const hasPrevious=rec._enteredPrevious?.[previousKey]!==false&&previous!==null&&previous!==undefined&&previous!==''&&Number.isFinite(Number(previous))&&Number(previous)>=0&&Number(current)>=Number(previous)&&(rec._enteredPrevious?.[previousKey]===true||Number(previous)>0);
       const replacement=rec._meterEvents?.[previousKey],difference=hasPrevious?(typeof KomunalkaMeters!=='undefined'?KomunalkaMeters.usage(previous,current,replacement):Number(current)-Number(previous)):null;
       return {label,unit,current:String(current),previous:hasPrevious?String(previous):'',difference:difference===null?'':String(difference),...(replacement?{replacement}:{})};

@@ -8,7 +8,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #
         .toast.show { transform: translateX(0); }
         .toast.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .toast.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        :root { font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; color: #273247; --admin-brand:#5675bb; --admin-brand-soft:#edf2fd; --admin-line:#e1e7f0; --admin-muted:#69768b; --admin-success:#4f806d; --admin-success-soft:#eaf6f1; }
+        :root { font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; color: #273247; --admin-brand:var(--brand); --admin-brand-soft:var(--brand-light); --admin-line:var(--ui-line); --admin-muted:var(--ui-muted); --admin-success:#4f806d; --admin-success-soft:#eaf6f1; }
         body { background: radial-gradient(circle at 15% 0,#edf1ff 0,transparent 34%),radial-gradient(circle at 92% 4%,#f8eff4 0,transparent 30%),#f5f7fb; }
         button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #9eb4df; outline-offset: 2px; }
         button:disabled { opacity: .45; cursor: not-allowed; }

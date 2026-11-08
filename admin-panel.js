@@ -25,7 +25,7 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
         }
         async function requestUserPage(){
             const generation=++usersGeneration,owner=adminToken,query=userQuery();
-            usersBusy=true;document.querySelectorAll('button[onclick="prevPage()"],button[onclick="nextPage()"]').forEach(button=>button.disabled=true);
+            usersBusy=true;document.querySelectorAll('#prevPageBtn,#nextPageBtn').forEach(button=>button.disabled=true);
             try{
             const data=await adminApi('admin_stats',query);
             if(generation!==usersGeneration||owner!==adminToken)return;
@@ -41,7 +41,7 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
             document.getElementById('lastUpdate').textContent='Оновлено: '+new Date().toLocaleTimeString('uk-UA');renderUsers();
             if(sessionStorage.getItem('admin_tab')==='analytics')renderAnalytics();
             if(sessionStorage.getItem('admin_tab')==='security')renderSecurity();
-            }finally{if(generation===usersGeneration){usersBusy=false;document.querySelector('button[onclick="prevPage()"]').disabled=currentPage===0;document.querySelector('button[onclick="nextPage()"]').disabled=serverPages?!userCursor:(currentPage+1)*PAGE_SIZE>=getFilteredUsers().length;}}
+            }finally{if(generation===usersGeneration){usersBusy=false;document.querySelector('#prevPageBtn').disabled=currentPage===0;document.querySelector('#nextPageBtn').disabled=serverPages?!userCursor:(currentPage+1)*PAGE_SIZE>=getFilteredUsers().length;}}
         }
 
         async function adminApi(action, payload = {}) {
@@ -270,8 +270,8 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
             const total=serverPages?userTotal:filtered.length;
             document.getElementById('usersCount').textContent = `${total} з ${indexedStats?.totalUsers??allUsers.length}`;
             document.getElementById('pageInfo').textContent = pageUsers.length ? `${start + 1}–${start+pageUsers.length} з ${total}` : 'Немає результатів';
-            document.querySelector('button[onclick="prevPage()"]').disabled = currentPage === 0;
-            document.querySelector('button[onclick="nextPage()"]').disabled = serverPages?!userCursor:start + PAGE_SIZE >= filtered.length;
+            document.querySelector('#prevPageBtn').disabled = currentPage === 0;
+            document.querySelector('#nextPageBtn').disabled = serverPages?!userCursor:start + PAGE_SIZE >= filtered.length;
 
             document.getElementById('usersTableBody').innerHTML = pageUsers.map(u => {
                 const loginAttr = escAttr(u.login);
@@ -652,3 +652,44 @@ const WORKER_URL = "https://komunproga.mikolenko-anton1.workers.dev";
 
         // =================== AUTO-REFRESH ===================
         setInterval(() => { if (adminToken && document.visibilityState === 'visible') loadStats(); }, 300000); // 5 min
+
+// Static event routing: no executable inline HTML attributes.
+const adminEventActions=Object.freeze({
+  action0:(event,element)=>{adminLogin();},
+  action1:(event,element)=>{loadStats();},
+  action2:(event,element)=>{openBroadcast();},
+  action3:(event,element)=>{exportAllData();},
+  action4:(event,element)=>{adminLogout();},
+  action5:(event,element)=>{switchAdminTab('users', element);},
+  action6:(event,element)=>{switchAdminTab('feedback', element);},
+  action7:(event,element)=>{switchAdminTab('analytics', element);},
+  action8:(event,element)=>{switchAdminTab('tariffs', element);},
+  action9:(event,element)=>{switchAdminTab('security', element);},
+  action10:(event,element)=>{switchAdminTab('settings', element);},
+  action11:(event,element)=>{filterUsers();},
+  action12:(event,element)=>{massAction('pro');},
+  action13:(event,element)=>{massAction('delete');},
+  action14:(event,element)=>{toggleSelectAll();},
+  action15:(event,element)=>{sortUsers('login');},
+  action16:(event,element)=>{sortUsers('records');},
+  action17:(event,element)=>{sortUsers('lastMonth');},
+  action18:(event,element)=>{prevPage();},
+  action19:(event,element)=>{nextPage();},
+  action20:(event,element)=>{loadFeedback();},
+  action21:(event,element)=>{filterFeedback();},
+  action22:(event,element)=>{loadMoreFeedback();},
+  action23:(event,element)=>{loadTariffs();},
+  action24:(event,element)=>{renderTariffs();},
+  action25:(event,element)=>{loadServiceMetrics();},
+  action26:(event,element)=>{loadAdminAudit();},
+  action27:(event,element)=>{exportFullBackup();},
+  action28:(event,element)=>{cleanupEmptyAccounts();},
+  action29:(event,element)=>{sendBroadcastFromSettings();},
+  action30:(event,element)=>{directViewUser();},
+  action31:(event,element)=>{if(event.target===element)element.classList.add('hidden');},
+  action32:(event,element)=>{document.getElementById('userModal').classList.add('hidden');},
+  action33:(event,element)=>{sendBroadcast();},
+  action34:(event,element)=>{document.getElementById('broadcastModal').classList.add('hidden');},
+  action35:(event,element)=>{closePasswordModal();},
+});
+for(const type of ['click','change','input'])document.addEventListener(type,event=>{const element=event.target.closest('[data-admin-'+type+']');if(element)adminEventActions[element.getAttribute('data-admin-'+type)]?.(event,element);});

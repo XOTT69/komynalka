@@ -11,7 +11,8 @@ export async function verifyRecovery(archive,{testPasswords={}}={}){
   const mf=new Miniflare(convertV4MiniflareOptions({modules:true,scriptPath:'.wrangler/check/worker.js',compatibilityDate:'2024-01-01',kvNamespaces:['KV'],durableObjects:{ACCOUNT_STORE:{className:'AccountStore',useSQLite:true}},log:new Log(LogLevel.NONE),outboundService:()=>new Response('Network disabled',{status:503})}));
   try{
     const kv=await mf.getKVNamespace('KV'),objects=await mf.getDurableObjectNamespace('ACCOUNT_STORE');
-    for(const entry of archive.kvEntries){if(entry.expiration&&entry.expiration*1000<=Date.now())continue;await kv.put(entry.name,entry.value,{...(entry.metadata?{metadata:entry.metadata}:{}),...(entry.expiration?{expiration:entry.expiration}:{})});}
+    let restoredKV=0;
+    for(const entry of archive.kvEntries){if(entry.expiration&&entry.expiration*1000<=Date.now())continue;await kv.put(entry.name,entry.value,{...(entry.metadata?{metadata:entry.metadata}:{}),...(entry.expiration?{expiration:entry.expiration}:{})});assert.ok(await kv.get(entry.name)===entry.value,'Restored KV value differs');restoredKV++;}
     for(const snapshot of archive.authorities){
       const stub=objects.get(objects.idFromName(snapshot.login)),call=async body=>{const response=await stub.fetch('https://account.internal',{method:'POST',body:JSON.stringify({login:snapshot.login,...body})});assert.equal(response.status,200);return response.json();};
       await call({action:'restore-snapshot',snapshot});
@@ -27,7 +28,7 @@ export async function verifyRecovery(archive,{testPasswords={}}={}){
       }
     }
     if(archive.community){const stub=objects.get(objects.idFromName('__community__'));const response=await stub.fetch('https://account.internal',{method:'POST',body:JSON.stringify({login:'__community__',action:'community-restore',snapshot:archive.community})});assert.equal(response.status,200);const restored=await(await stub.fetch('https://account.internal',{method:'POST',body:JSON.stringify({login:'__community__',action:'community-read'})})).json();assert.deepEqual(restored.list,archive.community.list);assert.equal(restored.revision,archive.community.revision);}
-    return {verified:true,scope:'isolated local workerd / SQLite',accounts:archive.authorities.length,sessions:'revoked',...archive.manifest};
+    return {verified:true,scope:'isolated local workerd / SQLite',accounts:archive.authorities.length,sessions:'revoked',...archive.manifest,restoredKV};
   }finally{await mf.dispose();}
 }
 

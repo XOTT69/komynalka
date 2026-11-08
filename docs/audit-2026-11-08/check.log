@@ -1,0 +1,239 @@
+
+> komunalka@5.16.0 check
+> node scripts/check-syntax.mjs && npm run build && npm run check:performance && node tests/sanity-check.mjs && npm run smoke && npm test
+
+JavaScript and inline script syntax passed
+
+> komunalka@5.16.0 build
+> node scripts/build.mjs
+
+Vendor assets ready: 17 files
+Built 68 assets; 44 required offline (5.16.0, 4f1874aa3f55)
+
+> komunalka@5.16.0 check:performance
+> node scripts/check-performance.mjs
+
+Build budgets passed: startup JS 154.6 KiB gzip; HTML 29.9 KiB gzip. This is not a speed measurement.
+Sanity checks passed
+
+> komunalka@5.16.0 smoke
+> node tests/ui-smoke.mjs
+
+UI smoke checks passed
+
+> komunalka@5.16.0 test
+> node --test tests/*.test.mjs
+
+✔ archive is immutable and preserves every nested address field (3.878542ms)
+✔ last active address cannot be archived and current always falls back to an active one (3.095417ms)
+✔ restore removes only archive metadata and permanent removal accepts archived addresses only (0.773917ms)
+Worker: INVALID_CURSOR
+Worker: INVALID_SORT
+Worker: INVALID_LIMIT
+✔ directory pages 1200 accounts without reading financial accounts after initial build; filters and statistics span all pages (4580.405417ms)
+✔ directory summaries never contain credentials, financial values, addresses, contacts or notes; newest revisions win and deletion hides rows (15.503791ms)
+Admin index update deferred
+✔ committed account changes survive index outage and replay without overwriting account data (15.15775ms)
+✔ feedback pages search the full index and only return the requested page; status changes and delayed repair remain visible (595.762292ms)
+✔ Unicode cursor round trips, and explicit restore refreshes summaries even when it restores an older revision (512.037333ms)
+✔ admin list keeps selection across pages and never deletes without typed confirmation (1674.081833ms)
+✔ tariff moderation is visible, escapes provider text and current broadcast is readable (260.211209ms)
+✔ feedback inbox escapes messages and updates their workflow status (196.465833ms)
+✔ admin navigation returns to the signed-in app and remembers the working section (557.375792ms)
+✔ server pages retain selected users, show global totals and export all pages instead of just the visible rows (707.743417ms)
+✔ feedback fetches one page and loads more on demand, rather than downloading the entire inbox (566.111666ms)
+✔ reliability dashboard separates API errors, expired subscriptions and provider acceptance (188.538333ms)
+✔ empty reliability counters do not claim delivery or absence of all errors (144.630125ms)
+✔ legacy AI history is migrated once and never copied into a second account (421.693459ms)
+✔ AI system prompt allows general questions while retaining utility context (3.255333ms)
+✔ late AI responses never cross owners or restore a cleared conversation (458.441958ms)
+✔ stored history outlives API context and general questions exclude utility data (573.786083ms)
+✔ declined AI consent and network failures retain the typed question (131.532167ms)
+✔ AI uses an active Groq model after the retired llama model (232.299791ms)
+groq provider returned 404
+gemini provider returned 404
+✔ AI falls back to Gemini when Groq is unavailable and retries its model alias (14.742041ms)
+✔ AI reports missing configuration without leaking provider credentials (7.356917ms)
+✔ reminder link selects only an owned active address and is consumed once (4244.870167ms)
+✔ actual app login preserves history, account totals and additional legacy fields (905.587834ms)
+✔ control gained during initial SW registration reloads only for a subsequent controller (636.711584ms)
+✔ an interrupted update check leaves the update button usable (520.065292ms)
+✔ a disappearing update candidate or failed message transport cannot lock the update button (773.182834ms)
+✔ an unknown previous reading cannot charge from zero; explicit zero is accepted (1027.929375ms)
+✔ zero tariffs survive template, save and offline reopening; negative tariffs cannot replace them (7448.501541ms)
+✔ late Telegram links, delivery states and Push inspection never move into another account (1026.175584ms)
+✔ cached accounts and drafts reopen when the network indicator is online but the API fails (3208.794041ms)
+✔ a delayed auto-login failure cannot restore the previous account after a newer login (761.821292ms)
+✔ registration creates an isolated account and the account password control replaces every old session (667.12ms)
+✔ the account shows the admin shortcut only after server approval for xott69 (381.442583ms)
+✔ Google popup failures show actionable inline recovery without changing stored accounts (122.838583ms)
+✔ editing only the historical note does not apply the new tariff or alter partial payment (497.796042ms)
+✔ payment proof is stored with its month, visible in history and excluded from sharing (335.479708ms)
+✔ draft including zero, note and payment proof survives closing and offline reopening (268.517583ms)
+✔ account B never adopts a global legacy backup from A, and failed login creates no account (197.134334ms)
+✔ all original feature controls are retained and IDs are unique (102.495875ms)
+✔ rapid navigation leaves one active page and every analytics entry renders extended tools (671.195125ms)
+✔ historical disabled services remain visible and imported IDs are safe in keyboard-accessible cards (537.525917ms)
+✔ PWA reading shortcut opens entry and the data center reports sync and backup health (205.846208ms)
+✔ PWA reminder and payment shortcuts open their exact workflow; snooze preserves history (408.050791ms)
+✔ CSV and real PDF libraries retain cents, historical services and partial payments (217.664333ms)
+✔ legacy device preferences are scoped once and actually reach cloud storage (201.935416ms)
+✔ editing a note after disabling an old service preserves its charge and partial payment (258.735ms)
+✔ explicit zero readings save correctly and a fast submit recalculates the latest input (294.505916ms)
+✔ a shared address loads its history while the guest form stays read-only (304.420542ms)
+✔ reminder date edits and deletion persist without resurrecting defaults or changing history (555.889292ms)
+✔ monthly tasks separate saved readings, provider completion and partial payment (225.323667ms)
+✔ settings groups retain unsaved fields and every route returns to its menu (279.617042ms)
+✔ selected provider stays visible per address and electricity modes expose clear states (214.833333ms)
+✔ horizontal swipes expose record actions without deleting or changing partial payment (240.050083ms)
+✔ collapsed readings still validate and keyboard navigation preserves the draft without submitting (196.554209ms)
+✔ provider edits persist offline, preserve history and stay out of guest shares (420.853334ms)
+✔ provider email opens a filled draft with separate copy actions and does not mark transfer complete (185.472417ms)
+✔ current-month water email is one action away from the dashboard transfer list (195.913083ms)
+✔ reminder overview names the next Kyiv day and never claims a disconnected channel will deliver (246.727583ms)
+✔ address archive preserves data, pauses daily use and restores the complete address (373.997542ms)
+✔ custom service archive hides daily controls, preserves history and restores the full configuration (242.904792ms)
+✔ feedback is sent from inside the app without exposing account records (195.208666ms)
+✔ a visitor can report a login problem before authentication (126.980125ms)
+✔ a failed local provider save keeps the editor and prior data; retry succeeds (435.272459ms)
+✔ an open provider editor cannot overwrite a newer card received by sync (263.67975ms)
+✔ account export roundtrips and preview merge preserves current fields while adding new history (291.260792ms)
+✔ meter replacement survives drafts and uses both meters in costs, history, CSV and email (481.660958ms)
+✔ iPhone PWA uses redirect without a popup and preserves account data before navigation (134.2445ms)
+✔ iPad standalone with desktop user agent uses redirect while Safari tabs retain popup (96.341ms)
+✔ verified redirect result opens the existing mapped account and retains readings and unknown fields (160.331333ms)
+✔ cancelled or failed redirect gives visible recovery and never creates or deletes an account (199.859042ms)
+✔ redirect initiation errors release the Google button and clear pending intent (125.278708ms)
+✔ Google redirect linking still requires the existing account password and never links automatically (320.977625ms)
+✔ a late redirect result cannot replace an account signed in by a newer action (195.023084ms)
+✔ first setup resumes per account and only changes an empty address after final confirmation (461.184375ms)
+✔ setup cannot overwrite another account or a changed address (218.244583ms)
+✔ large history renders in pages and batch payment changes only visible records (837.907416ms)
+✔ legacy save cannot register accounts or impersonate internal object names (133.818375ms)
+✔ guest responses are whitelisted and stale KV cannot resurrect revoked legacy access (279.696292ms)
+Worker: SHARE_LIMIT
+✔ expired shares and share-limit enforcement leave no invisible active links (299.240541ms)
+✔ account deletion purges authoritative private state and does not touch another account (492.72025ms)
+✔ session management is account-scoped and revokes other devices only (604.445917ms)
+✔ newest feedback remains visible after 500 items with stable pagination (89.9685ms)
+Account KV mirror failed
+✔ recovery archive keeps current credentials despite KV failure and encrypted copies detect tampering (1306.113375ms)
+✔ rate limit alarms remove expired buckets without discarding live counters (4.081167ms)
+✔ admin health probes actual stores and the private audit log excludes secrets (223.319458ms)
+✔ legacy capitalization directory is built once and repeated missing logins do not rescan KV (357.665834ms)
+✔ deletion retries alias cleanup after a KV failure while keeping private state purged (530.9595ms)
+✔ read-only login does not migrate the account while recovery writes are paused (7.909875ms)
+✔ production CSP permits the Google popup bootstrap used by the shipped Firebase SDK (13.109291ms)
+✔ a header-only deployment change invalidates cached PWA HTML without altering account assets (78.901167ms)
+✔ deployment formatting and unrelated build metadata cannot advertise false PWA updates (0.479542ms)
+✔ Google redirect helpers use a transparent project-specific proxy with uncached same-origin frames (9.012208ms)
+✔ registration is explicit, enforces the password policy and stores no reusable password hash (211.537958ms)
+✔ first password login migrates a legacy account without changing its utility history (112.332917ms)
+✔ simultaneous first logins converge on one legacy-account migration (353.247875ms)
+✔ changing a password preserves account data, revokes old sessions and returns a replacement session (866.51425ms)
+✔ account export omits credentials and guest links can be listed and revoked (312.297916ms)
+✔ account deletion requires the password and removes sessions, shares and aliases (643.402708ms)
+✔ administrator password reset uses the strong verifier and revokes every user session (823.76375ms)
+✔ Firebase tokens require a genuine signature, correct project and valid lifetime (729.863542ms)
+✔ backup verifier reconciles counts without revealing account contents (2.873542ms)
+✔ backup verifier rejects partial, live, duplicate and mapping-less migration exports (1.056042ms)
+✔ production build injects one release version and keeps optional assets out of the install cache (180.065875ms)
+✔ the published HTML and SW use the build identity of assets and deployment response policy (291.588125ms)
+✔ usage comparison requires evidence and explains an unusual change with exact values (98.896375ms)
+✔ comparison ignores future, missing and invalid readings without changing records (0.417583ms)
+✔ unentered services are not reported as a 100 percent saving, while explicit zero remains valid (1.89025ms)
+✔ legacy backup is byte-for-byte unchanged; accounts and drafts are isolated (10.325042ms)
+✔ new edits during an in-flight save are persisted and sent after the earlier acknowledgement (4.502792ms)
+✔ server errors and protected responses retain pending edits (3.617ms)
+✔ three-way merge preserves independent edits and unknown fields (4.371375ms)
+✔ same-field conflict preserves both copies and requires explicit durable resolution (6.385417ms)
+✔ failed backup aborts destructive resolution, corrupt envelopes are never reset (4.055208ms)
+✔ monthly summary keeps cents, partial payment and compares only the adjacent month (4.99375ms)
+✔ setup accepts explicit zero and Ukrainian decimals but rejects unknown, negative and invalid rates (6.539959ms)
+✔ public demo calculates and copies fictional text without reading storage or requesting an API (962.023417ms)
+✔ feedback status requires its author, exposes no contacts and bounds work per request (407.54325ms)
+✔ replacement preserves old consumption, decimal readings and independent day/night meters (13.319208ms)
+✔ missing readings, invalid meter values and dates cannot create a negative charge (0.771042ms)
+✔ monthly input status respects explicit zero and missing services without changing legacy records (32.550334ms)
+✔ transfer period matches the push cycle across December and short months (356.461541ms)
+✔ next action opens the prepared letter only when readings are saved and transfer is due (15.151459ms)
+✔ provider links allow web URLs, preserve leading-zero accounts and reject executable or credential URLs (11.887792ms)
+✔ provider changes on independent addresses and concurrent history edits merge without data loss (5.370292ms)
+✔ delivery confirmation is additive, month-specific and preserves provider settings (4.596584ms)
+✔ copying readings uses only the selected saved month and retains explicit zeros (1.170666ms)
+✔ the sample water email uses saved readings, account and address without changing history (5.856708ms)
+✔ email drafts retain explicit zero, separate electricity zones and flag missing previous readings (2.81075ms)
+✔ reminders target due addresses in Push and Telegram without exposing readings (1161.366125ms)
+✔ background delivery is daily, retries errors, and removes expired subscriptions (2243.250791ms)
+✔ disabled, completed, archived, deleted accounts and maintenance never send (8873.207417ms)
+✔ selected Kyiv time follows winter, summer and DST transition (1659.886875ms)
+✔ background delivery waits for the selected time and then sends once (1379.807125ms)
+✔ subscription validation blocks arbitrary servers and requires real key sizes (11.568291ms)
+✔ actual push payload is encrypted with aes128gcm and VAPID; no live delivery occurs (175.067625ms)
+✔ permission alone never means subscribed; server rejection is visible and rolls back a new subscription (1.2555ms)
+✔ permission is requested only by enable and unsubscribe works when the server is offline (1.101208ms)
+✔ no waiting release, a first install and identical builds never show update (2.715583ms)
+✔ a genuine waiting update is discovered after reopening and disappears after activation (0.895417ms)
+✔ unknown candidate versions and redundant workers cannot advertise updates (0.331417ms)
+✔ custom days, disabled services and master switch use one calendar (158.491458ms)
+✔ a cross-month period has one completion cycle, including December and leap February (6.288416ms)
+✔ completion is address-specific and Ukrainian dates do not depend on device timezone (1.174792ms)
+✔ a same-month range is active for the whole selected period (1.149875ms)
+✔ deleted built-in and custom reminders stay absent from the UI schedule and background delivery (1.984708ms)
+✔ next reminder date follows Kyiv time and skips a completed cycle (18.096042ms)
+✔ next reminder preview uses the validated account time (8.078291ms)
+✔ snoozing one address hides only today and preserves unrelated account settings (12.827791ms)
+✔ archived addresses keep their schedule but never produce reminders (29.48525ms)
+✔ custom services archive and restore without losing settings (2.6145ms)
+✔ aggregates preserve result categories and coarse latency, without individual events or identities (16.952625ms)
+✔ retention removes expired daily aggregates even without new events and periods cover UTC dates (81.875958ms)
+✔ unknown categories, oversized batches and unbounded periods cannot expand storage (1.341709ms)
+✔ only a valid admin session reads metrics; public requests cannot inject counters or retrieve them (469.523083ms)
+✔ broken monitoring never blocks successful account writes, including background failures (24.910625ms)
+✔ reminder monitoring counts only actual attempts and preserves daily de-duplication and retries (890.928541ms)
+✔ a failed channel-state write does not count a second provider attempt (799.428542ms)
+✔ an incomplete offline bundle cannot replace the installed release (14.048541ms)
+✔ activation only removes app caches; offline navigation retains its matching HTML (4.803083ms)
+✔ reminder notification exposes useful actions and routes them into the installed app (8.850166ms)
+✔ OAuth helpers bypass offline HTML and query-insensitive caching (6.897667ms)
+✔ address-aware push routes stay on the app origin and ignore supplied URLs (4.589209ms)
+sync queue unit checks passed
+✔ tests/sync-queue.test.mjs (430.448334ms)
+Worker: TEST_RATE_LIMITED
+✔ Telegram requires an authenticated account and private webhook, links once, and never changes readings (2100.739125ms)
+✔ bot API works when the Worker runtime has no AbortSignal.timeout (5.689083ms)
+✔ Telegram API redirects are not followed with the bot token (4.559917ms)
+✔ an existing webhook is preserved until its owner approves moving the bot (1.982ms)
+✔ only the signed-in owner may repoint an existing Telegram bot (24.62675ms)
+✔ existing account read preserves all historical data and raw recovery snapshot (68.544708ms)
+Worker: CONFLICT
+✔ two devices cannot overwrite each other; identical retry is idempotent (41.740125ms)
+✔ legacy snapshot writers are rejected, not allowed to erase other-device records (9.138917ms)
+✔ bare UID and view-only share writes are rejected by server (7.489375ms)
+✔ accounts require their own credentials; missing admin secret has no default password (3.373416ms)
+✔ private admin entry is visible only to the authenticated owner (4.507167ms)
+✔ admin listing paginates all keys and includes Google-only accounts (21.652958ms)
+✔ request body limit applies without Content-Length; CORS accepts owned production domains only (4.775875ms)
+✔ authenticated feedback is private, validated and manageable from admin without changing utility data (47.878167ms)
+✔ pre-login feedback accepts login failures without account access and resists simple spam (51.926375ms)
+Account KV mirror failed
+Account KV mirror failed
+✔ a committed account remains discoverable and exportable when its KV mirror fails (116.314833ms)
+✔ maintenance blocks writers and paginated backups retain UID and share mappings verbatim (4.537166ms)
+✔ old share_ links with phone metadata and capitalized account keys keep working (8.956208ms)
+Worker: UNSUPPORTED_LEGACY_ACCOUNT
+✔ opaque old accounts are preserved and flagged; Google and share aliases are not accounts (8.368042ms)
+✔ an edited community tariff loses approval and corrupt tariff data is never shown as empty (16.878209ms)
+✔ push subscriptions are authenticated, schedule an alarm and do not alter account history (14.838334ms)
+Worker: PUSH_NOT_CONNECTED
+Worker: PUSH_NOT_CONNECTED
+Worker: TEST_RATE_LIMITED
+✔ push test reaches only the signed-in account’s subscribed device, with a cooldown and no account edits (63.94775ms)
+ℹ tests 188
+ℹ suites 0
+ℹ pass 188
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 35860.677875

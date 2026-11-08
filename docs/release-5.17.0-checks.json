@@ -1,0 +1,63 @@
+{
+  "version": "5.17.0",
+  "checkedAt": "2026-11-08",
+  "productionWrites": false,
+  "unitIntegration": {
+    "passed": 203,
+    "failed": 0
+  },
+  "browsers": {
+    "chromium": "passed",
+    "webkit": "passed",
+    "firefox": "local launch blocked: profile folder; Linux CI required"
+  },
+  "responsive": {
+    "widths": [
+      320,
+      390,
+      768,
+      1440
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "status": "passed"
+  },
+  "pwa": "passed",
+  "installedUpgrade": {
+    "from": "5.16.0",
+    "to": "5.17.0",
+    "addresses": 2,
+    "records": 8,
+    "snapshotUnchanged": true,
+    "draftRetained": true,
+    "offlineReload": true,
+    "scope": "isolated localhost with fictional data"
+  },
+  "dependencyAudit": {
+    "vulnerabilities": 0
+  },
+  "historicalRecovery": {
+    "snapshotDate": "2026-10-04",
+    "accounts": 51,
+    "addresses": 57,
+    "records": 66,
+    "kvKeys": 97,
+    "verified": true,
+    "sourceMutations": 0,
+    "freshProductionCapture": false
+  },
+  "freshRecovery": {
+    "snapshotDate": "2026-11-08",
+    "accounts": 50,
+    "addresses": 56,
+    "records": 68,
+    "kvKeys": 90,
+    "unrecognizedKVValuesRetained": 7,
+    "verified": true,
+    "consistentRevisions": true,
+    "recordMutations": 0,
+    "temporaryBackupServiceDeleted": true
+  }
+}

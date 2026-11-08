@@ -41,7 +41,7 @@ for (const icon of ['icon-192.png', 'icon-512.png']) {
 if (!sw.includes('SKIP_WAITING')) fail('service worker cannot apply a waiting update on demand');
 if (!sw.includes("event.request.mode === 'navigate'")) fail('service worker navigation fallback is missing');
 
-const app = await readFile(path.join(root, 'app.js'), 'utf8');
+const app = (await Promise.all(['app.js','export-tools.js','record-card.js'].map(file=>readFile(path.join(root,file),'utf8')))).join('\n');
 if (!app.includes('updatefound')) fail('app does not listen for real service worker updates');
 if (!app.includes('normalizeImportData')) fail('JSON import normalization is missing');
 if (!app.includes('csvCell')) fail('CSV escaping helper is missing');
@@ -52,7 +52,7 @@ if (!app.includes('showActionToast')) fail('action toast with undo/rollback is m
 if (!app.includes('payableIds')) fail('batch pay is not scoped to visible records');
 if (!app.includes('getSaveAnomalyWarning')) fail('save-time anomaly warning is missing');
 if (!app.includes('escapeAttr')) fail('HTML attribute escaping helper is missing');
-if (!app.includes('sanitizeDomId')) fail('imported DOM id sanitization is missing');
+if (!app.includes('KomunalkaModel.validateSnapshot') || !app.includes('escapeAttr')) fail('shared write validation and attribute escaping are missing');
 if (!app.includes('CUSTOM_TARIFF_TEMPLATE_KEY')) fail('custom tariff template support is missing');
 if (!app.includes('renderChangeLog')) fail('change log rendering is missing');
 if (!app.includes('nextDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)')) fail('year-safe next-month forecast is missing');
@@ -98,7 +98,7 @@ const landing = await readFile(path.join(root, 'landing.html'), 'utf8');
 if (landing.includes('cdn.tailwindcss.com')) fail('landing page still depends on a third-party Tailwind runtime');
 // Check the resulting cascade, not the removed floating-dock implementation.
 const layout=new JSDOM(index,{virtualConsole:new VirtualConsole()});
-const modern=layout.window.document.createElement('style');modern.textContent=await readFile(path.join(root,'styles/modern.css'),'utf8')+'\n'+await readFile(path.join(root,'styles/workspace.css'),'utf8');layout.window.document.head.append(modern);
+const modern=layout.window.document.createElement('style');modern.textContent=await readFile(path.join(root,'styles/tokens.css'),'utf8')+'\n'+await readFile(path.join(root,'styles/app.css'),'utf8');layout.window.document.head.append(modern);
 if(layout.window.getComputedStyle(layout.window.document.getElementById('bottomNav')).position!=='fixed')fail('navigation must stay fixed after the full style cascade');
 layout.window.close();
 

@@ -4,7 +4,6 @@
 @source "../landing.html";
 @source "../admin.html";
 @source "../*.js";
-@source "../tests/*.html";
 @custom-variant dark (&:where(.dark, .dark *));
 @layer base {
   *, ::before, ::after { border-color: #e5e7eb; }

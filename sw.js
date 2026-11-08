@@ -1,6 +1,6 @@
 // build.mjs replaces these with the complete, content-addressed release manifest.
 const CACHE_NAME = 'komunalka-dev';
-const PRECACHE_URLS = ['./index.html','./app.js','./sync-queue.js','./data-store.js','./styles/modern.css','./icon-192.png','./icon-512.png'];
+const PRECACHE_URLS = ['./index.html','./app.js','./sync-queue.js','./data-store.js','./data-model.js','./export-tools.js','./record-card.js','./styles/tokens.css','./styles/app.css','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(PRECACHE_URLS.map(url=>new Request(url,{cache:'reload'})))));
 });

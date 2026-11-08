@@ -14,6 +14,7 @@ test('production CSP permits the Google popup bootstrap used by the shipped Fire
   assert.deepEqual(directives.get('script-src').filter(source=>!source.startsWith("'")),['https://www.googletagmanager.com','https://apis.google.com'],'do not permit arbitrary remote scripts to repair login');
   assert.deepEqual(directives.get('frame-ancestors'),["'none'"]);
   assert.deepEqual(directives.get('object-src'),["'none'"]);
+  assert.deepEqual(directives.get('script-src-attr'),["'none'"],'stored inline event handlers must be blocked');
   assert.ok(directives.get('frame-src').includes('https://pwakomun.firebaseapp.com'));
 });
 
@@ -47,3 +48,5 @@ test('Google redirect helpers use a transparent project-specific proxy with unca
  assert.equal(root.find(h=>h.key==='X-Frame-Options').value,'DENY');
  assert.match(root.find(h=>h.key==='Content-Security-Policy').value,/frame-src 'self'/);
 });
+
+test('administration has no executable inline event attributes',async()=>{const html=await readFile(new URL('../admin.html',import.meta.url),'utf8');assert.doesNotMatch(html,/\bon(?:click|input|change|keydown)\s*=/i);assert.ok(html.includes('data-admin-click'));});

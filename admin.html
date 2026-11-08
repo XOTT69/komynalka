@@ -8,6 +8,7 @@
     <link rel="icon" type="image/png" href="./icon-192.png">
     <link rel="stylesheet" href="./assets/tailwind.css">
     <link rel="stylesheet" href="./vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="styles/tokens.css">
     <link rel="stylesheet" href="styles/admin.css">
 </head>
 <body class="min-h-screen">
@@ -25,7 +26,7 @@
             </div>
             <label for="adminPass" class="block text-sm font-bold mb-2">Пароль адміністратора</label>
             <input type="password" id="adminPass" autocomplete="current-password" placeholder="Введіть пароль" class="w-full p-4 border rounded-xl mb-4 outline-none focus:ring-2 focus:ring-blue-500 font-medium">
-            <button onclick="adminLogin()" id="loginBtn" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 active:scale-95 transition-all">Увійти</button>
+            <button data-admin-click="action0" id="loginBtn" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 active:scale-95 transition-all">Увійти</button>
             <p id="loginError" class="text-red-500 text-sm text-center mt-3 hidden font-bold"></p>
             <a href="./index.html" class="back-to-app login-back"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i>Повернутися в Комуналку</a>
         </div>
@@ -45,10 +46,10 @@
                 </div>
                 <div class="flex gap-2 flex-wrap admin-header-actions">
                     <a id="backToApp" href="./index.html" class="back-to-app"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>У застосунок</span></a>
-                    <button onclick="loadStats()" class="header-secondary px-3 py-2 text-sm font-bold active:scale-95 transition-all" aria-label="Оновити дані" title="Оновити дані"><i class="fa-solid fa-sync mr-1"></i><span class="hidden md:inline">Оновити</span></button>
-                    <button onclick="openBroadcast()" class="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold hover:bg-blue-600 active:scale-95 transition-all" aria-label="Створити оголошення" title="Оголошення"><i class="fa-solid fa-bullhorn mr-1"></i><span class="hidden md:inline">Оголошення</span></button>
-                    <button onclick="exportAllData()" class="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 active:scale-95 transition-all" aria-label="Експортувати користувачів у CSV" title="Експорт CSV"><i class="fa-solid fa-download mr-1"></i><span class="hidden md:inline">CSV</span></button>
-                    <button onclick="adminLogout()" class="px-3 py-2 bg-red-50 text-red-500 rounded-lg text-sm font-bold hover:bg-red-100 active:scale-95 transition-all" aria-label="Завершити адмінсесію" title="Вийти з адмінпанелі"><i class="fa-solid fa-sign-out-alt mr-1"></i><span class="hidden md:inline">Вийти</span></button>
+                    <button data-admin-click="action1" class="header-secondary px-3 py-2 text-sm font-bold active:scale-95 transition-all" aria-label="Оновити дані" title="Оновити дані"><i class="fa-solid fa-sync mr-1"></i><span class="hidden md:inline">Оновити</span></button>
+                    <button data-admin-click="action2" class="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold hover:bg-blue-600 active:scale-95 transition-all" aria-label="Створити оголошення" title="Оголошення"><i class="fa-solid fa-bullhorn mr-1"></i><span class="hidden md:inline">Оголошення</span></button>
+                    <button data-admin-click="action3" class="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 active:scale-95 transition-all" aria-label="Експортувати користувачів у CSV" title="Експорт CSV"><i class="fa-solid fa-download mr-1"></i><span class="hidden md:inline">CSV</span></button>
+                    <button data-admin-click="action4" class="px-3 py-2 bg-red-50 text-red-500 rounded-lg text-sm font-bold hover:bg-red-100 active:scale-95 transition-all" aria-label="Завершити адмінсесію" title="Вийти з адмінпанелі"><i class="fa-solid fa-sign-out-alt mr-1"></i><span class="hidden md:inline">Вийти</span></button>
                 </div>
             </div>
         </div>
@@ -95,12 +96,12 @@
 
             <!-- Tabs -->
             <div class="admin-tabs flex gap-2 mb-4 overflow-x-auto no-scrollbar" role="tablist" aria-label="Розділи адмінпанелі">
-                <button data-admin-tab="users" class="tab-btn active px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('users', this)" role="tab" aria-selected="true"><i class="fa-solid fa-users"></i>Користувачі</button>
-                <button data-admin-tab="feedback" class="tab-btn px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('feedback', this)" role="tab" aria-selected="false"><i class="fa-solid fa-comments"></i>Звернення <span id="feedbackBadge" class="hidden ml-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px]"></span></button>
-                <button data-admin-tab="analytics" class="tab-btn px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('analytics', this)" role="tab" aria-selected="false"><i class="fa-solid fa-chart-line"></i>Аналітика</button>
-                <button data-admin-tab="tariffs" class="tab-btn px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('tariffs', this)" role="tab" aria-selected="false"><i class="fa-solid fa-tags"></i>Тарифи <span id="pendingTariffsBadge" class="hidden ml-1 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px]"></span></button>
-                <button data-admin-tab="security" class="tab-btn px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('security', this)" role="tab" aria-selected="false"><i class="fa-solid fa-shield-halved"></i>Безпека</button>
-                <button data-admin-tab="settings" class="tab-btn px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" onclick="switchAdminTab('settings', this)" role="tab" aria-selected="false"><i class="fa-solid fa-sliders"></i>Дані й оголошення</button>
+                <button data-admin-tab="users" class="tab-btn active px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" data-admin-click="action5" role="tab" aria-selected="true"><i class="fa-solid fa-users"></i>Користувачі</button>
+                <button data-admin-tab="feedback" class="tab-btn px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" data-admin-click="action6" role="tab" aria-selected="false"><i class="fa-solid fa-comments"></i>Звернення <span id="feedbackBadge" class="hidden ml-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px]"></span></button>
+                <button data-admin-tab="analytics" class="tab-btn px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" data-admin-click="action7" role="tab" aria-selected="false"><i class="fa-solid fa-chart-line"></i>Аналітика</button>
+                <button data-admin-tab="tariffs" class="tab-btn px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" data-admin-click="action8" role="tab" aria-selected="false"><i class="fa-solid fa-tags"></i>Тарифи <span id="pendingTariffsBadge" class="hidden ml-1 px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[10px]"></span></button>
+                <button data-admin-tab="security" class="tab-btn px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" data-admin-click="action9" role="tab" aria-selected="false"><i class="fa-solid fa-shield-halved"></i>Безпека</button>
+                <button data-admin-tab="settings" class="tab-btn px-4 py-2 text-sm font-bold bg-slate-100 text-slate-600 whitespace-nowrap" data-admin-click="action10" role="tab" aria-selected="false"><i class="fa-solid fa-sliders"></i>Дані й оголошення</button>
             </div>
 
             <!-- Tab: Users -->
@@ -110,19 +111,19 @@
                     <div class="flex gap-3 items-center flex-wrap">
                         <div class="relative flex-1 min-w-[200px]">
                             <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                            <input type="search" id="searchUsers" placeholder="Пошук за логіном або ім’ям..." oninput="filterUsers()" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-lg border outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium" aria-label="Пошук користувачів">
+                            <input type="search" id="searchUsers" placeholder="Пошук за логіном або ім’ям..." data-admin-input="action11" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-lg border outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium" aria-label="Пошук користувачів">
                         </div>
-                        <select id="filterType" onchange="filterUsers()" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
+                        <select id="filterType" data-admin-change="action11" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
                             <option value="all">Усі типи входу</option>
                             <option value="google">Google</option>
                             <option value="login">Логін</option>
                         </select>
-                        <select id="filterPro" onchange="filterUsers()" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
+                        <select id="filterPro" data-admin-change="action11" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
                             <option value="all">Усі плани</option>
                             <option value="pro">Pro</option>
                             <option value="free">Без Pro</option>
                         </select>
-                        <select id="filterActive" onchange="filterUsers()" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
+                        <select id="filterActive" data-admin-change="action11" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold outline-none">
                             <option value="all">Уся активність</option>
                             <option value="active">Є запис цього місяця</option>
                             <option value="inactive">Без запису цього місяця</option>
@@ -137,20 +138,20 @@
                         <div class="flex gap-2 items-center">
                             <span class="text-sm text-slate-400" id="usersCount">0</span>
                             <span class="text-xs text-slate-500" id="selectedCount">Вибрано: 0</span>
-                            <button id="bulkProBtn" onclick="massAction('pro')" disabled class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-lg text-xs font-bold hover:bg-yellow-100 border border-yellow-200">Надати Pro</button>
-                            <button id="bulkDeleteBtn" onclick="massAction('delete')" disabled class="px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100 border border-red-200">Видалити вибраних</button>
+                            <button id="bulkProBtn" data-admin-click="action12" disabled class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-lg text-xs font-bold hover:bg-yellow-100 border border-yellow-200">Надати Pro</button>
+                            <button id="bulkDeleteBtn" data-admin-click="action13" disabled class="px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100 border border-red-200">Видалити вибраних</button>
                         </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead class="bg-slate-50 border-b">
                                 <tr>
-                                    <th class="text-left p-3 font-bold text-slate-500"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" aria-label="Вибрати користувачів на сторінці"></th>
-                                    <th class="text-left p-3 font-bold text-slate-500 cursor-pointer" onclick="sortUsers('login')">Логін ↕</th>
+                                    <th class="text-left p-3 font-bold text-slate-500"><input type="checkbox" id="selectAll" data-admin-change="action14" aria-label="Вибрати користувачів на сторінці"></th>
+                                    <th class="text-left p-3 font-bold text-slate-500 cursor-pointer" data-admin-click="action15">Логін ↕</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Тип</th>
-                                    <th class="text-center p-3 font-bold text-slate-500 cursor-pointer" onclick="sortUsers('records')">Записи ↕</th>
+                                    <th class="text-center p-3 font-bold text-slate-500 cursor-pointer" data-admin-click="action16">Записи ↕</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Адреси</th>
-                                    <th class="text-center p-3 font-bold text-slate-500 cursor-pointer" onclick="sortUsers('lastMonth')">Останній ↕</th>
+                                    <th class="text-center p-3 font-bold text-slate-500 cursor-pointer" data-admin-click="action17">Останній ↕</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Пристрої</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Pro</th>
                                     <th class="text-center p-3 font-bold text-slate-500">Цей місяць</th>
@@ -163,18 +164,18 @@
                     <div class="p-3 border-t flex justify-between items-center">
                         <span class="text-xs text-slate-400" id="pageInfo">—</span>
                         <div class="flex gap-2">
-                            <button onclick="prevPage()" class="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-bold hover:bg-slate-200">← Назад</button>
-                            <button onclick="nextPage()" class="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-bold hover:bg-slate-200">Далі →</button>
+                            <button data-admin-click="action18" id="prevPageBtn" class="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-bold hover:bg-slate-200">← Назад</button>
+                            <button data-admin-click="action19" id="nextPageBtn" class="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-bold hover:bg-slate-200">Далі →</button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div id="tabFeedback" class="hidden">
-                <div class="flex flex-wrap items-start justify-between gap-3 mb-4"><div><h2 class="text-xl font-black">Звернення користувачів</h2><p class="admin-intro mb-0">Проблеми, ідеї та побажання з форми у застосунку.</p></div><button type="button" onclick="loadFeedback()" class="px-4 py-2 bg-white border rounded-xl text-sm font-bold hover:bg-slate-50"><i class="fa-solid fa-rotate mr-2"></i>Оновити</button></div>
+                <div class="flex flex-wrap items-start justify-between gap-3 mb-4"><div><h2 class="text-xl font-black">Звернення користувачів</h2><p class="admin-intro mb-0">Проблеми, ідеї та побажання з форми у застосунку.</p></div><button type="button" data-admin-click="action20" class="px-4 py-2 bg-white border rounded-xl text-sm font-bold hover:bg-slate-50"><i class="fa-solid fa-rotate mr-2"></i>Оновити</button></div>
                 <div class="bg-white p-4 rounded-xl border shadow-sm admin-surface">
-                    <div class="flex flex-wrap gap-3 mb-4"><input id="searchFeedback" type="search" oninput="filterFeedback()" placeholder="Пошук у повідомленнях або логінах" class="flex-1 min-w-[220px] px-3 py-2.5 bg-slate-50 border rounded-lg text-sm"><select id="filterFeedbackType" onchange="filterFeedback()" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold"><option value="all">Усі типи</option><option value="problem">Проблеми</option><option value="idea">Ідеї</option><option value="other">Інше</option></select><select id="filterFeedbackStatus" onchange="filterFeedback()" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold"><option value="active">Потребують уваги</option><option value="new">Нові</option><option value="in_progress">У роботі</option><option value="done">Завершені</option><option value="all">Усі</option></select></div>
-                    <p id="feedbackCount" class="text-sm text-slate-500 mb-3">Завантаження…</p><div id="feedbackList" class="space-y-3"></div><button id="feedbackMore" type="button" onclick="loadMoreFeedback()" class="hidden mt-4 px-4 py-3 bg-slate-100 rounded-xl font-bold">Показати ще 25</button>
+                    <div class="flex flex-wrap gap-3 mb-4"><input id="searchFeedback" type="search" data-admin-input="action21" placeholder="Пошук у повідомленнях або логінах" class="flex-1 min-w-[220px] px-3 py-2.5 bg-slate-50 border rounded-lg text-sm"><select id="filterFeedbackType" data-admin-change="action21" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold"><option value="all">Усі типи</option><option value="problem">Проблеми</option><option value="idea">Ідеї</option><option value="other">Інше</option></select><select id="filterFeedbackStatus" data-admin-change="action21" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold"><option value="active">Потребують уваги</option><option value="new">Нові</option><option value="in_progress">У роботі</option><option value="done">Завершені</option><option value="all">Усі</option></select></div>
+                    <p id="feedbackCount" class="text-sm text-slate-500 mb-3">Завантаження…</p><div id="feedbackList" class="space-y-3"></div><button id="feedbackMore" type="button" data-admin-click="action22" class="hidden mt-4 px-4 py-3 bg-slate-100 rounded-xl font-bold">Показати ще 25</button>
                 </div>
             </div>
 
@@ -182,12 +183,12 @@
             <div id="tabTariffs" class="hidden">
                 <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                     <div><h2 class="text-xl font-black">Тарифи спільноти</h2><p class="admin-intro mb-0">Перевіряйте назву, регіон, автора та значення перед підтвердженням.</p></div>
-                    <button id="refreshTariffs" type="button" class="px-4 py-2 bg-white border rounded-xl text-sm font-bold hover:bg-slate-50" onclick="loadTariffs()">Оновити тарифи</button>
+                    <button id="refreshTariffs" type="button" class="px-4 py-2 bg-white border rounded-xl text-sm font-bold hover:bg-slate-50" data-admin-click="action23">Оновити тарифи</button>
                 </div>
                 <div class="bg-white p-4 rounded-xl border shadow-sm admin-surface">
                     <div class="flex flex-wrap gap-3 mb-4">
-                        <input type="search" id="searchTariffs" oninput="renderTariffs()" placeholder="Пошук за назвою, автором або містом" aria-label="Пошук тарифів" class="flex-1 min-w-[220px] px-3 py-2.5 bg-slate-50 border rounded-lg text-sm">
-                        <select id="filterTariffs" onchange="renderTariffs()" aria-label="Статус тарифів" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold">
+                        <input type="search" id="searchTariffs" data-admin-input="action24" placeholder="Пошук за назвою, автором або містом" aria-label="Пошук тарифів" class="flex-1 min-w-[220px] px-3 py-2.5 bg-slate-50 border rounded-lg text-sm">
+                        <select id="filterTariffs" data-admin-change="action24" aria-label="Статус тарифів" class="px-3 py-2.5 bg-slate-50 border rounded-lg text-sm font-bold">
                             <option value="pending">Очікують перевірки</option><option value="all">Усі</option><option value="verified">Підтверджені</option>
                         </select>
                     </div>
@@ -221,7 +222,7 @@
             <!-- Tab: Security -->
             <div id="tabSecurity" class="hidden">
                 <section class="reliability-panel" aria-labelledby="reliabilityTitle">
-                    <div class="reliability-heading"><div><h3 id="reliabilityTitle">Надійність сервісу</h3><p>Загальні результати запитів і надсилання нагадувань</p></div><div class="reliability-controls"><label for="metricsPeriod">Період</label><select id="metricsPeriod" onchange="loadServiceMetrics()"><option value="1">Сьогодні</option><option value="7" selected>7 днів</option><option value="14">14 днів</option></select><button type="button" onclick="loadServiceMetrics()">Оновити</button></div></div>
+                    <div class="reliability-heading"><div><h3 id="reliabilityTitle">Надійність сервісу</h3><p>Загальні результати запитів і надсилання нагадувань</p></div><div class="reliability-controls"><label for="metricsPeriod">Період</label><select id="metricsPeriod" data-admin-change="action25"><option value="1">Сьогодні</option><option value="7" selected>7 днів</option><option value="14">14 днів</option></select><button type="button" data-admin-click="action25">Оновити</button></div></div>
                     <p id="metricsStatus" class="reliability-status" role="status">Відкрийте розділ для перевірки.</p>
                     <div id="metricsCards" class="reliability-cards"></div>
                     <div id="metricsRows" class="reliability-rows"></div>
@@ -241,7 +242,7 @@
                         <p class="text-sm text-slate-600 mt-2">Параметри шифрування та захисту неможливо достовірно визначити з браузера. У цій панелі вони не позначаються як «активні» без перевірки сервера.</p>
                     </div>
                 </div>
-            <div class="bg-white p-6 rounded-xl border shadow-sm mt-4"><h3 class="font-bold mb-3">Журнал адміністративних дій</h3><p class="text-sm text-slate-500 mb-3">Останні 100 дій. Зберігання — до 365 днів. Паролі, токени й тексти повідомлень не записуються.</p><button type="button" onclick="loadAdminAudit()" class="px-4 py-2 border rounded-xl text-sm font-bold mb-3">Оновити журнал</button><div id="adminAuditList" class="space-y-2 text-sm" role="status"></div></div></div>
+            <div class="bg-white p-6 rounded-xl border shadow-sm mt-4"><h3 class="font-bold mb-3">Журнал адміністративних дій</h3><p class="text-sm text-slate-500 mb-3">Останні 100 дій. Зберігання — до 365 днів. Паролі, токени й тексти повідомлень не записуються.</p><button type="button" data-admin-click="action26" class="px-4 py-2 border rounded-xl text-sm font-bold mb-3">Оновити журнал</button><div id="adminAuditList" class="space-y-2 text-sm" role="status"></div></div></div>
 
             <!-- Tab: Settings -->
             <div id="tabSettings" class="hidden">
@@ -250,9 +251,9 @@
                     <div class="bg-white p-6 rounded-xl border shadow-sm">
                         <h3 class="font-bold mb-4">🗄️ Дані</h3>
                         <div class="space-y-3">
-                            <button onclick="exportFullBackup()" class="w-full py-3 bg-blue-50 text-blue-700 font-bold rounded-xl border border-blue-200 hover:bg-blue-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-database mr-2"></i>Повний бекап (JSON)</button>
-                            <button onclick="exportAllData()" class="w-full py-3 bg-green-50 text-green-700 font-bold rounded-xl border border-green-200 hover:bg-green-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-file-csv mr-2"></i>Експорт юзерів (CSV)</button>
-                            <button onclick="cleanupEmptyAccounts()" class="w-full py-3 bg-orange-50 text-orange-700 font-bold rounded-xl border border-orange-200 hover:bg-orange-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-broom mr-2"></i>Переглянути порожні акаунти</button>
+                            <button data-admin-click="action27" class="w-full py-3 bg-blue-50 text-blue-700 font-bold rounded-xl border border-blue-200 hover:bg-blue-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-database mr-2"></i>Повний бекап (JSON)</button>
+                            <button data-admin-click="action3" class="w-full py-3 bg-green-50 text-green-700 font-bold rounded-xl border border-green-200 hover:bg-green-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-file-csv mr-2"></i>Експорт юзерів (CSV)</button>
+                            <button data-admin-click="action28" class="w-full py-3 bg-orange-50 text-orange-700 font-bold rounded-xl border border-orange-200 hover:bg-orange-100 active:scale-95 transition-all text-sm"><i class="fa-solid fa-broom mr-2"></i>Переглянути порожні акаунти</button>
                             <label class="block text-sm font-semibold mt-3" for="backupPassword">Пароль шифрування копії</label><input id="backupPassword" type="password" minlength="12" autocomplete="new-password" placeholder="Щонайменше 12 символів" class="w-full p-3 border rounded-xl mt-2"><p class="text-xs text-slate-500 mt-2">Збережіть пароль окремо. Без нього відновлення копії неможливе. Активні сесії при відновленні завершуються.</p><p id="backupProgress" class="text-xs text-slate-500" role="status"></p>
                         </div>
                     </div>
@@ -260,13 +261,13 @@
                         <h3 class="font-bold mb-4">📢 Оголошення для всіх</h3>
                         <div id="currentBroadcast" class="admin-alert mb-3">Завантаження поточного оголошення…</div>
                         <textarea id="broadcastMsgSettings" maxlength="500" rows="3" placeholder="Текст оголошення для всіх користувачів..." class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium mb-3 text-sm"></textarea>
-                        <button onclick="sendBroadcastFromSettings()" class="w-full py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 active:scale-95 transition-all text-sm"><i class="fa-solid fa-paper-plane mr-2"></i>Надіслати</button>
+                        <button data-admin-click="action29" class="w-full py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 active:scale-95 transition-all text-sm"><i class="fa-solid fa-paper-plane mr-2"></i>Надіслати</button>
                     </div>
                     <div class="bg-white p-6 rounded-xl border shadow-sm">
                         <h3 class="font-bold mb-4">🔍 Пошук користувача</h3>
                         <div class="flex gap-2">
                             <input type="text" id="directUserSearch" placeholder="Логін користувача..." class="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium">
-                            <button onclick="directViewUser()" class="px-4 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm active:scale-95">Знайти</button>
+                            <button data-admin-click="action30" class="px-4 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm active:scale-95">Знайти</button>
                         </div>
                     </div>
                     <div class="bg-white p-6 rounded-xl border shadow-sm">
@@ -283,37 +284,37 @@
     </div>
 
     <!-- User Details Modal -->
-    <div id="userModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div id="userModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" data-admin-click="action31">
         <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-black" id="modalUserTitle">Юзер</h3>
-                <button onclick="document.getElementById('userModal').classList.add('hidden')" class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200 active:scale-90 transition-all">✕</button>
+                <button data-admin-click="action32" class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200 active:scale-90 transition-all">✕</button>
             </div>
             <div id="modalUserContent" class="text-sm"></div>
         </div>
     </div>
 
     <!-- Broadcast Modal -->
-    <div id="broadcastModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div id="broadcastModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" data-admin-click="action31">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <h3 class="text-xl font-black mb-4">📢 Оголошення</h3>
             <p class="admin-intro">Нове оголошення замінить поточне для всіх користувачів застосунку.</p>
             <textarea id="broadcastMsg" maxlength="500" rows="4" placeholder="Текст оголошення..." class="w-full p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none font-medium mb-4"></textarea>
             <div class="flex gap-3">
-                <button onclick="sendBroadcast()" class="flex-1 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 active:scale-95 transition-all">Надіслати</button>
-                <button onclick="document.getElementById('broadcastModal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 font-bold rounded-xl hover:bg-slate-200 active:scale-95 transition-all">Скасувати</button>
+                <button data-admin-click="action33" class="flex-1 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 active:scale-95 transition-all">Надіслати</button>
+                <button data-admin-click="action34" class="flex-1 py-3 bg-slate-100 font-bold rounded-xl hover:bg-slate-200 active:scale-95 transition-all">Скасувати</button>
             </div>
         </div>
     </div>
 
     <!-- Password Modal -->
-    <div id="passwordModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+    <div id="passwordModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" data-admin-click="action31" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
         <form id="passwordForm" class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <h3 id="passwordModalTitle" class="text-xl font-black mb-2">Новий пароль</h3>
             <p class="admin-intro">Пароль зміниться одразу. Користувачеві знадобиться новий пароль для наступного входу.</p>
             <label for="newAdminUserPass" class="block text-sm font-bold mb-2">Новий пароль · щонайменше 8 символів</label>
             <input id="newAdminUserPass" type="password" autocomplete="new-password" minlength="8" required class="w-full p-3 border rounded-xl mb-4">
-            <div class="flex gap-3"><button type="submit" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl">Змінити пароль</button><button type="button" onclick="closePasswordModal()" class="flex-1 py-3 bg-slate-100 font-bold rounded-xl">Скасувати</button></div>
+            <div class="flex gap-3"><button type="submit" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl">Змінити пароль</button><button type="button" data-admin-click="action35" class="flex-1 py-3 bg-slate-100 font-bold rounded-xl">Скасувати</button></div>
         </form>
     </div>
 

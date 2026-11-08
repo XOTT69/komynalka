@@ -1,0 +1,15 @@
+{
+  "verified": true,
+  "scope": "isolated workerd / SQLite, fictional data",
+  "accounts": 40,
+  "records": 8800,
+  "parallelRequests": 10,
+  "queries": 100,
+  "concurrentWriters": 10,
+  "acceptedWrites": 1,
+  "conflicts": 9,
+  "historyPreserved": true,
+  "localP50Ms": 17,
+  "localP95Ms": 45,
+  "timingScope": "local runtime only; not production performance"
+}
