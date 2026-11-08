@@ -225,55 +225,10 @@ html.dark button.bg-brand,html.dark button[class*='from-brand'],html.dark #submi
   color: var(--ui-muted);
   font-size: .875rem;
 }
-.dashboard-summary {
-  padding: 24px;
-  background: var(--ui-surface)!important;
-  color: var(--ui-text);
-  border: 1px solid var(--ui-line);
-  border-radius: 20px;
-}
-.summary-topline {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  gap: 12px;
-}
-.summary-label {
-  color: var(--ui-muted);
-  font-size: .875rem;
-}
-#dashBalance {
-  font-size: clamp(2rem,7vw,3rem);
-  font-weight: 650;
-  letter-spacing: -.035em;
-  font-variant-numeric: tabular-nums;
-  margin: 6px 0 22px;
-}
-.summary-split {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  border-top: 1px solid var(--ui-line);
-  padding-top: 16px;
-  margin-bottom: 20px;
-}
-.summary-split p:last-child {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-top: 4px;
-  font-variant-numeric: tabular-nums;
-}
 .primary-action {
   min-height: 48px;
   width: 100%;
   padding: 12px 18px;
-}
-.dashboard-summary #dashInsight {
-  background: var(--brand-light)!important;
-  color: var(--ui-text)!important;
-  border: 0;
-  font-weight: 400;
-  margin-bottom: 16px;
 }
 .overview-secondary {
   display: grid;
@@ -282,20 +237,6 @@ html.dark button.bg-brand,html.dark button[class*='from-brand'],html.dark #submi
 .section-caption {
   color: var(--ui-muted);
   margin: 20px 0 8px;
-}
-#dashDebtCard {
-  background: var(--ui-surface)!important;
-  border: 1px solid var(--ui-line)!important;
-  border-left: 4px solid var(--ui-warning)!important;
-  color: var(--ui-text)!important;
-  border-radius: 16px!important;
-  box-shadow: none!important;
-}
-#dashDebtCard>.absolute {
-  display: none;
-}
-#dashDebtCard .opacity-60,#dashDebtCard .opacity-70 {
-  opacity: 1;
 }
 #dashDebt {
   color: var(--ui-warning);
@@ -780,12 +721,6 @@ html.dark #bottomNav {
   overscroll-behavior-y: contain;
   scrollbar-gutter: stable;
 }
-#tabDashboard .dashboard-summary {
-  border-top: 3px solid var(--brand);
-}
-.dashboard-summary .summary-topline {
-  margin-bottom: 6px;
-}
 .month-status {
   font-size: .875rem;
   color: var(--ui-muted);
@@ -1130,24 +1065,8 @@ html.dark #bottomNav {
 #userGreeting {
   display: none;
 }
-.dashboard-summary #dashAddBtn {
-  background: var(--brand)!important;
-  color: white!important;
-}
-.dark .dashboard-summary #dashAddBtn {
-  color: #14243d!important;
-}
 .dark #quickActionsBtn {
   color: #14243d!important;
-}
-.summary-split {
-  grid-template-columns: repeat(auto-fit,minmax(min(100%,8rem),1fr));
-}
-.summary-split>div {
-  min-width: 0;
-}
-.summary-split p:last-child {
-  overflow-wrap: anywhere;
 }
 #debtBadge {
   width: auto!important;
@@ -1297,63 +1216,6 @@ html.dark #bottomNav {
 .dashboard-summary,.monthly-tasks,.task-copy {
   min-width: 0;
 }
-#tabDashboard .dashboard-summary {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(120deg,#204d90,#18376a)!important;
-  border: 1px solid #355d98;
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 12px 28px rgb(25 57 105 / .12);
-}
-html.dark #tabDashboard .dashboard-summary {
-  background: linear-gradient(120deg,#253f65,#1c3153)!important;
-  border-color: #3c577d;
-  box-shadow: none;
-}
-.dashboard-summary .summary-topline {
-  padding-right: 38px;
-  min-height: 36px;
-}
-.dashboard-summary .summary-label,.dashboard-summary .month-status {
-  color: #d6e3f7!important;
-}
-.summary-symbol {
-  position: absolute;
-  right: 24px;
-  top: 24px;
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  background: #ffffff15;
-  color: #d6e3f7;
-}
-.dashboard-summary #dashBalance {
-  font-size: clamp(2.25rem,8vw,3.25rem);
-  letter-spacing: -.04em!important;
-  color: #fff;
-  margin: 8px 0 24px;
-  line-height: 1.2;
-}
-.dashboard-summary .summary-split {
-  border-color: #ffffff26;
-  padding-top: 18px;
-  margin-bottom: 24px;
-}
-.dashboard-summary .summary-split p:last-child {
-  color: #fff!important;
-  font-size: 1.125rem;
-}
-.dashboard-summary #dashAddBtn,html.dark .dashboard-summary #dashAddBtn {
-  background: #fff!important;
-  color: #1e4787!important;
-  border: 1px solid #fff!important;
-  min-height: 48px;
-  font-size: .9375rem;
-  border-radius: 13px!important;
-}
 .dashboard-action-hint {
   color: #d6e3f7;
   font-size: .8125rem;
@@ -1453,13 +1315,6 @@ html.dark #tabDashboard .dashboard-summary {
 }
 .overview-link>i {
   font-size: .875rem;
-}
-#dashDebtCard {
-  margin-top: 16px!important;
-}
-#dashDebtCard .flex {
-  gap: 12px;
-  flex-wrap: wrap;
 }
 #tabCalc>.entry-header {
   background: var(--ui-surface)!important;
@@ -3268,39 +3123,6 @@ html.dark .button-primary {
   color: var(--brand)!important;
   border-color: var(--ui-line)!important;
 }
-.dashboard-summary {
-  background: linear-gradient(145deg,#607fc0 0%,#526fab 100%)!important;
-  color: #fff!important;
-  border: 0!important;
-  box-shadow: 0 18px 42px rgb(67 88 136 / .19)!important;
-}
-.dashboard-summary .summary-label,.dashboard-summary .month-status,.dashboard-summary .dashboard-action-hint {
-  color: rgb(255 255 255 / .78)!important;
-}
-.dashboard-summary #dashBalance,.dashboard-summary .summary-split p:last-child {
-  color: #fff!important;
-}
-.dashboard-summary .summary-split {
-  border-color: rgb(255 255 255 / .22);
-}
-.dashboard-summary .dashboard-next-meta {
-  background: rgb(255 255 255 / .13);
-  color: #fff;
-}
-.dashboard-summary #dashAddBtn {
-  background: #fff!important;
-  color: #4e6ba8!important;
-  box-shadow: 0 8px 20px rgb(40 57 96 / .16)!important;
-}
-.summary-symbol {
-  background: var(--brand-light);
-  color: var(--brand);
-  right: 22px;
-  top: 20px;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-}
 .monthly-tasks {
   box-shadow: 0 10px 30px rgb(53 65 91 / .045);
 }
@@ -3478,14 +3300,6 @@ html.dark .button-primary {
 .reminder-banner-actions button:last-child {
   background: var(--brand);
   color: #fff;
-}
-html.dark .dashboard-summary {
-  background: linear-gradient(145deg,#3a4c70 0%,#303e5d 100%)!important;
-  box-shadow: none!important;
-}
-html.dark .dashboard-summary #dashAddBtn {
-  background: #e9effb!important;
-  color: #344b78!important;
 }
 @media(max-width:520px) {
   .provider-delivery-confirm {
@@ -3753,56 +3567,115 @@ body {
   font-weight: 700 !important;
   font-size: 1.65rem;
 }
+/* The account balance uses one surface in both themes. */
 #tabDashboard .dashboard-summary {
-  color: var(--ui-text)!important;
-  background: var(--ui-surface) !important;
-  border: 1px solid var(--ui-line) !important;
-  border-radius: 22px;
-  padding: 22px;
-  box-shadow: var(--ui-shadow) !important;
+  position: relative;
+  overflow: hidden;
+  color: var(--balance-text);
+  background: var(--balance-surface);
+  border: 1px solid var(--balance-line);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 12px 32px rgb(18 38 67 / .12);
 }
-html.dark #tabDashboard .dashboard-summary {
-  background: var(--ui-surface) !important;
-  border-color: var(--ui-line) !important;
+.dashboard-summary .summary-topline {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  padding-right: 46px;
 }
-#tabDashboard .dashboard-summary .summary-label,#tabDashboard .dashboard-summary .month-status,#tabDashboard .dashboard-summary .dashboard-action-hint {
-  color: var(--ui-muted)!important;
-}
-#tabDashboard .dashboard-summary #dashBalance {
-  color: var(--ui-text)!important;
-  font-size: clamp(2.2rem,8.5vw,2.9rem);
-  font-weight: 730;
-  letter-spacing: -.045em !important;
-  margin: 10px 0 18px;
-  line-height: 1.12;
-}
-#tabDashboard .dashboard-summary .summary-split {
-  padding-top: 14px;
-  margin-bottom: 16px;
-  border-color: var(--ui-line);
-}
-#tabDashboard .dashboard-summary .summary-split p:last-child {
-  color: var(--ui-text)!important;
-  font-size: 1rem;
-}
-#tabDashboard .dashboard-summary .dashboard-next-meta {
-  padding: 0;
-  background: none;
-  color: var(--ui-text);
-  font-weight: 600;
-  margin-bottom: 10px;
+.dashboard-summary .summary-label,
+.dashboard-summary .month-status,
+.dashboard-summary .dashboard-action-hint {
+  color: var(--balance-muted);
   font-size: .8125rem;
+  line-height: 1.5;
 }
-#tabDashboard .dashboard-summary #dashAddBtn,html.dark #tabDashboard .dashboard-summary #dashAddBtn {
-  background: var(--brand)!important;
-  color: var(--ui-surface)!important;
-  border-color: var(--brand)!important;
-  min-height: 46px;
-  box-shadow: none!important;
+.summary-symbol {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--balance-line);
+  border-radius: 12px;
+  color: var(--balance-accent);
 }
-html.dark #tabDashboard .dashboard-summary #dashAddBtn {
-  color: #182744!important;
+.dashboard-summary #dashBalance {
+  color: var(--balance-text);
+  font-size: clamp(2.35rem,8.5vw,3.2rem);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.045em;
+  line-height: 1.12;
+  margin: 18px 0 28px;
+  overflow-wrap: anywhere;
 }
+.summary-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,9rem),1fr));
+  gap: 16px;
+  border-top: 1px solid var(--balance-line);
+  padding-top: 20px;
+  margin-bottom: 22px;
+}
+.summary-split>div { min-width: 0; }
+.dashboard-summary .summary-split p:last-child {
+  color: var(--balance-text);
+  margin-top: 6px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.dashboard-summary .dashboard-next-meta {
+  padding: 0;
+  margin-bottom: 12px;
+  color: var(--balance-text);
+  background: transparent;
+  font-size: .8125rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.dashboard-summary #dashAddBtn {
+  min-height: 50px;
+  background: var(--balance-accent)!important;
+  color: #182e27!important;
+  border: 1px solid var(--balance-accent);
+  border-radius: 13px;
+  box-shadow: none;
+  font-size: .9375rem;
+}
+.dashboard-summary #dashAddBtn:hover { background: #e7f2e9!important; }
+.dashboard-summary :focus-visible { outline-color: var(--balance-accent); }
+.outstanding-link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 20px;
+  text-align: left;
+  color: var(--ui-text);
+  background: var(--ui-warning-soft);
+  border: 1px solid color-mix(in srgb,var(--ui-warning) 22%,var(--ui-line));
+  border-radius: 18px;
+}
+.outstanding-link.hidden { display: none; }
+.outstanding-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--ui-surface);
+  color: var(--ui-warning);
+}
+.outstanding-copy { display: grid; gap: 5px; flex: 1; min-width: 0; }
+.outstanding-copy>span,.outstanding-copy small { font-size: .8125rem; line-height: 1.5; color: var(--ui-muted); }
+.outstanding-copy strong { font-size: 1.375rem; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.outstanding-link>i { font-size: .875rem; color: var(--ui-warning); }
 .dashboard-action-hint {
   font-size: .8125rem;
   line-height: 1.45;

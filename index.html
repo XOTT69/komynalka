@@ -204,10 +204,11 @@
   </div><section id="monthlyTasks" class="monthly-tasks" aria-labelledby="monthlyTasksTitle"><div class="section-heading"><div><h3 id="monthlyTasksTitle">Справи на місяць</h3><p>Показники, передача й оплата</p></div><span id="monthlyTasksCount" class="task-count"></span></div><div class="month-progress" aria-hidden="true"><span id="monthlyTasksProgress"></span></div><p id="monthlyTasksProgressText" class="month-progress-text" role="status"></p><div id="monthlyTasksList"></div></section></div><button type="button" id="overviewAnalyticsLink" class="overview-link"><span><i class="fa-solid fa-chart-simple" aria-hidden="true"></i> Аналітика витрат</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
 
   <button type="button" id="monthlySummaryOpen" class="overview-link"><span><i class="fa-solid fa-file-lines" aria-hidden="true"></i> Підсумок місяця</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
-  <div id="dashDebtCard" class="bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 p-5 rounded-[2rem] shadow-xl shadow-red-500/20 text-white hidden relative overflow-hidden">
-    <div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-    <div class="flex justify-between items-center relative z-10"><div><p class="text-[9px] font-bold opacity-70 uppercase tracking-[0.15em] mb-1">Залишок за інші місяці</p><p class="text-2xl font-black count-up" id="dashDebt">0 ₴</p></div><div class="text-right"><p class="text-[10px] opacity-60" id="dashDebtMonths"></p></div></div>
-  </div>
+  <button id="dashDebtCard" type="button" class="outstanding-link hidden" aria-label="Переглянути неоплачені записи">
+    <span class="outstanding-icon"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i></span>
+    <span class="outstanding-copy"><span>Залишок за інші місяці</span><strong id="dashDebt">0 ₴</strong><small id="dashDebtMonths"></small></span>
+    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+  </button>
 
 
 

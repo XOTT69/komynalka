@@ -47,5 +47,17 @@
     "verified": true,
     "sourceMutations": 0,
     "freshProductionCapture": false
+  },
+  "freshRecovery": {
+    "snapshotDate": "2026-11-08",
+    "accounts": 50,
+    "addresses": 56,
+    "records": 68,
+    "kvKeys": 90,
+    "unrecognizedKVValuesRetained": 7,
+    "verified": true,
+    "consistentRevisions": true,
+    "recordMutations": 0,
+    "temporaryBackupServiceDeleted": true
   }
 }

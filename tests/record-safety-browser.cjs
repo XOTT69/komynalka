@@ -31,6 +31,17 @@ if(!/^http:\/\/(?:127\.0\.0\.1|localhost):\d+$/.test(base))throw new Error('Fict
       return {escaped,eventExecuted:window.__safetyExecuted===true,writeStatus:rejected.status,originalRecordsPreserved:preserved};
     });
     assert.equal(report.escaped,true);assert.equal(report.eventExecuted,false);assert.equal(report.writeStatus,400);assert.equal(report.originalRecordsPreserved,true);
+    // Opening an older outstanding balance resets stale history filters and never changes records.
+    const navigation=await page.evaluate(()=>{
+      const historical=records.find(r=>r.month!==getMonthKey());
+      setRecordPayment(historical,'partial',100);
+      renderDashboard();
+      const before=JSON.stringify(records);
+      $('searchRecords').value='немає збігів';$('sortSelect').value='amount-asc';
+      $('dashDebtCard').click();
+      return {tab:$('tabHistory').classList.contains('tab-active'),filter:currentFilter,search:$('searchRecords').value,sort:$('sortSelect').value,unchanged:before===JSON.stringify(records),visible:document.querySelectorAll('#recordsList .swipe-card').length};
+    });
+    assert.equal(navigation.tab,true);assert.equal(navigation.filter,'unpaid');assert.equal(navigation.search,'');assert.equal(navigation.sort,'date-desc');assert.equal(navigation.unchanged,true);assert.equal(navigation.visible,2);
     await page.goto(base+'/admin.html');await page.locator('#adminPass').fill('test-only-password');await page.locator('#loginBtn').click();await page.locator('#usersTableBody .user-row, #loginError:not(.hidden)').first().waitFor();assert.equal(await page.locator('#loginError').isVisible(),false,await page.locator('#loginError').textContent());
     await page.locator('[data-admin-tab=security]').click();await page.locator('#metricsStatus').filter({hasText:'Перевірено'}).waitFor();assert.deepEqual(errors,[]);
     await mkdir('test-results',{recursive:true});await writeFile(`test-results/record-safety-${engine}.json`,JSON.stringify(report,null,2));console.log(`${engine}: inert historical HTML, strict write validation, CSP, preserved records and administration passed`);await context.close();

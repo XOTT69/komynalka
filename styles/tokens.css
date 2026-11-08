@@ -25,12 +25,16 @@
   --nav-glass-alpha: 1;
   --nav-glass-blur: 0px;
   --ui-shadow: 0 3px 16px rgb(28 46 78 / .035);
+  --balance-surface: #182e4c;
+  --balance-text: #ffffff;
+  --balance-muted: #c1cfe2;
+  --balance-line: #40546f;
+  --balance-accent: #d4e6d9;
   --product-mint: #eaf6f0;
   --product-lavender: #f1edfa;
   --product-warm: #fff4e5;
   --warning: var(--ui-warning);
-  --danger: var(--ui-danger)
-;
+  --danger: var(--ui-danger);
 }
 html.dark {
   --ui-bg: #101722;
@@ -57,6 +61,5 @@ html.dark {
   --ui-shadow: none;
   --product-mint: #203b35;
   --product-lavender: #302c48;
-  --product-warm: #3c3425
-;
+  --product-warm: #3c3425;
 }

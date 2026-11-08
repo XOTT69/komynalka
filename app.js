@@ -973,6 +973,13 @@ $('btnTabAnalytics')?.addEventListener('click', ()=>switchTab('tabAnalytics',3))
 $('btnTabSettings')?.addEventListener('click',  ()=>switchTab('tabSettings',4));
 $('dashAddBtn')?.addEventListener('click',runDashboardAction);
 $('overviewAnalyticsLink')?.addEventListener('click',()=>switchTab('tabAnalytics',3));
+$('dashDebtCard')?.addEventListener('click',()=>{
+  if($('searchRecords'))$('searchRecords').value='';
+  if($('sortSelect'))$('sortSelect').value='date-desc';
+  $('filterPanel')?.classList.remove('hidden');
+  document.querySelector('#filterButtons [data-filter="unpaid"]')?.click();
+  switchTab('tabHistory',2);
+});
 $('dashAnalyticsBtn')?.addEventListener('click',()=>switchTab('tabAnalytics',3));
 $('moreAnalyticsBtn')?.addEventListener('click',()=>switchTab('tabAnalytics',3));
 $('dashHistoryBtn')?.addEventListener('click', ()=>switchTab('tabHistory',2));
