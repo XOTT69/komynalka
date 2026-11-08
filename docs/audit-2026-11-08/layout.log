@@ -1,0 +1,5 @@
+
+> komunalka@5.16.0 check:layout
+> node scripts/check-layout.cjs
+
+[{"width":320,"theme":"light","menuFixed":true,"readingsFit":true,"reminderDatesFit":true},{"width":390,"theme":"light","menuFixed":true,"readingsFit":true,"reminderDatesFit":true},{"width":390,"theme":"dark","menuFixed":true,"readingsFit":true,"reminderDatesFit":true},{"width":768,"theme":"light","menuFixed":true,"readingsFit":true,"reminderDatesFit":true},{"width":1440,"theme":"light","menuFixed":true,"readingsFit":true,"reminderDatesFit":true},{"width":1440,"theme":"dark","menuFixed":true,"readingsFit":true,"reminderDatesFit":true}]

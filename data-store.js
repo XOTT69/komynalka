@@ -9,15 +9,15 @@
   });
   const equal = (a,b) => canonical(a) === canonical(b);
   // Three-way merge: absence in a stale snapshot is not an instruction to delete.
-  function merge(base, local, remote, path = '', conflicts = []) {
+  function mergeValue(base, local, remote, path = '', conflicts = []) {
     if (equal(local, remote)) return {value:copy(local), conflicts};
     if (equal(base, local)) return {value:copy(remote), conflicts};
     if (equal(base, remote)) return {value:copy(local), conflicts};
     if (object(local) && object(remote) && (object(base) || base === undefined)) {
       const value = {};
       for (const key of new Set([...Object.keys(base || {}), ...Object.keys(local), ...Object.keys(remote)])) {
-        const next = merge(base?.[key], local[key], remote[key], `${path}/${key}`, conflicts).value;
-        if (next !== undefined) value[key] = next;
+        const next = mergeValue(base?.[key], local[key], remote[key], `${path}/${key}`, conflicts).value;
+        if (next !== undefined) Object.defineProperty(value,key,{value:next,enumerable:true,writable:true,configurable:true});
       }
       return {value, conflicts};
     }
@@ -27,7 +27,7 @@
         const maps = arrays.map(array => new Map(array.map(item => [String(item.id), item])));
         const value = [];
         for (const id of new Set([...maps[1].keys(), ...maps[2].keys(), ...maps[0].keys()])) {
-          const item = merge(maps[0].get(id), maps[1].get(id), maps[2].get(id), `${path}/${id}`, conflicts).value;
+          const item = mergeValue(maps[0].get(id), maps[1].get(id), maps[2].get(id), `${path}/${id}`, conflicts).value;
           if (item !== undefined) value.push(item);
         }
         return {value, conflicts};
@@ -35,6 +35,16 @@
     }
     conflicts.push(path || '/');
     return {value:copy(local), conflicts};
+  }
+  function merge(base,local,remote){
+    const result=mergeValue(base,local,remote);
+    for(const address of result.value?.addresses||[]){
+      const prior=base?.addresses?.find(item=>String(item.id)===String(address.id));
+      const count=records=>{const map=new Map();for(const record of records||[])map.set(record.month,(map.get(record.month)||0)+1);return map;};
+      const before=count(prior?.records);
+      for(const [month,total] of count(address.records))if(total>1&&total>(before.get(month)||0))result.conflicts.push(`/addresses/${address.id}/month:${month}`);
+    }
+    return result;
   }
   function create(storage, owner) {
     if (!owner) throw new Error('ACCOUNT_REQUIRED');

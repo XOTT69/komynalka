@@ -4,7 +4,7 @@
   const definitions=[['water','Вода','showWater',['wCur'],'waterCost'],['hotWater','Гаряча вода','showHotWater',['hwCur'],'hotWaterCost'],['electro','Світло','showElectro',['dCur','nCur'],'electroCost'],['gas','Газ','showGas',['gCur'],'gasCost']];
   function readings(address,month){
     const rec=(address.records||[]).find(r=>r.month===month),p=address.prefs||{};
-    const services=definitions.filter(([, ,pref])=>p[pref]===true||(p[pref]===undefined&&pref!=='showHotWater')).map(([id,label,,fields,cost])=>({id,label,done:Boolean(rec&&(typeof rec._filled?.[id]==='boolean'?rec._filled[id]:Number(rec[cost])>0||fields.some(field=>Number(rec[field])>0)))}));
+    const services=definitions.filter(([, ,pref])=>p[pref]===true||(p[pref]===undefined&&pref!=='showHotWater')).map(([id,label,,fields,cost])=>({id,label,done:Boolean(rec&&(id==='electro'&&rec._enteredCurrent?rec._filled?.electro===true&&rec._enteredCurrent.dCur===true&&((rec.calculationMode?.twoZone??p.electroTwoZone)!==true||rec._enteredCurrent.nCur===true):typeof rec._filled?.[id]==='boolean'?rec._filled[id]:Number(rec[cost])>0||fields.some(field=>Number(rec[field])>0)))}));
     for(const service of address.customServices||[])if(!service.archivedAt)services.push({id:String(service.id),label:service.name||'Інша послуга',done:Boolean(rec?.customData&&Object.prototype.hasOwnProperty.call(rec.customData,service.id))});
     return {record:rec,services,done:services.filter(s=>s.done).length,total:services.length};
   }

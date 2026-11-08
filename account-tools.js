@@ -13,13 +13,13 @@
     const owner=sessionLogin;
     try{
       if(file.size>5*1024*1024)throw new Error('Завеликий файл. Максимум 5 МБ.');
-      const data=normalizeImportData(JSON.parse(await file.text()));if(!data||data.addresses.length>10)throw new Error('Непідтримуваний формат або більше 10 адрес.');
-      if(owner!==sessionLogin)return;syncCurrentAddress();pendingImport={owner,data};
+      const original=JSON.parse(await file.text()),data=normalizeImportData(original);if(!data||data.addresses.length>10)throw new Error('Непідтримуваний формат або більше 10 адрес.');
+      if(owner!==sessionLogin)return;syncCurrentAddress();KomunalkaModel.validateSnapshot(data,accountSnapshot());KomunalkaModel.checkSize(data);pendingImport={owner,data,drafts:Array.isArray(original.localDrafts)?original.localDrafts:[]};
       const records=data.addresses.flatMap(address=>address.records||[]),merged=importedState();
       $('importPreviewSummary').textContent=`${data.addresses.length} адрес · ${records.length} записів · нараховано ${fmt.format(records.reduce((sum,r)=>sum+Math.round(r.total*100),0)/100)} ₴.`;
       $('importPreviewConflicts').textContent=merged.conflicts.length?`Є ${merged.conflicts.length} відмінностей у наявних даних. При об’єднанні зберігаємо ваші поточні значення; нові адреси й записи додаємо. Для повного відновлення копії оберіть заміну.`:'Нові дані можна додати без заміни наявних записів.';
       $('importStrategy').value='merge';open($('importPreviewDialog'));
-    }catch(error){pendingImport=null;showToast(error.message||'Не вдалося прочитати файл','⚠️');}
+    }catch(error){pendingImport=null;showToast(/^[A-Z_]+$/.test(error.message)?KomunalkaModel.message(error.message):error.message||'Не вдалося прочитати файл','⚠️');}
   });
   $('importPreviewCancel')?.addEventListener('click',()=>{pendingImport=null;close($('importPreviewDialog'));});
   $('importPreviewDialog')?.addEventListener('cancel',()=>{pendingImport=null;});
@@ -29,11 +29,14 @@
     try{
       syncCurrentAddress();const data=$('importStrategy').value==='replace'?pendingImport.data:importedState().value;
       if(data.addresses.length>10)throw new Error('Після об’єднання буде більше 10 адрес.');
+      KomunalkaModel.validateSnapshot(data,accountSnapshot());KomunalkaModel.checkSize(data);
       if(!saveDraft()||!backupCurrentState(PRE_IMPORT_BACKUP_KEY))return;
-      activeStore.stage(data);applySnapshot(data);addChangeLog('json_imported',{addresses:addresses.length,records:addresses.reduce((sum,a)=>sum+a.records.length,0)});
+      activeStore.stage(data);
+      for(const draft of pendingImport.drafts){const match=typeof draft.key==='string'&&draft.key.match(/^([^:]+):(\d{4}-(?:0[1-9]|1[0-2]))$/);if(!match||!draft.value||typeof draft.value!=='object')continue;const address=decodeURIComponent(match[1]);if(data.addresses.some(item=>String(item.id)===address)&&!activeStore.draft(address,match[2]))activeStore.saveDraft(address,match[2],draft.value);}
+      applySnapshot(data);addChangeLog('json_imported',{addresses:addresses.length,records:addresses.reduce((sum,a)=>sum+a.records.length,0)});
       close($('importPreviewDialog'));pendingImport=null;await syncToCloud();
       if(owner!==sessionLogin)return;showActionToast('Дані імпортовано','Відновити попередні',()=>{if(owner!==sessionLogin)return;if(restoreFromLocalBackup(PRE_IMPORT_BACKUP_KEY))showToast('Попередні дані відновлено');});
-    }catch(error){showToast(error.message||'Імпорт не завершено','⚠️');}finally{button.disabled=false;}
+    }catch(error){showToast(/^[A-Z_]+$/.test(error.message)?KomunalkaModel.message(error.message):error.message||'Імпорт не завершено','⚠️');}finally{button.disabled=false;}
   });
   async function loadSessions(){
     const owner=sessionLogin,request=++sessionRequest,list=$('accountSessionsList');if(!list)return;

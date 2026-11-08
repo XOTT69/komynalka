@@ -16,8 +16,7 @@ await mkdir('dist/assets',{recursive:true});
 const cssCompiler=await compile(await readFile('styles/tailwind.css','utf8'),{base:path.join(root,'styles'),onDependency(){}});
 const cssScanner=new Scanner({sources:cssCompiler.sources});
 await writeFile('dist/assets/tailwind.css',optimize(cssCompiler.build(cssScanner.scan()),{minify:true}).code);
-const entries=['guides','robots.txt','sitemap.xml','index.html','demo.html','demo.js','onboarding-ui.js','monthly-summary.js','landing.html','admin.html','admin-panel.js','privacy.html','app.js','account-tools.js','meter-readings.js','meter-replacement-ui.js','operational-backup.js','ui-dialogs.js','ai-chat.js','year-report-image.js','sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','manifest.json','icon.png','icon-192.png','icon-512.png','badge-96.png','og-image.png','styles','vendor'];
-for(const optional of ['data-model.js']){try{await readFile(optional);entries.push(optional);}catch{}}
+const entries=['guides','robots.txt','sitemap.xml','index.html','demo.html','demo.js','onboarding-ui.js','monthly-summary.js','landing.html','admin.html','admin-panel.js','privacy.html','app.js','data-model.js','export-tools.js','record-card.js','account-tools.js','meter-readings.js','meter-replacement-ui.js','operational-backup.js','ui-dialogs.js','ai-chat.js','year-report-image.js','sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','manifest.json','icon.png','icon-192.png','icon-512.png','badge-96.png','og-image.png','styles','vendor'];
 for(const entry of entries)await cp(entry,path.join('dist',entry),{recursive:true});
 const builtIndexPath=path.join('dist','index.html');
 let builtIndex=await readFile(builtIndexPath,'utf8');

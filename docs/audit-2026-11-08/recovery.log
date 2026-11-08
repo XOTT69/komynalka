@@ -1,0 +1,9 @@
+{
+  "verified": true,
+  "scope": "isolated local workerd / SQLite",
+  "accounts": 2,
+  "sessions": "revoked",
+  "addresses": 2,
+  "records": 2,
+  "kvKeys": 5
+}

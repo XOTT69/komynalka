@@ -1,0 +1,62 @@
+/* Shared light/dark theme. Private account data never depends on these tokens. */
+:root {
+  --ui-bg: #f5f7fb;
+  --ui-surface: #ffffff;
+  --ui-soft: #f3f6fa;
+  --ui-text: #202d43;
+  --ui-muted: #617086;
+  --ui-line: #dfe6ef;
+  --brand: #315fca;
+  --brand-hover: #244da9;
+  --brand-light: #edf2ff;
+  --brand-border: #cbd8f5;
+  --ui-danger: #ad4053;
+  --ui-danger-soft: #fff0f1;
+  --ui-warning: #8b651e;
+  --ui-warning-soft: #fff6e9;
+  --ui-success: #287360;
+  --ui-success-soft: #eaf6f1;
+  --service-water: #6f9fce;
+  --service-hot-water: #c98591;
+  --service-electricity: #b68b40;
+  --service-gas: #bf805c;
+  --ui-radius: 18px;
+  color-scheme: light;
+  --nav-glass-alpha: 1;
+  --nav-glass-blur: 0px;
+  --ui-shadow: 0 3px 16px rgb(28 46 78 / .035);
+  --product-mint: #eaf6f0;
+  --product-lavender: #f1edfa;
+  --product-warm: #fff4e5;
+  --warning: var(--ui-warning);
+  --danger: var(--ui-danger)
+;
+}
+html.dark {
+  --ui-bg: #101722;
+  --ui-surface: #192333;
+  --ui-soft: #202e40;
+  --ui-text: #edf3fc;
+  --ui-muted: #b2bfd3;
+  --ui-line: #34435a;
+  --brand: #afc8ff;
+  --brand-hover: #cadbff;
+  --brand-light: #273d60;
+  --brand-border: #49658b;
+  --ui-danger: #efadb8;
+  --ui-danger-soft: #3b282d;
+  --ui-warning: #e4c18c;
+  --ui-warning-soft: #3a3126;
+  --ui-success: #9ad6c3;
+  --ui-success-soft: #253a34;
+  --service-water: #9fc9eb;
+  --service-hot-water: #e5a9b1;
+  --service-electricity: #e2c27b;
+  --service-gas: #e0aa89;
+  color-scheme: dark;
+  --ui-shadow: none;
+  --product-mint: #203b35;
+  --product-lavender: #302c48;
+  --product-warm: #3c3425
+;
+}

@@ -140,7 +140,7 @@ function formatDeviceTime(value){if(!value)return null;const date=new Date(value
 function renderDataHealth(){
   if($('dataBuildVersion'))$('dataBuildVersion').textContent=`${APP_VERSION} / ${APP_BUILD}`;
   const summary=$('dataHealthSummary');if(!summary)return;
-  const labels={synced:'Дані захищені та синхронізовані',syncing:'Надсилаємо зміни у хмару…',pending:'Зміни безпечно збережені на цьому пристрої',offline:'Офлайн: працюємо з локальною копією',error:'Синхронізація потребує уваги',conflict:'Потрібно обрати правильну версію даних'};
+  const labels={synced:'Зміни синхронізовано з хмарою',syncing:'Надсилаємо зміни у хмару…',pending:'Нові зміни збережено на цьому пристрої',offline:'Офлайн: працюємо з локальною копією',error:'Синхронізація потребує уваги',conflict:'Потрібно обрати правильну версію даних'};
   const state=activeStore?.read?.(),meta=readDeviceMeta();
   summary.textContent=labels[syncState]||'Стан даних невідомий';
   if($('dataLastSync'))$('dataLastSync').textContent=formatDeviceTime(meta.lastSyncedAt)||'Ще не синхронізовано';
@@ -178,18 +178,12 @@ const accountStorage={
 
 function escapeHtml(str) {
   const div = document.createElement('div');
-  div.textContent = str || '';
+  div.textContent = str == null ? '' : String(str);
   return div.innerHTML;
 }
 
 function escapeAttr(str) {
   return escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-function sanitizeDomId(value, fallback = 'item') {
-  const raw = String(value || '').trim();
-  const safe = raw.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 48);
-  return safe || `${fallback}_${Date.now().toString(36)}`;
 }
 
 function createTariffSnapshot() {
@@ -429,6 +423,8 @@ function bindAccount(owner,remote,revision,protocol){
   activeDrain=KomunalkaSyncQueue.createDrain(boundStore,async entry=>{
     if(activeStore!==boundStore)throw new Error('ACCOUNT_CHANGED');
     if(syncProtocol!==2)throw new Error('SERVER_UPDATE_REQUIRED');
+    KomunalkaModel.checkSize(entry.local);
+    KomunalkaModel.validateSnapshot(entry.local,entry.base);
     const res=await secureFetch('POST',{}, {...entry.local,baseRevision:entry.revision,clientMutationId:entry.pending.id});
     const result=await res.json();
     if(activeStore!==boundStore)throw new Error('ACCOUNT_CHANGED');
@@ -439,11 +435,26 @@ function bindAccount(owner,remote,revision,protocol){
   return state;
 }
 async function flushSync(){
-  if(isGuest||!activeDrain||!activeStore)return;
-  if(!navigator.onLine){setSyncState('offline');return;}
+  if(isGuest||!activeDrain||!activeStore)return {success:false,reason:'ACCOUNT_REQUIRED'};
+  if(!navigator.onLine){setSyncState('offline');return {success:false,reason:'OFFLINE'};}
   const store=activeStore;
-  try{const state=await activeDrain();if(store!==activeStore)return;if(state?.conflict)showSyncConflict();else if(state&&!state.pending){if(!KomunalkaData.equal(accountSnapshot(),state.local)){saveDraft();applySnapshot(state.local);}setSyncState('synced');}}
-  catch(e){if(store!==activeStore)return;setSyncState(navigator.onLine?'pending':'offline');if(e.message==='SERVER_UPDATE_REQUIRED'){if($('syncStatusText'))$('syncStatusText').textContent='На пристрої · сервер очікує оновлення';}else if(navigator.onLine)showToast('Зміни на пристрої. Синхронізацію можна повторити.','⚠️');}
+  try{
+    const state=await activeDrain();if(store!==activeStore)return {success:false,reason:'ACCOUNT_CHANGED'};
+    if(state?.conflict){showSyncConflict();return {success:false,reason:'CONFLICT'};}
+    if(state&&!state.pending){
+      if(!KomunalkaData.equal(accountSnapshot(),state.local)){if(!saveDraft())return {success:false,reason:'DRAFT_WRITE_FAILED'};applySnapshot(state.local);}
+      setSyncState('synced');return {success:true};
+    }
+    return {success:false,reason:'PENDING'};
+  }catch(e){
+    if(store!==activeStore)return {success:false,reason:'ACCOUNT_CHANGED'};
+    const permanent=['PAYLOAD_TOO_LARGE','DUPLICATE_MONTH','INVALID_READING','INVALID_AMOUNT','INVALID_SERVICE','DUPLICATE_ID','NO_AUTH','NOT_FOUND','WRONG_PASSWORD'].includes(e.message);
+    setSyncState(permanent?'error':navigator.onLine?'pending':'offline');
+    if(e.message==='SERVER_UPDATE_REQUIRED'){if($('syncStatusText'))$('syncStatusText').textContent='На пристрої · сервер очікує оновлення';}
+    else if(permanent){const message=['NO_AUTH','NOT_FOUND','WRONG_PASSWORD'].includes(e.message)?'Сесію завершено. Збережіть JSON-копію та увійдіть знову.':KomunalkaModel.message(e.message);if($('syncStatusText'))$('syncStatusText').textContent=message;showToast(message,'⚠️');}
+    else if(navigator.onLine)showToast('Зміни на пристрої. Синхронізацію можна повторити.','⚠️');
+    return {success:false,reason:e.message};
+  }
 }
 function syncToCloud(){
   if(isGuest||!activeStore)return Promise.resolve(false);
@@ -452,7 +463,7 @@ function syncToCloud(){
   setSyncState('pending');
   return flushSync();
 }
-function debouncedSync(){syncCurrentAddress();saveToLocal();clearTimeout(syncDebounceTimer);syncDebounceTimer=setTimeout(flushSync,700);}
+function debouncedSync(){syncCurrentAddress();if(!saveToLocal())return;setSyncState('pending');clearTimeout(syncDebounceTimer);syncDebounceTimer=setTimeout(flushSync,700);}
 function showSyncConflict(){
   const state=activeStore?.read();if(!state?.conflict)return;
   setSyncState('conflict');
@@ -466,7 +477,7 @@ for(const [id,choice] of [['syncUseLocal','local'],['syncUseCloud','remote']])$(
   if(!confirm(choice==='local'?'Застосувати версію з цього пристрою? Хмарна версія залишиться в локальній резервній копії.':'Відкрити хмарну версію? Поточна версія залишиться в локальній резервній копії.'))return;
   try{const state=activeStore.resolve(choice);applySnapshot(state.local);$('syncRecovery')?.classList.add('hidden');flushSync();}catch(e){showToast('Не вдалося створити копію. Версії залишились без змін.','❌');}
 });
-window.addEventListener('online',async()=>{try{if(!activeStore)return;const res=await secureFetch('GET');const data=await res.json();if(!res.ok||!data.success)throw new Error('READ_FAILED');syncProtocol=data.data.syncProtocol||0;const state=activeStore.initialize(normalizeImportData(data.data),data.data.revision);if(state.conflict)showSyncConflict();else{saveDraft();applySnapshot(state.local);await flushSync();}}catch(e){setSyncState('pending');}});
+window.addEventListener('online',async()=>{const store=activeStore,owner=sessionLogin;try{if(!store)return;const res=await secureFetch('GET');const data=await res.json();if(store!==activeStore||owner!==sessionLogin)return;if(!res.ok||!data.success)throw new Error('READ_FAILED');if(!saveDraft())return;syncProtocol=data.data.syncProtocol||0;const state=store.initialize(normalizeImportData(data.data),data.data.revision);if(state.conflict)showSyncConflict();else{applySnapshot(state.local);await flushSync();}}catch(e){if(store===activeStore&&owner===sessionLogin)setSyncState('pending');}});
 window.addEventListener('offline',()=>setSyncState('offline'));
 window.addEventListener('storage',e=>{if(activeStore&&e.key===activeStore.key){const state=activeStore.read();if(state){saveDraft();applySnapshot(state.local);if(state.conflict)showSyncConflict();else setSyncState(state.pending?'pending':'synced');}}});
 
@@ -1024,7 +1035,7 @@ class ChartEngine {
     this.render();
   }
   setData(data) { this.data=data; if(!this.width||!this.height){this.setupCanvas();if(!this.width||!this.height) return;} this.animate(); }
-  animate() { this.animProgress=0; const start=performance.now(); const tick=now=>{this.animProgress=Math.min((now-start)/this.options.animDuration,1);this.animProgress=1-Math.pow(1-this.animProgress,3);this.render();if(this.animProgress<1)requestAnimationFrame(tick);}; requestAnimationFrame(tick); }
+  animate() { if(this.animationFrame)cancelAnimationFrame(this.animationFrame);if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){this.animProgress=1;this.render();return;}this.animProgress=0; const start=performance.now(); const tick=now=>{this.animProgress=Math.min((now-start)/this.options.animDuration,1);this.animProgress=1-Math.pow(1-this.animProgress,3);this.render();if(this.animProgress<1)this.animationFrame=requestAnimationFrame(tick);}; this.animationFrame=requestAnimationFrame(tick); }
   render() {
     if(!this.ctx||!this.width) return;
     const{ctx,width,height,data,options}=this; const{padding,barRadius,colors}=options;
@@ -1057,7 +1068,7 @@ class DonutChart {
   constructor(canvasId) { this.canvas=$(canvasId); if(!this.canvas) return; this.ctx=this.canvas.getContext('2d'); this.data=[]; this.animProgress=0; this.width=0; this.height=0; this.setupCanvas(); }
   setupCanvas() { if(!this.canvas) return; const dpr=window.devicePixelRatio||1,rect=this.canvas.getBoundingClientRect(); if(rect.width===0||rect.height===0) return; this.canvas.width=rect.width*dpr;this.canvas.height=rect.height*dpr; this.ctx.setTransform(dpr,0,0,dpr,0,0); this.width=rect.width;this.height=rect.height; }
   setData(data) { this.data=data.filter(d=>d.value>0); if(!this.width||!this.height){this.setupCanvas();if(!this.width||!this.height) return;} this.animate(); }
-  animate() { this.animProgress=0; const start=performance.now(); const tick=now=>{this.animProgress=Math.min((now-start)/800,1);this.animProgress=1-Math.pow(1-this.animProgress,3);this.render();if(this.animProgress<1)requestAnimationFrame(tick);}; requestAnimationFrame(tick); }
+  animate() { if(this.animationFrame)cancelAnimationFrame(this.animationFrame);if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){this.animProgress=1;this.render();return;}this.animProgress=0; const start=performance.now(); const tick=now=>{this.animProgress=Math.min((now-start)/800,1);this.animProgress=1-Math.pow(1-this.animProgress,3);this.render();if(this.animProgress<1)this.animationFrame=requestAnimationFrame(tick);}; this.animationFrame=requestAnimationFrame(tick); }
   render() {
     if(!this.ctx||!this.width) return;
     const{ctx,width,height,data}=this; ctx.clearRect(0,0,width,height); if(!data.length) return;
@@ -1077,29 +1088,7 @@ class SmartForecast {
     this.sorted = [...this.records].sort((a,b) => a.month.localeCompare(b.month));
   }
 
-  calcTrend() {
-    const n = this.sorted.length;
-    if (n < 3) return null;
-    const x = Array.from({length: n}, (_, i) => i);
-    const y = this.sorted.map(r => r.total);
-    const sumX = x.reduce((a,b) => a+b, 0);
-    const sumY = y.reduce((a,b) => a+b, 0);
-    const sumXY = x.reduce((s, xi, i) => s + xi * y[i], 0);
-    const sumXX = x.reduce((s, xi) => s + xi * xi, 0);
-    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
-    return { slope, intercept, nextValue: slope * n + intercept };
-  }
-
-  predict(month) {
-    const trend = this.calcTrend();
-    if (!trend) return null;
-    return {
-      predicted: Math.round(Math.max(0, trend.nextValue)),
-      trend: Math.round(trend.slope * 100) / 100,
-      confidence: this.sorted.length >= 6 ? 'high' : this.sorted.length >= 3 ? 'medium' : 'low',
-    };
-  }
+  predict(month) { return KomunalkaModel.forecast(this.sorted,month); }
 
   detectAnomalies() {
     if (this.sorted.length < 4) return [];
@@ -1160,7 +1149,7 @@ function renderMonthlyTasks(){
   const action=(id,label,disabled=false)=>`<button type="button" class="task-action" data-month-action="${id}" ${disabled?'disabled':''}>${label}</button>`;
   target.innerHTML=row('readings','fa-pen-to-square','Показники',readingText,entryDone,action(input.total?'readings':'settings',input.total?(entryDone?'Переглянути':'Внести'):'Обрати'))+
     `<details class="monthly-transfers"><summary>${row('transfer','fa-paper-plane','Передача постачальникам',reminders.length?`${reminders.filter(r=>r.done).length} з ${reminders.length} позначено виконаними`:'Налаштуйте дні передачі показників',transfersDone,'<i class="fa-solid fa-chevron-down" aria-hidden="true"></i>')}</summary><div class="transfer-list">${reminders.length?reminders.map((r,i)=>`<div class="transfer-item"><div><strong>${escapeHtml(r.label)}</strong><p>${escapeHtml(period(r))}${r.done?' · Виконано':r.overdue?' · Період минув':''}</p><p class="transfer-stage ${r.done?'is-done':''}">${escapeHtml(transferStage(r))}</p></div><button type="button" class="task-action" data-transfer-index="${i}" ${!canEditData()||(!r.available&&!r.done)?'disabled':''}>${r.done?'Скасувати':r.available?'Передано':'Ще не час'}</button></div>`).join(''):action('reminders','Налаштувати нагадування')}${emailServices.map(service=>`<button type="button" class="task-action transfer-email-action" data-email-service="${escapeAttr(service.id)}"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Лист: ${escapeHtml(service.label)}</button>`).join('')}${action('providers','Постачальники та кабінети')}<p class="task-note">Лист відкривається як чернетка. Позначайте «Передано» лише після фактичного надсилання.</p></div></details>`+
-    row('payment','fa-wallet','Оплата',paymentText,payDone,action('payment',payDone?'Переглянути':'Позначити оплату',!rec));
+    row('payment','fa-wallet','Оплата',paymentText,payDone,action('payment',payDone?'Деталі':'Внести',!rec));
   const completed=Number(entryDone)+Number(transfersDone)+Number(payDone),steps=2+Number(reminders.length>0),percent=Math.round(completed/steps*100);
   $('monthlyTasksCount').textContent=`${completed} / ${steps}`;
   if($('monthlyTasksProgress'))$('monthlyTasksProgress').style.width=percent+'%';
@@ -1189,7 +1178,7 @@ function renderEntryReview(valid=validateReadingsUI()){
   const paid=getPaymentInputData().paidAmount;
   $('entryReviewMonth').textContent=/^\d{4}-\d{2}$/.test(month)?new Date(month+'-01T12:00:00').toLocaleDateString('uk-UA',{month:'long',year:'numeric'}):'';
   const missingPrevious=readingInputIds.filter(id=>id.endsWith('Prev')).some(id=>$(id)?.getAttribute('aria-invalid')==='true'&&$(id).value==='');
-  $('entryReviewStatus').textContent=!valid?(missingPrevious?'Вкажіть попередній показник. Якщо лічильник починав із нуля, введіть 0.':'Поточні показники мають бути не меншими за попередні.'):historic?'Ви оновлюєте наявний запис. Історичні суми зберігаються для незмінених показників.':'Можна зберегти частину послуг, а решту додати пізніше.';
+  $('entryReviewStatus').textContent=!valid?(missingPrevious?'Вкажіть попередній показник. Якщо лічильник починав із нуля, введіть 0.':'Перевірте показники та суми послуг. Від’ємні значення недоступні.'):historic?'Ви оновлюєте наявний запис. Історичні суми зберігаються для незмінених показників.':'Можна зберегти частину послуг, а решту додати пізніше.';
   $('entryReviewStatus').classList.toggle('review-error',!valid);
   $('entryReviewLines').innerHTML=valid?base.map(([label,key])=>`<div class="review-line"><span>${label}</span><strong>${fmt.format(currentCalc[key]||0)} ₴</strong></div>`).join(''):'';
   const insightTarget=$('entryInsights');
@@ -1198,7 +1187,7 @@ function renderEntryReview(valid=validateReadingsUI()){
     const current={
       water:prefs.showWater&&entered('wCur')?formUsage('wPrev','wCur'):null,
       hotWater:prefs.showHotWater&&entered('hwCur')?formUsage('hwPrev','hwCur'):null,
-      electro:prefs.showElectro&&(entered('dCur')||(prefs.electroTwoZone&&entered('nCur')))?formUsage('dPrev','dCur')+(prefs.electroTwoZone?formUsage('nPrev','nCur'):0):null,
+      electro:prefs.showElectro&&(entered('dCur')||(entryElectricityMode().twoZone&&entered('nCur')))?formUsage('dPrev','dCur')+(entryElectricityMode().twoZone?formUsage('nPrev','nCur'):0):null,
       gas:prefs.showGas&&entered('gCur')?formUsage('gPrev','gCur'):null,
     };
     const insights=valid?KomunalkaInsights.compare(records,month,current).filter(item=>item.tone!=='normal'):[];
@@ -1208,7 +1197,7 @@ function renderEntryReview(valid=validateReadingsUI()){
   for(const [id,value] of [['entryReviewTotal',currentCalc.total],['entryReviewPaid',paid],['entryReviewBalance',Math.max(0,currentCalc.total-paid)]])$(id).textContent=valid?fmt.format(value)+' ₴':'—';
   const rate=(id,text)=>{if($(id))$(id).textContent=historic&&!historic.tariffSnapshot?'Тариф старого запису не збережено. Незмінені показники зберігають історичну суму.':text;};
   rate('blockWaterRate',`Тариф: ${fmt.format(t.water)} ₴ / м³`);rate('blockHotWaterRate',`Тариф: ${fmt.format(t.hotWater)} ₴ / м³`);rate('blockGasRate',`Тариф: ${fmt.format(t.gas)} ₴ / м³`);
-  rate('blockElectroRate',prefs.electroWinter&&$('isWinterInput')?.checked?`До ${t.winterLimit} кВт·год: ${fmt.format(t.electroWinter)} ₴; понад ліміт: ${fmt.format(t.electroBase)} ₴.${prefs.electroTwoZone?' Нічний коефіцієнт: '+t.nightCoef+'.':''}`:`День: ${fmt.format(t.electroBase)} ₴ / кВт·год${prefs.electroTwoZone?' · Ніч: '+fmt.format(t.electroBase*t.nightCoef)+' ₴ / кВт·год':''}`);
+  rate('blockElectroRate',entryElectricityMode().winter&&$('isWinterInput')?.checked?`До ${t.winterLimit} кВт·год: ${fmt.format(t.electroWinter)} ₴; понад ліміт: ${fmt.format(t.electroBase)} ₴.${entryElectricityMode().twoZone?' Нічний коефіцієнт: '+t.nightCoef+'.':''}`:`День: ${fmt.format(t.electroBase)} ₴ / кВт·год${entryElectricityMode().twoZone?' · Ніч: '+fmt.format(t.electroBase*t.nightCoef)+' ₴ / кВт·год':''}`);
 }
 
 // =================== DASHBOARD ===================
@@ -1237,10 +1226,6 @@ function renderDashboard() {
   renderDashCanvasChart(); renderBudgetProgress(curRec); renderDonutChart(curRec); renderSmartInsight(curRec,curMonth); renderMonthMiniWidget(curRec,curMonth); renderAchievements(); renderTips();
   const unlocked=getUnlockedAchievements().length; if($('achCounter'))$('achCounter').textContent=`${unlocked}/${ACHIEVEMENTS.length}`;
   checkReminders();
-}
-
-function isDayInRange(day, start, end) {
-  return start <= end ? day >= start && day <= end : day >= start || day <= end;
 }
 
 function getNextDeadlineLabel(){
@@ -1330,33 +1315,47 @@ function getV(id){return Math.max(0,parseFloat($(id)?.value)||0);}
 let calcDebounceTimer;
 function debouncedCalculate(){clearTimeout(calcDebounceTimer);calcDebounceTimer=setTimeout(()=>{calculatePreview();updateSmartBadges();},150);}
 
+function entryElectricityMode(){
+  const record=records.find(item=>item.month===$('monthInput')?.value);
+  return {twoZone:record?.calculationMode?.twoZone??prefs.electroTwoZone,winter:record?.calculationMode?.winter??prefs.electroWinter};
+}
+function applyEntryElectricityMode(){
+  const mode=entryElectricityMode();
+  if($('electroNightRow'))$('electroNightRow').style.display=mode.twoZone?'flex':'none';
+  for(const id of ['lblDay1','lblDay2'])if($(id))$(id).textContent=mode.twoZone?'(День)':'';
+  if($('winterCheckboxWrapper'))$('winterCheckboxWrapper').style.display=mode.winter?'flex':'none';
+}
 function formMeterEvents(){try{const value=JSON.parse($('meterEventsInput')?.value||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}catch{return {};}}
 function recordUsage(record,previous,current){return KomunalkaMeters.usage(record[previous],record[current],record._meterEvents?.[previous])??0;}
 function formUsage(previous,current){return KomunalkaMeters.usage($(previous)?.value??'',$(current)?.value??'',formMeterEvents()[previous])??0;}
+function customFormData(historic){
+  const entries=new Map(Object.entries(historic?.customData||{}));
+  for(const service of activeCustomServices()){
+    const input=$(`custom_${service.id}`),raw=input?.value.trim()||'';
+    if(raw!=='')entries.set(String(service.id),{...(entries.get(String(service.id))||{}),name:service.name,val:Number(raw)});
+    else if(!historic&&service.defaultSum!==''&&service.defaultSum!=null)entries.set(String(service.id),{name:service.name,val:Number(service.defaultSum)});
+  }
+  return Object.fromEntries(entries);
+}
 function calculatePreview() {
   const historic=records.find(r=>r.month===$('monthInput')?.value);
   const calculationTariffs=historic?.tariffSnapshot?{...tariffs,...historic.tariffSnapshot}:tariffs;
   if(prefs.showWater)    currentCalc.waterCost   =formUsage('wPrev','wCur')*calculationTariffs.water;    else currentCalc.waterCost=0;
   if(prefs.showHotWater) currentCalc.hotWaterCost=formUsage('hwPrev','hwCur')*calculationTariffs.hotWater; else currentCalc.hotWaterCost=0;
   if(prefs.showElectro){
-    const dV=formUsage('dPrev','dCur'),nV=prefs.electroTwoZone?formUsage('nPrev','nCur'):Math.max(0,Number(historic?.nCur||0)-Number(historic?.nPrev||0)),tEl=dV+nV;
-    if(tEl===0) currentCalc.electroCost=0;
-    else if(prefs.electroWinter&&$('isWinterInput')?.checked){
-      if(tEl<=calculationTariffs.winterLimit) currentCalc.electroCost=dV*calculationTariffs.electroWinter+nV*calculationTariffs.electroWinter*calculationTariffs.nightCoef;
-      else{const dp=dV/tEl,np=nV/tEl;currentCalc.electroCost=calculationTariffs.winterLimit*dp*calculationTariffs.electroWinter+calculationTariffs.winterLimit*np*calculationTariffs.electroWinter*calculationTariffs.nightCoef+(tEl-calculationTariffs.winterLimit)*dp*calculationTariffs.electroBase+(tEl-calculationTariffs.winterLimit)*np*calculationTariffs.electroBase*calculationTariffs.nightCoef;}
-    } else currentCalc.electroCost=dV*calculationTariffs.electroBase+nV*calculationTariffs.electroBase*calculationTariffs.nightCoef;
+    const dV=formUsage('dPrev','dCur'),nV=entryElectricityMode().twoZone?formUsage('nPrev','nCur'):Math.max(0,Number(historic?.nCur||0)-Number(historic?.nPrev||0)),tEl=dV+nV;
+    currentCalc.electroCost=KomunalkaModel.electricity(dV,nV,calculationTariffs,entryElectricityMode().winter&&$('isWinterInput')?.checked);
   } else currentCalc.electroCost=0;
   if(prefs.showGas) currentCalc.gasCost=formUsage('gPrev','gCur')*calculationTariffs.gas; else currentCalc.gasCost=0;
-  currentCalc.customCost=0;
-  activeCustomServices().forEach(srv=>{let val=parseFloat($(`custom_${srv.id}`)?.value);if(isNaN(val)&&srv.defaultSum)val=parseFloat(srv.defaultSum);if(!isNaN(val))currentCalc.customCost+=val;});
+  const customValues=customFormData(historic);
+  currentCalc.customCost=Object.values(customValues).reduce((sum,item)=>sum+Number(item.val||0),0);
   if(historic){
     for(const [key,enabled] of [['waterCost',prefs.showWater],['hotWaterCost',prefs.showHotWater],['electroCost',prefs.showElectro],['gasCost',prefs.showGas]])if(!enabled)currentCalc[key]=Number(historic[key]||0);
-    currentCalc.customCost+=Object.entries(historic.customData||{}).filter(([id])=>!activeCustomServices().some(s=>String(s.id)===id)).reduce((sum,[,s])=>sum+Number(s.val||0),0);
-    const unchanged=ids=>ids.filter(id=>id.endsWith('Prev')).every(id=>KomunalkaData.equal(historic._meterEvents?.[id],formMeterEvents()[id]))&&ids.every(id=>Number(historic[id]??0)===(['nPrev','nCur'].includes(id)&&!prefs.electroTwoZone?Number(historic[id]||0):getV(id)));
+    const unchanged=ids=>ids.filter(id=>id.endsWith('Prev')).every(id=>KomunalkaData.equal(historic._meterEvents?.[id],formMeterEvents()[id]))&&ids.every(id=>Number(historic[id]??0)===(['nPrev','nCur'].includes(id)&&!entryElectricityMode().twoZone?Number(historic[id]||0):getV(id)));
     for(const [key,ids] of [['waterCost',['wPrev','wCur']],['hotWaterCost',['hwPrev','hwCur']],['gasCost',['gPrev','gCur']]])if(unchanged(ids)&&historic[key]!=null)currentCalc[key]=Number(historic[key]);
     const season=historic.isWinter??([10,11,12,1,2,3,4].includes(Number(historic.month.slice(5))));
     if(unchanged(['dPrev','dCur','nPrev','nCur'])&&season===Boolean($('isWinterInput')?.checked)&&historic.electroCost!=null)currentCalc.electroCost=Number(historic.electroCost);
-    if(activeCustomServices().every(srv=>Number(historic.customData?.[srv.id]?.val??0)===Number($(`custom_${srv.id}`)?.value||srv.defaultSum||0))&&historic.customCost!=null)currentCalc.customCost=Number(historic.customCost);
+    if(KomunalkaData.equal(Object.fromEntries(Object.entries(customValues).map(([id,item])=>[id,Number(item.val)])),Object.fromEntries(Object.entries(historic.customData||{}).map(([id,item])=>[id,Number(item.val)])))&&historic.customCost!=null)currentCalc.customCost=Number(historic.customCost);
   }
   currentCalc.total=currentCalc.waterCost+currentCalc.hotWaterCost+currentCalc.electroCost+currentCalc.gasCost+currentCalc.customCost;
   if(historic&&['waterCost','hotWaterCost','electroCost','gasCost','customCost'].every(key=>currentCalc[key]===Number(historic[key]??0)))currentCalc.total=historic.total;
@@ -1372,7 +1371,7 @@ function calculatePreview() {
 }
 
 function validateReadingsUI() {
-  const pairs=[['wPrev','wCur',prefs.showWater],['hwPrev','hwCur',prefs.showHotWater],['dPrev','dCur',prefs.showElectro],['nPrev','nCur',prefs.showElectro&&prefs.electroTwoZone],['gPrev','gCur',prefs.showGas]];
+  const pairs=[['wPrev','wCur',prefs.showWater],['hwPrev','hwCur',prefs.showHotWater],['dPrev','dCur',prefs.showElectro],['nPrev','nCur',prefs.showElectro&&entryElectricityMode().twoZone],['gPrev','gCur',prefs.showGas]];
   let hasInvalid=false;
   pairs.forEach(([prevId,curId,enabled])=>{
     const prevEl=$(prevId),curEl=$(curId);
@@ -1384,6 +1383,11 @@ function validateReadingsUI() {
     prevEl.classList.toggle('input-invalid',Boolean(prevInvalid));curEl.classList.toggle('input-invalid',Boolean(curInvalid));prevEl.setAttribute('aria-invalid',String(Boolean(prevInvalid)));curEl.setAttribute('aria-invalid',String(Boolean(curInvalid)));
     if(invalid) hasInvalid=true;
   });
+  for(const input of document.querySelectorAll('.custom-srv-input')){
+    const invalid=input.validity.badInput||(input.value!==''&&!KomunalkaModel.nonnegative(input.value));
+    input.classList.toggle('input-invalid',invalid);input.setAttribute('aria-invalid',String(invalid));
+    if(invalid)hasInvalid=true;
+  }
   const btn=$('submitFormBtn');
   if(btn){btn.disabled=hasInvalid||!canEditData();btn.classList.toggle('opacity-60',hasInvalid);}
   if(hasInvalid&&$('heroTotal')) $('heroTotal').innerHTML=`<span class="text-lg text-red-300">Перевірте показники</span>`;
@@ -1396,13 +1400,13 @@ function updateSmartBadges(){
   const update=(prevId,curId,badgeId,unit,color,activeBg)=>{const badge=$(badgeId);if(!badge)return;const d=formUsage(prevId,curId);badge.innerText=d>0?`+${d} ${unit}`:`0 ${unit}`;badge.className=d>0?`absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 ${activeBg} ${color} shadow-md px-2.5 py-1.5 rounded-xl text-[11px] font-bold`:'absolute left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 z-10 bg-white dark:bg-apple-dark shadow-md border border-slate-100 dark:border-white/10 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-slate-400';};
   if(prefs.showWater)    update('wPrev','wCur','wDiffBadge','м³','text-blue-600','bg-blue-100 dark:bg-blue-500/20');
   if(prefs.showHotWater) update('hwPrev','hwCur','hwDiffBadge','м³','text-red-600','bg-red-100 dark:bg-red-500/20');
-  if(prefs.showElectro)  {update('dPrev','dCur','dDiffBadge','кВт','text-yellow-600','bg-yellow-100 dark:bg-yellow-500/20');if(prefs.electroTwoZone)update('nPrev','nCur','nDiffBadge','кВт','text-indigo-500','bg-indigo-100 dark:bg-indigo-500/20');}
+  if(prefs.showElectro)  {update('dPrev','dCur','dDiffBadge','кВт·год','text-yellow-600','bg-yellow-100 dark:bg-yellow-500/20');if(entryElectricityMode().twoZone)update('nPrev','nCur','nDiffBadge','кВт·год','text-indigo-500','bg-indigo-100 dark:bg-indigo-500/20');}
   if(prefs.showGas)      update('gPrev','gCur','gDiffBadge','м³','text-orange-500','bg-orange-100 dark:bg-orange-500/20');
 }
 
 function updateMonthComparison(){const comp=$('monthComparison');if(!comp)return;if(records.length===0||currentCalc.total===0){comp.classList.add('hidden');return;}const selectedMonth=$('monthInput')?.value;if(!selectedMonth){comp.classList.add('hidden');return;}const[sy,sm]=selectedMonth.split('-').map(Number);const prevDate=new Date(sy,sm-2),prevMonth=`${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,'0')}`;const prevRec=records.find(r=>r.month===prevMonth);if(!prevRec||prevRec.total===0){comp.classList.add('hidden');return;}const diff=((currentCalc.total-prevRec.total)/prevRec.total)*100;comp.classList.remove('hidden');if($('comparisonIcon'))$('comparisonIcon').className=diff<0?'fa-solid fa-arrow-trend-down':'fa-solid fa-arrow-trend-up';if($('comparisonText'))$('comparisonText').textContent=`${diff>0?'+':''}${Math.round(diff)}% vs ${new Date(prevMonth+'-01').toLocaleString('uk-UA',{month:'short'})}`;comp.style.color=diff<0?'#34c759':diff>5?'#ff3b30':'#8e8e93';}
 
-function updateSmartForecast(){const el=$('smartForecast');if(!el) return;if(!records||records.length===0){el.innerText='—';return;}const selectedMonth=$('monthInput')?.value;if(!selectedMonth){el.innerText='—';return;}const[,sm]=selectedMonth.split('-').map(Number);const sameMonth=records.filter(r=>{const[,rm]=r.month.split('-').map(Number);return rm===sm;});if(sameMonth.length>0){el.innerText=`~ ${fmt.format(sameMonth.reduce((s,r)=>s+r.total,0)/sameMonth.length)} ₴`;return;}const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month));el.innerText=`~ ${fmt.format(sorted.slice(0,3).reduce((s,r)=>s+r.total,0)/Math.min(3,sorted.length))} ₴`;}
+function updateSmartForecast(){const el=$('smartForecast');if(!el) return;if(!records||records.length===0){el.innerText='—';return;}const selectedMonth=$('monthInput')?.value;if(!selectedMonth){el.innerText='—';return;}const[,sm]=selectedMonth.split('-').map(Number);const sameMonth=records.filter(r=>r.month<selectedMonth).filter(r=>{const[,rm]=r.month.split('-').map(Number);return rm===sm;});if(sameMonth.length>0){el.innerText=`~ ${fmt.format(sameMonth.reduce((s,r)=>s+r.total,0)/sameMonth.length)} ₴`;return;}const sorted=records.filter(r=>r.month<selectedMonth).sort((a,b)=>new Date(b.month)-new Date(a.month));if(!sorted.length){el.innerText='—';return;}el.innerText=`~ ${fmt.format(sorted.slice(0,3).reduce((s,r)=>s+r.total,0)/Math.min(3,sorted.length))} ₴`;}
 
 function getSaveAnomalyWarning(total, month) {
   const previous = records.filter(r => r.month !== month && r.total > 0);
@@ -1440,7 +1444,7 @@ $('paymentDateInput')?.addEventListener('input',()=>renderEntryReview());
 $('paymentReferenceInput')?.addEventListener('input',()=>renderEntryReview());
 $('isWinterInput')?.addEventListener('change',calculatePreview);
 $('monthInput')?.addEventListener('change',()=>{if(!saveDraft())return;fillPreviousReadings();calculatePreview();updateSmartBadges();});
-if($('monthInput')) $('monthInput').value=`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
+if($('monthInput')) $('monthInput').value=getMonthKey();
 
 // =================== DRAFT ===================
 const DRAFT_KEY='komunalka_draft';
@@ -1496,33 +1500,32 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
   e.preventDefault();
   if(!requireEdit('У режимі перегляду не можна зберігати записи'))return;
   calculatePreview();
-  if(!validateReadingsUI()){showToast('Перевірте показники','⚠️');return;}
+  if(!validateReadingsUI()){showToast('Перевірте показники та суми послуг','⚠️');return;}
   const entered=id=>$(id)?.value.trim()!=='';
+  const month=$('monthInput').value,cData=customFormData(records.find(r=>r.month===month));
   const hasWater   =prefs.showWater   &&entered('wCur');
   const hasHotWater=prefs.showHotWater&&entered('hwCur');
-  const hasElectro =prefs.showElectro &&(entered('dCur')||(prefs.electroTwoZone&&entered('nCur')));
+  const hasElectro =prefs.showElectro &&(entered('dCur')||(entryElectricityMode().twoZone&&entered('nCur')));
   const hasGas     =prefs.showGas     &&entered('gCur');
-  const hasCustom  =activeCustomServices().some(srv=>{const v=parseFloat($(`custom_${srv.id}`)?.value);return !isNaN(v)&&v>0;});
+  const hasCustom=activeCustomServices().some(service=>Object.hasOwn(cData,service.id)&&KomunalkaModel.nonnegative(cData[service.id]?.val));
   if(!records.some(r=>r.month===$('monthInput').value)&&!hasWater&&!hasHotWater&&!hasElectro&&!hasGas&&!hasCustom){showToast('Заповніть хоча б одну послугу','⚠️');return;}
-  const month=$('monthInput').value;
   const warning=getSaveAnomalyWarning(currentCalc.total,month);
   if(warning&&!confirm(warning)){showToast('Перевірте дані','⚠️');return;}
-  let cData={};
-  activeCustomServices().forEach(srv=>{let v=parseFloat($(`custom_${srv.id}`)?.value);if(isNaN(v)&&srv.defaultSum)v=parseFloat(srv.defaultSum);if(!isNaN(v)&&v>0)cData[srv.id]={name:srv.name,val:v};});
   const existingIdx=records.findIndex(r=>r.month===month);
   const paymentData=getPaymentInputData(currentCalc.total);
-  const newData={id:Date.now(),month,_meterEvents:formMeterEvents(),isWinter:Boolean($('isWinterInput')?.checked),wPrev:hasWater?getV('wPrev'):0,wCur:hasWater?getV('wCur'):0,hwPrev:hasHotWater?getV('hwPrev'):0,hwCur:hasHotWater?getV('hwCur'):0,dPrev:hasElectro?getV('dPrev'):0,dCur:hasElectro?getV('dCur'):0,nPrev:(hasElectro&&prefs.electroTwoZone)?getV('nPrev'):(records[existingIdx]?.nPrev||0),nCur:(hasElectro&&prefs.electroTwoZone)?getV('nCur'):(records[existingIdx]?.nCur||0),gPrev:hasGas?getV('gPrev'):0,gCur:hasGas?getV('gCur'):0,customData:cData,note:$('recordNote')?.value?.trim()||'',waterCost:hasWater?currentCalc.waterCost:0,hotWaterCost:hasHotWater?currentCalc.hotWaterCost:0,electroCost:hasElectro?currentCalc.electroCost:0,gasCost:hasGas?currentCalc.gasCost:0,customCost:currentCalc.customCost,total:currentCalc.total,...paymentData,tariffSnapshot:createTariffSnapshot(),_filled:{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas,custom:hasCustom},_enteredPrevious:{wPrev:hasWater&&entered('wPrev'),hwPrev:hasHotWater&&entered('hwPrev'),dPrev:hasElectro&&entered('dPrev'),nPrev:hasElectro&&prefs.electroTwoZone&&entered('nPrev'),gPrev:hasGas&&entered('gPrev')}};
+  const newData={id:Date.now(),month,_enteredCurrent:Object.fromEntries(['wCur','hwCur','dCur','nCur','gCur'].map(key=>[key,entered(key)])),calculationMode:records[existingIdx]?.calculationMode||{twoZone:entryElectricityMode().twoZone,winter:entryElectricityMode().winter},_meterEvents:formMeterEvents(),isWinter:Boolean($('isWinterInput')?.checked),wPrev:hasWater?getV('wPrev'):0,wCur:hasWater?getV('wCur'):0,hwPrev:hasHotWater?getV('hwPrev'):0,hwCur:hasHotWater?getV('hwCur'):0,dPrev:hasElectro?getV('dPrev'):0,dCur:hasElectro?getV('dCur'):0,nPrev:(hasElectro&&entryElectricityMode().twoZone)?getV('nPrev'):(records[existingIdx]?.nPrev||0),nCur:(hasElectro&&entryElectricityMode().twoZone)?getV('nCur'):(records[existingIdx]?.nCur||0),gPrev:hasGas?getV('gPrev'):0,gCur:hasGas?getV('gCur'):0,customData:cData,note:$('recordNote')?.value?.trim()||'',waterCost:hasWater?currentCalc.waterCost:0,hotWaterCost:hasHotWater?currentCalc.hotWaterCost:0,electroCost:hasElectro?currentCalc.electroCost:0,gasCost:hasGas?currentCalc.gasCost:0,customCost:currentCalc.customCost,total:currentCalc.total,...paymentData,tariffSnapshot:createTariffSnapshot(),_filled:{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas,custom:hasCustom},_enteredPrevious:{wPrev:hasWater&&entered('wPrev'),hwPrev:hasHotWater&&entered('hwPrev'),dPrev:hasElectro&&entered('dPrev'),nPrev:hasElectro&&entryElectricityMode().twoZone&&entered('nPrev'),gPrev:hasGas&&entered('gPrev')}};
   setRecordPayment(newData,paymentData.paymentStatus,paymentData.paidAmount,paymentData);
   if(existingIdx>=0){
     const existing=records[existingIdx];
-    const merged={...existing,...newData,id:existing.id};
+    const merged={...existing,...newData,id:existing.id,_filled:{...existing._filled,...newData._filled},_enteredPrevious:{...existing._enteredPrevious,...newData._enteredPrevious},_enteredCurrent:{...existing._enteredCurrent,...newData._enteredCurrent}};
     if(!hasWater   &&(existing._filled?.water||existing.waterCost>0))   {merged.wPrev=existing.wPrev;merged.wCur=existing.wCur;merged.waterCost=existing.waterCost;merged._filled.water=true;}
     if(!hasHotWater&&(existing._filled?.hotWater||existing.hotWaterCost>0)){merged.hwPrev=existing.hwPrev;merged.hwCur=existing.hwCur;merged.hotWaterCost=existing.hotWaterCost;merged._filled.hotWater=true;}
     if(!hasElectro &&(existing._filled?.electro||existing.electroCost>0)) {merged.dPrev=existing.dPrev;merged.dCur=existing.dCur;merged.nPrev=existing.nPrev;merged.nCur=existing.nCur;merged.electroCost=existing.electroCost;merged._filled.electro=true;}
     if(!hasGas     &&(existing._filled?.gas||existing.gasCost>0))     {merged.gPrev=existing.gPrev;merged.gCur=existing.gCur;merged.gasCost=existing.gasCost;merged._filled.gas=true;}
+    for(const [service,current] of [['water','wCur'],['hotWater','hwCur'],['electro','dCur'],['electro','nCur'],['gas','gCur']])if(!{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas}[service])merged._enteredCurrent[current]=existing._enteredCurrent?.[current]??KomunalkaModel.entered(existing,current,service);
     for(const [service,key] of [['water','wPrev'],['hotWater','hwPrev'],['electro','dPrev'],['electro','nPrev'],['gas','gPrev']])if(!{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas}[service])merged._enteredPrevious[key]=existing._enteredPrevious?.[key]??(existing[key]!==undefined&&existing[key]!==null);
     if(!hasCustom  &&(existing._filled?.custom||existing.customCost>0))  {merged.customData={...existing.customData,...cData};merged.customCost=existing.customCost;merged._filled.custom=true;}
-    else if(hasCustom){merged.customData={...(existing.customData||{}),...cData};}
+    else if(hasCustom){merged.customData={...(existing.customData||{}),...cData};merged.customCost=currentCalc.customCost;}
     merged.total=(merged.waterCost||0)+(merged.hotWaterCost||0)+(merged.electroCost||0)+(merged.gasCost||0)+(merged.customCost||0);
     if(['waterCost','hotWaterCost','electroCost','gasCost','customCost'].every(key=>Number(merged[key]??0)===Number(existing[key]??0)))merged.total=existing.total;
     else merged.total=Math.round(merged.total*100)/100;
@@ -1554,6 +1557,7 @@ $('btnClearFields')?.addEventListener('click',()=>{if(!requireEdit('У режи�
 // =================== FILL PREVIOUS READINGS ===================
 function fillPreviousReadings() {
   try {
+    applyEntryElectricityMode();
     if($('meterEventsInput'))$('meterEventsInput').value='{}';
     readingInputIds.forEach(id=>{if($(id))$(id).value='';});
     document.querySelectorAll('.custom-srv-input').forEach(el=>el.value='');
@@ -1565,18 +1569,19 @@ function fillPreviousReadings() {
     const prevDate=new Date(sy,sm-2),prevMonth=`${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,'0')}`;
     const prevRecord=records.find(r=>r.month===prevMonth);
     if(prevRecord){
-      if(prefs.showWater   &&prevRecord.wCur !=null&&$('wPrev')) $('wPrev').value=prevRecord.wCur;
-      if(prefs.showHotWater&&prevRecord.hwCur!=null&&$('hwPrev'))$('hwPrev').value=prevRecord.hwCur;
-      if(prefs.showElectro){if(prevRecord.dCur!=null&&$('dPrev'))$('dPrev').value=prevRecord.dCur;if(prefs.electroTwoZone&&prevRecord.nCur!=null&&$('nPrev'))$('nPrev').value=prevRecord.nCur;}
-      if(prefs.showGas&&prevRecord.gCur!=null&&$('gPrev'))$('gPrev').value=prevRecord.gCur;
+      if(prefs.showWater   &&KomunalkaModel.entered(prevRecord,'wCur','water')&&$('wPrev')) $('wPrev').value=prevRecord.wCur;
+      if(prefs.showHotWater&&KomunalkaModel.entered(prevRecord,'hwCur','hotWater')&&$('hwPrev'))$('hwPrev').value=prevRecord.hwCur;
+      if(prefs.showElectro){if(KomunalkaModel.entered(prevRecord,'dCur','electro')&&$('dPrev'))$('dPrev').value=prevRecord.dCur;if(entryElectricityMode().twoZone&&KomunalkaModel.entered(prevRecord,'nCur','electro')&&$('nPrev'))$('nPrev').value=prevRecord.nCur;}
+      if(prefs.showGas&&KomunalkaModel.entered(prevRecord,'gCur','gas')&&$('gPrev'))$('gPrev').value=prevRecord.gCur;
     }
     const currentRecord=records.find(r=>r.month===selectedMonth);
     if(currentRecord){
       if($('meterEventsInput'))$('meterEventsInput').value=JSON.stringify(currentRecord._meterEvents||{});
       if(prefs.showWater&&currentRecord._filled?.water!==false)   {if(currentRecord.wPrev!=null&&$('wPrev'))$('wPrev').value=currentRecord.wPrev;if(currentRecord.wCur!=null&&$('wCur'))$('wCur').value=currentRecord.wCur;}
       if(prefs.showHotWater&&currentRecord._filled?.hotWater!==false){if(currentRecord.hwPrev!=null&&$('hwPrev'))$('hwPrev').value=currentRecord.hwPrev;if(currentRecord.hwCur!=null&&$('hwCur'))$('hwCur').value=currentRecord.hwCur;}
-      if(prefs.showElectro&&currentRecord._filled?.electro!==false) {if(currentRecord.dPrev!=null&&$('dPrev'))$('dPrev').value=currentRecord.dPrev;if(currentRecord.dCur!=null&&$('dCur'))$('dCur').value=currentRecord.dCur;if(prefs.electroTwoZone){if(currentRecord.nPrev!=null&&$('nPrev'))$('nPrev').value=currentRecord.nPrev;if(currentRecord.nCur!=null&&$('nCur'))$('nCur').value=currentRecord.nCur;}}
+      if(prefs.showElectro&&currentRecord._filled?.electro!==false) {if(currentRecord.dPrev!=null&&$('dPrev'))$('dPrev').value=currentRecord.dPrev;if(currentRecord.dCur!=null&&$('dCur'))$('dCur').value=currentRecord.dCur;if(entryElectricityMode().twoZone){if(currentRecord.nPrev!=null&&$('nPrev'))$('nPrev').value=currentRecord.nPrev;if(currentRecord.nCur!=null&&$('nCur'))$('nCur').value=currentRecord.nCur;}}
       if(prefs.showGas&&currentRecord._filled?.gas!==false)     {if(currentRecord.gPrev!=null&&$('gPrev'))$('gPrev').value=currentRecord.gPrev;if(currentRecord.gCur!=null&&$('gCur'))$('gCur').value=currentRecord.gCur;}
+      for(const [previous,current] of [['wPrev','wCur'],['hwPrev','hwCur'],['dPrev','dCur'],['nPrev','nCur'],['gPrev','gCur']])if(currentRecord._enteredCurrent?.[current]===false){if($(current))$(current).value='';if(currentRecord._enteredPrevious?.[previous]===false&&$(previous))$(previous).value='';}
       for(const [key,event] of Object.entries(currentRecord._meterEvents||{}))if($(key))$(key).value=event.newInitial;
       if(currentRecord.customData)Object.keys(currentRecord.customData).forEach(srvId=>{const el=$(`custom_${srvId}`);if(el)el.value=currentRecord.customData[srvId].val;});
       if($('recordNote'))$('recordNote').value=currentRecord.note||'';
@@ -1607,14 +1612,6 @@ function setSelectedTariffPreset(presetId = '') {
   const select = $('tariffPresetSelect');
   if (!select) return;
   select.value = Array.from(select.options).some(option => option.value === value) ? value : '';
-}
-
-function renderTariffPresets() {
-  const select = $('tariffPresetSelect');
-  if (!select) return;
-  const selected = String(prefs.selectedTariffPreset || select.value || '');
-  select.innerHTML = '<option value="">Обрати місто / постачальника</option>' + TARIFF_PRESETS.map(preset => `<option value="${escapeAttr(preset.id)}">${escapeHtml(preset.name)}</option>`).join('');
-  setSelectedTariffPreset(selected);
 }
 
 function applyTariffPreset(presetId) {
@@ -1658,6 +1655,7 @@ function applyPreferences() {
   else{if($('electroNightRow'))$('electroNightRow').style.display='none';if($('lblDay1'))$('lblDay1').innerText='';if($('lblDay2'))$('lblDay2').innerText='';}
   if($('winterCheckboxWrapper'))   $('winterCheckboxWrapper').style.display   =prefs.electroWinter?'flex':'none';
   if($('settingElectroWinterWrap'))$('settingElectroWinterWrap').style.display=prefs.electroWinter?'flex':'none';
+  applyEntryElectricityMode();
   updateServiceChartOptions();
   applyAccessMode();
 }
@@ -1715,7 +1713,7 @@ $('reminderTime')?.addEventListener('change',function(){
 });
 
 $('saveSettingsBtn')?.addEventListener('click',()=>{
-  const nextTariffs=readTariffInputs();if(!nextTariffs)return;tariffs=nextTariffs;
+  const nextTariffs=readTariffInputs();if(!nextTariffs)return;if(customServices.some(service=>!service.archivedAt&&service.defaultSum!==''&&service.defaultSum!=null&&!KomunalkaModel.nonnegative(service.defaultSum))){showToast('Суми послуг мають бути невід’ємними числами','⚠️');return;}tariffs=nextTariffs;
   prefs={...prefs,showWater:$('prefWater')?.checked,showHotWater:$('prefHotWater')?.checked,showElectro:$('prefElectro')?.checked,showGas:$('prefGas')?.checked,electroTwoZone:$('prefElectroTwoZone')?.checked,electroWinter:$('prefElectroWinter')?.checked,remindersEnabled:$('prefReminders')?.checked,remWaterStart:parseInt($('remWaterStart')?.value)||1,remWaterEnd:parseInt($('remWaterEnd')?.value)||5,remElectroStart:parseInt($('remElectroStart')?.value)||28,remElectroEnd:parseInt($('remElectroEnd')?.value)||3,remGasStart:parseInt($('remGasStart')?.value)||1,remGasEnd:parseInt($('remGasEnd')?.value)||5,familyRole:$('familyRoleSelect')?.value||getFamilyRole()};
   customServices=customServices.filter(s=>KomunalkaServices.isArchived(s)||String(s.name||'').trim()!=="");
   const budgetVal = parseFloat($('budgetInput')?.value);
@@ -1750,7 +1748,7 @@ function renderSettingsCustomServices(){const list=$('customServicesSettingsList
 function changeCustomServiceArchive(id,archive){if(!requireEdit('У режимі перегляду налаштування недоступні'))return;saveDraft();customServices=archive?KomunalkaServices.archive(customServices,id):KomunalkaServices.restore(customServices,id);addChangeLog(archive?'service_archived':'service_restored');syncCurrentAddress();saveToLocal();syncToCloud();renderSettingsCustomServices();renderCalcCustomServices();applyPreferences();calculatePreview();renderChangeLog();showToast(archive?'Послугу перенесено в архів':'Послугу відновлено',archive?'📦':'↩️');}
 $('addCustomServiceBtn')?.addEventListener('click',()=>{customServices.push({id:'s'+Date.now(),name:"",defaultSum:""});renderSettingsCustomServices();});
 
-function renderCalcCustomServices(){const c=$('customServicesContainer');if(!c)return;const active=activeCustomServices();if(active.length===0){c.innerHTML='';applyAccessMode();return;}c.innerHTML=active.map(srv=>`<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-1.5 text-center">${escapeHtml(srv.name)||'Послуга'}</span><input type="number" step="0.01" id="custom_${escapeAttr(srv.id)}" class="custom-srv-input premium-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-white/10" placeholder="${escapeAttr(srv.defaultSum||'0.00')}"></div>`).join('');document.querySelectorAll('.custom-srv-input').forEach(input=>input.addEventListener('input',()=>{calculatePreview();debouncedDraft();}));applyAccessMode();}
+function renderCalcCustomServices(){const c=$('customServicesContainer');if(!c)return;const previous=new Map([...c.querySelectorAll('input')].map(input=>[input.id,input.value]));const active=activeCustomServices();if(active.length===0){c.innerHTML='';applyAccessMode();return;}c.innerHTML=active.map(srv=>`<div class="flex flex-col bg-slate-50 dark:bg-black/40 rounded-2xl p-3 border border-slate-100 dark:border-white/5"><span class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate mb-1.5 text-center">${escapeHtml(srv.name)||'Послуга'}</span><input type="number" min="0" step="0.01" id="custom_${escapeAttr(srv.id)}" class="custom-srv-input premium-input w-full bg-white dark:bg-[#2c2c2e] p-2.5 rounded-xl text-center text-lg font-black outline-none border border-slate-200 dark:border-white/10" placeholder="${escapeAttr(srv.defaultSum||'0.00')}"></div>`).join('');document.querySelectorAll('.custom-srv-input').forEach(input=>{if(previous.has(input.id))input.value=previous.get(input.id);});document.querySelectorAll('.custom-srv-input').forEach(input=>input.addEventListener('input',()=>{calculatePreview();debouncedDraft();}));applyAccessMode();}
 
 function getMonthKey() {
   const date=KomunalkaReminders.calendar();return KomunalkaReminders.monthKey(date.year,date.month);
@@ -1883,13 +1881,14 @@ function renderRecords(){
     if(!sorted.length){list.innerHTML=`<div class="text-center py-8"><p class="text-slate-400 font-medium">Нічого не знайдено</p></div>`;return;}
   const viewKey=JSON.stringify([sessionLogin,currentAddressId,sortVal,currentFilter,search]);if(viewKey!==historyViewKey){historyViewKey=viewKey;historyVisibleLimit=48;}
   const visibleRecords=sorted.slice(0,historyVisibleLimit);
+  const periods=new Map();for(const r of records)periods.set(r.month,(periods.get(r.month)||0)+1);const duplicates=[...periods].filter(([,count])=>count>1);if(duplicates.length){const notice=document.createElement('p');notice.className='import-notice';notice.setAttribute('role','status');notice.textContent='Усі записи збережено. Є кілька записів за місяць: '+duplicates.map(([month])=>month).join(', ')+'. Порівняйте їх перед зміною сум.';list.append(notice);}
   const unpaidCount=visibleRecords.filter(r=>getOutstandingAmount(r)>0).length;
   if(unpaidCount>0&&currentFilter!=='paid'){
     const batchBar=document.createElement('div');
     batchBar.className='bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-2xl flex justify-between items-center text-white mb-4';
-    batchBar.innerHTML=`<div><p class="text-xs font-bold opacity-80">${unpaidCount} з боргом у списку</p><p class="text-sm font-black">${fmt.format(visibleRecords.reduce((s,r)=>s+getOutstandingAmount(r),0))} ₴</p></div><button class="batch-pay-btn px-4 py-2 bg-white/20 rounded-xl text-xs font-bold active:scale-95 transition-transform border border-white/20">✓ Оплатити видимі</button>`;
+    batchBar.innerHTML=`<div><p class="text-xs font-bold opacity-80">${unpaidCount} з боргом у списку</p><p class="text-sm font-black">${fmt.format(visibleRecords.reduce((s,r)=>s+getOutstandingAmount(r),0))} ₴</p></div><button class="batch-pay-btn px-4 py-2 bg-white/20 rounded-xl text-xs font-bold active:scale-95 transition-transform border border-white/20">Позначити сплаченими</button>`;
     list.appendChild(batchBar);
-    batchBar.querySelector('.batch-pay-btn')?.addEventListener('click',()=>{if(!requireEdit('У режимі перегляду не можна змінювати оплату'))return;if(confirm(`Позначити ${unpaidCount} видимих записів як оплачені?`)){const payableIds=new Set(visibleRecords.filter(r=>getOutstandingAmount(r)>0).map(r=>r.id));records.forEach(r=>{if(payableIds.has(r.id))setRecordPayment(r,'paid',r.total);});addChangeLog('visible_records_paid',{count:payableIds.size});renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();showToast(`${unpaidCount} записів оплачено!`,'✅');}});
+    batchBar.querySelector('.batch-pay-btn')?.addEventListener('click',()=>{if(!requireEdit('У режимі перегляду не можна змінювати оплату'))return;if(confirm(`Позначити ${unpaidCount} видимих записів як оплачені?`)){const payableIds=new Set(visibleRecords.filter(r=>getOutstandingAmount(r)>0).map(r=>r.id));records.forEach(r=>{if(payableIds.has(r.id))setRecordPayment(r,'paid',r.total);});addChangeLog('visible_records_paid',{count:payableIds.size});renderRecords();renderDashboard();syncCurrentAddress();syncToCloud();checkNewAchievements();showToast(`${unpaidCount} записів позначено сплаченими`,'✅');}});
   }
   let lastYear=null;
   visibleRecords.forEach(rec=>{
@@ -1902,7 +1901,7 @@ function renderRecords(){
 
 function renderHistoryChart(sortedRecords,retryCount=0){if(!$('historyChartCanvas'))return;if(!historyChart)historyChart=new ChartEngine('historyChartCanvas',{padding:30,barRadius:5});if(!historyChart.width)historyChart.setupCanvas();if(!historyChart.width){if(retryCount<5)setTimeout(()=>renderHistoryChart(sortedRecords,retryCount+1),200);return;}historyChart.setData(sortedRecords.slice(-10).map(r=>({value:r.total,label:new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color:isRecordPaid(r)?'#007aff':getPaymentStatus(r)==='partial'?'#ffcc00':'#ff9500'})));}
 
-function renderServiceChart(retryCount=0){if(!$('serviceChartCanvas')||records.length===0){if($('serviceChartSummary'))$('serviceChartSummary').innerHTML='';return;}const type=$('serviceChartSelect')?.value||'water',unit=type==='electro'?'кВт':'м³';if(!serviceChart)serviceChart=new ChartEngine('serviceChartCanvas',{padding:24,barRadius:4,unit});else serviceChart.options.unit=unit;if(!serviceChart.width)serviceChart.setupCanvas();if(!serviceChart.width){if(retryCount<5)setTimeout(()=>renderServiceChart(retryCount+1),200);return;}const sorted=[...records].sort((a,b)=>new Date(a.month)-new Date(b.month)).slice(-8);const getValue=rec=>{switch(type){case 'water':return recordUsage(rec,'wPrev','wCur');case 'hotWater':return recordUsage(rec,'hwPrev','hwCur');case 'electro':return recordUsage(rec,'dPrev','dCur')+recordUsage(rec,'nPrev','nCur');case 'gas':return recordUsage(rec,'gPrev','gCur');default:return 0;}};const getColor=()=>{switch(type){case 'water':return'#3b82f6';case 'hotWater':return'#ef4444';case 'electro':return'#eab308';case 'gas':return'#f97316';default:return'#6b7280';}};const color=getColor(),data=sorted.map(rec=>({value:getValue(rec),label:new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color}));serviceChart.setData(data);const values=data.map(d=>d.value),avg=values.length?values.reduce((a,b)=>a+b,0)/values.length:0,last=values[values.length-1]||0,prevLast=values.length>1?values[values.length-2]:last,trendPct=prevLast>0?Math.round(((last-prevLast)/prevLast)*100):0;const summary=$('serviceChartSummary');if(summary)summary.innerHTML=`<span>Сер.: <span style="color:${color}" class="font-black">${Math.round(avg)} ${unit}/міс</span></span><span>Ост.: <span class="${trendPct<0?'text-green-600':trendPct>0?'text-red-500':'text-slate-500'} font-black">${last} ${unit} (${trendPct>0?'+':''}${trendPct}%)</span></span>`;}
+function renderServiceChart(retryCount=0){if(!$('serviceChartCanvas')||records.length===0){if($('serviceChartSummary'))$('serviceChartSummary').innerHTML='';return;}const type=$('serviceChartSelect')?.value||'water',unit=type==='electro'?'кВт·год':'м³';if(!serviceChart)serviceChart=new ChartEngine('serviceChartCanvas',{padding:24,barRadius:4,unit});else serviceChart.options.unit=unit;if(!serviceChart.width)serviceChart.setupCanvas();if(!serviceChart.width){if(retryCount<5)setTimeout(()=>renderServiceChart(retryCount+1),200);return;}const sorted=[...records].sort((a,b)=>new Date(a.month)-new Date(b.month)).slice(-8);const getValue=rec=>{switch(type){case 'water':return recordUsage(rec,'wPrev','wCur');case 'hotWater':return recordUsage(rec,'hwPrev','hwCur');case 'electro':return recordUsage(rec,'dPrev','dCur')+recordUsage(rec,'nPrev','nCur');case 'gas':return recordUsage(rec,'gPrev','gCur');default:return 0;}};const getColor=()=>{switch(type){case 'water':return'#3b82f6';case 'hotWater':return'#ef4444';case 'electro':return'#eab308';case 'gas':return'#f97316';default:return'#6b7280';}};const color=getColor(),data=sorted.map(rec=>({value:getValue(rec),label:new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'short'}).slice(0,3),color}));serviceChart.setData(data);const values=data.map(d=>d.value),avg=values.length?values.reduce((a,b)=>a+b,0)/values.length:0,last=values[values.length-1]||0,prevLast=values.length>1?values[values.length-2]:last,trendPct=prevLast>0?Math.round(((last-prevLast)/prevLast)*100):0;const summary=$('serviceChartSummary');if(summary)summary.innerHTML=`<span>Сер.: <span style="color:${color}" class="font-black">${Math.round(avg)} ${unit}/міс</span></span><span>Ост.: <span class="${trendPct<0?'text-green-600':trendPct>0?'text-red-500':'text-slate-500'} font-black">${last} ${unit} (${trendPct>0?'+':''}${trendPct}%)</span></span>`;}
 $('serviceChartSelect')?.addEventListener('change',renderServiceChart);
 
 async function shareRecordById(id){const rec=records.find(r=>String(r.id)===String(id));if(!rec)return;const d=new Date(rec.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'});let t=`🧾 Комуналка за ${d}\n📍 ${$('currentAddressDisplay')?.innerText||''}\n──────────\n`;if(rec.waterCost>0)t+=`💧 Вода: ${fmt.format(rec.waterCost)} ₴\n`;if(rec.hotWaterCost>0)t+=`🌡️ Гар.: ${fmt.format(rec.hotWaterCost)} ₴\n`;if(rec.electroCost>0)t+=`⚡ Світло: ${fmt.format(rec.electroCost)} ₴\n`;if(rec.gasCost>0)t+=`🔥 Газ: ${fmt.format(rec.gasCost)} ₴\n`;if(rec.customCost>0)t+=`📦 Інше: ${fmt.format(rec.customCost)} ₴\n`;t+=`──────────\n💰 Всього: ${fmt.format(rec.total)} ₴\n💳 ${getPaymentLabel(rec)}${getPaymentStatus(rec)==='partial'?`: ${fmt.format(getPaidAmount(rec))} ₴ сплачено, борг ${fmt.format(getOutstandingAmount(rec))} ₴`:''}`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
@@ -1916,61 +1915,12 @@ $('filterButtons')?.addEventListener('click',(e)=>{const btn=e.target.closest('.
 $('searchRecords')?.addEventListener('input',()=>{clearTimeout(searchDebounceTimer);searchDebounceTimer=setTimeout(renderRecords,200);});
 $('sortSelect')?.addEventListener('change',()=>renderRecords());
 
-// =================== EXPORT ===================
-function csvCell(value){let text=String(value??'');if(typeof value==='string'&&/^[=+@\t\r]|^-\D/.test(text))text="'"+text;return /[",\n\r]/.test(text)?`"${text.replace(/"/g,'""')}"`:text;}
-function downloadBlob(content,filename,type){const blob=new Blob([content],{type}),link=document.createElement('a'),url=URL.createObjectURL(blob);link.href=url;link.download=filename;link.hidden=true;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-const optionalScriptLoads=new Map();
-function loadOptionalScript(src,ready){
-  if(ready?.())return Promise.resolve();
-  if(optionalScriptLoads.has(src))return optionalScriptLoads.get(src);
-  const promise=new Promise((resolve,reject)=>{const script=document.createElement('script');let timer;const finish=error=>{clearTimeout(timer);error?reject(error):resolve();};script.src=src;script.async=true;script.onload=()=>finish(ready&&!ready()?new Error('OPTIONAL_SCRIPT_NOT_READY'):null);script.onerror=()=>finish(new Error('OPTIONAL_SCRIPT_FAILED'));timer=setTimeout(()=>finish(new Error('OPTIONAL_SCRIPT_TIMEOUT')),15000);document.head.appendChild(script);});
-  optionalScriptLoads.set(src,promise);promise.catch(()=>{if(optionalScriptLoads.get(src)===promise)optionalScriptLoads.delete(src);});return promise;
-}
-function pdfAutoTableReady(){try{return typeof window.jspdf?.jsPDF?.API?.autoTable==='function'||typeof new window.jspdf.jsPDF().autoTable==='function';}catch{return false;}}
-async function ensurePdfTools(){await loadOptionalScript('vendor/jspdf/jspdf.umd.min.js',()=>!!window.jspdf?.jsPDF);await loadOptionalScript('vendor/jspdf/jspdf.plugin.autotable.min.js',pdfAutoTableReady);}
-
-function exportServices(){
-  return [
-    {key:'waterCost',label:'Вода',unit:'м³',used:!!prefs.showWater,value:r=>recordUsage(r,'wPrev','wCur')},
-    {key:'hotWaterCost',label:'Гаряча вода',unit:'м³',used:!!prefs.showHotWater,value:r=>recordUsage(r,'hwPrev','hwCur')},
-    {key:'electroCost',label:'Світло',unit:'кВт·год',used:!!prefs.showElectro,value:r=>recordUsage(r,'dPrev','dCur')+recordUsage(r,'nPrev','nCur')},
-    {key:'gasCost',label:'Газ',unit:'м³',used:!!prefs.showGas,value:r=>recordUsage(r,'gPrev','gCur')}
-  ].filter(service=>service.used||records.some(r=>Number(r[service.key])>0));
-}
-function exportCSV(){
-  if(!records.length)return showToast('Немає записів','⚠️');
-  const services=exportServices(),header=['Місяць',...services.flatMap(s=>[`${s.label} (${s.unit})`,`${s.label} (₴)`]),'Інше (₴)','Всього (₴)','Сплачено (₴)','Залишок (₴)','Статус','Нотатка'];
-  const rows=[header,...[...records].sort((a,b)=>b.month.localeCompare(a.month)).map(r=>[r.month,...services.flatMap(s=>[s.value(r),Number(r[s.key]||0).toFixed(2)]),Number(r.customCost||0).toFixed(2),Number(r.total||0).toFixed(2),getPaidAmount(r).toFixed(2),getOutstandingAmount(r).toFixed(2),getPaymentLabel(r),r.note||''])];
-  downloadBlob('\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\n')+'\n','komunalka.csv','text/csv;charset=utf-8;');
-  showToast('CSV збережено','📊');
-}
-
-async function generatePDF(){
-  if(!records.length)return showToast('Немає записів','⚠️');
-  try{
-    showToast('Готуємо PDF…','⏳');
-    await ensurePdfTools();
-    const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape'});
-    let hasFont=false;
-    try{const resp=await fetch('./vendor/fonts/Roboto-Regular.ttf');if(resp.ok){const bytes=new Uint8Array(await resp.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);doc.addFileToVFS('Roboto.ttf',btoa(binary));doc.addFont('Roboto.ttf','Roboto','normal');doc.setFont('Roboto','normal');hasFont=true;}}catch{}
-    const t=hasFont?s=>String(s):s=>transliterate(String(s)),money=value=>Number(value||0).toFixed(2),services=exportServices();
-    doc.setFillColor(36,86,189);doc.rect(0,0,297,35,'F');doc.setTextColor(255,255,255);doc.setFontSize(18);doc.text(t('Комунальні платежі'),15,15);doc.setFontSize(10);doc.text(t($('currentAddressDisplay')?.innerText||''),15,24);doc.setTextColor(60,60,60);
-    const head=['Місяць',...services.map(s=>`${s.label}, ₴`),'Інше, ₴','Всього, ₴','Сплачено, ₴','Залишок, ₴','Статус'].map(t);
-    const body=[...records].sort((a,b)=>b.month.localeCompare(a.month)).map(r=>[r.month,...services.map(s=>money(r[s.key])),money(r.customCost),money(r.total),money(getPaidAmount(r)),money(getOutstandingAmount(r)),t(getPaymentLabel(r))]);
-    doc.autoTable({startY:42,head:[head],body,theme:'striped',styles:{font:hasFont?'Roboto':'helvetica',fontStyle:'normal',fontSize:8,cellPadding:3},headStyles:{fillColor:[36,86,189],textColor:[255,255,255],fontStyle:'normal'},margin:{left:12,right:12}});
-    doc.save(`komunalka_${new Date().toISOString().slice(0,10)}.pdf`);showToast('PDF збережено','📄');
-  }catch{showToast('Не вдалося створити PDF. Дані залишились збережені.','❌');}
-}
-
-function transliterate(text){const map={'а':'a','б':'b','в':'v','г':'h','ґ':'g','д':'d','е':'e','є':'ye','ж':'zh','з':'z','и':'y','і':'i','ї':'yi','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ь':'','ю':'yu','я':'ya','А':'A','Б':'B','В':'V','Г':'H','Ґ':'G','Д':'D','Е':'E','Є':'Ye','Ж':'Zh','З':'Z','И':'Y','І':'I','Ї':'Yi','Й':'Y','К':'K','Л':'L','М':'M','Н':'N','О':'O','П':'P','Р':'R','С':'S','Т':'T','У':'U','Ф':'F','Х':'Kh','Ц':'Ts','Ч':'Ch','Ш':'Sh','Щ':'Shch','Ь':'','Ю':'Yu','Я':'Ya'};return text.split('').map(c=>map[c]||c).join('');}
-
-async function shareAllRecords(){if(!records.length)return showToast('Немає','⚠️');const sorted=[...records].sort((a,b)=>new Date(b.month)-new Date(a.month)).slice(0,6);let t=`📊 Комунальні\n📍 ${$('currentAddressDisplay')?.innerText||''}\n───────\n`;sorted.forEach(r=>{t+=`${new Date(r.month+'-01').toLocaleString('uk-UA',{month:'short',year:'numeric'})}: ${fmt.format(r.total)} ₴ ${isRecordPaid(r)?'✅':getPaymentStatus(r)==='partial'?'◐':'⏳'}\n`;});t+=`───────\nСередній: ${fmt.format(sorted.reduce((s,r)=>s+r.total,0)/sorted.length)} ₴/міс`;if(navigator.share){try{await navigator.share({text:t});return;}catch(e){}}try{await navigator.clipboard.writeText(t);showToast("Скопійовано!","📋");}catch(e){prompt(":",t);}}
-
+// Export actions use the shared, self-hosted export-tools module.
 $('exportCsvBtn')?.addEventListener('click',exportCSV);
 $('exportPdfBtn')?.addEventListener('click',generatePDF);
 $('shareAllBtn')?.addEventListener('click',shareAllRecords);
 $('exportJsonBtn')?.addEventListener('click',()=>{syncCurrentAddress();downloadBlob(JSON.stringify({version:APP_VERSION,exportDate:new Date().toISOString(),addresses,currentAddressId,accountSettings:activeSettings},null,2),'komunalka_backup.json','application/json;charset=utf-8;');writeDeviceMeta({lastExportAt:Date.now()});showToast('Бекап створено','💾');});
-$('exportAccountBtn')?.addEventListener('click',async()=>{try{await syncToCloud();const response=await secureFetch('POST',{}, {action:'account_export'}),result=await response.json();if(!response.ok||!result.success)throw new Error();downloadBlob(JSON.stringify(result.export,null,2),`komunalka_account_${new Date().toISOString().slice(0,10)}.json`,'application/json;charset=utf-8;');writeDeviceMeta({lastExportAt:Date.now()});renderDataHealth();showToast('Усі дані завантажено','💾');}catch{showToast('Не вдалося завантажити дані','❌');}});
+$('exportAccountBtn')?.addEventListener('click',()=>exportCompleteAccount().catch(()=>showToast('Не вдалося створити повну копію. Дані залишаються на пристрої.','❌')));
 $('dataSyncNowBtn')?.addEventListener('click',async()=>{if(!activeStore)return showToast('Спочатку увійдіть в акаунт','⚠️');await syncToCloud();renderDataHealth();});
 $('importJsonBtn')?.addEventListener('click',()=>$('importFileInput')?.click());
 
@@ -2201,10 +2151,10 @@ function renderAnalytics() {
   // Прогноз
   const pred = sf.predict(nextMonth);
   if (pred && $('forecastValue')) {
-    const confLabels = { high: '🟢 Висока', medium: '🟡 Середня', low: '🔴 Низька' };
-    $('forecastValue').innerHTML = `<span class="text-3xl font-black">${fmt.format(pred.predicted)} ₴</span>`;
+    const confLabels = { estimate: 'Орієнтовний тренд' };
+    $('forecastValue').innerHTML = `<span class="text-3xl font-black">~ ${fmt.format(pred.predicted)} ₴</span>`;
     $('forecastConfidence').innerHTML = `
-      <span class="text-[9px] font-bold ${pred.confidence === 'high' ? 'text-green-500' : pred.confidence === 'medium' ? 'text-yellow-500' : 'text-red-400'}">${confLabels[pred.confidence]}</span>
+      <span class="text-[9px] font-bold ${pred.confidence === 'high' ? 'text-green-500' : pred.confidence === 'medium' ? 'text-yellow-500' : 'text-red-400'}">${confLabels[pred.confidence]} · ${pred.sampleMonths} міс. даних</span>
       <span class="text-[9px] text-slate-400 ml-2">${new Date(nextMonth+'-01').toLocaleString('uk-UA',{month:'long'})}</span>
     `;
     $('forecastCard')?.classList.remove('hidden');
@@ -2845,7 +2795,7 @@ $('cloudTariffSearch')?.addEventListener('input', renderCloudCommunityTariffs);
 $('cloudTariffServiceFilter')?.addEventListener('change', renderCloudCommunityTariffs);
 
 // Розширений renderTariffPresets — додає community тарифи
-function renderTariffPresetsExtended() {
+function renderTariffPresets() {
   const select = $('tariffPresetSelect');
   if (!select) return;
   const selected = String(prefs.selectedTariffPreset || select.value || '');
@@ -2863,11 +2813,6 @@ function renderTariffPresetsExtended() {
   setSelectedTariffPreset(selected);
 }
 
-// Перевизначаємо renderTariffPresets через присвоєння (не через function declaration,
-// щоб уникнути рекурсії через JS hoisting)
-const _renderTariffPresetsBase = renderTariffPresets;
-renderTariffPresets = function() { renderTariffPresetsExtended(); };
-
 // Розширений applyTariffPreset — підтримує community
 // Зберігаємо оригінал через const (не перевизначаємо function — інакше hoisting викликає рекурсію)
 const _applyTariffPresetBase = applyTariffPreset;
@@ -2884,113 +2829,6 @@ applyTariffPreset = function(presetId) {
 };
 
 // =================== FIX: HIDE DISABLED SERVICES IN RECORD CARD ===================
-function createRecordCard(rec) {
-  const card = document.createElement('div');
-  const recPaid = isRecordPaid(rec), paymentStatus = getPaymentStatus(rec), paidAmount = getPaidAmount(rec), outstanding = getOutstandingAmount(rec);
-  const paymentDateLabel=formatPaymentDate(rec.paymentDate),paymentReference=String(rec.paymentReference||'').trim().slice(0,120);
-  card.className = `premium-card swipe-card p-5 relative overflow-hidden cursor-pointer select-none ${recPaid ? '' : 'ring-1 ring-orange-400/20'}`;
-  const dStr = new Date(rec.month + '-01').toLocaleString('uk-UA', { month: 'long' });
-  const [rY, rM] = rec.month.split('-');
-
-  // Рахуємо лише активні послуги
-  const showW  = (rec._filled?.water    || rec.waterCost > 0);
-  const showHW = (rec._filled?.hotWater || rec.hotWaterCost > 0);
-  const showE  = (rec._filled?.electro  || rec.electroCost > 0);
-  const showG  = (rec._filled?.gas      || rec.gasCost > 0);
-  const showC  = rec.customCost > 0;
-
-  const filledServices = [];
-  if (showW)  filledServices.push('💧');
-  if (showHW) filledServices.push('🌡️');
-  if (showE)  filledServices.push('⚡');
-  if (showG)  filledServices.push('🔥');
-  if (showC)  filledServices.push('📦');
-
-  const totalExp = (prefs.showWater?1:0)+(prefs.showHotWater?1:0)+(prefs.showElectro?1:0)+(prefs.showGas?1:0)+(activeCustomServices().length>0?1:0);
-  const isPartial = filledServices.length < totalExp && filledServices.length > 0;
-  const partialBadge = isPartial ? `<span class="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-md ml-2">Частково</span>` : '';
-  const prevYR = records.find(r => r.month === (parseInt(rY)-1) + '-' + rM);
-  let yoy = '';
-  if (prevYR && prevYR.total > 0 && rec.total > 0) {
-    const p = Math.round(((rec.total - prevYR.total) / prevYR.total) * 100);
-    if (p < 0) yoy = `<span class="text-[9px] font-bold text-green-600 bg-green-50 dark:bg-green-500/10 px-2 py-0.5 rounded-md ml-2">↓${Math.abs(p)}%</span>`;
-    else if (p > 0) yoy = `<span class="text-[9px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-md ml-2">↑+${p}%</span>`;
-  }
-
-  // Доля тільки активних
-  const activeTotal = (showW ? rec.waterCost||0 : 0) + (showHW ? rec.hotWaterCost||0 : 0) + (showE ? rec.electroCost||0 : 0) + (showG ? rec.gasCost||0 : 0) + (showC ? rec.customCost||0 : 0);
-  const pW  = activeTotal > 0 ? ((showW  ? rec.waterCost||0    : 0) / activeTotal) * 100 : 0;
-  const pHW = activeTotal > 0 ? ((showHW ? rec.hotWaterCost||0 : 0) / activeTotal) * 100 : 0;
-  const pE  = activeTotal > 0 ? ((showE  ? rec.electroCost||0  : 0) / activeTotal) * 100 : 0;
-  const pG  = activeTotal > 0 ? ((showG  ? rec.gasCost||0      : 0) / activeTotal) * 100 : 0;
-  const conic = `conic-gradient(#3b82f6 0% ${pW}%,#ef4444 ${pW}% ${pW+pHW}%,#eab308 ${pW+pHW}% ${pW+pHW+pE}%,#f97316 ${pW+pHW+pE}% ${pW+pHW+pE+pG}%,#a855f7 ${pW+pHW+pE+pG}% 100%)`;
-  const recId = rec.id;
-
-  // Перевірка зміни тарифу
-  let tariffChangedBadge = '';
-  if (rec.tariffSnapshot) {
-    const changed = [];
-    if (showW  && Math.abs((rec.tariffSnapshot.water||0)      - tariffs.water)       > 0.001) changed.push('💧');
-    if (showHW && Math.abs((rec.tariffSnapshot.hotWater||0)   - tariffs.hotWater)    > 0.001) changed.push('🌡️');
-    if (showE  && Math.abs((rec.tariffSnapshot.electroBase||0)- tariffs.electroBase) > 0.001) changed.push('⚡');
-    if (showG  && Math.abs((rec.tariffSnapshot.gas||0)        - tariffs.gas)         > 0.001) changed.push('🔥');
-    if (changed.length) tariffChangedBadge = `<span class="text-[9px] font-bold text-violet-600 bg-violet-50 dark:bg-violet-500/10 px-2 py-0.5 rounded-md ml-1" title="Тариф змінився з часу запису">⚠️ тариф ${changed.join('')}</span>`;
-  }
-
-  card.innerHTML = `
-    ${!recPaid ? '<div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-orange-400/15 to-transparent rounded-bl-[4rem]"></div>' : ''}
-    <div class="flex justify-between items-center relative z-10" data-toggle-details="${escapeAttr(recId)}" role="button" tabindex="0" aria-expanded="false">
-      <div>
-        <h4 class="font-bold text-xl capitalize text-slate-900 dark:text-white mb-1.5">${escapeHtml(dStr)}</h4>
-        <div class="flex items-center flex-wrap gap-1">
-          <span class="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${recPaid ? 'bg-brand-light text-brand' : paymentStatus === 'partial' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300' : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'}">${getPaymentLabel(rec)}</span>
-          ${partialBadge}${yoy}${tariffChangedBadge}
-        </div>
-      </div>
-      <div class="flex items-center gap-3">
-        <span class="font-black text-2xl text-slate-900 dark:text-white">${fmt.format(rec.total)} ₴</span>
-        <div class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-white/5 rounded-full text-slate-400"><i class="chevron-icon fa-solid fa-chevron-down transition-transform duration-300"></i></div>
-      </div>
-    </div>
-    <div class="details-panel hidden">
-      <div class="border-t border-slate-100 dark:border-white/5 pt-5 mt-5">
-        ${rec.total > 0 ? `<div class="flex items-center gap-4 bg-slate-50 dark:bg-black/50 p-4 rounded-2xl border border-slate-100 dark:border-white/5 mb-5"><div class="w-14 h-14 rounded-full shrink-0 shadow-sm border border-slate-200 dark:border-white/10" style="background:${conic}"></div><div class="flex flex-col gap-1 text-[10px] font-bold text-slate-500 w-full">${pW>0?`<div class="flex justify-between"><span>💧 Вода</span><span>${Math.round(pW)}%</span></div>`:''}${pHW>0?`<div class="flex justify-between"><span>🌡️ Гар.</span><span>${Math.round(pHW)}%</span></div>`:''}${pE>0?`<div class="flex justify-between"><span>⚡ Світло</span><span>${Math.round(pE)}%</span></div>`:''}${pG>0?`<div class="flex justify-between"><span>🔥 Газ</span><span>${Math.round(pG)}%</span></div>`:''}${(100-pW-pHW-pE-pG)>1?`<div class="flex justify-between"><span>📦 Інше</span><span>${Math.round(100-pW-pHW-pE-pG)}%</span></div>`:''}</div></div>` : ''}
-        <div class="space-y-3">
-          ${Object.keys(rec._meterEvents||{}).length?'<p class="meter-replacement-note">У цьому місяці враховано заміну лічильника: споживання до й після заміни.</p>':''}${showW ? `<div class="flex justify-between"><span class="font-bold">💧 Вода</span><span class="font-black">${fmt.format(rec.waterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.wPrev}→${rec.wCur}</span><span class="text-blue-500">+${recordUsage(rec,'wPrev','wCur')} м³</span></div>` : ''}
-          ${showHW ? `<div class="flex justify-between"><span class="font-bold">🌡️ Гар.</span><span class="font-black">${fmt.format(rec.hotWaterCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.hwPrev}→${rec.hwCur}</span><span class="text-red-500">+${recordUsage(rec,'hwPrev','hwCur')} м³</span></div>` : ''}
-          ${showE ? `<div class="flex justify-between"><span class="font-bold">⚡ Світло</span><span class="font-black">${fmt.format(rec.electroCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>Д:${rec.dPrev}→${rec.dCur}</span><span class="text-yellow-600">+${recordUsage(rec,'dPrev','dCur')}</span></div>${(rec.nCur||rec.nPrev)?`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl mt-1"><span>Н:${rec.nPrev}→${rec.nCur}</span><span class="text-indigo-500">+${recordUsage(rec,'nPrev','nCur')}</span></div>`:''}` : ''}
-          ${showG ? `<div class="flex justify-between"><span class="font-bold">🔥 Газ</span><span class="font-black">${fmt.format(rec.gasCost)} ₴</span></div><div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${rec.gPrev}→${rec.gCur}</span><span class="text-orange-500">+${recordUsage(rec,'gPrev','gCur')} м³</span></div>` : ''}
-          ${showC ? `<div class="flex justify-between"><span class="font-bold">📦 Інше</span><span class="font-black">${fmt.format(rec.customCost)} ₴</span></div>${rec.customData ? Object.values(rec.customData).filter(s=>s.val>0).map(s=>`<div class="flex justify-between text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-black/50 px-3 py-2 rounded-xl"><span>${escapeHtml(s.name)}</span><span class="text-purple-500">${fmt.format(s.val)} ₴</span></div>`).join('') : ''}` : ''}
-          ${paymentStatus === 'partial' ? `<div class="flex justify-between text-[11px] font-bold text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-500/10 px-3 py-2 rounded-xl"><span>💳 Сплачено частково</span><span>${fmt.format(paidAmount)} ₴ / борг ${fmt.format(outstanding)} ₴</span></div>` : ''}
-          ${paymentStatus !== 'charged' && (paymentDateLabel || paymentReference) ? `<div class="payment-history-meta"><i class="fa-solid fa-receipt" aria-hidden="true"></i><div><strong>Підтвердження оплати</strong>${paymentDateLabel?`<span>${escapeHtml(paymentDateLabel)}</span>`:''}${paymentReference?`<span>${escapeHtml(paymentReference)}</span>`:''}</div></div>` : ''}
-          ${rec.note ? `<div class="mt-3 p-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs text-slate-500 italic"><i class="fa-solid fa-sticky-note mr-1"></i>${escapeHtml(rec.note)}</div>` : ''}
-        </div>
-      </div>
-      <div class="flex gap-2.5 mt-4 pt-3 border-t border-slate-100 dark:border-white/5">
-        <button type="button" class="rec-pay flex-1 py-3.5 rounded-2xl font-bold text-xs border active:scale-[0.96] transition-all ${recPaid ? 'bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 border-slate-200 dark:border-white/10' : 'bg-gradient-to-r from-brand to-blue-600 text-white shadow-lg border-brand'}" data-rec-id="${escapeAttr(recId)}">${recPaid ? '↩ Нараховано' : '✓ Оплачено'}</button>
-        <button type="button" aria-label="Поділитися записом" class="rec-share w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 active:scale-[0.90] transition-transform" data-rec-id="${escapeAttr(recId)}"><i class="fa-solid fa-share-nodes"></i></button>
-        <button type="button" aria-label="Редагувати запис" class="rec-edit w-12 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 active:scale-[0.90] transition-transform" data-rec-id="${escapeAttr(recId)}"><i class="fa-solid fa-pen"></i></button>
-        <button type="button" aria-label="Видалити запис" class="rec-del w-12 bg-red-50 dark:bg-red-500/10 rounded-2xl text-red-400 active:scale-[0.90] transition-transform" data-rec-id="${escapeAttr(recId)}"><i class="fa-solid fa-trash"></i></button>
-      </div>
-    </div>`;
-
-  const swL = document.createElement('div'); swL.className = 'swipe-bg-left'; swL.innerHTML = '<i class="fa-solid fa-trash mr-2"></i>Видалити';
-  const swR = document.createElement('div'); swR.className = 'swipe-bg-right'; swR.innerHTML = `<i class="fa-solid fa-${recPaid ? 'rotate-left' : 'check'} mr-2"></i>${recPaid ? 'Нараховано' : 'Оплачено'}`;
-  card.insertBefore(swL, card.firstChild); card.insertBefore(swR, card.firstChild);
-  initSwipe(card, recId);
-  card.querySelector('[data-toggle-details]')?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.currentTarget.click();}});
-
-  card.addEventListener('click', (e) => {
-    const toggleTarget = e.target.closest('[data-toggle-details]');
-    if (toggleTarget) { const panel = card.querySelector('.details-panel'), chevron = card.querySelector('.chevron-icon'); if (panel) { panel.classList.toggle('hidden'); toggleTarget.setAttribute('aria-expanded',String(!panel.classList.contains('hidden'))); if (chevron) chevron.style.transform = panel.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'; } return; }
-    const payBtn = e.target.closest('.rec-pay');     if (payBtn)   { e.stopPropagation(); togglePaidById(recId); return; }
-    const shareBtn = e.target.closest('.rec-share'); if (shareBtn) { e.stopPropagation(); shareRecordById(recId); return; }
-    const editBtn = e.target.closest('.rec-edit');   if (editBtn)  { e.stopPropagation(); editRecordById(recId); return; }
-    const delBtn = e.target.closest('.rec-del');     if (delBtn)   { e.stopPropagation(); requestRecordDeletion(recId); return; }
-  });
-  return card;
-}
-
 // checkReminders вже делегує до checkRemindersExtended через typeof перевірку вище
 
 // =================== INIT EXTENDED ===================
@@ -3196,7 +3034,7 @@ $('overviewDetails')?.addEventListener('toggle',()=>{if($('overviewDetails').ope
 
 // Fast entry keeps every input mounted. Collapsing a service never changes values.
 function activeMeterGroups(){
-  return [['blockWater','Вода',prefs.showWater,['wCur']],['blockHotWater','Гаряча вода',prefs.showHotWater,['hwCur']],['blockElectro','Світло',prefs.showElectro,prefs.electroTwoZone?['dCur','nCur']:['dCur']],['blockGas','Газ',prefs.showGas,['gCur']]].filter(([, ,enabled])=>enabled).map(([id,label,,fields])=>{const invalid=fields.some(key=>[key,key.replace('Cur','Prev')].some(input=>$(input)?.getAttribute('aria-invalid')==='true'||$(input)?.validity.badInput));return{id,label,fields,invalid,complete:!invalid&&fields.every(key=>$(key)?.value!=='')};});
+  return [['blockWater','Вода',prefs.showWater,['wCur']],['blockHotWater','Гаряча вода',prefs.showHotWater,['hwCur']],['blockElectro','Світло',prefs.showElectro,entryElectricityMode().twoZone?['dCur','nCur']:['dCur']],['blockGas','Газ',prefs.showGas,['gCur']]].filter(([, ,enabled])=>enabled).map(([id,label,,fields])=>{const invalid=fields.some(key=>[key,key.replace('Cur','Prev')].some(input=>$(input)?.getAttribute('aria-invalid')==='true'||$(input)?.validity.badInput));return{id,label,fields,invalid,complete:!invalid&&fields.every(key=>$(key)?.value!=='')};});
 }
 function renderEntryProgress(){
   if(!$('entryProgress'))return;const groups=activeMeterGroups(),done=groups.filter(g=>g.complete).length;
@@ -3210,7 +3048,7 @@ $('collapseCompleted')?.addEventListener('click',()=>{calculatePreview();activeM
 $('expandReadings')?.addEventListener('click',()=>{document.querySelectorAll('.meter-details').forEach(d=>d.open=true);});
 $('jumpToReview')?.addEventListener('click',showEntryReview);
 document.querySelectorAll('[data-meter-next]').forEach(button=>button.addEventListener('click',()=>{const groups=activeMeterGroups(),index=groups.findIndex(g=>g.id===button.dataset.meterNext),next=groups[index+1];if(next)focusEntryField($(next.fields[0]));else showEntryReview();}));
-$('utilityForm')?.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.isComposing||!e.target.matches('input[type="number"]'))return;e.preventDefault();const fields=[...$('utilityForm').querySelectorAll('input[type="number"]')].filter(input=>!input.disabled&&(!input.id.endsWith('Prev')||input.value===''||input===e.target)&&(input.closest('.meter-card')?activeMeterGroups().some(g=>g.id===input.closest('.meter-card').id)&&!(input.id.startsWith('n')&&!prefs.electroTwoZone):input.offsetParent!==null));const next=fields[fields.indexOf(e.target)+1];if(next)focusEntryField(next);else showEntryReview();});
+$('utilityForm')?.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.isComposing||!e.target.matches('input[type="number"]'))return;e.preventDefault();const fields=[...$('utilityForm').querySelectorAll('input[type="number"]')].filter(input=>!input.disabled&&(!input.id.endsWith('Prev')||input.value===''||input===e.target)&&(input.closest('.meter-card')?activeMeterGroups().some(g=>g.id===input.closest('.meter-card').id)&&!(input.id.startsWith('n')&&!entryElectricityMode().twoZone):input.offsetParent!==null));const next=fields[fields.indexOf(e.target)+1];if(next)focusEntryField(next);else showEntryReview();});
 
 let providerEditor=null,providerEmailDraftContext=null;
 function renderProviders(){

@@ -6,7 +6,7 @@ import {createHash,webcrypto} from 'node:crypto';
 import worker from '../worker.js';
 import {environment,legacyAccount} from './helpers.mjs';
 const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
-const sources=await Promise.all(['sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','meter-readings.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','onboarding-ui.js','app.js','account-tools.js','meter-replacement-ui.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
+const sources=await Promise.all(['data-model.js','sync-queue.js','data-store.js','addresses.js','service-archive.js','reminders.js','monthly-tasks.js','meter-readings.js','providers.js','consumption-insights.js','pwa-updates.js','push-client.js','onboarding-ui.js','export-tools.js','record-card.js','app.js','account-tools.js','meter-replacement-ui.js'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
 const password='test-password',hash=createHash('sha256').update(password).digest('hex');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 test('reminder link selects only an owned active address and is consumed once',async()=>{
@@ -190,7 +190,7 @@ test('historical disabled services remain visible and imported IDs are safe in k
 });
 test('PWA reading shortcut opens entry and the data center reports sync and backup health',async()=>{
   const legacy=legacyAccount(hash),{env}=environment({anna:legacy}),p=await page(env,{},false,'/#calc');
-  try{await p.w.performLogin('anna',password,false);await delay(30);const d=p.w.document;assert.equal(d.querySelector('.tab-active').id,'tabCalc');p.w.switchTab('tabSettings',4);p.w.openSettingsPanel('data');assert.match(d.getElementById('dataHealthSummary').textContent,/синхронізовані/i);assert.notEqual(d.getElementById('dataLastSync').textContent,'Ще не синхронізовано');let backup='';p.w.downloadBlob=value=>{backup=value;};d.getElementById('exportJsonBtn').click();assert.match(backup,/"addresses"/);assert.notEqual(d.getElementById('dataLastExport').textContent,'Ще не створено');assert.deepEqual(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records,legacy.addresses[0].records);assert.deepEqual(p.errors,[]);}finally{p.close();}
+  try{await p.w.performLogin('anna',password,false);await delay(30);const d=p.w.document;assert.equal(d.querySelector('.tab-active').id,'tabCalc');p.w.switchTab('tabSettings',4);p.w.openSettingsPanel('data');assert.match(d.getElementById('dataHealthSummary').textContent,/синхронізовано/i);assert.notEqual(d.getElementById('dataLastSync').textContent,'Ще не синхронізовано');let backup='';p.w.downloadBlob=value=>{backup=value;};d.getElementById('exportJsonBtn').click();assert.match(backup,/"addresses"/);assert.notEqual(d.getElementById('dataLastExport').textContent,'Ще не створено');assert.deepEqual(JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records,legacy.addresses[0].records);assert.deepEqual(p.errors,[]);}finally{p.close();}
 });
 test('PWA reminder and payment shortcuts open their exact workflow; snooze preserves history',async()=>{
   const legacy=legacyAccount(hash);legacy.addresses[0].prefs={...legacy.addresses[0].prefs,remindersEnabled:true,remWaterStart:1,remWaterEnd:31,showWater:true,showElectro:false,showGas:false};
@@ -482,4 +482,59 @@ test('setup cannot overwrite another account or a changed address',async()=>{
 
 test('large history renders in pages and batch payment changes only visible records',async()=>{
   const account=legacyAccount(hash),base=account.addresses[0].records[0];account.addresses[0].records=Array.from({length:1000},(_,i)=>({...base,id:'large-'+i,month:`${1900+Math.floor(i/12)}-${String(i%12+1).padStart(2,'0')}`}));const {env}=environment({anna:account}),p=await page(env);try{await p.w.performLogin('anna',password,false);p.w.switchTab('tabHistory',2);const d=p.w.document;assert.match(d.getElementById('historyLoadMore').parentNode.textContent,/Показано 48 із 1000/);d.querySelector('.batch-pay-btn').click();await delay(30);let data=JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records;assert.equal(data.filter(record=>record.paymentStatus==='paid').length,48);assert.equal(data.filter(record=>record.paymentStatus==='partial').length,952);d.getElementById('historyLoadMore').click();assert.match(d.getElementById('historyLoadMore').parentNode.textContent,/Показано 96 із 1000/);d.getElementById('searchRecords').value='1900-01';p.w.renderRecords();assert.equal(d.getElementById('historyLoadMore'),null);data=JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records;assert.equal(data.length,1000);assert.deepEqual(p.errors,[]);}finally{p.close();}
+});
+
+test('historical HTML readings are displayed as inert text in actual history cards, including guests',async()=>{
+ const legacy=legacyAccount(hash),payload='<img src="missing" onerror="window.__executed=true">';legacy.addresses[0].records[0].wCur=payload;
+ const {env}=environment({anna:legacy}),p=await page(env);
+ try{await p.w.performLogin('anna',password,false);const card=p.w.createRecordCard(legacy.addresses[0].records[0]);assert.equal(card.querySelector('img'),null);assert.ok(card.textContent.includes(payload));assert.equal(p.w.__executed,undefined);assert.deepEqual(p.errors,[]);}finally{p.close();}
+});
+
+test('explicit zero custom charge replaces its prior value, preserving unrelated record and service metadata',async()=>{
+ const legacy=legacyAccount(hash),a=legacy.addresses[0];a.customServices=[{id:'fixed',name:'Обслуговування',defaultSum:480}];Object.assign(a.records[0],{customCost:480,total:631.9,customData:{fixed:{name:'Обслуговування',val:480,legacy:{keep:true}}}});
+ const {env}=environment({anna:legacy}),p=await page(env);try{
+  await p.w.performLogin('anna',password,false);p.w.editRecordById(42);await delay(80);const d=p.w.document,input=d.getElementById('custom_fixed');input.value='0';input.dispatchEvent(new p.w.Event('input',{bubbles:true}));p.w.calculatePreview();assert.match(d.getElementById('entryReviewTotal').textContent,/151,90/);
+  d.getElementById('utilityForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await p.w.syncToCloud();const r=JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records[0];assert.equal(r.customCost,0);assert.equal(r.customData.fixed.val,0);assert.equal(r.customData.fixed.legacy.keep,true);assert.equal(r.total,151.9);assert.equal(r.customField,'preserve');assert.equal(r.paidAmount,50);assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+
+test('custom input and durable draft survive service changes; negative amounts cannot submit',async()=>{
+ const legacy=legacyAccount(hash);legacy.addresses[0].customServices=[{id:'fixed',name:'Послуга',defaultSum:''}];const {env}=environment({anna:legacy}),p=await page(env);try{
+  await p.w.performLogin('anna',password,false);const d=p.w.document;d.getElementById('monthInput').value='2027-02';d.getElementById('monthInput').dispatchEvent(new p.w.Event('change',{bubbles:true}));d.getElementById('custom_fixed').value='123';d.getElementById('custom_fixed').dispatchEvent(new p.w.Event('input',{bubbles:true}));
+  d.getElementById('prefHotWater').checked=true;d.getElementById('prefHotWater').dispatchEvent(new p.w.Event('change',{bubbles:true}));assert.equal(d.getElementById('custom_fixed').value,'123');d.getElementById('recordNote').value='Note';d.getElementById('recordNote').dispatchEvent(new p.w.Event('input',{bubbles:true}));assert.equal(JSON.parse(p.storage()['komynalka_account_v1:anna:draft:home:2027-02']).custom_fixed,'123');
+  d.getElementById('custom_fixed').value='-100';p.w.calculatePreview();assert.equal(d.getElementById('submitFormBtn').disabled,true);assert.equal(d.getElementById('entryReviewTotal').textContent,'—');assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+
+test('unfilled prior month stays unknown, and an absent night zone stays partial after reload',async()=>{
+ const legacy=legacyAccount(hash),a=legacy.addresses[0];a.prefs={showWater:true,showElectro:true,showGas:false,electroTwoZone:true};a.records[0]._filled={water:false,electro:true};a.records[0].wCur=0;a.records[0].wPrev=0;
+ const {env}=environment({anna:legacy}),p=await page(env);try{
+  await p.w.performLogin('anna',password,false);const d=p.w.document;d.getElementById('monthInput').value='2026-09';d.getElementById('monthInput').dispatchEvent(new p.w.Event('change',{bubbles:true}));assert.equal(d.getElementById('wPrev').value,'');d.getElementById('dPrev').value='0';d.getElementById('dCur').value='10';d.getElementById('nPrev').value='';d.getElementById('nCur').value='';
+  d.getElementById('utilityForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await p.w.syncToCloud();const saved=JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0],r=saved.records.find(r=>r.month==='2026-09');assert.equal(r._enteredCurrent.nCur,false);assert.equal(p.w.KomunalkaMonth.readings(saved,'2026-09').services.find(s=>s.id==='electro').done,false);
+  p.w.editRecordById(r.id);await delay(80);assert.equal(d.getElementById('nCur').value,'');assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+
+test('complete account export includes latest local changes and drafts even when cloud saving fails',async()=>{
+ const {env}=environment({anna:legacyAccount(hash)}),p=await page(env);try{
+  await p.w.performLogin('anna',password,false);p.w.__download=null;p.w.downloadBlob=content=>{p.w.__download=JSON.parse(content)};
+  const fetch=p.w.fetch;p.w.fetch=async(url,options)=>{const body=JSON.parse(options?.body||'{}');if(Array.isArray(body.addresses))return new Response('{"success":false}',{status:503});return fetch(url,options);};
+  p.w.prompt=()=>'Локальна нова назва';p.w.openAddressModal();p.w.document.querySelector('.addr-edit').click();
+  await p.w.exportCompleteAccount();assert.equal(p.w.__download.data.addresses[0].name,'Локальна нова назва');assert.equal(p.w.__download.data.addresses[0].records[0].customField,'preserve');assert.equal(p.w.__download.recovery.pending,true);assert.ok(Array.isArray(p.w.__download.localDrafts));assert.deepEqual(p.errors,[]);
+ }finally{p.close();}
+});
+
+test('a delayed reconnect for the previous owner cannot replace the active account',async()=>{
+ const anna=legacyAccount(hash),bob=legacyAccount(hash);bob.addresses[0].name='Другий акаунт';bob.addresses[0].records[0].note='Only Bob';
+ const {env}=environment({anna,bob});let pause=false,release,started;const pending=new Promise(resolve=>started=resolve),gate=new Promise(resolve=>release=resolve);
+ const p=await page(env,{},false,'',async(url,options,original)=>{if(pause&&options.method==='GET'){pause=false;const response=await original(url,options);started();await gate;return response;}return original(url,options);});
+ try{await p.w.performLogin('anna',password,false);pause=true;p.w.dispatchEvent(new p.w.Event('online'));await pending;await p.w.performLogin('bob',password,false);release();await delay(50);assert.equal(p.w.localStorage.getItem('k_login'),'bob');const local=JSON.parse(p.storage()['komynalka_account_v1:bob']).local;assert.equal(local.addresses[0].name,'Другий акаунт');assert.deepEqual(local.addresses[0].records,bob.addresses[0].records);assert.deepEqual(p.errors,[]);}finally{release();p.close();}
+});
+
+
+test('a first bill can consist only of a configured fixed amount, including explicit zero',async()=>{
+ for(const amount of [480,0]){
+  const legacy=legacyAccount(hash);legacy.addresses[0].records=[];legacy.addresses[0].prefs={showWater:false,showElectro:false,showGas:false};legacy.addresses[0].customServices=[{id:'fixed',name:'Послуга',defaultSum:String(amount)}];
+  const {env}=environment({anna:legacy}),p=await page(env);try{await p.w.performLogin('anna',password,false);const d=p.w.document;d.getElementById('monthInput').value='2027-05';d.getElementById('monthInput').dispatchEvent(new p.w.Event('change',{bubbles:true}));d.getElementById('utilityForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await p.w.syncToCloud();const records=JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records;assert.equal(records.length,1);assert.equal(records[0].total,amount);assert.equal(records[0].customData.fixed.val,amount);assert.deepEqual(p.errors,[]);}finally{p.close();}
+ }
 });

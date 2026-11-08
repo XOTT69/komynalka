@@ -1,0 +1,16 @@
+
+ ⛅️ wrangler 4.145.0
+────────────────────
+
+Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+Total Upload: 146.34 KiB / gzip: 34.65 KiB
+Your Worker has access to the following bindings:
+Binding                                                         Resource
+env.ACCOUNT_STORE (AccountStore)                                Durable Object
+env.KV (d16e9ce7ed3e4e688f1d19b33c26c13d)                       KV Namespace
+env.FIREBASE_PROJECT_ID ("pwakomun")                            Environment Variable
+env.ADMIN_OWNER_LOGIN ("xott69")                                Environment Variable
+
+--dry-run: exiting now.
+
+Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md

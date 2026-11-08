@@ -2,6 +2,7 @@ import {metricOperation,recordMetrics} from './service-metrics.js';
 import {accountSummary} from './admin-directory.js';
 import {pushConfigured} from './push-delivery.js';
 import './meter-readings.js';
+import './data-model.js';
 import {handleTelegramWebhook,prepareBot,randomLinkToken} from './telegram.js';
 import {verifyFirebaseToken} from './auth-token.js';
 import {createOpaqueToken,createPasswordVerifier,parseSessionToken,passwordPolicy,sessionToken,sha256Hex,validLogin,verifyPassword} from './password-auth.js';
@@ -10,7 +11,7 @@ export {AccountStore} from './account-store.js';
 // КОМУНАЛКА Worker — синхронізація, сесії, нагадування та адміністрування
 // ============================================================
 
-const WORKER_VERSION='5.16.0';
+const WORKER_VERSION='5.17.0';
 const CORS = {
   'Cache-Control':'no-store',
   'X-Content-Type-Options':'nosniff',
@@ -387,6 +388,7 @@ async function doPost(req, env, ip, fp, observation) {
 }
 
 async function doSave(body,env,login,data,ip,fp){
+  try{globalThis.KomunalkaModel.validateSnapshot(body,data);}catch(error){return err(error.message,400);}
   if(!Array.isArray(body.addresses)||body.addresses.length<1||body.addresses.length>10)return err('INVALID_DATA',400);
   if(!body.addresses.every(a=>a&&a.id!=null&&Array.isArray(a.records)&&a.records.every(r=>r&&r.id!=null&&/^\d{4}-(0[1-9]|1[0-2])$/.test(r.month)&&Number.isFinite(Number(r.total)))))return err('INVALID_DATA',400);
   try{for(const address of body.addresses)for(const record of address.records)if(record._meterEvents){if(typeof record._meterEvents!=='object'||Array.isArray(record._meterEvents))throw new Error();for(const [key,event] of Object.entries(record._meterEvents)){if(!['wPrev','hwPrev','dPrev','nPrev','gPrev'].includes(key))throw new Error();globalThis.KomunalkaMeters.validate(event,record.month);}}}catch{return err('INVALID_METER_REPLACEMENT',400);}
@@ -436,7 +438,7 @@ const shareRecordFields=['id','month','isWinter','total','waterCost','hotWaterCo
 function guestAddress(address){
   const pick=(value,keys)=>Object.fromEntries(keys.filter(key=>value?.[key]!==undefined&&['string','number','boolean'].includes(typeof value[key])).map(key=>[key,value[key]]));
   const tariffKeys=['water','hotWater','electroBase','electroWinter','gas','nightCoef','winterLimit'];
-  return {...pick(address,['id','name']),tariffs:pick(address.tariffs,tariffKeys),prefs:pick(address.prefs,['showWater','showHotWater','showElectro','showGas','electroTwoZone','electroWinter','winterMode']),customServices:(address.customServices||[]).map(value=>pick(value,['id','name','price','type','enabled','defaultSum'])),records:(address.records||[]).map(record=>({...pick(record,shareRecordFields),tariffSnapshot:pick(record.tariffSnapshot,tariffKeys),_filled:pick(record._filled,['water','hotWater','electro','gas','custom']),customData:Object.fromEntries(Object.entries(record.customData||{}).map(([id,value])=>[id,pick(value,['name','val'])])),_meterEvents:Object.fromEntries(Object.entries(record._meterEvents||{}).filter(([id])=>['wPrev','hwPrev','dPrev','nPrev','gPrev'].includes(id)).map(([id,value])=>[id,pick(value,['date','oldPrevious','oldFinal','newInitial'])]))}))};
+  return {...pick(address,['id','name']),tariffs:pick(address.tariffs,tariffKeys),prefs:pick(address.prefs,['showWater','showHotWater','showElectro','showGas','electroTwoZone','electroWinter','winterMode']),customServices:(address.customServices||[]).map(value=>pick(value,['id','name','price','type','enabled','defaultSum'])),records:(address.records||[]).map(record=>({...pick(record,shareRecordFields),tariffSnapshot:pick(record.tariffSnapshot,tariffKeys),_filled:pick(record._filled,['water','hotWater','electro','gas','custom']),_enteredCurrent:pick(record._enteredCurrent,['wCur','hwCur','dCur','nCur','gCur']),_enteredPrevious:pick(record._enteredPrevious,['wPrev','hwPrev','dPrev','nPrev','gPrev']),calculationMode:pick(record.calculationMode,['twoZone','winter']),customData:Object.fromEntries(Object.entries(record.customData||{}).map(([id,value])=>[id,pick(value,['name','val'])])),_meterEvents:Object.fromEntries(Object.entries(record._meterEvents||{}).filter(([id])=>['wPrev','hwPrev','dPrev','nPrev','gPrev'].includes(id)).map(([id,value])=>[id,pick(value,['date','oldPrevious','oldFinal','newInitial'])]))}))};
 }
 async function importShare(env,key,sd,expiration){
   const login=sd.login||sd.phone,token=key.startsWith('share:')?key.slice(6):key.slice(6);
