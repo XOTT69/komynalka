@@ -1,7 +1,7 @@
 {
   "version": "5.17.0",
   "checkedAt": "2026-11-08",
-  "productionWrites": false,
+  "productionWrites": true,
   "unitIntegration": {
     "passed": 203,
     "failed": 0
@@ -9,7 +9,7 @@
   "browsers": {
     "chromium": "passed",
     "webkit": "passed",
-    "firefox": "local launch blocked: profile folder; Linux CI required"
+    "firefox": "passed in Linux GitHub CI"
   },
   "responsive": {
     "widths": [
@@ -58,6 +58,30 @@
     "verified": true,
     "consistentRevisions": true,
     "recordMutations": 0,
+    "temporaryBackupServiceDeleted": true
+  },
+  "productionRecordMutations": 0,
+  "ci": {
+    "url": "https://github.com/XOTT69/komynalka/actions/runs/42505405495",
+    "conclusion": "success",
+    "codeCommit": "4fc5743c835f0a56e86ff0dcac701e9f4c6727d7"
+  },
+  "deployment": {
+    "site": "https://mykomunalka.pp.ua",
+    "build": "a6bde1d244a6",
+    "workerVersion": "5.17.0",
+    "syncProtocol": 2,
+    "criticalAssetsMatched": 12,
+    "liveBrowserWidths": [
+      390,
+      1440
+    ],
+    "liveBrowserErrors": 0
+  },
+  "postDeployment": {
+    "accountsUnchanged": 50,
+    "recordsUnchanged": 68,
+    "kvValuesUnchanged": 90,
     "temporaryBackupServiceDeleted": true
   }
 }
