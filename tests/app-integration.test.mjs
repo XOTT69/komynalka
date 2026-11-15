@@ -267,6 +267,7 @@ test('settings groups retain unsaved fields and every route returns to its menu'
 });
 test('selected provider stays visible per address and electricity modes expose clear states',async()=>{
  const legacy=legacyAccount(hash);legacy.accountSettings={komynalka_community_tariff:JSON.stringify([{id:'custom_chabany',name:'Чабани',tariffs:{water:56.7,hotWater:0,electroBase:4.32,electroWinter:2.64,gas:7.96},city:'Чабани',region:'Київська',serviceType:'all'}])};
+ legacy.addresses[0].prefs.electroTwoZone=true;
  const {env}=environment({anna:legacy}),p=await page(env);
  try{
   await p.w.performLogin('anna',password,false);const d=p.w.document;p.w.openSettingsPanel('home');
@@ -537,4 +538,37 @@ test('a first bill can consist only of a configured fixed amount, including expl
   const legacy=legacyAccount(hash);legacy.addresses[0].records=[];legacy.addresses[0].prefs={showWater:false,showElectro:false,showGas:false};legacy.addresses[0].customServices=[{id:'fixed',name:'Послуга',defaultSum:String(amount)}];
   const {env}=environment({anna:legacy}),p=await page(env);try{await p.w.performLogin('anna',password,false);const d=p.w.document;d.getElementById('monthInput').value='2027-05';d.getElementById('monthInput').dispatchEvent(new p.w.Event('change',{bubbles:true}));d.getElementById('utilityForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await p.w.syncToCloud();const records=JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records;assert.equal(records.length,1);assert.equal(records[0].total,amount);assert.equal(records[0].customData.fixed.val,amount);assert.deepEqual(p.errors,[]);}finally{p.close();}
  }
+});
+
+test('single-zone is the default, explicit off wins, and a legacy two-zone record survives editing',async()=>{
+  const legacy=legacyAccount(hash),baseAddress=legacy.addresses[0];
+  Object.assign(baseAddress.prefs,{showElectro:true,electroTwoZone:false});
+  const historic=baseAddress.records[0];
+  Object.assign(historic,{dPrev:110,dCur:120,nPrev:0,nCur:9,electroCost:30,total:181.9,calculationMode:{twoZone:true,winter:true},
+    _enteredCurrent:{dCur:true,nCur:true},_enteredPrevious:{wPrev:true,dPrev:true,nPrev:true},_meterEvents:{nPrev:{date:historic.month+'-08',oldPrevious:44,oldFinal:47,newInitial:0}}});
+  const unknown={...structuredClone(baseAddress),id:'one-zone',records:[]};
+  const implied={...structuredClone(baseAddress),id:'legacy-zones'};
+  delete unknown.prefs.electroTwoZone;delete implied.prefs.electroTwoZone;
+  legacy.addresses.push(unknown,implied);
+  const {env}=environment({anna:legacy}),p=await page(env);
+  try{
+    await p.w.performLogin('anna',password,false);const d=p.w.document,get=id=>d.getElementById(id);
+    p.w.editRecordById(historic.id);
+    assert.equal(get('electroNightRow').hidden,true);assert.equal(get('nCur').disabled,true);
+    get('recordNote').value='Edited with the night fields closed';
+    get('recordNote').dispatchEvent(new p.w.Event('input',{bubbles:true}));
+    get('utilityForm').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
+    await p.w.flushSync();
+    const current=JSON.parse(p.storage()['komynalka_account_v1:anna']).local.addresses[0].records[0];
+    assert.equal(current.note,'Edited with the night fields closed');
+    for(const key of ['nPrev','nCur','electroCost','total','paidAmount','tariffSnapshot'])assert.deepEqual(current[key],historic[key]);
+    assert.deepEqual(current._meterEvents.nPrev,historic._meterEvents.nPrev);
+    assert.equal(current._enteredPrevious.nPrev,true);
+    assert.equal(current._enteredCurrent.nCur,true);
+    assert.deepEqual(current.calculationMode,historic.calculationMode);
+    p.w.selectAddress('one-zone');assert.equal(get('prefElectroTwoZone').checked,false);assert.equal(get('nPrev').disabled,true);
+    p.w.selectAddress('legacy-zones');p.w.editRecordById(historic.id);assert.equal(get('prefElectroTwoZone').checked,true);
+    assert.equal(get('electroNightRow').hidden,false);assert.equal(get('nCur').disabled,false);assert.equal(get('nCur').value,'9');
+    assert.deepEqual(p.errors,[]);
+  }finally{p.close();}
 });

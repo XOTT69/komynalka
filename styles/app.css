@@ -883,6 +883,9 @@ html.dark #bottomNav {
   padding: 12px!important;
   border-radius: 12px!important;
 }
+#utilityForm .meter-readings[hidden] {
+  display: none!important;
+}
 .meter-readings>div:not([id$=Badge]) {
   min-width: 0;
 }

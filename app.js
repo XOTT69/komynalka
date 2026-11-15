@@ -55,7 +55,7 @@ let currentFilter = 'all';
 let historyVisibleLimit=48,historyViewKey='';
 let syncState = 'synced';
 const defaultTariffs = { water: 30.38, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 };
-const defaultPrefs   = { showWater: true, showHotWater: false, showElectro: true, showGas: true, electroTwoZone: true, electroWinter: true, selectedTariffPreset: '', remindersEnabled: false, remWaterStart: 1, remWaterEnd: 5, remElectroStart: 28, remElectroEnd: 3, remGasStart: 1, remGasEnd: 5, familyRole: 'owner' };
+const defaultPrefs   = { showWater: true, showHotWater: false, showElectro: true, showGas: true, electroTwoZone: false, electroWinter: true, selectedTariffPreset: '', remindersEnabled: false, remWaterStart: 1, remWaterEnd: 5, remElectroStart: 28, remElectroEnd: 3, remGasStart: 1, remGasEnd: 5, familyRole: 'owner' };
 const TARIFF_PRESETS = [
   { id: 'kyiv-typical', name: 'Київ / типовий постачальник', tariffs: { water: 30.38, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 } },
   { id: 'lviv-typical', name: 'Львів / типовий постачальник', tariffs: { water: 32.64, hotWater: 100.00, electroBase: 4.32, electroWinter: 2.64, winterLimit: 2000, nightCoef: 0.5, gas: 7.96 } },
@@ -65,6 +65,16 @@ const TARIFF_PRESETS = [
 ];
 const defaultCustomServices = [{ id: "s1", name: "Квартплата", defaultSum: "" }, { id: "s2", name: "Сміття", defaultSum: "" }];
 let addresses = [], currentAddressId = 'default', isGuest = false, tariffs = {}, prefs = {}, records = [], customServices = [];
+const nightElectricityEnabled=()=>Boolean(prefs.showElectro)&&prefs.electroTwoZone===true;
+function hasRecordedNightZone(record){
+  return Boolean(record?._meterEvents?.nPrev||record?._enteredPrevious?.nPrev===true||
+    record?._enteredCurrent?.nCur===true||Number(record?.nPrev)>0||Number(record?.nCur)>0);
+}
+function addressTwoZone(address){
+  const saved=address.prefs?.electroTwoZone;
+  if(saved==null)return (address.records||[]).some(record=>record.calculationMode?.twoZone===true||hasRecordedNightZone(record));
+  return saved===true||saved==='true'||saved===1||saved==='1';
+}
 const activeCustomServices=()=>KomunalkaServices.active(customServices);
 let currentCalc = { waterCost: 0, hotWaterCost: 0, electroCost: 0, gasCost: 0, customCost: 0, total: 0 };
 const urlParamsObj  = new URLSearchParams(window.location.search);
@@ -273,7 +283,7 @@ function applyAccessMode() {
   const form = $('utilityForm');
   if (form) {
     form.querySelectorAll('input, select, textarea, button').forEach(el => {
-      el.disabled = locked;
+      el.disabled = locked || Boolean(el.closest('#electroNightRow[hidden]'));
       el.classList.toggle('opacity-60', locked);
     });
     form.classList.toggle('pointer-events-none', locked);
@@ -806,7 +816,7 @@ function loadCurrentAddress(skipDraftSave=false) {
   const addr = addresses.find(a => String(a.id) === String(currentAddressId)) || addresses[0];
   currentAddressId = addr.id;
   tariffs        = { ...defaultTariffs,  ...(addr.tariffs  || {}) };
-  prefs          = { ...defaultPrefs,    ...(addr.prefs    || {}) };
+  prefs          = { ...defaultPrefs,    ...(addr.prefs    || {}), electroTwoZone:addressTwoZone(addr) };
   records        = addr.records        || [];
   customServices = addr.customServices || [...defaultCustomServices];
   if ($('currentAddressDisplay')) $('currentAddressDisplay').textContent = addr.name + (isGuest ? ' (Гість)' : '');
@@ -1324,13 +1334,17 @@ function debouncedCalculate(){clearTimeout(calcDebounceTimer);calcDebounceTimer=
 
 function entryElectricityMode(){
   const record=records.find(item=>item.month===$('monthInput')?.value);
-  return {twoZone:record?.calculationMode?.twoZone??prefs.electroTwoZone,winter:record?.calculationMode?.winter??prefs.electroWinter};
+  return {twoZone:nightElectricityEnabled(),winter:record?.calculationMode?.winter??prefs.electroWinter};
 }
 function applyEntryElectricityMode(){
   const mode=entryElectricityMode();
-  if($('electroNightRow'))$('electroNightRow').style.display=mode.twoZone?'flex':'none';
+  if($('electroNightRow'))$('electroNightRow').hidden=!mode.twoZone;
+  for(const [id,label] of [['dPrev','попередні показники'],['dCur','поточні показники']]){
+    if($(id))$(id).setAttribute('aria-label',`Світло${mode.twoZone?' · день':''}: ${label}`);
+  }
   for(const id of ['lblDay1','lblDay2'])if($(id))$(id).textContent=mode.twoZone?'(День)':'';
   if($('winterCheckboxWrapper'))$('winterCheckboxWrapper').style.display=mode.winter?'flex':'none';
+  for(const id of ['nPrev','nCur'])if($(id))$(id).disabled=!mode.twoZone||!canEditData();
 }
 function formMeterEvents(){try{const value=JSON.parse($('meterEventsInput')?.value||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}catch{return {};}}
 function recordUsage(record,previous,current){return KomunalkaMeters.usage(record[previous],record[current],record._meterEvents?.[previous])??0;}
@@ -1350,7 +1364,8 @@ function calculatePreview() {
   if(prefs.showWater)    currentCalc.waterCost   =formUsage('wPrev','wCur')*calculationTariffs.water;    else currentCalc.waterCost=0;
   if(prefs.showHotWater) currentCalc.hotWaterCost=formUsage('hwPrev','hwCur')*calculationTariffs.hotWater; else currentCalc.hotWaterCost=0;
   if(prefs.showElectro){
-    const dV=formUsage('dPrev','dCur'),nV=entryElectricityMode().twoZone?formUsage('nPrev','nCur'):Math.max(0,Number(historic?.nCur||0)-Number(historic?.nPrev||0)),tEl=dV+nV;
+    const dV=formUsage('dPrev','dCur');
+    const nV=nightElectricityEnabled()?formUsage('nPrev','nCur'):(historic?recordUsage(historic,'nPrev','nCur'):0);
     currentCalc.electroCost=KomunalkaModel.electricity(dV,nV,calculationTariffs,entryElectricityMode().winter&&$('isWinterInput')?.checked);
   } else currentCalc.electroCost=0;
   if(prefs.showGas) currentCalc.gasCost=formUsage('gPrev','gCur')*calculationTariffs.gas; else currentCalc.gasCost=0;
@@ -1358,10 +1373,12 @@ function calculatePreview() {
   currentCalc.customCost=Object.values(customValues).reduce((sum,item)=>sum+Number(item.val||0),0);
   if(historic){
     for(const [key,enabled] of [['waterCost',prefs.showWater],['hotWaterCost',prefs.showHotWater],['electroCost',prefs.showElectro],['gasCost',prefs.showGas]])if(!enabled)currentCalc[key]=Number(historic[key]||0);
-    const unchanged=ids=>ids.filter(id=>id.endsWith('Prev')).every(id=>KomunalkaData.equal(historic._meterEvents?.[id],formMeterEvents()[id]))&&ids.every(id=>Number(historic[id]??0)===(['nPrev','nCur'].includes(id)&&!entryElectricityMode().twoZone?Number(historic[id]||0):getV(id)));
+    const events=formMeterEvents();
+    const unchanged=ids=>ids.every(id=>Number(historic[id]??0)===getV(id)&&(!id.endsWith('Prev')||KomunalkaData.equal(historic._meterEvents?.[id],events[id])));
     for(const [key,ids] of [['waterCost',['wPrev','wCur']],['hotWaterCost',['hwPrev','hwCur']],['gasCost',['gPrev','gCur']]])if(unchanged(ids)&&historic[key]!=null)currentCalc[key]=Number(historic[key]);
     const season=historic.isWinter??([10,11,12,1,2,3,4].includes(Number(historic.month.slice(5))));
-    if(unchanged(['dPrev','dCur','nPrev','nCur'])&&season===Boolean($('isWinterInput')?.checked)&&historic.electroCost!=null)currentCalc.electroCost=Number(historic.electroCost);
+    const electroFields=nightElectricityEnabled()?['dPrev','dCur','nPrev','nCur']:['dPrev','dCur'];
+    if(unchanged(electroFields)&&season===Boolean($('isWinterInput')?.checked)&&historic.electroCost!=null)currentCalc.electroCost=Number(historic.electroCost);
     if(KomunalkaData.equal(Object.fromEntries(Object.entries(customValues).map(([id,item])=>[id,Number(item.val)])),Object.fromEntries(Object.entries(historic.customData||{}).map(([id,item])=>[id,Number(item.val)])))&&historic.customCost!=null)currentCalc.customCost=Number(historic.customCost);
   }
   currentCalc.total=currentCalc.waterCost+currentCalc.hotWaterCost+currentCalc.electroCost+currentCalc.gasCost+currentCalc.customCost;
@@ -1483,9 +1500,14 @@ function loadDraft(){
     if(!draft){if($('draftStatus'))$('draftStatus').textContent='Попередні показники підтягуються з історії';return;}
     readingInputIds.forEach(id=>{if($(id)&&draft[id]!==undefined)$(id).value=draft[id];});
     activeCustomServices().forEach(srv=>{const id=`custom_${srv.id}`;if($(id)&&draft[id]!==undefined)$(id).value=draft[id];});
-    if($('recordNote'))$('recordNote').value=draft.note??'';
+    if($('recordNote')&&!draft.nightOnly)$('recordNote').value=draft.note??'';
     if($('isWinterInput')&&draft.isWinter!==undefined)$('isWinterInput').checked=draft.isWinter;
     if($('meterEventsInput')&&draft.meterEvents)$('meterEventsInput').value=JSON.stringify(draft.meterEvents);
+    if($('meterEventsInput')&&draft.nightOnly){
+      const events=formMeterEvents();
+      if(draft.nightMeterEvent)events.nPrev=draft.nightMeterEvent;else delete events.nPrev;
+      $('meterEventsInput').value=JSON.stringify(events);
+    }
     if(draft.paymentStatus&&$('paymentStatusInput'))$('paymentStatusInput').value=draft.paymentStatus;
     if(draft.paidAmount!==undefined&&$('paidAmountInput'))$('paidAmountInput').value=draft.paidAmount;
     if(draft.paymentDate!==undefined&&$('paymentDateInput'))$('paymentDateInput').value=draft.paymentDate;
@@ -1495,7 +1517,32 @@ function loadDraft(){
     if($('draftStatus'))$('draftStatus').textContent='Відновлено вашу чернетку';
   }catch(e){if($('draftStatus'))$('draftStatus').textContent='Чернетка потребує перевірки. Оригінал збережено.';}
 }
-function clearDraft(){if(activeStore&&draftContext)activeStore.clearDraft(draftContext.address,draftContext.month);draftDirty=false;}
+function clearDraft(remaining=null){
+  if(activeStore&&draftContext){
+    const {address,month}=draftContext;
+    if(remaining)activeStore.saveDraft(address,month,{month,...remaining});else activeStore.clearDraft(address,month);
+  }
+  draftDirty=false;
+}
+function previousRecordFor(month){
+  const [year,monthNumber]=month.split('-').map(Number);
+  const date=new Date(year,monthNumber-2,1);
+  const previousMonth=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+  return records.find(record=>record.month===previousMonth);
+}
+function inactiveNightDraft(month,record){
+  if(nightElectricityEnabled())return null;
+  const nightMeterEvent=formMeterEvents().nPrev||null;
+  const savedEvent=record?._meterEvents?.nPrev||null;
+  const nPrev=$('nPrev').value,nCur=$('nCur').value;
+  const sameEvent=KomunalkaData.equal(nightMeterEvent,savedEvent);
+  if(!nPrev&&!nCur&&sameEvent)return null;
+  const previousRecord=previousRecordFor(month);
+  const savedPrevious=savedEvent?.newInitial??(hasRecordedNightZone(record)?record.nPrev:hasRecordedNightZone(previousRecord)?previousRecord.nCur:null);
+  const savedCurrent=hasRecordedNightZone(record)?record.nCur:null;
+  if(nPrev===String(savedPrevious??'')&&nCur===String(savedCurrent??'')&&sameEvent)return null;
+  return {nightOnly:true,nPrev,nCur,nightMeterEvent};
+}
 function debouncedDraft(){draftDirty=true;saveDraft();}
 document.addEventListener('input',e=>{if(e.target.closest('#utilityForm'))debouncedDraft();});
 document.addEventListener('change',e=>{if(e.target.closest('#utilityForm')||e.target.id==='isWinterInput')debouncedDraft();});
@@ -1519,11 +1566,20 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
   const warning=getSaveAnomalyWarning(currentCalc.total,month);
   if(warning&&!confirm(warning)){showToast('Перевірте дані','⚠️');return;}
   const existingIdx=records.findIndex(r=>r.month===month);
+  const existing=records[existingIdx],nightEnabled=nightElectricityEnabled();
+  const nightEntered=nightEnabled&&entered('nCur');
+  const remainingDraft=inactiveNightDraft(month,existing);
+  const previousMode=existing?.calculationMode;
+  const calculationMode={
+    ...previousMode,
+    twoZone:previousMode?.twoZone===true||nightEntered||(!previousMode&&(existing?hasRecordedNightZone(existing):nightEnabled)),
+    winter:entryElectricityMode().winter
+  };
   const paymentData=getPaymentInputData(currentCalc.total);
-  const newData={id:Date.now(),month,_enteredCurrent:Object.fromEntries(['wCur','hwCur','dCur','nCur','gCur'].map(key=>[key,entered(key)])),calculationMode:records[existingIdx]?.calculationMode||{twoZone:entryElectricityMode().twoZone,winter:entryElectricityMode().winter},_meterEvents:formMeterEvents(),isWinter:Boolean($('isWinterInput')?.checked),wPrev:hasWater?getV('wPrev'):0,wCur:hasWater?getV('wCur'):0,hwPrev:hasHotWater?getV('hwPrev'):0,hwCur:hasHotWater?getV('hwCur'):0,dPrev:hasElectro?getV('dPrev'):0,dCur:hasElectro?getV('dCur'):0,nPrev:(hasElectro&&entryElectricityMode().twoZone)?getV('nPrev'):(records[existingIdx]?.nPrev||0),nCur:(hasElectro&&entryElectricityMode().twoZone)?getV('nCur'):(records[existingIdx]?.nCur||0),gPrev:hasGas?getV('gPrev'):0,gCur:hasGas?getV('gCur'):0,customData:cData,note:$('recordNote')?.value?.trim()||'',waterCost:hasWater?currentCalc.waterCost:0,hotWaterCost:hasHotWater?currentCalc.hotWaterCost:0,electroCost:hasElectro?currentCalc.electroCost:0,gasCost:hasGas?currentCalc.gasCost:0,customCost:currentCalc.customCost,total:currentCalc.total,...paymentData,tariffSnapshot:createTariffSnapshot(),_filled:{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas,custom:hasCustom},_enteredPrevious:{wPrev:hasWater&&entered('wPrev'),hwPrev:hasHotWater&&entered('hwPrev'),dPrev:hasElectro&&entered('dPrev'),nPrev:hasElectro&&entryElectricityMode().twoZone&&entered('nPrev'),gPrev:hasGas&&entered('gPrev')}};
+  const newData={id:Date.now(),month,_enteredCurrent:Object.fromEntries(['wCur','hwCur','dCur','nCur','gCur'].map(key=>[key,key==='nCur'?nightEntered:entered(key)])),calculationMode,_meterEvents:formMeterEvents(),isWinter:Boolean($('isWinterInput')?.checked),wPrev:hasWater?getV('wPrev'):0,wCur:hasWater?getV('wCur'):0,hwPrev:hasHotWater?getV('hwPrev'):0,hwCur:hasHotWater?getV('hwCur'):0,dPrev:hasElectro?getV('dPrev'):0,dCur:hasElectro?getV('dCur'):0,nPrev:nightEnabled?getV('nPrev'):0,nCur:nightEnabled?getV('nCur'):0,gPrev:hasGas?getV('gPrev'):0,gCur:hasGas?getV('gCur'):0,customData:cData,note:$('recordNote')?.value?.trim()||'',waterCost:hasWater?currentCalc.waterCost:0,hotWaterCost:hasHotWater?currentCalc.hotWaterCost:0,electroCost:hasElectro?currentCalc.electroCost:0,gasCost:hasGas?currentCalc.gasCost:0,customCost:currentCalc.customCost,total:currentCalc.total,...paymentData,tariffSnapshot:createTariffSnapshot(),_filled:{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas,custom:hasCustom},_enteredPrevious:{wPrev:hasWater&&entered('wPrev'),hwPrev:hasHotWater&&entered('hwPrev'),dPrev:hasElectro&&entered('dPrev'),nPrev:nightEnabled&&entered('nPrev'),gPrev:hasGas&&entered('gPrev')}};
+  if(!nightEnabled)delete newData._meterEvents.nPrev;
   setRecordPayment(newData,paymentData.paymentStatus,paymentData.paidAmount,paymentData);
-  if(existingIdx>=0){
-    const existing=records[existingIdx];
+  if(existing){
     const merged={...existing,...newData,id:existing.id,_filled:{...existing._filled,...newData._filled},_enteredPrevious:{...existing._enteredPrevious,...newData._enteredPrevious},_enteredCurrent:{...existing._enteredCurrent,...newData._enteredCurrent}};
     if(!hasWater   &&(existing._filled?.water||existing.waterCost>0))   {merged.wPrev=existing.wPrev;merged.wCur=existing.wCur;merged.waterCost=existing.waterCost;merged._filled.water=true;}
     if(!hasHotWater&&(existing._filled?.hotWater||existing.hotWaterCost>0)){merged.hwPrev=existing.hwPrev;merged.hwCur=existing.hwCur;merged.hotWaterCost=existing.hotWaterCost;merged._filled.hotWater=true;}
@@ -1531,6 +1587,12 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
     if(!hasGas     &&(existing._filled?.gas||existing.gasCost>0))     {merged.gPrev=existing.gPrev;merged.gCur=existing.gCur;merged.gasCost=existing.gasCost;merged._filled.gas=true;}
     for(const [service,current] of [['water','wCur'],['hotWater','hwCur'],['electro','dCur'],['electro','nCur'],['gas','gCur']])if(!{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas}[service])merged._enteredCurrent[current]=existing._enteredCurrent?.[current]??KomunalkaModel.entered(existing,current,service);
     for(const [service,key] of [['water','wPrev'],['hotWater','hwPrev'],['electro','dPrev'],['electro','nPrev'],['gas','gPrev']])if(!{water:hasWater,hotWater:hasHotWater,electro:hasElectro,gas:hasGas}[service])merged._enteredPrevious[key]=existing._enteredPrevious?.[key]??(existing[key]!==undefined&&existing[key]!==null);
+    if(!nightEnabled){
+      for(const key of ['nPrev','nCur'])if(Object.hasOwn(existing,key))merged[key]=existing[key];else delete merged[key];
+      for(const [key,field] of [['_enteredPrevious','nPrev'],['_enteredCurrent','nCur'],['_meterEvents','nPrev']]){
+        if(Object.hasOwn(existing[key]||{},field))merged[key][field]=existing[key][field];else delete merged[key][field];
+      }
+    }
     if(!hasCustom  &&(existing._filled?.custom||existing.customCost>0))  {merged.customData={...existing.customData,...cData};merged.customCost=existing.customCost;merged._filled.custom=true;}
     else if(hasCustom){merged.customData={...(existing.customData||{}),...cData};merged.customCost=currentCalc.customCost;}
     merged.total=(merged.waterCost||0)+(merged.hotWaterCost||0)+(merged.electroCost||0)+(merged.gasCost||0)+(merged.customCost||0);
@@ -1541,7 +1603,7 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
     records[existingIdx]=merged; addChangeLog('record_updated', { month, total: merged.total }); showToast('Запис оновлено на пристрої');
   } else { records.push(newData); addChangeLog('record_created', { month, total: newData.total }); showToast('Запис додано на пристрої'); }
   syncCurrentAddress();if(!saveToLocal())return;
-  clearDraft();
+  clearDraft(remainingDraft);
   $('submitFormBtn')?.classList.add('save-btn-success');
   setTimeout(()=>$('submitFormBtn')?.classList.remove('save-btn-success'),600);
   // Saving a calculation does not mean the readings were sent to the provider.
@@ -1572,13 +1634,11 @@ function fillPreviousReadings() {
     setPaymentInputsFromRecord(null);
     const selectedMonth=$('monthInput')?.value;
     if(!selectedMonth||records.length===0){autoSetWinter(selectedMonth);loadDraft();return;}
-    const[sy,sm]=selectedMonth.split('-').map(Number);
-    const prevDate=new Date(sy,sm-2),prevMonth=`${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,'0')}`;
-    const prevRecord=records.find(r=>r.month===prevMonth);
+    const prevRecord=previousRecordFor(selectedMonth);
     if(prevRecord){
       if(prefs.showWater   &&KomunalkaModel.entered(prevRecord,'wCur','water')&&$('wPrev')) $('wPrev').value=prevRecord.wCur;
       if(prefs.showHotWater&&KomunalkaModel.entered(prevRecord,'hwCur','hotWater')&&$('hwPrev'))$('hwPrev').value=prevRecord.hwCur;
-      if(prefs.showElectro){if(KomunalkaModel.entered(prevRecord,'dCur','electro')&&$('dPrev'))$('dPrev').value=prevRecord.dCur;if(entryElectricityMode().twoZone&&KomunalkaModel.entered(prevRecord,'nCur','electro')&&$('nPrev'))$('nPrev').value=prevRecord.nCur;}
+      if(prefs.showElectro){if(KomunalkaModel.entered(prevRecord,'dCur','electro')&&$('dPrev'))$('dPrev').value=prevRecord.dCur;if(nightElectricityEnabled()&&hasRecordedNightZone(prevRecord)&&KomunalkaModel.entered(prevRecord,'nCur','electro')&&$('nPrev'))$('nPrev').value=prevRecord.nCur;}
       if(prefs.showGas&&KomunalkaModel.entered(prevRecord,'gCur','gas')&&$('gPrev'))$('gPrev').value=prevRecord.gCur;
     }
     const currentRecord=records.find(r=>r.month===selectedMonth);
@@ -1586,10 +1646,10 @@ function fillPreviousReadings() {
       if($('meterEventsInput'))$('meterEventsInput').value=JSON.stringify(currentRecord._meterEvents||{});
       if(prefs.showWater&&currentRecord._filled?.water!==false)   {if(currentRecord.wPrev!=null&&$('wPrev'))$('wPrev').value=currentRecord.wPrev;if(currentRecord.wCur!=null&&$('wCur'))$('wCur').value=currentRecord.wCur;}
       if(prefs.showHotWater&&currentRecord._filled?.hotWater!==false){if(currentRecord.hwPrev!=null&&$('hwPrev'))$('hwPrev').value=currentRecord.hwPrev;if(currentRecord.hwCur!=null&&$('hwCur'))$('hwCur').value=currentRecord.hwCur;}
-      if(prefs.showElectro&&currentRecord._filled?.electro!==false) {if(currentRecord.dPrev!=null&&$('dPrev'))$('dPrev').value=currentRecord.dPrev;if(currentRecord.dCur!=null&&$('dCur'))$('dCur').value=currentRecord.dCur;if(entryElectricityMode().twoZone){if(currentRecord.nPrev!=null&&$('nPrev'))$('nPrev').value=currentRecord.nPrev;if(currentRecord.nCur!=null&&$('nCur'))$('nCur').value=currentRecord.nCur;}}
+      if(prefs.showElectro&&currentRecord._filled?.electro!==false) {if(currentRecord.dPrev!=null&&$('dPrev'))$('dPrev').value=currentRecord.dPrev;if(currentRecord.dCur!=null&&$('dCur'))$('dCur').value=currentRecord.dCur;if(nightElectricityEnabled()&&hasRecordedNightZone(currentRecord)){if(currentRecord.nPrev!=null&&currentRecord._enteredPrevious?.nPrev!==false&&$('nPrev'))$('nPrev').value=currentRecord.nPrev;if(KomunalkaModel.entered(currentRecord,'nCur','electro')&&$('nCur'))$('nCur').value=currentRecord.nCur;}}
       if(prefs.showGas&&currentRecord._filled?.gas!==false)     {if(currentRecord.gPrev!=null&&$('gPrev'))$('gPrev').value=currentRecord.gPrev;if(currentRecord.gCur!=null&&$('gCur'))$('gCur').value=currentRecord.gCur;}
       for(const [previous,current] of [['wPrev','wCur'],['hwPrev','hwCur'],['dPrev','dCur'],['nPrev','nCur'],['gPrev','gCur']])if(currentRecord._enteredCurrent?.[current]===false){if($(current))$(current).value='';if(currentRecord._enteredPrevious?.[previous]===false&&$(previous))$(previous).value='';}
-      for(const [key,event] of Object.entries(currentRecord._meterEvents||{}))if($(key))$(key).value=event.newInitial;
+      for(const [key,event] of Object.entries(currentRecord._meterEvents||{}))if($(key)&&(key!=='nPrev'||nightElectricityEnabled()))$(key).value=event.newInitial;
       if(currentRecord.customData)Object.keys(currentRecord.customData).forEach(srvId=>{const el=$(`custom_${srvId}`);if(el)el.value=currentRecord.customData[srvId].val;});
       if($('recordNote'))$('recordNote').value=currentRecord.note||'';
       setPaymentInputsFromRecord(currentRecord);
@@ -1658,9 +1718,6 @@ function applyPreferences() {
   if($('blockElectro'))   $('blockElectro').style.display  =prefs.showElectro ?'block':'none';
   if($('blockGas'))       $('blockGas').style.display      =prefs.showGas     ?'block':'none';
   if($('blockCustomServices'))$('blockCustomServices').style.display=activeCustomServices().length>0?'block':'none';
-  if(prefs.electroTwoZone){if($('electroNightRow'))$('electroNightRow').style.display='flex';if($('lblDay1'))$('lblDay1').innerText='(День)';if($('lblDay2'))$('lblDay2').innerText='(День)';}
-  else{if($('electroNightRow'))$('electroNightRow').style.display='none';if($('lblDay1'))$('lblDay1').innerText='';if($('lblDay2'))$('lblDay2').innerText='';}
-  if($('winterCheckboxWrapper'))   $('winterCheckboxWrapper').style.display   =prefs.electroWinter?'flex':'none';
   if($('settingElectroWinterWrap'))$('settingElectroWinterWrap').style.display=prefs.electroWinter?'flex':'none';
   applyEntryElectricityMode();
   updateServiceChartOptions();
@@ -1704,7 +1761,7 @@ $('tariffPresetSelect')?.addEventListener('change',(e)=>{const presetId=e.target
 ['tWater','tHotWater','tElectroBase','tElectroWinter','tGas'].forEach(id=>$(id)?.addEventListener('input',()=>setSelectedTariffPreset('')));
 $('familyRoleSelect')?.addEventListener('change',(e)=>{prefs.familyRole=e.target.value;updateFamilyRoleHint();});
 
-['prefWater','prefHotWater','prefElectro','prefGas','prefElectroTwoZone','prefElectroWinter'].forEach(id=>{$(id)?.addEventListener('change',()=>{prefs.showWater=$('prefWater')?.checked??prefs.showWater;prefs.showHotWater=$('prefHotWater')?.checked??prefs.showHotWater;prefs.showElectro=$('prefElectro')?.checked??prefs.showElectro;prefs.showGas=$('prefGas')?.checked??prefs.showGas;prefs.electroTwoZone=$('prefElectroTwoZone')?.checked??prefs.electroTwoZone;prefs.electroWinter=$('prefElectroWinter')?.checked??prefs.electroWinter;applyPreferences();renderCalcCustomServices();calculatePreview();updateSmartBadges();});});
+['prefWater','prefHotWater','prefElectro','prefGas','prefElectroTwoZone','prefElectroWinter'].forEach(id=>{$(id)?.addEventListener('change',()=>{if(!saveDraft()){applyPreferences();return;}prefs.showWater=$('prefWater')?.checked??prefs.showWater;prefs.showHotWater=$('prefHotWater')?.checked??prefs.showHotWater;prefs.showElectro=$('prefElectro')?.checked??prefs.showElectro;prefs.showGas=$('prefGas')?.checked??prefs.showGas;prefs.electroTwoZone=$('prefElectroTwoZone')?.checked??prefs.electroTwoZone;prefs.electroWinter=$('prefElectroWinter')?.checked??prefs.electroWinter;applyPreferences();renderCalcCustomServices();calculatePreview();updateSmartBadges();});});
 $('prefReminders')?.addEventListener('change',function(){
   prefs.remindersEnabled = this.checked;
   if($('remindersSettings'))$('remindersSettings').style.display=this.checked?'block':'none';
