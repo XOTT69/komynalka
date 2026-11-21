@@ -38,8 +38,13 @@
     if(Object.hasOwn(fields,'emailBody'))clean.emailBody=template(fields.emailBody,1500);
     return {...settings,providerCards:{...all,[addressKey(address)]:{...group,[serviceKey(id)]:{...prev,...clean}}}};
   }
-  function meterValues(address,id,month){
-    const rec=(address.records||[]).find(r=>r.month===month);if(!rec||rec._filled?.[id]===false)return null;
+  function periodRecords(address,month){
+    return (address.records||[]).filter(record=>record.month===month);
+  }
+  function meterValues(address,id,month,recordId){
+    const matches=periodRecords(address,month);
+    const rec=recordId==null?(matches.length===1?matches[0]:null):matches.find(record=>String(record.id)===String(recordId));
+    if(!rec||rec._filled?.[id]===false)return null;
     const keys={water:[['wPrev','wCur','Вода','м³']],hotWater:[['hwPrev','hwCur','Гаряча вода','м³']],electro:(rec.calculationMode?.twoZone??address.prefs?.electroTwoZone)?[['dPrev','dCur','День','кВт·год'],['nPrev','nCur','Ніч','кВт·год']]:[['dPrev','dCur','Світло','кВт·год']],gas:[['gPrev','gCur','Газ','м³']]}[id];
     if(!keys)return null;
     const values=keys.map(([previousKey,currentKey,label,unit])=>{
@@ -57,8 +62,11 @@
     const values=meterValues(address,id,month);
     return values?values.map(value=>`${value.label}: ${value.current} ${value.unit}`).join('\n'):null;
   }
-  function emailDraft(address,service,card,month){
-    const values=meterValues(address,service.id,month);if(!values)return null;
+  function templateNeedsReadings(body,zoneCount=1){
+    return Boolean(body&&!body.includes('{readings}')&&(zoneCount!==1||!body.includes('{current}')));
+  }
+  function emailDraft(address,service,card,month,recordId){
+    const values=meterValues(address,service.id,month,recordId);if(!values)return null;
     const to=email(card.email);if(!to)return null;
     const one=values.length===1?values[0]:null;
     const list=values.map(value=>`${value.label}: поточні ${value.current}${value.previous?`, попередні ${value.previous}, різниця ${value.difference}`:''} ${value.unit}${value.replacement?`; заміна ${value.replacement.date}: старий ${value.replacement.oldPrevious} → ${value.replacement.oldFinal}, новий від ${value.replacement.newInitial}`:''}`).join('\n');
@@ -67,7 +75,10 @@
     const defaultSubject=tokens.account?`О/р ${tokens.account}. ${tokens.address}`:`Показники: ${tokens.service}. ${tokens.address}`;
     const defaultBody=one&&one.previous&&!one.replacement?`Показники ліч. Поточні ${one.current}. Попередні ${one.previous}. Різниця ${one.difference}`:`Показники за ${month}:\n${list}`;
     const subject=card.emailSubject?fill(template(card.emailSubject,240).replace(/[\r\n]+/g,' ')):defaultSubject;
-    const body=card.emailBody?fill(template(card.emailBody,1500)):defaultBody;
+    const draftBody=template(card.emailBody,1500);
+    const losesPrevious=!one?.previous&&/\{(?:previous|difference)\}/.test(draftBody);
+    const losesReplacement=values.some(value=>value.replacement)&&!draftBody.includes('{readings}');
+    const body=draftBody&&!templateNeedsReadings(draftBody,values.length)&&!losesPrevious&&!losesReplacement?fill(draftBody):defaultBody;
     return {to,subject,body,needsReview:values.some(value=>!value.previous||value.replacement)};
   }
   function mailto(draft){return `mailto:${encodeURIComponent(email(draft.to)).replace('%40','@')}?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(draft.body)}`;}
@@ -84,12 +95,27 @@
     const value=settings?.providerDeliveries?.[addressKey(address)]?.[serviceKey(id)]?.[month];
     return object(value)&&typeof value.sentAt==='string'?value:null;
   }
-  function markDelivered(settings,address,id,month,sentAt=new Date().toISOString()){
+  function deliveryState(settings,address,id,month,values){
+    const saved=delivery(settings,address,id,month);
+    if(!saved)return 'ready';
+    return saved.snapshot&&readingSnapshot(values)!==saved.snapshot?'changed':'sent';
+  }
+  function readingSnapshot(values){
+    return values?JSON.stringify(values.map(({current,previous,difference,replacement})=>[current,previous,difference,replacement?.date,replacement?.oldPrevious,replacement?.oldFinal,replacement?.newInitial])):'';
+  }
+  function markDelivered(settings,address,id,month,sentAt=new Date().toISOString(),values){
     const period=String(month||''),stamp=String(sentAt||'');
     if(!/^\d{4}-\d{2}$/.test(period)||!/^\d{4}-\d{2}-\d{2}T/.test(stamp)||!Number.isFinite(Date.parse(stamp)))throw new Error('INVALID_DELIVERY');
     const all=settings?.providerDeliveries,group=all?.[addressKey(address)],service=group?.[serviceKey(id)];
     if((all!==undefined&&!object(all))||(group!==undefined&&!object(group))||(service!==undefined&&!object(service)))throw new Error('INVALID_DELIVERY_DATA');
-    return {...(settings||{}),providerDeliveries:{...(all||{}),[addressKey(address)]:{...(group||{}),[serviceKey(id)]:{...(service||{}),[period]:{...(object(service?.[period])?service[period]:{}),sentAt:stamp}}}}};
+    return {...(settings||{}),providerDeliveries:{...(all||{}),[addressKey(address)]:{...(group||{}),[serviceKey(id)]:{...(service||{}),[period]:{...(object(service?.[period])?service[period]:{}),sentAt:stamp,...(values?{snapshot:readingSnapshot(values)}:{})}}}}};
   }
-  global.KomunalkaProviders=Object.freeze({services,website,email,get,update,meterValues,readings,emailDraft,mailto,gmail,delivery,markDelivered});
+  function clearDelivered(settings,address,id,month){
+    if(!delivery(settings,address,id,month))return settings;
+    const owner=addressKey(address),service=serviceKey(id);
+    const all=settings.providerDeliveries,periods={...all[owner][service]};
+    delete periods[month];
+    return {...settings,providerDeliveries:{...all,[owner]:{...all[owner],[service]:periods}}};
+  }
+  global.KomunalkaProviders=Object.freeze({services,website,email,get,update,periodRecords,meterValues,readings,templateNeedsReadings,emailDraft,mailto,gmail,delivery,deliveryState,readingSnapshot,markDelivered,clearDelivered});
 })(globalThis);

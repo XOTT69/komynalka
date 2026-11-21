@@ -42,6 +42,8 @@ function createRecordCard(rec) {
   const pG  = activeTotal > 0 ? ((showG  ? rec.gasCost||0      : 0) / activeTotal) * 100 : 0;
   const conic = `conic-gradient(#3b82f6 0% ${pW}%,#ef4444 ${pW}% ${pW+pHW}%,#eab308 ${pW+pHW}% ${pW+pHW+pE}%,#f97316 ${pW+pHW+pE}% ${pW+pHW+pE+pG}%,#a855f7 ${pW+pHW+pE+pG}% 100%)`;
   const recId = rec.id;
+  card.dataset.providerRecordMonth=rec.month;
+  const mailServices=isGuest?[]:providerMailServices({...currentAddressSnapshot(),records:[rec]},rec.month,rec.id);
 
   // Перевірка зміни тарифу
   let tariffChangedBadge = '';
@@ -82,6 +84,8 @@ function createRecordCard(rec) {
           ${rec.note ? `<div class="mt-3 p-3 bg-slate-50 dark:bg-black/50 rounded-xl text-xs text-slate-500 italic"><i class="fa-solid fa-sticky-note mr-1"></i>${escapeHtml(rec.note)}</div>` : ''}
         </div>
       </div>
+      ${mailServices.length?`<div class="history-mail-actions">${mailServices.map(service=>`<button type="button" data-history-mail="${escapeAttr(service.id)}"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Лист · ${escapeHtml(service.label)}</button>`).join('')}</div>`:''}
+      ${canEditData()&&outstanding>0&&KomunalkaProviders.periodRecords(currentAddressSnapshot(),rec.month).length===1?`<button type="button" class="history-partial-action" data-history-partial>Внести суму оплати</button>`:''}
       <div class="flex gap-2.5 mt-4 pt-3 border-t border-slate-100 dark:border-white/5">
         <button type="button" class="rec-pay flex-1 py-3.5 rounded-2xl font-bold text-xs border active:scale-[0.96] transition-all ${recPaid ? 'bg-slate-50 dark:bg-[#2c2c2e] text-slate-500 border-slate-200 dark:border-white/10' : 'bg-gradient-to-r from-brand to-blue-600 text-white shadow-lg border-brand'}" data-rec-id="${escapeAttr(recId)}">${recPaid ? '↩ Нараховано' : '✓ Оплачено'}</button>
         <button type="button" aria-label="Поділитися записом" class="rec-share w-12 bg-blue-50 dark:bg-blue-500/10 rounded-2xl text-blue-500 active:scale-[0.90] transition-transform" data-rec-id="${escapeAttr(recId)}"><i class="fa-solid fa-share-nodes"></i></button>
@@ -99,6 +103,14 @@ function createRecordCard(rec) {
   card.addEventListener('click', (e) => {
     const toggleTarget = e.target.closest('[data-toggle-details]');
     if (toggleTarget) { const panel = card.querySelector('.details-panel'), chevron = card.querySelector('.chevron-icon'); if (panel) { panel.classList.toggle('hidden'); toggleTarget.setAttribute('aria-expanded',String(!panel.classList.contains('hidden'))); if (chevron) chevron.style.transform = panel.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'; } return; }
+    const emailButton=e.target.closest('[data-history-mail]');
+    if(emailButton){openProviderEmail(emailButton.dataset.historyMail,rec.month,rec.id);return;}
+    if(e.target.closest('[data-history-partial]')){
+      if(!requireEdit())return;
+      editRecordById(recId);
+      $('paymentStatusInput')?.focus();
+      return;
+    }
     const payBtn = e.target.closest('.rec-pay');     if (payBtn)   { e.stopPropagation(); togglePaidById(recId); return; }
     const shareBtn = e.target.closest('.rec-share'); if (shareBtn) { e.stopPropagation(); shareRecordById(recId); return; }
     const editBtn = e.target.closest('.rec-edit');   if (editBtn)  { e.stopPropagation(); editRecordById(recId); return; }

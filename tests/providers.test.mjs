@@ -46,3 +46,32 @@ test('email drafts retain explicit zero, separate electricity zones and flag mis
  const legacyZero=P.emailDraft({name:'Дім',prefs:{showWater:true},records:[{month:'2026-11',wPrev:0,wCur:5,_filled:{water:true}}]},service.find(item=>item.id==='water'),card,'2026-11');assert.equal(legacyZero.needsReview,true);assert.equal(legacyZero.body.includes('Попередні 0'),false);
  assert.throws(()=>P.email('wrong@'),/INVALID_EMAIL/);assert.throws(()=>P.email('a@example.org\r\nBcc:other@example.org'),/INVALID_EMAIL/);
 });
+
+test('the saved month supplies water values even when the legacy template contains fixed readings',()=>{
+ const month='2026-11',service={id:'water',label:'Вода'};
+ const card={email:'provider@example.org',account:'00042',emailSubject:'О/р {account}',emailBody:'Було 120, стало 125'};
+ const address={name:'Дім',records:[{id:'a',month,wPrev:120,wCur:128,_filled:{water:true}}]};
+ assert.match(P.emailDraft(address,service,card,month).body,/128.*120.*8/);
+ assert.equal(card.emailBody,'Було 120, стало 125');
+ assert.equal(P.emailDraft(address,service,card,month).subject,'О/р 00042');
+ const duplicate={...address,records:[...address.records,{...address.records[0],id:'b',wCur:131}]};
+ assert.equal(P.emailDraft(duplicate,service,card,month),null);
+ assert.match(P.emailDraft(duplicate,service,card,month,'b').body,/131.*120.*11/);
+ const otherAddress={name:'Інша адреса',records:[{id:'c',month,wPrev:8,wCur:9,_filled:{water:true}}]};
+ assert.match(P.emailDraft(otherAddress,service,card,month).body,/Поточні 9. Попередні 8. Різниця 1/);
+});
+
+test('changes to readings reopen a confirmed delivery; undo keeps another month and service',()=>{
+ const month='2026-11',before=[{previous:'120',current:'128',difference:'8'}];
+ const after=[{previous:'120',current:'129',difference:'9'}];
+ let settings=P.markDelivered({},'home','water',month,undefined,before);
+ settings=P.markDelivered(settings,'home','water','2026-10',undefined,before);
+ settings=P.markDelivered(settings,'home','hotWater',month,undefined,before);
+ assert.equal(P.deliveryState(settings,'home','water',month,before),'sent');
+ assert.equal(P.deliveryState(settings,'home','water',month,after),'changed');
+ const undone=P.clearDelivered(settings,'home','water',month);
+ assert.equal(P.delivery(undone,'home','water',month),null);
+ assert.ok(P.delivery(undone,'home','water','2026-10'));
+ assert.ok(P.delivery(undone,'home','hotWater',month));
+ assert.ok(P.delivery(settings,'home','water',month));
+});

@@ -9,7 +9,7 @@ const APP_BUILD=document.querySelector('meta[name="app-build"]')?.content||'loca
 const APP_PUBLIC_URL = 'https://mykomunalka.pp.ua/';
 const optionalModules=new Map();
 function loadOptionalModule(name){
-  const modules={ai:'ai-chat.js',image:'year-report-image.js',summary:'monthly-summary.js'};
+  const modules={ai:'ai-chat.js',image:'year-report-image.js',summary:'monthly-summary.js',providerMail:'provider-mail-ui.js'};
   if(!modules[name])return Promise.reject(new Error('UNKNOWN_MODULE'));
   if(!optionalModules.has(name))optionalModules.set(name,new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=modules[name];script.onload=()=>resolve();script.onerror=()=>{script.remove();optionalModules.delete(name);reject(new Error('MODULE_LOAD_FAILED'));};document.head.append(script);}));
   return optionalModules.get(name);
@@ -970,7 +970,12 @@ function launchTabFromLocation(){
     if(!address){showToast('Адреса з нагадування недоступна в цьому акаунті','⚠️');return;}
     if(String(currentAddressId)!==String(address.id)&&!selectAddress(address.id))return;
   }
-  if(window.location.hash==='#calc'&&!isGuest){switchTab('tabCalc',1);return;}
+  if(window.location.hash==='#calc'&&!isGuest){
+    const due=requestedAddress===null?[]:KomunalkaMonth.reminders(currentAddressSnapshot(),activeSettings)
+      .filter(item=>item.available&&!item.done&&providerReadingFields[item.id]);
+    if(due.length===1){openMonthlyEntry(providerReadingFields[due[0].id],due[0].cycle);return;}
+    switchTab('tabCalc',1);return;
+  }
   if(window.location.hash==='#payment'&&!isGuest){openMonthlyEntry('paymentStatusInput');return;}
   if(window.location.hash==='#providers'&&!isGuest){switchTab('tabSettings',4);openSettingsPanel('providers');return;}
   if(window.location.hash==='#reminders'&&!isGuest){switchTab('tabSettings',4);openSettingsPanel('reminders');}
@@ -1141,15 +1146,31 @@ class SmartForecast {
 let dashChart, historyChart, serviceChart, donutChart, analyticsChart;
 
 function currentAddressSnapshot(){return {id:currentAddressId,tariffs,name:addresses.find(address=>String(address.id)===String(currentAddressId))?.name||'Мій дім',prefs,records,customServices};}
-function openMonthlyEntry(field){
+let lastSavedProviderPeriod=null;
+const providerReadingFields={water:'wCur',hotWater:'hwCur',electro:'dCur',gas:'gCur'};
+function openMonthlyEntry(field,month=getMonthKey()){
   if(!saveDraft())return;
-  $('monthInput').value=getMonthKey();switchTab('tabCalc',1);
+  $('monthInput').value=month;switchTab('tabCalc',1);
   const target=$(field||'monthInput');const detail=target?.closest('.meter-details');if(detail)detail.open=true;target?.scrollIntoView?.({block:'center',behavior:'smooth'});target?.focus({preventScroll:true});
 }
 function renderMonthlyTasks(){
   const target=$('monthlyTasksList');if(!target)return;
   const month=getMonthKey(),address=currentAddressSnapshot(),input=KomunalkaMonth.readings(address,month),reminders=KomunalkaMonth.reminders(address,activeSettings),rec=input.record;
-  const emailServices=KomunalkaProviders.services(address).filter(service=>{try{return service.meter&&Boolean(KomunalkaProviders.emailDraft(address,service,KomunalkaProviders.get(activeSettings,currentAddressId,service.id),month));}catch{return false;}});
+  const contacts=KomunalkaProviders.services(address).filter(service=>service.meter);
+  const periodByService=service=>reminders.find(reminder=>reminder.id===(service.id==='hotWater'?'water':service.id))?.cycle||month;
+  const transferItem=(service,period)=>{
+    const card=KomunalkaProviders.get(activeSettings,address.id,service.id);
+    const values=KomunalkaProviders.meterValues(address,service.id,period);
+    return {service,period,card,values,state:KomunalkaProviders.deliveryState(activeSettings,address.id,service.id,period,values)};
+  };
+  const showMailAction=item=>item.card.email||(item.service.id==='water'&&item.values);
+  const readyToTransfer=contacts.map(service=>transferItem(service,periodByService(service))).filter(showMailAction);
+  const emailServices=readyToTransfer.filter(item=>item.card.email&&item.values&&item.state!=='sent').map(item=>item.service);
+  const lastSaved=lastSavedProviderPeriod;
+  const extra=lastSaved?.owner===sessionLogin&&lastSaved.address===address.id
+    ?contacts.filter(service=>periodByService(service)!==lastSaved.month).map(service=>transferItem(service,lastSaved.month)).filter(item=>item.values&&showMailAction(item))
+    :[];
+  renderMonthlyMailActions([...extra,...readyToTransfer]);
   const entryDone=input.total>0&&input.done===input.total,payDone=Boolean(rec&&getOutstandingAmount(rec)===0),transfersDone=reminders.length>0&&reminders.every(r=>r.done);
   const missing=input.services.filter(s=>!s.done).map(s=>s.label);
   const readingText=input.total?`${input.done} з ${input.total} послуг внесено${missing.length?' · Залишилось: '+missing.join(', '):''}`:'Виберіть послуги в налаштуваннях';
@@ -1157,9 +1178,9 @@ function renderMonthlyTasks(){
   const period=rem=>{const f=date=>new Date(date).toLocaleDateString('uk-UA',{day:'numeric',month:'short',timeZone:'UTC'});return `${f(rem.start)} — ${f(rem.end)}`;};
   const transferStage=rem=>{
     if(rem.done)return 'Передано · підтверджено вами';
-    const related=input.services.filter(service=>service.id===rem.id||(rem.id==='water'&&service.id==='hotWater'));
-    if(related.some(service=>!service.done))return 'Спочатку збережіть показники';
+    const related=KomunalkaMonth.readings(address,rem.cycle).services.filter(service=>service.id===rem.id||(rem.id==='water'&&service.id==='hotWater'));
     if(emailServices.some(service=>service.id===rem.id||(rem.id==='water'&&service.id==='hotWater')))return 'Показники збережено · лист готовий';
+    if(related.some(service=>!service.done))return 'Спочатку збережіть показники';
     return related.length?'Показники збережено · очікує передачі':'Очікує виконання';
   };
   const row=(id,icon,title,subtitle,done,button)=>`<div class="month-task ${done?'task-done':''}" data-month-task="${id}"><span class="task-icon" aria-hidden="true"><i class="fa-solid ${done?'fa-check':icon}"></i></span><div class="task-copy"><h4>${title}</h4><p>${escapeHtml(subtitle)}</p></div>${button}</div>`;
@@ -1177,16 +1198,52 @@ function renderMonthlyTasks(){
     prefs.reminderCompletions={...prefs.reminderCompletions};if(reminder.done)delete prefs.reminderCompletions[reminder.id];else prefs.reminderCompletions[reminder.id]=reminder.cycle;
     debouncedSync();checkReminders();renderMonthlyTasks();$('monthlyTasksList').querySelector('details').open=true;showToast(reminder.done?'Позначку скасовано':'Виконання збережено','✓');
   }));
-  target.querySelectorAll('[data-email-service]').forEach(button=>button.addEventListener('click',()=>openProviderEmail(button.dataset.emailService,month)));
+  target.querySelectorAll('[data-email-service]').forEach(button=>button.addEventListener('click',()=>{
+    const item=readyToTransfer.find(entry=>entry.service.id===button.dataset.emailService);
+    if(item)openProviderEmail(item.service.id,item.period);
+  }));
   $('dashMonthStatus').textContent=rec?(entryDone?'Показники за місяць внесено':'Місяць заповнено частково'):'За цей місяць ще немає запису';
   $('dashMonthStatus').classList.toggle('hidden',entryDone);
   const next=KomunalkaMonth.nextAction(input,reminders,rec?getOutstandingAmount(rec):0,emailServices.map(service=>service.id));
   $('dashAddBtn').dataset.action=next.kind;$('dashAddBtn').dataset.service=next.serviceId||'';
+  $('dashAddBtn').dataset.month=next.reminder?.cycle||month;
   const label=$('dashAddBtn').querySelector('span');if(label)label.textContent=({setup:'Обрати послуги',readings:rec?'Продовжити показники':'Внести показники',email:'Підготувати лист',transfer:'Передати показники',payment:'Позначити оплату',review:'Переглянути показники'})[next.kind];
   const icon=$('dashAddBtn').querySelector('i');if(icon)icon.className=`fa-solid ${({setup:'fa-gear',readings:'fa-pen-to-square',email:'fa-envelope',transfer:'fa-paper-plane',payment:'fa-wallet',review:'fa-check'})[next.kind]}`;
   const end=next.reminder?new Date(next.reminder.end).toLocaleDateString('uk-UA',{day:'numeric',month:'long',timeZone:'UTC'}):'';
   $('dashNextActionMeta').textContent=next.reminder?`${next.reminder.overdue?'Період минув':'Наступна дія'} · ${next.reminder.label} · до ${end}`:next.kind==='readings'?'Наступна дія · '+(input.services.find(service=>!service.done)?.label||'показники'):next.kind==='payment'?'Наступна дія · оплата':next.kind==='setup'?'Почніть із потрібних послуг':'Справи за місяць виконано';
   $('dashboardActionHint').textContent=({setup:'Налаштування збережуться для цієї адреси',readings:'Попередні значення вже підтягуються з історії',email:'Лист готовий до перевірки. Передачу підтвердите після надсилання.',transfer:'Відкрийте список послуг і позначте фактично передані',payment:'Збережіть оплату у своєму обліку',review:reminders.length?'Показники внесено, передача й оплата позначені':'Показники та оплата за місяць збережені'})[next.kind];
+}
+function providerPeriodLabel(month){
+  return new Intl.DateTimeFormat('uk-UA',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(month+'-01T12:00:00Z'));
+}
+function renderMonthlyMailActions(items){
+  const panel=$('monthlyMailActions');if(!panel)return;
+  panel.hidden=isGuest||items.length===0;
+  panel.replaceChildren();
+  if(panel.hidden)return;
+  for(const {service,period,values,state,card} of items){
+    const row=document.createElement('div');row.className='provider-month-row';
+    const label=document.createElement('div');
+    const title=document.createElement('strong');title.textContent=service.label;
+    const subtitle=document.createElement('small');
+    subtitle.textContent=providerPeriodLabel(period)+' · '+(state==='changed'?'Показники змінено':state==='sent'?'Передано':values?(card.email?'Лист готовий':'Показник збережено'):'Потрібен запис');
+    label.append(title,subtitle);
+    const action=document.createElement('button');action.type='button';action.className='task-action';
+    const ambiguous=KomunalkaProviders.periodRecords(currentAddressSnapshot(),period).length>1;
+    action.textContent=values?(!card.email?'Додати email':state==='sent'?'Переглянути':'Підготувати лист'):(ambiguous?'Вибрати запис':'Внести');
+    action.addEventListener('click',()=>values?openProviderEmail(service.id,period):ambiguous?openProviderHistory(period):openMonthlyEntry(providerReadingFields[service.id],period));
+    row.append(label,action);panel.append(row);
+  }
+}
+function openProviderHistory(month){
+  if(!saveDraft())return;
+  $('searchRecords').value=month;
+  switchTab('tabHistory',2);
+  document.querySelector('#filterButtons [data-filter="all"]')?.click();
+  const card=[...document.querySelectorAll('[data-provider-record-month]')].find(item=>item.dataset.providerRecordMonth===month);
+  card?.scrollIntoView?.({block:'center'});
+  card?.querySelector('[data-toggle-details]')?.focus({preventScroll:true});
+  showToast('Відкрийте потрібний запис і виберіть послугу','ℹ️');
 }
 function renderEntryReview(valid=validateReadingsUI()){
   if(!$('entryReviewTotal'))return;
@@ -1461,7 +1518,12 @@ function setPaymentInputsFromRecord(rec = null) {
   $('paymentDetails')?.classList.toggle('hidden',status==='charged');
 }
 
-readingInputIds.forEach(id=>{const el=$(id);if(el) el.addEventListener('input',debouncedCalculate);});
+readingInputIds.forEach(id=>{
+  $(id)?.addEventListener('input',()=>{
+    if(id.endsWith('Prev'))$(id)?.closest('.meter-card')?.querySelector('[data-reading-source]')?.setAttribute('hidden','');
+    debouncedCalculate();
+  });
+});
 $('paymentStatusInput')?.addEventListener('change',()=>{const active=$('paymentStatusInput').value!=='charged';if($('paidAmountInput')){$('paidAmountInput').style.display=$('paymentStatusInput').value==='partial'?'block':'none';if($('paymentStatusInput').value!=='partial')$('paidAmountInput').value='';}$('paymentDetails')?.classList.toggle('hidden',!active);if(active&&$('paymentDateInput')&&!$('paymentDateInput').value)$('paymentDateInput').value=kyivDateKey();if(!active){if($('paymentDateInput'))$('paymentDateInput').value='';if($('paymentReferenceInput'))$('paymentReferenceInput').value='';}renderEntryReview();});
 $('paidAmountInput')?.addEventListener('input',()=>renderEntryReview());
 $('paymentDateInput')?.addEventListener('input',()=>renderEntryReview());
@@ -1600,9 +1662,27 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
     else merged.total=Math.round(merged.total*100)/100;
     setRecordPayment(merged, paymentData.paymentStatus, paymentData.paidAmount, paymentData);
     merged.note=newData.note;
-    records[existingIdx]=merged; addChangeLog('record_updated', { month, total: merged.total }); showToast('Запис оновлено на пристрої');
-  } else { records.push(newData); addChangeLog('record_created', { month, total: newData.total }); showToast('Запис додано на пристрої'); }
-  syncCurrentAddress();if(!saveToLocal())return;
+    records[existingIdx]=merged;
+  } else records.push(newData);
+  const previousCompletions=prefs.reminderCompletions;
+  for(const service of KomunalkaProviders.services(currentAddressSnapshot()).filter(item=>item.meter)){
+    const reminderId=service.id==='hotWater'?'water':service.id;
+    if(previousCompletions?.[reminderId]!==month)continue;
+    const values=KomunalkaProviders.meterValues(currentAddressSnapshot(),service.id,month);
+    if(KomunalkaProviders.deliveryState(activeSettings,currentAddressId,service.id,month,values)==='changed'){
+      prefs.reminderCompletions={...prefs.reminderCompletions};
+      delete prefs.reminderCompletions[reminderId];
+    }
+  }
+  syncCurrentAddress();
+  if(!saveToLocal()){
+    if(existing)records[existingIdx]=existing;else records.pop();
+    prefs.reminderCompletions=previousCompletions;
+    syncCurrentAddress();
+    return;
+  }
+  addChangeLog(existing?'record_updated':'record_created',{month,total:(existing?records[existingIdx]:newData).total});
+  showToast(existing?'Запис оновлено на пристрої':'Запис додано на пристрої');
   clearDraft(remainingDraft);
   $('submitFormBtn')?.classList.add('save-btn-success');
   setTimeout(()=>$('submitFormBtn')?.classList.remove('save-btn-success'),600);
@@ -1612,13 +1692,20 @@ $('utilityForm')?.addEventListener('submit',(e)=>{
   $('monthInput').value=`${nD.getFullYear()}-${String(nD.getMonth()+1).padStart(2,'0')}`;
   setPaymentInputsFromRecord(null);
   fillPreviousReadings();calculatePreview();updateSmartBadges();checkNewAchievements();
+  lastSavedProviderPeriod={owner:sessionLogin,address:currentAddressId,month};
   switchTab('tabDashboard',0);
   const address=currentAddressSnapshot();
-  const emailService=KomunalkaProviders.services(address).find(service=>{
-    const card=KomunalkaProviders.get(activeSettings,currentAddressId,service.id);
-    try{return Boolean(card.email&&KomunalkaProviders.emailDraft(address,service,card,month));}catch{return false;}
-  });
-  if(emailService)showActionToast('Показники збережено','Підготувати лист',()=>openProviderEmail(emailService.id,month),'✉️');
+  const savedAddress=currentAddressId,owner=sessionLogin;
+  const emailServices=providerMailServices(currentAddressSnapshot(),month);
+  if(emailServices.length)showActionToast('Показники збережено',emailServices.length===1?'Підготувати лист':'Вибрати лист',()=>{
+    if(savedAddress!==currentAddressId||owner!==sessionLogin)return;
+    if(emailServices.length===1)openProviderEmail(emailServices[0].id,month);
+    else{
+      switchTab('tabSettings',4);
+      $('providerMonth').value=month;
+      openSettingsPanel('providers');
+    }
+  },'✉️');
 });
 
 $('btnClearFields')?.addEventListener('click',()=>{if(!requireEdit('У режимі перегляду очищення недоступне'))return;if($('meterEventsInput'))$('meterEventsInput').value='{}';readingInputIds.forEach(id=>{const el=$(id);if(el){el.value='';el.classList.remove('input-invalid');}});document.querySelectorAll('.custom-srv-input').forEach(el=>el.value='');if($('recordNote'))$('recordNote').value='';setPaymentInputsFromRecord(null);calculatePreview();updateSmartBadges();clearDraft();showToast('Очищено','🧼');});
@@ -1627,6 +1714,7 @@ $('btnClearFields')?.addEventListener('click',()=>{if(!requireEdit('У режи�
 function fillPreviousReadings() {
   try {
     applyEntryElectricityMode();
+    document.querySelectorAll('[data-reading-source]').forEach(item=>item.hidden=true);
     if($('meterEventsInput'))$('meterEventsInput').value='{}';
     readingInputIds.forEach(id=>{if($(id))$(id).value='';});
     document.querySelectorAll('.custom-srv-input').forEach(el=>el.value='');
@@ -1658,6 +1746,16 @@ function fillPreviousReadings() {
     }
     autoSetWinter(selectedMonth);
     loadDraft();
+    if(!currentRecord&&prevRecord){
+      for(const [id,key] of [['water','wCur'],['hotWater','hwCur'],['electro','dCur'],['gas','gCur']]){
+        const note=document.querySelector(`[data-reading-source="${id}"]`);
+        const previous=$(key.replace('Cur','Prev'));
+        if(note&&previous?.value!==''&&KomunalkaModel.entered(prevRecord,key,id)&&Number(previous.value)===Number(prevRecord[key])){
+          note.textContent='Попередній показник · '+providerPeriodLabel(prevRecord.month);
+          note.hidden=false;
+        }
+      }
+    }
   } catch(e){console.error('fillPreviousReadings:',e);}
 }
 function autoSetWinter(month){if(!month||!$('isWinterInput'))return;const rec=records.find(r=>r.month===month),mo=new Date(month+'-01').getMonth()+1;$('isWinterInput').checked=typeof rec?.isWinter==='boolean'?rec.isWinter:(mo>=10||mo<=4);}
@@ -1937,8 +2035,8 @@ function renderRecords(){
   switch(sortVal){case 'date-desc':sorted.sort((a,b)=>new Date(b.month)-new Date(a.month));break;case 'date-asc':sorted.sort((a,b)=>new Date(a.month)-new Date(b.month));break;case 'amount-desc':sorted.sort((a,b)=>b.total-a.total);break;case 'amount-asc':sorted.sort((a,b)=>a.total-b.total);break;}
   if(currentFilter==='paid')  sorted=sorted.filter(r=>isRecordPaid(r));
   if(currentFilter==='unpaid')sorted=sorted.filter(r=>getOutstandingAmount(r)>0);
-  const search=$('searchRecords')?.value?.toLowerCase()||'';
-  if(search)sorted=sorted.filter(r=>new Date(r.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'}).toLowerCase().includes(search)||r.month.includes(search));
+  const search=$('searchRecords')?.value?.trim().toLowerCase()||'';
+  if(search)sorted=sorted.filter(r=>new Date(r.month+'-01').toLocaleString('uk-UA',{month:'long',year:'numeric'}).toLowerCase().includes(search)||r.month.includes(search)||String(r.note||'').toLowerCase().includes(search));
   renderHistoryChart([...records].sort((a,b)=>new Date(a.month)-new Date(b.month)));
   renderServiceChart();
   list.innerHTML='';
@@ -3076,9 +3174,9 @@ document.querySelectorAll('[data-settings-back]').forEach(button=>button.addEven
 function runDashboardAction(){
   const action=$('dashAddBtn')?.dataset.action;
   if(action==='setup'){switchTab('tabSettings',4);openSettingsPanel('home');return;}
-  if(action==='email'){openProviderEmail($('dashAddBtn').dataset.service,getMonthKey());return;}
+  if(action==='email'){openProviderEmail($('dashAddBtn').dataset.service,$('dashAddBtn').dataset.month);return;}
   if(action==='transfer'){const detail=$('monthlyTasksList')?.querySelector('details');if(detail){detail.open=true;detail.scrollIntoView?.({block:'center',behavior:'smooth'});detail.querySelector('summary')?.focus();}return;}
-  openMonthlyEntry(action==='payment'?'paymentStatusInput':undefined);
+  openMonthlyEntry(action==='payment'?'paymentStatusInput':providerReadingFields[$('dashAddBtn')?.dataset.service]);
 }
 let pendingRecordDeletion=null;
 function closeRecordAction(){const dialog=$('recordActionDialog');if(typeof dialog?.close==='function')dialog.close();else dialog?.removeAttribute('open');pendingRecordDeletion=null;}
@@ -3114,33 +3212,38 @@ $('jumpToReview')?.addEventListener('click',showEntryReview);
 document.querySelectorAll('[data-meter-next]').forEach(button=>button.addEventListener('click',()=>{const groups=activeMeterGroups(),index=groups.findIndex(g=>g.id===button.dataset.meterNext),next=groups[index+1];if(next)focusEntryField($(next.fields[0]));else showEntryReview();}));
 $('utilityForm')?.addEventListener('keydown',e=>{if(e.key!=='Enter'||e.isComposing||!e.target.matches('input[type="number"]'))return;e.preventDefault();const fields=[...$('utilityForm').querySelectorAll('input[type="number"]')].filter(input=>!input.disabled&&(!input.id.endsWith('Prev')||input.value===''||input===e.target)&&(input.closest('.meter-card')?activeMeterGroups().some(g=>g.id===input.closest('.meter-card').id)&&!(input.id.startsWith('n')&&!entryElectricityMode().twoZone):input.offsetParent!==null));const next=fields[fields.indexOf(e.target)+1];if(next)focusEntryField(next);else showEntryReview();});
 
-let providerEditor=null,providerEmailDraftContext=null;
+let providerEditor=null;
 function renderProviders(){
   const list=$('providersList');if(!list)return;
   $('providerAddressLabel').textContent=addresses.find(a=>String(a.id)===String(currentAddressId))?.name||'Поточна адреса';
   if(!$('providerMonth').value)$('providerMonth').value=getMonthKey();
   if(isGuest){list.innerHTML='<p class="provider-note">Картки постачальників доступні у власному акаунті.</p>';return;}
   const address=currentAddressSnapshot(),month=$('providerMonth').value,services=KomunalkaProviders.services(address),schedule=KomunalkaReminders.schedule(address,activeSettings);
+  const ambiguous=KomunalkaProviders.periodRecords(address,month).length>1;
   list.innerHTML=services.map(service=>{
     const card=KomunalkaProviders.get(activeSettings,currentAddressId,service.id),has=Boolean(card.name||card.account||card.website||card.contact||card.email),readings=KomunalkaProviders.readings(address,service.id,month),delivery=KomunalkaProviders.delivery(activeSettings,currentAddressId,service.id,month);
     let url='';try{url=KomunalkaProviders.website(card.website);}catch{}
     const reminder=schedule.find(r=>r.id===(service.id==='hotWater'?'water':service.id)&&r.active&&r.enabled!==false),period=prefs.remindersEnabled&&reminder?`Передача: ${reminder.startDay}–${reminder.endDay} числа щомісяця`:'Дні передачі можна обрати в нагадуваннях';
+    const values=KomunalkaProviders.meterValues(address,service.id,month);
+    const changed=KomunalkaProviders.deliveryState(activeSettings,address.id,service.id,month,values)==='changed';
     const sent=delivery?new Date(delivery.sentAt).toLocaleString('uk-UA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
-    return `<article class="provider-card"><div class="provider-heading"><span class="settings-icon"><i class="fa-solid fa-${service.icon}" aria-hidden="true"></i></span><div><h4>${escapeHtml(service.label)}</h4><p>${escapeHtml(card.name||'Постачальника ще не додано')}</p></div><button type="button" class="provider-edit" data-provider-edit="${escapeAttr(service.id)}" ${!canEditData()?'disabled':''}>${has?'Змінити':'Додати'}</button></div>${card.account?`<div class="provider-account"><span>Особовий рахунок</span><strong>${escapeHtml(card.account)}</strong></div>`:''}${card.contact?`<p class="provider-contact">${escapeHtml(card.contact)}</p>`:''}${card.email?`<p class="provider-email-address"><i class="fa-solid fa-envelope" aria-hidden="true"></i> ${escapeHtml(card.email)}</p>`:''}<p class="provider-period">${delivery?`<span class="provider-sent-state"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Надіслано ${escapeHtml(sent)}</span>`:escapeHtml(period)}</p><div class="provider-actions">${service.meter?`<button type="button" class="${card.email?'provider-primary':'provider-email-setup'}" data-provider-email="${escapeAttr(service.id)}" ${card.email&&readings===null?'disabled':''}><i class="fa-solid fa-envelope" aria-hidden="true"></i> ${card.email?(delivery?'Переглянути лист':'Підготувати лист'):'Додати email для листа'}</button>`:''}${url?`<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" class="${service.meter?'':'provider-primary'}">Відкрити кабінет <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>`:''}${card.account?`<button type="button" data-provider-copy="account" data-provider-id="${escapeAttr(service.id)}">Скопіювати рахунок</button>`:''}${service.meter?`<button type="button" data-provider-copy="readings" data-provider-id="${escapeAttr(service.id)}" ${readings===null?'disabled':''}>Скопіювати показники</button>`:''}</div>${service.meter&&readings===null?'<p class="provider-note">За вибраний місяць немає збережених показників цієї послуги.</p>':''}</article>`;
+    return `<article class="provider-card"><div class="provider-heading"><span class="settings-icon"><i class="fa-solid fa-${service.icon}" aria-hidden="true"></i></span><div><h4>${escapeHtml(service.label)}</h4><p>${escapeHtml(card.name||'Постачальника ще не додано')}</p></div><button type="button" class="provider-edit" data-provider-edit="${escapeAttr(service.id)}" ${!canEditData()?'disabled':''}>${has?'Змінити':'Додати'}</button></div>${card.account?`<div class="provider-account"><span>Особовий рахунок</span><strong>${escapeHtml(card.account)}</strong></div>`:''}${card.contact?`<p class="provider-contact">${escapeHtml(card.contact)}</p>`:''}${card.email?`<p class="provider-email-address"><i class="fa-solid fa-envelope" aria-hidden="true"></i> ${escapeHtml(card.email)}</p>`:''}<p class="provider-period">${changed?'Показники змінено після передачі':delivery?`<span class="provider-sent-state"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Надіслано ${escapeHtml(sent)}</span>`:escapeHtml(period)}</p><div class="provider-actions">${service.meter?`<button type="button" class="${card.email?'provider-primary':'provider-email-setup'}" data-provider-email="${escapeAttr(service.id)}" ${card.email&&readings===null?'disabled':''}><i class="fa-solid fa-envelope" aria-hidden="true"></i> ${card.email?(delivery&&!changed?'Переглянути лист':'Підготувати лист'):'Додати email для листа'}</button>`:''}${url?`<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" class="${service.meter?'':'provider-primary'}">Відкрити кабінет <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>`:''}${card.account?`<button type="button" data-provider-copy="account" data-provider-id="${escapeAttr(service.id)}">Скопіювати рахунок</button>`:''}${service.meter?`<button type="button" data-provider-copy="readings" data-provider-id="${escapeAttr(service.id)}" ${readings===null?'disabled':''}>Скопіювати показники</button>`:''}</div>${service.meter&&readings===null?`<p class="provider-note">${ambiguous?'За цей місяць є кілька записів.':'За вибраний місяць немає збережених показників цієї послуги.'}</p><button type="button" class="task-action provider-recovery-action" data-provider-entry="${escapeAttr(service.id)}">${ambiguous?'Вибрати запис в історії':'Внести показник'}</button>`:''}</article>`;
   }).join('')||'<p class="provider-note">Спочатку додайте послуги в розділі «Мій дім».</p>';
+  list.querySelectorAll('[data-provider-entry]').forEach(button=>button.addEventListener('click',()=>ambiguous?openProviderHistory(month):openMonthlyEntry(providerReadingFields[button.dataset.providerEntry],month)));
   list.querySelectorAll('[data-provider-edit]').forEach(button=>button.addEventListener('click',()=>openProviderEditor(button.dataset.providerEdit)));
   list.querySelectorAll('[data-provider-email]').forEach(button=>button.addEventListener('click',()=>openProviderEmail(button.dataset.providerEmail,month)));
   list.querySelectorAll('[data-provider-copy]').forEach(button=>button.addEventListener('click',()=>{const id=button.dataset.providerId,text=button.dataset.providerCopy==='account'?KomunalkaProviders.get(activeSettings,currentAddressId,id).account:KomunalkaProviders.readings(currentAddressSnapshot(),id,$('providerMonth').value);if(text!==null&&text!==undefined)copyProviderText(String(text));}));
 }
 function closeProviderDialog(){const dialog=$('providerDialog');if(typeof dialog.close==='function')dialog.close();else dialog.removeAttribute('open');providerEditor=null;}
-function openProviderEditor(id,focusEmail=false){
+function openProviderEditor(id,focusEmail=false,month=$('providerMonth')?.value||getMonthKey()){
   if(!requireEdit())return;const service=KomunalkaProviders.services(currentAddressSnapshot()).find(s=>s.id===id);if(!service)return;
-  const card=KomunalkaProviders.get(activeSettings,currentAddressId,id);providerEditor={id,owner:sessionLogin,address:currentAddressId,base:KomunalkaData.copy(card)};
-  $('providerDialogTitle').textContent=service.label+' · постачальник';$('providerDialogAddress').textContent=$('providerAddressLabel').textContent;
+  const card=KomunalkaProviders.get(activeSettings,currentAddressId,id);providerEditor={id,month,owner:sessionLogin,address:currentAddressId,base:KomunalkaData.copy(card)};
+  $('providerDialogTitle').textContent=service.label+' · постачальник';$('providerDialogAddress').textContent=currentAddressSnapshot().name;
   for(const field of ['Name','Account','Website','Contact'])$('provider'+field).value=card[field.toLowerCase()]||'';
   $('providerEmail').value=card.email||(/^\S+@\S+\.\S+$/.test(card.contact||'')?card.contact:'');
   $('providerEmailSubject').value=card.emailSubject||'';$('providerEmailBody').value=card.emailBody||'';
   $('providerEmailSettings').open=Boolean(card.emailSubject||card.emailBody);
+  renderProviderTemplatePreview();
   $('providerError').textContent='';const dialog=$('providerDialog');if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');$(focusEmail?'providerEmail':'providerName').focus();
 }
 $('providerForm')?.addEventListener('submit',e=>{
@@ -3152,75 +3255,36 @@ $('providerForm')?.addEventListener('submit',e=>{
     Object.assign(fields,{email:$('providerEmail').value,emailSubject:$('providerEmailSubject').value,emailBody:$('providerEmailBody').value});
     const previous=activeSettings;const next=KomunalkaProviders.update(activeSettings,currentAddressId,editor.id,fields);activeSettings=next;syncCurrentAddress();
     if(!saveToLocal()){activeSettings=previous;$('providerError').textContent='Не вдалося зберегти. Введені поля залишаються тут — спробуйте ще раз.';return;}
-    closeProviderDialog();renderProviders();syncToCloud();showToast('Картку збережено на пристрої','✓');
+    closeProviderDialog();renderProviders();renderMonthlyTasks();syncToCloud();showToast('Картку збережено на пристрої','✓');
   }catch(error){$('providerError').textContent=error.message==='INVALID_WEBSITE'?'Вкажіть посилання на сайт: https://… або адресу сайту без пробілів.':error.message==='INVALID_EMAIL'?'Вкажіть одну повну email-адресу постачальника.':error.message==='INVALID_EMAIL_TEMPLATE'?'Перевірте тему й текст листа: забагато символів або недопустимий знак.':'Картку не вдалося зберегти. Перевірте поля; попередні дані збережено.';}
 });
 $('providerCancel')?.addEventListener('click',closeProviderDialog);
 $('providerDialog')?.addEventListener('cancel',()=>{providerEditor=null;});
-$('providerClear')?.addEventListener('click',()=>{for(const id of ['providerName','providerAccount','providerWebsite','providerContact','providerEmail','providerEmailSubject','providerEmailBody'])$(id).value='';$('providerError').textContent='Поля очищено. Натисніть «Зберегти», щоб застосувати.';});
+$('providerClear')?.addEventListener('click',()=>{for(const id of ['providerName','providerAccount','providerWebsite','providerContact','providerEmail','providerEmailSubject','providerEmailBody'])$(id).value='';renderProviderTemplatePreview();$('providerError').textContent='Поля очищено. Натисніть «Зберегти», щоб застосувати.';});
 $('providerMonth')?.addEventListener('change',renderProviders);
 $('providerReminderSettings')?.addEventListener('click',()=>openSettingsPanel('reminders'));
-function updateProviderMailLink(){
-  const link=$('providerOpenMail'),copy=$('providerCopyFullMail'),choice=$('providerMailDestination'),help=$('providerMailDestinationHelp');
-  if(!link||!choice)return;
-  const destination=choice.value;
-  link.classList.toggle('hidden',destination==='copy');copy?.classList.toggle('hidden',destination!=='copy');
-  help.textContent=destination==='gmail'?'Відкриється нова вкладка Gmail із заповненими полями. Увійдіть у Gmail, якщо потрібно.':destination==='copy'?'Лист залишиться тут. Скопіюйте все або кожне поле окремо.':'Відкриється поштовий застосунок, вибраний за замовчуванням на пристрої. На iPhone це може бути Apple Mail.';
-  if(destination==='copy')return;
-  const draft={to:$('providerEmailTo').value,subject:$('providerEmailSubjectText').value,body:$('providerEmailBodyText').value};
-  try{
-    link.href=destination==='gmail'?KomunalkaProviders.gmail(draft):KomunalkaProviders.mailto(draft);
-    link.textContent=destination==='gmail'?'Відкрити Gmail':'Відкрити пошту';
-    if(destination==='gmail'){link.target='_blank';link.rel='noopener noreferrer';}else{link.removeAttribute('target');link.removeAttribute('rel');}
-    link.removeAttribute('aria-disabled');
-  }catch{link.removeAttribute('href');link.setAttribute('aria-disabled','true');}
+function providerMailServices(address,month,recordId){
+  return KomunalkaProviders.services(address).filter(service=>{
+    const card=KomunalkaProviders.get(activeSettings,address.id,service.id);
+    try{return Boolean(KomunalkaProviders.emailDraft(address,service,card,month,recordId));}catch{return false;}
+  });
 }
-function openProviderEmail(id,month=$('providerMonth')?.value||getMonthKey()){
+function openProviderEmail(id,month,recordId){
   if(isGuest)return;
-  const address=currentAddressSnapshot(),service=KomunalkaProviders.services(address).find(item=>item.id===id);if(!service)return;
-  const card=KomunalkaProviders.get(activeSettings,currentAddressId,id);
-  if(!card.email){openProviderEditor(id,true);return;}
-  let draft;try{draft=KomunalkaProviders.emailDraft(address,service,card,month);}catch{showToast('Перевірте email у картці постачальника','⚠️');return;}
-  if(!draft){showToast('Спочатку збережіть показники за обраний місяць','⚠️');return;}
-  providerEmailDraftContext={id,month,owner:sessionLogin,address:currentAddressId};
-  $('providerEmailContext').textContent=`${service.label} · ${month} · ${address.name||'Поточна адреса'}`;
-  $('providerEmailTo').value=draft.to;$('providerEmailSubjectText').value=draft.subject;$('providerEmailBodyText').value=draft.body;
-  const savedDestination=localStorage.getItem(MAIL_DESTINATION_KEY);
-  $('providerMailDestination').value=['system','gmail','copy'].includes(savedDestination)?savedDestination:'system';
-  $('providerCopyStatus').classList.add('hidden');
-  $('providerEmailNotice').classList.toggle('hidden',!draft.needsReview);
-  $('providerEmailNotice').textContent=draft.needsReview?'Попередній показник не був введений. Перевірте його в листі перед надсиланням.':'';
-  renderProviderDeliveryStatus();
-  updateProviderMailLink();const dialog=$('providerEmailDialog');if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
+  const address=currentAddressId,owner=sessionLogin;
+  const period=month||$('providerMonth')?.value||getMonthKey();
+  if(window.KomunalkaProviderMail)return window.KomunalkaProviderMail.openEmail(id,period,recordId);
+  void loadOptionalModule('providerMail').then(()=>{
+    if(owner===sessionLogin&&address===currentAddressId)window.KomunalkaProviderMail.openEmail(id,period,recordId);
+  }).catch(()=>showToast('Не вдалося підготувати лист. Спробуйте ще раз.','⚠️'));
 }
-function renderProviderDeliveryStatus(){
-  const context=providerEmailDraftContext,button=$('providerMarkSent'),status=$('providerDeliveryStatus'),wrap=button?.closest('.provider-delivery-confirm');if(!context||!button||!status)return;
-  const delivery=KomunalkaProviders.delivery(activeSettings,context.address,context.id,context.month);
-  if(delivery){status.textContent='Надіслано '+new Date(delivery.sentAt).toLocaleString('uk-UA',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});button.textContent='Позначено ✓';}
-  else{status.textContent='Позначте після відправлення у пошті';button.textContent='Позначити надісланим';}
-  button.disabled=Boolean(delivery)||!canEditData();wrap?.classList.toggle('is-sent',Boolean(delivery));
+function renderProviderTemplatePreview(){
+  if(window.KomunalkaProviderMail){window.KomunalkaProviderMail.renderTemplatePreview();return;}
+  const editor=providerEditor;
+  void loadOptionalModule('providerMail').then(()=>{
+    if(editor===providerEditor)window.KomunalkaProviderMail.renderTemplatePreview();
+  }).catch(()=>{$('providerTemplatePreview').textContent='Перегляд недоступний. Спробуйте відкрити картку ще раз.';});
 }
-$('providerMarkSent')?.addEventListener('click',()=>{
-  const context=providerEmailDraftContext;if(!context||context.owner!==sessionLogin||String(context.address)!==String(currentAddressId)||!requireEdit())return;
-  const previousSettings=activeSettings,previousCompletions={...(prefs.reminderCompletions||{})};
-  try{
-    activeSettings=KomunalkaProviders.markDelivered(activeSettings,context.address,context.id,context.month);
-    const reminderId=context.id==='hotWater'?'water':context.id;prefs.reminderCompletions={...previousCompletions,[reminderId]:context.month};
-    syncCurrentAddress();if(!saveToLocal())throw new Error('SAVE_FAILED');
-    renderProviderDeliveryStatus();renderMonthlyTasks();syncToCloud();showToast('Надсилання позначено','✓');
-  }catch{activeSettings=previousSettings;prefs.reminderCompletions=previousCompletions;syncCurrentAddress();showToast('Не вдалося зберегти позначку','⚠️');}
-});
-for(const id of ['providerEmailTo','providerEmailSubjectText','providerEmailBodyText'])$(id)?.addEventListener('input',()=>{if(id==='providerEmailSubjectText')$(id).value=$(id).value.replace(/[\r\n]+/g,' ');updateProviderMailLink();});
-$('providerMailDestination')?.addEventListener('change',e=>{localStorage.setItem(MAIL_DESTINATION_KEY,e.target.value);updateProviderMailLink();});
-document.querySelectorAll('[data-provider-email-copy]').forEach(button=>button.addEventListener('click',()=>{
-  const target={to:'providerEmailTo',subject:'providerEmailSubjectText',body:'providerEmailBodyText'}[button.dataset.providerEmailCopy];
-  if(target)copyProviderText($(target).value,button,'Скопійовано');
-}));
-$('providerCopyFullMail')?.addEventListener('click',event=>{
-  const text=`Кому: ${$('providerEmailTo').value}\nТема: ${$('providerEmailSubjectText').value}\n\n${$('providerEmailBodyText').value}`;
-  copyProviderText(text,event.currentTarget,'Увесь лист скопійовано');
-});
-$('providerEmailClose')?.addEventListener('click',()=>{const dialog=$('providerEmailDialog');if(typeof dialog.close==='function')dialog.close();else dialog.removeAttribute('open');providerEmailDraftContext=null;if($('settings-providers')&&!$('settings-providers').classList.contains('hidden'))renderProviders();});
 async function copyProviderText(text,button=null,label='Скопійовано'){
   try{
     await navigator.clipboard.writeText(text);
@@ -3243,16 +3307,29 @@ function openOnboarding(){
   if(!window.KomunalkaOnboarding)return;
   if(!onboardingUI)onboardingUI=KomunalkaOnboarding.create({
     owner:()=>sessionLogin,address:()=>currentAddressSnapshot(),progress:()=>readDeviceMeta().onboarding,
+    provider:()=>{
+      const {email='',account=''}=KomunalkaProviders.get(activeSettings,currentAddressId,'water');
+      return {email,account};
+    },
     previous:()=>Object.fromEntries(['wPrev','hwPrev','dPrev','nPrev','gPrev'].map(id=>[id,$(id)?.value||''])),
     saveProgress:progress=>{try{const key=deviceMetaKey(),raw=JSON.stringify({...readDeviceMeta(),onboarding:progress});localStorage.setItem(key,raw);return localStorage.getItem(key)===raw;}catch{return false;}},
     apply:async(draft,context)=>{
       if(context.owner!==sessionLogin||String(context.address)!==String(currentAddressId)||!canEditData())throw new Error('Акаунт або адреса змінилися. Відкрийте налаштування ще раз.');
       if(records.length||!KomunalkaData.equal(context.base,currentAddressSnapshot()))throw new Error('Дані вже змінилися. Закрийте майстер і відкрийте його ще раз.');
       if(!saveDraft())throw new Error('Спочатку збережіть чернетку на пристрої.');
-      const index=addresses.findIndex(address=>String(address.id)===String(currentAddressId)),old=KomunalkaData.copy(addresses[index]),oldTariffs=tariffs,oldPrefs=prefs;
+      const index=addresses.findIndex(address=>String(address.id)===String(currentAddressId)),old=KomunalkaData.copy(addresses[index]),oldTariffs=tariffs,oldPrefs=prefs,oldSettings=activeSettings,oldProvider=context.provider;
+      if(draft.prefs.showWater&&draft.waterProvider?.email?.trim()){
+        const saved=KomunalkaProviders.get(activeSettings,currentAddressId,'water');
+        const latest={email:saved.email||'',account:saved.account||''};
+        if(!KomunalkaData.equal(draft.waterProvider,context.provider)){
+          if(!KomunalkaData.equal(latest,context.provider))throw new Error('Картку води вже оновлено. Відкрийте майстер ще раз.');
+          activeSettings=KomunalkaProviders.update(activeSettings,currentAddressId,'water',{...saved,email:draft.waterProvider.email,account:draft.waterProvider.account});
+          context.provider={email:draft.waterProvider.email.trim(),account:draft.waterProvider.account.trim()};
+        }
+      }
       const nextTariffs={...tariffs};for(const key of ['water','hotWater','electroBase','electroWinter','gas'])if(draft.tariffs[key]!=null)nextTariffs[key]=KomunalkaOnboarding.number(draft.tariffs[key])??tariffs[key];
       tariffs=nextTariffs;prefs={...prefs,...Object.fromEntries(['showWater','showHotWater','showElectro','showGas','electroTwoZone','electroWinter'].map(key=>[key,Boolean(draft.prefs[key])]))};addresses[index]={...addresses[index],name:draft.name.trim().slice(0,120)};syncCurrentAddress();
-      if(!saveToLocal()){addresses[index]=old;tariffs=oldTariffs;prefs=oldPrefs;throw new Error('Не вдалося зберегти. Початкові дані залишилися без змін.');}
+      if(!saveToLocal()){addresses[index]=old;tariffs=oldTariffs;prefs=oldPrefs;activeSettings=oldSettings;context.provider=oldProvider;throw new Error('Не вдалося зберегти. Початкові дані залишилися без змін.');}
       context.base=KomunalkaData.copy(currentAddressSnapshot());
       loadCurrentAddress(true);switchTab('tabCalc',1);
       for(const [id,value] of Object.entries(draft.previous||{}))if($(id)&&String(value).trim()){const n=KomunalkaOnboarding.number(value);if(n!==null)$(id).value=String(n);}

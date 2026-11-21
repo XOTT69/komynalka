@@ -19,3 +19,12 @@ test('next action opens the prepared letter only when readings are saved and tra
  assert.equal(M.nextAction(input,[{...due,available:false}],100,['water']).kind,'payment');
  assert.equal(M.nextAction(input,[{...due,done:true}],0,['water']).kind,'review');
 });
+
+test('a ready water letter stays actionable while another service needs readings',()=>{
+ const input={month:'2027-01',total:2,done:1,services:[{id:'water',done:true},{id:'electro',done:false}]};
+ const due={id:'water',cycle:'2027-01',available:true,done:false,end:'2027-01-24'};
+ assert.equal(M.nextAction(input,[due],0,['water']).kind,'email');
+ const previousCycle={...due,cycle:'2026-12'};
+ input.services[0].done=false;
+ assert.deepEqual(M.nextAction(input,[previousCycle],0,['water']),{kind:'email',reminder:previousCycle,serviceId:'water'});
+});

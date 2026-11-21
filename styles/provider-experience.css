@@ -1,0 +1,143 @@
+/* Reuse the app palette so the monthly workflow works in both themes. */
+.provider-month-actions {
+  margin-block-start: 14px;
+  overflow: hidden;
+  border: 1px solid var(--ui-line);
+  border-radius: 16px;
+  background: var(--product-mint);
+}
+.provider-month-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+}
+.provider-month-row + .provider-month-row { border-block-start: 1px solid var(--ui-line); }
+.provider-month-row strong, .provider-month-row small { display: block; }
+.provider-month-row small { margin-top: 3px; color: var(--ui-muted); font-size: .75rem; }
+.provider-month-row .task-action { flex: 0 0 auto; min-height: 44px; }
+.provider-recovery-action { margin-top: 6px; min-height: 44px; }
+
+#providerEmailDialog {
+  border-radius: 24px;
+  border: 1px solid var(--ui-line);
+  box-shadow: 0 22px 80px rgb(6 23 48 / .26);
+}
+#providerEmailDialog .provider-email-header {
+  align-items: center;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--brand-light);
+}
+#providerEmailContext { overflow-wrap: anywhere; }
+.provider-readings-summary { display: grid; gap: 8px; margin: 12px 0; }
+.provider-readings-summary dl {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  margin: 0;
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
+  background: var(--ui-soft);
+}
+.provider-readings-summary dl > div { min-width: 0; padding: 10px 8px; text-align: center; }
+.provider-readings-summary dl > div + div { border-inline-start: 1px solid var(--ui-line); }
+.provider-readings-summary dt { color: var(--ui-muted); font-size: .75rem; overflow-wrap: anywhere; }
+.provider-readings-summary dd {
+  margin: 5px 0 0;
+  color: var(--ui-text);
+  font-size: clamp(.86rem,3.4vw,1.125rem);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.provider-readings-summary dl > div:nth-child(2) { background: var(--product-mint); }
+#providerEmailDialog [hidden], [data-reading-source][hidden], #monthlyMailActions[hidden] { display: none !important; }
+.template-tools, .history-mail-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 10px; }
+.template-tools button, .history-mail-actions button, .history-partial-action, #providerUndoSent {
+  min-height: 44px;
+  padding: 7px 11px;
+  border: 1px solid var(--brand-border);
+  border-radius: 10px;
+  color: var(--brand);
+  background: var(--brand-light);
+  font-size: .78rem;
+  font-weight: 700;
+}
+.template-preview {
+  margin-top: 12px;
+  padding: 12px;
+  color: var(--ui-text);
+  background: var(--ui-soft);
+  border-radius: 12px;
+  border: 1px solid var(--ui-line);
+}
+#providerTemplatePreview { margin: 7px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+#providerTemplateNotice { color: var(--ui-warning); }
+#providerTemplateNotice:empty { display: none; }
+.reading-source { margin: 4px 0; color: var(--ui-muted); font-size: .75rem; }
+.provider-month-actions button:focus-visible, .template-tools button:focus-visible,
+.history-mail-actions button:focus-visible, .history-partial-action:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+@media (max-width: 360px) {
+  .provider-month-row { align-items: start; flex-wrap: wrap; }
+  .provider-readings-summary dl > div { padding-inline: 4px; }
+}
+
+#tabDashboard .dashboard-summary {
+  border-radius: 25px;
+  background: radial-gradient(ellipse at 95% 0%, #2c5267 0%, transparent 55%), var(--balance-surface);
+  box-shadow: 0 12px 32px rgb(18 38 60 / .16);
+}
+#tabDashboard #dashBalance { font-variant-numeric: tabular-nums; letter-spacing: -.045em; }
+#tabDashboard #monthlyTasks {
+  border-color: var(--ui-line);
+  border-radius: 23px;
+  box-shadow: var(--ui-shadow);
+}
+#tabHistory .swipe-card, #tabCalc .meter-card, #providersList .provider-card {
+  border-radius: 19px;
+  border-color: var(--ui-line);
+  box-shadow: var(--ui-shadow);
+}
+#tabHistory .record-amount { font-variant-numeric: tabular-nums; }
+#tabCalc .meter-heading { min-height: 52px; }
+.onboarding-provider {
+  margin-top: 13px;
+  padding: 12px;
+  background: var(--ui-soft);
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
+}
+.onboarding-provider summary { cursor: pointer; font-weight: 700; min-height: 30px; }
+.onboarding-provider label { margin-top: 8px; }
+
+#providerEmailDialog .provider-email-field { padding: 11px 12px; }
+#providerEmailDialog .provider-email-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: .8rem;
+}
+#providerEmailDialog .provider-mail-destination { padding: 11px 12px; }
+#providerEmailDialog .dialog-actions { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 8px; }
+#providerEmailDialog .dialog-actions > * { width: 100%; min-height: 44px; }
+#providerEmailDialog::backdrop { background: rgb(13 28 45 / .42); }
+
+#providerEmailDialog .provider-email-field {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 3px 10px;
+}
+#providerEmailDialog .provider-email-field > div { display: contents; }
+#providerEmailDialog .provider-email-field label { grid-column: 1; grid-row: 1; margin: 0; }
+#providerEmailDialog .provider-email-field button {
+  grid-column: 2;
+  grid-row: 1;
+  width: auto;
+  min-height: 44px;
+  max-width: 100%;
+}
+#providerEmailDialog .provider-email-field :is(input,textarea) { grid-column: 1 / -1; grid-row: 2; }

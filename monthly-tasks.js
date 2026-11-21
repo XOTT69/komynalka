@@ -6,7 +6,7 @@
     const rec=(address.records||[]).find(r=>r.month===month),p=address.prefs||{};
     const services=definitions.filter(([, ,pref])=>p[pref]===true||(p[pref]===undefined&&pref!=='showHotWater')).map(([id,label,,fields,cost])=>({id,label,done:Boolean(rec&&(id==='electro'&&rec._enteredCurrent?rec._filled?.electro===true&&rec._enteredCurrent.dCur===true&&((rec.calculationMode?.twoZone??p.electroTwoZone)!==true||rec._enteredCurrent.nCur===true):typeof rec._filled?.[id]==='boolean'?rec._filled[id]:Number(rec[cost])>0||fields.some(field=>Number(rec[field])>0)))}));
     for(const service of address.customServices||[])if(!service.archivedAt)services.push({id:String(service.id),label:service.name||'Інша послуга',done:Boolean(rec?.customData&&Object.prototype.hasOwnProperty.call(rec.customData,service.id))});
-    return {record:rec,services,done:services.filter(s=>s.done).length,total:services.length};
+    return {month,record:rec,services,done:services.filter(s=>s.done).length,total:services.length};
   }
   const dateAt=(year,month,day)=>{const d=new Date(Date.UTC(year,month-1,1,12));d.setUTCDate(Math.min(day,new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate()));return d;};
   function reminders(address,settings,now=new Date()){
@@ -21,14 +21,17 @@
   }
   function nextAction(input,items,outstanding,emailIds=[]){
     if(input.total===0)return {kind:'setup'};
-    const missing=input.services.find(service=>!service.done);
-    if(missing)return {kind:'readings',serviceId:missing.id};
     const pending=items.filter(item=>!item.done).sort((a,b)=>a.end.localeCompare(b.end));
     const active=pending.find(item=>item.available);
-    if(active){
-      const emailId=emailIds.find(id=>id===active.id||(active.id==='water'&&id==='hotWater'));
-      return {kind:emailId?'email':'transfer',reminder:active,serviceId:emailId||null};
+    for(const item of pending){
+      if(!item.available)continue;
+      const emailId=emailIds.find(id=>(id===item.id||(item.id==='water'&&id==='hotWater'))&&
+        ((item.cycle&&input.month&&item.cycle!==input.month)||input.services.some(service=>service.id===id&&service.done)));
+      if(emailId)return {kind:'email',reminder:item,serviceId:emailId};
     }
+    const missing=input.services.find(service=>!service.done);
+    if(missing)return {kind:'readings',serviceId:missing.id};
+    if(active)return {kind:'transfer',reminder:active,serviceId:null};
     if(outstanding>0)return {kind:'payment'};
     if(pending.length)return {kind:'transfer',reminder:pending[0],serviceId:null};
     return {kind:'review'};

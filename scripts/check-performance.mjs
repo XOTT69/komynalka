@@ -10,6 +10,6 @@ for(const match of html.matchAll(/<script\b[^>]*src="([^"]+)"[^>]*>/g)){
 const report={kind:'build-size-estimate-not-network-timing',initialScripts:scripts,initialJavaScriptGzipBytes:scripts.reduce((sum,item)=>sum+item.gzipBytes,0),htmlGzipBytes:gzipSync(html).length};
 const budgets={initialJavaScriptGzipBytes:165*1024,htmlGzipBytes:35*1024};
 for(const [metric,limit] of Object.entries(budgets))if(report[metric]>limit)throw new Error(`${metric}: ${report[metric]} exceeds ${limit}`);
-for(const optional of ['ai-chat.js','year-report-image.js'])if(scripts.some(item=>item.file===optional))throw new Error(`Optional module is loaded at startup: ${optional}`);
+for(const optional of ['ai-chat.js','year-report-image.js','provider-mail-ui.js'])if(scripts.some(item=>item.file===optional))throw new Error(`Optional module is loaded at startup: ${optional}`);
 await mkdir('test-results',{recursive:true});await writeFile('test-results/performance-build.json',JSON.stringify({...report,budgets},null,2));
 console.log(`Build budgets passed: startup JS ${(report.initialJavaScriptGzipBytes/1024).toFixed(1)} KiB gzip; HTML ${(report.htmlGzipBytes/1024).toFixed(1)} KiB gzip. This is not a speed measurement.`);
